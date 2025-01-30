@@ -201,6 +201,32 @@
             gap: 12px;
             margin-bottom: 1.5rem;
         }
+
+        .form-select {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            font-weight: 400;
+            font-family: 'Poppins', sans-serif !important;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            background-color: #fff;
+            box-shadow: 0 0 0 2px #0061ff;
+            border: none;
+        }
+
+        /* Custom arrow icon for the select */
+        .form-select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%236c757d' d='M8 10.5l-4-4h8l-4 4z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 16px 12px;
+        }
     </style>
 </head>
 <body>
@@ -213,6 +239,19 @@
                     
                     <form method="POST" action="{{ route('login') }}">
                         @csrf
+                        
+                        <!-- Role Selection -->
+                        <div class="mb-4">
+                            <label class="form-label text-muted mb-2">Select Role</label>
+                            <select class="form-select" name="role" required>
+                                <option value="" selected disabled>Choose your role</option>
+                                <option value="student">Student</option>
+                                <option value="staff">Staff</option>
+                            </select>
+                            @error('role')
+                                <div class="error-message">{{ $message }}</div>
+                            @enderror
+                        </div>
                         
                         <!-- Email Input -->
                         <div class="mb-4">
