@@ -240,19 +240,6 @@
                     <form method="POST" action="{{ route('login') }}">
                         @csrf
                         
-                        <!-- Role Selection -->
-                        <div class="mb-4">
-                            <label class="form-label text-muted mb-2">Select Role</label>
-                            <select class="form-select" name="role" required>
-                                <option value="" selected disabled>Choose your role</option>
-                                <option value="student">Student</option>
-                                <option value="staff">Staff</option>
-                            </select>
-                            @error('role')
-                                <div class="error-message">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        
                         <!-- Email Input -->
                         <div class="mb-4">
                             <label class="form-label text-muted mb-2">Email address</label>
