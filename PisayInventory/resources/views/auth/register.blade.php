@@ -141,8 +141,8 @@
                         <!-- Name -->
                         <div class="mb-3">
                             <label class="form-label">Full Name</label>
-                            <input type="text" class="form-control" name="name" value="{{ old('name') }}" required autofocus autocomplete="name">
-                            @error('name')
+                            <input type="text" class="form-control" name="full_name" value="{{ old('full_name') }}" required autofocus autocomplete="name">
+                            @error('full_name')
                                 <div class="error-message">{{ $message }}</div>
                             @enderror
                         </div>
