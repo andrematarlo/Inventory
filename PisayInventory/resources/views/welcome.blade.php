@@ -54,6 +54,9 @@
                 background: rgba(255, 255, 255, 0.1);
             }
         </style>
+        
+        <!-- Vite assets -->
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body>
         <!-- Navigation -->
