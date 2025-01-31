@@ -6,18 +6,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use  HasFactory, Notifiable;
+    use HasFactory, Notifiable;
 
     /**
      * The table associated with the model.
      *
      * @var string
      */
-    protected $table = 'useraccounts';
+    protected $table = 'UserAccount';
+
+    /**
+     * The primary key associated with the table.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'UserAccountID';
 
     /**
      * The attributes that are mass assignable.
@@ -25,10 +31,15 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'role',
-        'full_name',
-        'email',
-        'password',
+        'Username',
+        'Password',
+        'CreatedById',
+        'DateCreated',
+        'ModifiedById',
+        'DateModified',
+        'DeletedById',
+        'DateDeleted',
+        'IsDeleted'
     ];
 
     /**
@@ -37,7 +48,8 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
-        'password',
+        'Password',
+        'remember_token',
     ];
 
     /**
@@ -56,4 +68,29 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    protected $attributes = [
+        'IsDeleted' => false
+    ];
+
+    // Override the default password column name
+    public function getAuthPassword()
+    {
+        return $this->Password;
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountId');
+    }
+
+    public function modifiedBy()
+    {
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountId');
+    }
+
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['Password'] = bcrypt($value);
+    }
 }

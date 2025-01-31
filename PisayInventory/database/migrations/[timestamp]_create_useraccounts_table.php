@@ -11,14 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('useraccounts', function (Blueprint $table) {
-            $table->id();
-            $table->string('role');
-            $table->string('full_name');
-            $table->string('email')->unique();
-            $table->string('password');
-            $table->timestamp('created_at')->useCurrent();
-        });
+        if (!Schema::hasTable('UserAccount')) {
+            Schema::create('UserAccount', function (Blueprint $table) {
+                $table->id('UserAccountID');
+                $table->string('Username');
+                $table->string('Password');
+                $table->integer('CreatedById')->nullable();
+                $table->dateTime('DateCreated')->nullable();
+                $table->integer('ModifiedById')->nullable();
+                $table->dateTime('DateModified')->nullable();
+                $table->integer('DeletedById')->nullable();
+                $table->dateTime('DateDeleted')->nullable();
+                $table->boolean('IsDeleted')->default(false);
+            });
+        }
     }
 
     /**
@@ -26,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('useraccounts');
+        Schema::dropIfExists('UserAccount');
     }
 }; 

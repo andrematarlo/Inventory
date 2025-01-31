@@ -9,8 +9,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
+use Carbon\Carbon;
 
 class RegisteredUserController extends Controller
 {
@@ -30,23 +32,34 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'full_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:useraccounts'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => ['required', 'string', 'in:student,staff'],
+            'Username' => ['required', 'string', 'max:255', 'unique:UserAccount'],
+            'Password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
-            'role' => $request->role,
-            'full_name' => $request->full_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            DB::beginTransaction();
 
-        event(new Registered($user));
+            $user = User::create([
+                'Username' => $request->Username,
+                'Password' => Hash::make($request->Password),
+                'DateCreated' => Carbon::now(),
+                'CreatedById' => 1, // You might want to adjust this based on your needs
+                'IsDeleted' => false
+            ]);
 
-        Auth::login($user);
+            DB::commit();
 
-        return redirect()->route('dashboard');
+            event(new Registered($user));
+            Auth::login($user);
+
+            return redirect()->route('dashboard')->with('success', 'Registration successful!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            // Log the error for debugging
+            \Log::error('Registration error: ' . $e->getMessage());
+            
+            return back()->withErrors(['error' => 'Registration failed. Please try again.'])->withInput();
+        }
     }
 }
