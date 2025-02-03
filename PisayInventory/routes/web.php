@@ -11,11 +11,13 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
-// Guest routes
+// Welcome page as the default route
+Route::get('/', function () {
+    return view('welcome');
+})->name('welcome');
+
+// Authentication Routes
 Route::middleware('guest')->group(function () {
-    Route::get('/', function () {
-        return redirect()->route('login');
-    });
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
