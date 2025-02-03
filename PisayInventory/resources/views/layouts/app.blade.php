@@ -391,6 +391,35 @@
             .menu-item [x-show] {
                 transition: all 0.3s ease;
             }
+
+            .nav-item.dropdown .dropdown-menu {
+                background: #f8f9fa;
+                border: none;
+                border-radius: 0.5rem;
+                margin-top: 0.5rem;
+                box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            }
+
+            .dropdown-item {
+                padding: 0.5rem 1.5rem;
+                color: #6c757d;
+                transition: all 0.3s ease;
+            }
+
+            .dropdown-item:hover {
+                background: #e9ecef;
+                color: #0d6efd;
+            }
+
+            .dropdown-item i {
+                width: 1.2rem;
+                text-align: center;
+            }
+
+            .nav-link.dropdown-toggle::after {
+                margin-left: auto;
+                vertical-align: middle;
+            }
         </style>
         @yield('additional_styles')
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -410,30 +439,29 @@
 
                 @if(Auth::user()->role === 'Admin')
                     <!-- Employee Management dropdown -->
-                    <div class="menu-item" x-data="{ open: false }">
-                        <div @click="open = !open" class="d-flex align-items-center justify-content-between w-100 cursor-pointer">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-people"></i>
-                                <span class="ms-3">Employee Management</span>
-                            </div>
-                            <i class="bi" :class="open ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
-                        </div>
-                        
-                        <div x-show="open" class="ms-4 mt-2" style="display: none">
-                            <a href="{{ route('roles.index') }}" class="menu-item {{ request()->routeIs('roles.*') ? 'active' : '' }}">
-                                <i class="bi bi-shield-lock"></i>
-                                <span>Roles</span>
-                            </a>
-                            <a href="{{ route('roles.policies') }}" class="menu-item {{ request()->routeIs('roles.policies') ? 'active' : '' }}">
-                                <i class="bi bi-key"></i>
-                                <span>Role Policies</span>
-                            </a>
-                            <a href="{{ route('employees.index') }}" class="menu-item {{ request()->routeIs('employees.*') ? 'active' : '' }}">
-                                <i class="bi bi-person-badge"></i>
-                                <span>Employees</span>
-                            </a>
-                        </div>
-                    </div>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-people me-2"></i>
+                            <span>Employee Management</span>
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ route('roles.index') }}">
+                                    <i class="bi bi-shield me-2"></i>Roles
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ route('roles.policies') }}">
+                                    <i class="bi bi-key me-2"></i>Role Policies
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ route('employees.index') }}">
+                                    <i class="bi bi-person-badge me-2"></i>Employees
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
                 @endif
 
                 <!-- Menu items for both Admin and Inventory Manager -->
@@ -517,6 +545,8 @@
                 setTimeout(function() {
                     $('.alert').alert('close');
                 }, 5000);
+
+                $('.dropdown-toggle').dropdown();
             });
         </script>
         @yield('scripts')

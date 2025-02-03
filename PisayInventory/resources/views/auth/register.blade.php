@@ -14,48 +14,48 @@
             align-items: center;
             justify-content: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 40px 0;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
         .page-layout {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            width: 100%;
             max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
             height: 100vh;
+            padding: 2rem 4rem;
         }
         .background-content {
-            position: relative;
-            width: 50%;
-            text-align: left;
-            color: white;
-            z-index: 1;
-            padding: 2rem;
-            transform: none;
-            top: auto;
-            left: auto;
+            width: 45%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            height: 90vh;
+            padding-top: 4rem;
         }
         .background-content h1 {
-            font-size: 3rem;
+            font-size: 3.2rem;
             font-weight: 700;
-            margin-bottom: 1.5rem;
-            text-align: left;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: white;
         }
         .background-content p {
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 2rem;
-            text-align: left;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 3rem;
         }
         .register-container {
             width: 45%;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 15px;
-            padding: 1.5rem;
+            padding: 2rem;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            max-height: 90vh;
+            height: 90vh;
+            overflow-y: auto;
         }
         .container {
             width: auto;
@@ -69,7 +69,7 @@
             padding: 0;
         }
         .form-group {
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
             position: relative;
         }
         .form-control, .form-select {
@@ -105,7 +105,7 @@
         .row {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
+            gap: 0.4rem;
             margin: 0;
         }
         .col-6 {
@@ -117,8 +117,8 @@
             max-width: 100%;
         }
         textarea.form-control {
-            min-height: 40px !important;
-            height: 40px !important;
+            min-height: 35px !important;
+            height: 35px !important;
             resize: none;
         }
         .btn-register {
@@ -139,7 +139,7 @@
             transform: translateY(-2px);
         }
         .register-header {
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             text-align: center;
         }
         .register-header h1 {
@@ -163,48 +163,43 @@
                 max-width: 500px;
             }
         }
-        .features-wrapper {
+        .features-grid {
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            margin-top: 2rem;
-        }
-        .feature-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            width: 300px;
         }
         .feature-item {
-            text-align: left;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .feature-icon {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
         }
         .feature-icon svg {
-            width: 20px;
-            height: 20px;
+            width: 28px;
+            height: 28px;
             color: white;
         }
         .feature-item h3 {
-            font-size: 0.9rem;
-            margin-bottom: 0.25rem;
+            font-size: 1.1rem;
+            margin-bottom: 0.35rem;
             color: white;
         }
         .feature-item p {
-            font-size: 0.8rem;
+            font-size: 0.95rem;
             color: rgba(255, 255, 255, 0.8);
             margin: 0;
         }
@@ -304,7 +299,18 @@
             justify-content: center;
             align-items: center;
             flex-direction: column;
-            margin-top: 1rem;
+            margin-top: 0.75rem;
+        }
+        .features-wrapper {
+            display: none;
+        }
+        /* Hide scrollbar but keep functionality */
+        .register-container::-webkit-scrollbar {
+            display: none;
+        }
+        .register-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
     </style>
 </head>
@@ -314,46 +320,40 @@
             <h1>PSHS Inventory Management System</h1>
             <p>Efficiently manage and track your school's resources with our modern inventory system.</p>
             
-            <div class="features-wrapper">
-                <div class="feature-container">
-                    <div class="feature-item">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3>Easy Tracking</h3>
-                            <p>Keep track of all inventory items</p>
-                        </div>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>Easy Tracking</h3>
+                        <p>Keep track of all inventory items</p>
                     </div>
                 </div>
                 
-                <div class="feature-container">
-                    <div class="feature-item">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3>Real-time Updates</h3>
-                            <p>Instant inventory changes</p>
-                        </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>Real-time Updates</h3>
+                        <p>Instant inventory changes</p>
                     </div>
                 </div>
                 
-                <div class="feature-container">
-                    <div class="feature-item">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3>Detailed Reports</h3>
-                            <p>Comprehensive analytics</p>
-                        </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>Detailed Reports</h3>
+                        <p>Comprehensive analytics</p>
                     </div>
                 </div>
             </div>
