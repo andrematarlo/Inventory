@@ -174,7 +174,7 @@
                 responsive: true,
                 destroy: true,
                 language: {
-                    search: "_INPUT_",
+                    search: "INPUT",
                     searchPlaceholder: "Search activities..."
                 }
             });
@@ -187,7 +187,7 @@
                 responsive: true,
                 destroy: true,
                 language: {
-                    search: "_INPUT_",
+                    search: "INPUT",
                     searchPlaceholder: "Search items..."
                 }
             });

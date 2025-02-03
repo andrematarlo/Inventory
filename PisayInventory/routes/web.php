@@ -8,16 +8,25 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\ClassificationController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
+// Guest routes
+Route::middleware('guest')->group(function () {
+    Route::get('/', function () {
+        return redirect()->route('login');
+    });
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'register']);
 });
 
-Route::middleware(['auth'])->group(function () {
-    // Dashboard
+// Protected routes - all routes that require authentication
+Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    
     // Items Management
     Route::resource('items', ItemController::class);
 
@@ -52,5 +61,3 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-
-require __DIR__.'/auth.php';

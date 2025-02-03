@@ -140,5 +140,11 @@
         <footer style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.8); position: relative; bottom: 0; width: 100%;">
             © {{ date('Y') }} PSHS Inventory System. All rights reserved.
         </footer>
+
+        @auth
+            <script>window.location = "{{ route('dashboard') }}";</script>
+        @else
+            <script>window.location = "{{ route('login') }}";</script>
+        @endauth
     </body>
 </html>
