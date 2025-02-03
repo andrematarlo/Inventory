@@ -16,6 +16,55 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
                 </div>
+
+                <!-- Add this after Dashboard and before other menu items -->
+                <div class="relative" x-data="{ open: false }">
+                    <!-- Employee Management Dropdown Trigger -->
+                    <div @click="open = !open" class="flex items-center px-4 py-3 cursor-pointer {{ request()->routeIs('employees.*', 'roles.*') ? 'bg-purple-100 text-purple-700' : 'text-gray-600' }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span class="flex-grow">Employee Management</span>
+                        <svg class="w-4 h-4 ml-2" :class="{'rotate-180': open}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+
+                    <!-- Dropdown Menu -->
+                    <div x-show="open" 
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="transform opacity-0 scale-95"
+                         x-transition:enter-end="transform opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="transform opacity-100 scale-100"
+                         x-transition:leave-end="transform opacity-0 scale-95"
+                         class="absolute left-0 mt-2 w-full bg-white shadow-lg rounded-md py-1 z-50">
+                        
+                        <!-- Roles -->
+                        <a href="{{ route('roles.index') }}" 
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-100 {{ request()->routeIs('roles.*') ? 'bg-purple-50' : '' }}">
+                            <i class="bi bi-shield-lock mr-2"></i>Roles
+                        </a>
+
+                        <!-- Role Policies -->
+                        <a href="{{ route('roles.index') }}" 
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-100">
+                            <i class="bi bi-key mr-2"></i>Role Policies
+                        </a>
+
+                        <!-- Add Employee -->
+                        <a href="{{ route('employees.create') }}" 
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-100 {{ request()->routeIs('employees.create') ? 'bg-purple-50' : '' }}">
+                            <i class="bi bi-person-plus mr-2"></i>Add Employee
+                        </a>
+
+                        <!-- Employee List -->
+                        <a href="{{ route('employees.index') }}" 
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-100 {{ request()->routeIs('employees.index') ? 'bg-purple-50' : '' }}">
+                            <i class="bi bi-people mr-2"></i>Employee List
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <!-- Settings Dropdown -->

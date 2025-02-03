@@ -17,13 +17,13 @@ class Employee extends Model
         'Email',
         'Gender',
         'Address',
-        'Role',
+        'role',
         'DateCreated',
-        'CreatedByID',
-        'ModifiedByID',
+        'CreatedById',
         'DateModified',
-        'DeletedByID',
+        'ModifiedById',
         'DateDeleted',
+        'DeletedById',
         'IsDeleted'
     ];
 
@@ -43,19 +43,19 @@ class Employee extends Model
     // Relationship with creator
     public function creator()
     {
-        return $this->belongsTo(UserAccount::class, 'CreatedByID', 'UserAccountID');
+        return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID');
     }
 
     // Relationship with modifier
     public function modifier()
     {
-        return $this->belongsTo(UserAccount::class, 'ModifiedByID', 'UserAccountID');
+        return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID');
     }
 
     // Relationship with deleter
     public function deleter()
     {
-        return $this->belongsTo(UserAccount::class, 'DeletedByID', 'UserAccountID');
+        return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID');
     }
 
     // Get full name attribute

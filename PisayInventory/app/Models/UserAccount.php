@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
 
 class UserAccount extends Authenticatable
 {
@@ -16,12 +17,13 @@ class UserAccount extends Authenticatable
     protected $fillable = [
         'Username',
         'Password',
-        'CreatedByID',
+        'role',
         'DateCreated',
-        'ModifiedByID',
+        'CreatedById',
         'DateModified',
-        'DeletedByID',
+        'ModifiedById',
         'DateDeleted',
+        'DeletedById',
         'IsDeleted'
     ];
 

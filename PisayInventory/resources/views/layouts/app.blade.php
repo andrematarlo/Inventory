@@ -353,8 +353,47 @@
                     min-width: 800px;
                 }
             }
+
+            /* Employee Management Dropdown Styles */
+            .menu-item .cursor-pointer {
+                cursor: pointer;
+            }
+
+            .menu-item .bi-chevron-right,
+            .menu-item .bi-chevron-down {
+                transition: transform 0.3s ease;
+            }
+
+            .menu-item .bi-chevron-down {
+                transform: rotate(90deg);
+            }
+
+            /* Submenu Styles */
+            .menu-item .ms-4 {
+                margin-left: 1rem !important;
+            }
+
+            .menu-item .ms-4 .menu-item {
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
+            }
+
+            .menu-item .ms-4 .menu-item i {
+                font-size: 0.9rem;
+            }
+
+            /* Animation for dropdown */
+            [x-cloak] {
+                display: none !important;
+            }
+
+            .menu-item [x-show] {
+                transition: all 0.3s ease;
+            }
         </style>
         @yield('additional_styles')
+        <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     </head>
     <body>
         <!-- Sidebar -->
@@ -367,6 +406,33 @@
                     <i class="bi bi-speedometer2"></i>
                     <span>Dashboard</span>
                 </a>
+
+                <!-- Add Employee Management dropdown -->
+                <div class="menu-item" x-data="{ open: false }">
+                    <div @click="open = !open" class="d-flex align-items-center justify-content-between w-100 cursor-pointer">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-people"></i>
+                            <span class="ms-3">Employee Management</span>
+                        </div>
+                        <i class="bi" :class="open ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+                    </div>
+                    
+                    <div x-show="open" class="ms-4 mt-2" style="display: none">
+                        <a href="{{ route('roles.index') }}" class="menu-item {{ request()->routeIs('roles.index') ? 'active' : '' }}">
+                            <i class="bi bi-shield-lock"></i>
+                            <span>Roles</span>
+                        </a>
+                        <a href="{{ route('roles.policies') }}" class="menu-item {{ request()->routeIs('roles.policies') ? 'active' : '' }}">
+                            <i class="bi bi-key"></i>
+                            <span>Role Policies</span>
+                        </a>
+                        <a href="{{ route('employees.index') }}" class="menu-item {{ request()->routeIs('employees.*') ? 'active' : '' }}">
+                            <i class="bi bi-person-badge"></i>
+                            <span>Employees</span>
+                        </a>
+                    </div>
+                </div>
+
                 <a href="{{ route('items.index') }}" class="menu-item {{ request()->routeIs('items.*') ? 'active' : '' }}">
                     <i class="bi bi-box"></i>
                     <span>Items</span>

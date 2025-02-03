@@ -9,6 +9,8 @@ use App\Http\Controllers\ClassificationController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\EmployeeController;
 use Illuminate\Support\Facades\Route;
 
 // Welcome page as the default route
@@ -62,4 +64,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+Route::middleware(['auth'])->group(function () {
+    // Put the restore route before the resource routes
+    Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+    
+    Route::resource('roles', RoleController::class, ['except' => ['show']]);
+    Route::resource('employees', EmployeeController::class, ['except' => ['show']]);
+    
+    // Role Policy routes
+    Route::get('roles/policies', [RoleController::class, 'policies'])->name('roles.policies');
+    Route::put('roles/policies/{id}', [RoleController::class, 'updatePolicy'])->name('roles.policies.update');
 });
