@@ -58,22 +58,19 @@ Route::middleware('auth')->group(function () {
         Route::get('/sales', [ReportController::class, 'generateSalesReport'])->name('reports.sales');
         Route::get('/low-stock', [ReportController::class, 'generateLowStockReport'])->name('reports.low-stock');
     });
+
+    // Employee Management
+    Route::resource('employees', EmployeeController::class);
+    Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+
+    // Role Management
+    Route::resource('roles', RoleController::class, ['except' => ['show']]);
+    Route::get('roles/policies', [RoleController::class, 'policies'])->name('roles.policies');
+    Route::put('roles/policies/{id}', [RoleController::class, 'updatePolicy'])->name('roles.policies.update');
 });
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-Route::middleware(['auth'])->group(function () {
-    // Put the restore route before the resource routes
-    Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
-    
-    Route::resource('roles', RoleController::class, ['except' => ['show']]);
-    Route::resource('employees', EmployeeController::class, ['except' => ['show']]);
-    
-    // Role Policy routes
-    Route::get('roles/policies', [RoleController::class, 'policies'])->name('roles.policies');
-    Route::put('roles/policies/{id}', [RoleController::class, 'updatePolicy'])->name('roles.policies.update');
 });

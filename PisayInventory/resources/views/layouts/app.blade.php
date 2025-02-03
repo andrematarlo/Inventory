@@ -3,6 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>@yield('title') - PSHS Inventory</title>
         <!-- Bootstrap CSS -->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -407,56 +408,62 @@
                     <span>Dashboard</span>
                 </a>
 
-                <!-- Add Employee Management dropdown -->
-                <div class="menu-item" x-data="{ open: false }">
-                    <div @click="open = !open" class="d-flex align-items-center justify-content-between w-100 cursor-pointer">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-people"></i>
-                            <span class="ms-3">Employee Management</span>
+                @if(Auth::user()->role === 'Admin')
+                    <!-- Employee Management dropdown -->
+                    <div class="menu-item" x-data="{ open: false }">
+                        <div @click="open = !open" class="d-flex align-items-center justify-content-between w-100 cursor-pointer">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-people"></i>
+                                <span class="ms-3">Employee Management</span>
+                            </div>
+                            <i class="bi" :class="open ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
                         </div>
-                        <i class="bi" :class="open ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+                        
+                        <div x-show="open" class="ms-4 mt-2" style="display: none">
+                            <a href="{{ route('roles.index') }}" class="menu-item {{ request()->routeIs('roles.*') ? 'active' : '' }}">
+                                <i class="bi bi-shield-lock"></i>
+                                <span>Roles</span>
+                            </a>
+                            <a href="{{ route('roles.policies') }}" class="menu-item {{ request()->routeIs('roles.policies') ? 'active' : '' }}">
+                                <i class="bi bi-key"></i>
+                                <span>Role Policies</span>
+                            </a>
+                            <a href="{{ route('employees.index') }}" class="menu-item {{ request()->routeIs('employees.*') ? 'active' : '' }}">
+                                <i class="bi bi-person-badge"></i>
+                                <span>Employees</span>
+                            </a>
+                        </div>
                     </div>
-                    
-                    <div x-show="open" class="ms-4 mt-2" style="display: none">
-                        <a href="{{ route('roles.index') }}" class="menu-item {{ request()->routeIs('roles.index') ? 'active' : '' }}">
-                            <i class="bi bi-shield-lock"></i>
-                            <span>Roles</span>
-                        </a>
-                        <a href="{{ route('roles.policies') }}" class="menu-item {{ request()->routeIs('roles.policies') ? 'active' : '' }}">
-                            <i class="bi bi-key"></i>
-                            <span>Role Policies</span>
-                        </a>
-                        <a href="{{ route('employees.index') }}" class="menu-item {{ request()->routeIs('employees.*') ? 'active' : '' }}">
-                            <i class="bi bi-person-badge"></i>
-                            <span>Employees</span>
-                        </a>
-                    </div>
-                </div>
+                @endif
 
-                <a href="{{ route('items.index') }}" class="menu-item {{ request()->routeIs('items.*') ? 'active' : '' }}">
-                    <i class="bi bi-box"></i>
-                    <span>Items</span>
-                </a>
-                <a href="{{ route('inventory.index') }}" class="menu-item {{ request()->routeIs('inventory.*') ? 'active' : '' }}">
-                    <i class="bi bi-box-seam"></i>
-                    <span>Inventory</span>
-                </a>
-                <a href="{{ route('suppliers.index') }}" class="menu-item {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
-                    <i class="bi bi-truck"></i>
-                    <span>Suppliers</span>
-                </a>
-                <a href="{{ route('classifications.index') }}" class="menu-item {{ request()->routeIs('classifications.*') ? 'active' : '' }}">
-                    <i class="bi bi-diagram-3"></i>
-                    <span>Classifications</span>
-                </a>
-                <a href="{{ route('units.index') }}" class="menu-item {{ request()->routeIs('units.*') ? 'active' : '' }}">
-                    <i class="bi bi-rulers"></i>
-                    <span>Units</span>
-                </a>
-                <a href="{{ route('reports.index') }}" class="menu-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
-                    <i class="bi bi-file-earmark-text"></i>
-                    <span>Reports</span>
-                </a>
+                <!-- Menu items for both Admin and Inventory Manager -->
+                @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
+                    <a href="{{ route('items.index') }}" class="menu-item {{ request()->routeIs('items.*') ? 'active' : '' }}">
+                        <i class="bi bi-box"></i>
+                        <span>Items</span>
+                    </a>
+                    <a href="{{ route('inventory.index') }}" class="menu-item {{ request()->routeIs('inventory.*') ? 'active' : '' }}">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Inventory</span>
+                    </a>
+                    <a href="{{ route('suppliers.index') }}" class="menu-item {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
+                        <i class="bi bi-truck"></i>
+                        <span>Suppliers</span>
+                    </a>
+                    <a href="{{ route('classifications.index') }}" class="menu-item {{ request()->routeIs('classifications.*') ? 'active' : '' }}">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>Classifications</span>
+                    </a>
+                    <a href="{{ route('units.index') }}" class="menu-item {{ request()->routeIs('units.*') ? 'active' : '' }}">
+                        <i class="bi bi-rulers"></i>
+                        <span>Units</span>
+                    </a>
+                    <a href="{{ route('reports.index') }}" class="menu-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Reports</span>
+                    </a>
+                @endif
+
                 <form method="POST" action="{{ route('logout') }}" class="mt-4">
                     @csrf
                     <button type="submit" class="menu-item w-100 text-start" style="background: none; border: none;">

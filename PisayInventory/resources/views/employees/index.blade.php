@@ -6,9 +6,11 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Employee Management</h2>
-        <a href="{{ route('employees.create') }}" class="btn btn-primary">
-            <i class="bi bi-person-plus me-2"></i>Add Employee
-        </a>
+        @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
+            <a href="{{ route('employees.create') }}" class="btn btn-primary">
+                <i class="bi bi-person-plus me-2"></i>Add Employee
+            </a>
+        @endif
     </div>
 
     <div class="card">
@@ -54,36 +56,39 @@
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        @if($employee->IsDeleted)
-                                            <form action="{{ route('employees.restore', $employee->EmployeeID) }}" 
-                                                  method="POST" 
-                                                  class="d-inline">
-                                                @csrf
-                                                <button type="submit" 
-                                                        class="btn btn-sm btn-success" 
-                                                        title="Restore"
-                                                        onclick="return confirm('Are you sure you want to restore this employee?')">
-                                                    <i class="bi bi-arrow-counterclockwise"></i>
-                                                </button>
-                                            </form>
-                                        @else
-                                            <a href="{{ route('employees.edit', $employee->EmployeeID) }}" 
-                                               class="btn btn-sm btn-primary" 
-                                               title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <form action="{{ route('employees.destroy', $employee->EmployeeID) }}" 
-                                                  method="POST" 
-                                                  class="d-inline" 
-                                                  onsubmit="return confirm('Are you sure you want to delete this employee?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" 
-                                                        class="btn btn-sm btn-danger" 
-                                                        title="Delete">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                        @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
+                                            @if($employee->IsDeleted)
+                                                <form action="{{ route('employees.restore', $employee->EmployeeID) }}" 
+                                                      method="POST" 
+                                                      class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" 
+                                                            class="btn btn-sm btn-success" 
+                                                            title="Restore"
+                                                            onclick="return confirm('Are you sure you want to restore this employee?')">
+                                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <a href="{{ route('employees.edit', $employee->EmployeeID) }}" 
+                                                   class="btn btn-sm btn-primary" 
+                                                   title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                
+                                                <form action="{{ route('employees.destroy', $employee->EmployeeID) }}" 
+                                                      method="POST" 
+                                                      class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" 
+                                                            class="btn btn-sm btn-danger" 
+                                                            title="Delete"
+                                                            onclick="return confirm('Are you sure you want to delete this employee?')">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
                                         @endif
                                     </div>
                                 </td>
