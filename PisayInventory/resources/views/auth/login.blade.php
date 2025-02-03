@@ -9,157 +9,285 @@
     <style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin: 0;
+            padding: 0;
             overflow: hidden;
+        }
+
+        .page-layout {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
             width: 100%;
-            max-width: 900px;
-            display: flex;
-        }
-        .login-image {
-            background: url('{{ asset("images/inventory-bg.jpg") }}') center/cover;
-            width: 50%;
+            max-width: 1400px;
+            height: auto;
+            padding: 2rem 4rem;
+            gap: 4rem;
             position: relative;
+        }
+
+        .background-content {
+            width: 45%;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
+            flex-direction: column;
+            justify-content: flex-start;
+            height: auto;
+            padding-top: 0;
         }
-        .login-image::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
-        }
-        .login-image-content {
-            position: relative;
+
+        .background-content h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 1rem;
             color: white;
-            text-align: center;
         }
-        .login-form {
-            width: 50%;
-            padding: 40px;
+
+        .background-content p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0;
         }
+
+        .login-container {
+            width: 45%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            margin-top: 4.5rem;
+        }
+
         .form-control {
-            border-radius: 10px;
-            padding: 12px 20px;
-            border: 1px solid #e1e1e1;
-            margin-bottom: 20px;
-        }
-        .form-control:focus {
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
-            border-color: #667eea;
-        }
-        .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 10px;
-            padding: 12px 20px;
-            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
             color: white;
+            margin-bottom: 1rem;
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .btn-login {
+            width: auto;
+            padding: 0.4rem 1.5rem;
+            margin: 0.5rem auto 0;
+            display: block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
             font-weight: 600;
-            margin-top: 10px;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
+            font-size: 0.9rem;
         }
+
         .btn-login:hover {
+            background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
+
         .login-header {
-            margin-bottom: 30px;
+            text-align: center;
+            margin-bottom: 1.5rem;
         }
+
         .login-header h1 {
             font-size: 2rem;
             font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 10px;
+            color: white;
+            margin-bottom: 0.5rem;
         }
+
         .login-header p {
-            color: #718096;
+            color: rgba(255, 255, 255, 0.8);
             font-size: 0.95rem;
         }
-        @media (max-width: 768px) {
-            .login-image {
-                display: none;
-            }
-            .login-form {
-                width: 100%;
-            }
-            .login-container {
-                max-width: 400px;
-            }
+
+        .features-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 3rem;
         }
-        .alert {
-            border-radius: 10px;
-            margin-bottom: 20px;
+
+        .feature-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
         }
-        .form-floating {
-            margin-bottom: 20px;
+
+        .feature-item:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
         }
-        .form-floating label {
-            padding-left: 20px;
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover .feature-icon {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .feature-item:hover svg {
+            transform: scale(1.1);
+            color: rgba(255, 255, 255, 1);
+        }
+
+        .feature-icon svg {
+            width: 28px;
+            height: 28px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover h3,
+        .feature-item:hover p {
+            transform: translateX(5px);
+        }
+
+        .feature-item h3,
+        .feature-item p {
+            transition: all 0.3s ease;
+        }
+
+        .feature-item h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.35rem;
+            color: white;
+        }
+
+        .feature-item p {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .alert-danger {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+            color: white;
+            margin-bottom: 1rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            border-radius: 8px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="login-container">
-            <div class="login-image">
-                <div class="login-image-content">
-                    <h2 class="mb-4">PSHS Inventory System</h2>
-                    <p class="mb-0">Efficiently manage your inventory with our comprehensive system</p>
+    <div class="page-layout">
+        <div class="background-content">
+            <h1>PSHS Inventory Management System</h1>
+            <p>Efficiently manage and track your school's resources with our modern inventory system.</p>
+            
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>Easy Tracking</h3>
+                        <p>Keep track of all inventory items</p>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>Real-time Updates</h3>
+                        <p>Instant inventory changes</p>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>Detailed Reports</h3>
+                        <p>Comprehensive analytics</p>
+                    </div>
                 </div>
             </div>
-            <div class="login-form">
-                <div class="login-header">
-                    <h1>Welcome Back!</h1>
-                    <p>Please sign in to continue</p>
+        </div>
+
+        <div class="login-container">
+            <div class="login-header">
+                <h1>Welcome Back!</h1>
+                <p>Please sign in to continue</p>
+            </div>
+
+            @if($errors->any())
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-circle-fill me-2"></i>
+                    {{ $errors->first() }}
+                </div>
+            @endif
+
+            <form method="POST" action="{{ url('/login') }}">
+                @csrf
+                <div class="form-group">
+                    <input type="text" class="form-control" id="username" name="Username" 
+                           placeholder="Username" required value="{{ old('Username') }}">
                 </div>
 
-                @if($errors->any())
-                    <div class="alert alert-danger" role="alert">
-                        <i class="bi bi-exclamation-circle-fill me-2"></i>
-                        {{ $errors->first() }}
-                    </div>
-                @endif
+                <div class="form-group">
+                    <input type="password" class="form-control" id="password" 
+                           name="Password" placeholder="Password" required>
+                </div>
 
-                <form method="POST" action="{{ url('/login') }}">
-                    @csrf
-                    <div class="form-floating">
-                        <input type="text" class="form-control" id="username" name="Username" 
-                               placeholder="Username" required value="{{ old('Username') }}">
-                        <label for="username"><i class="bi bi-person me-2"></i>Username</label>
-                    </div>
-
-                    <div class="form-floating">
-                        <input type="password" class="form-control" id="password" 
-                               name="Password" placeholder="Password" required>
-                        <label for="password"><i class="bi bi-lock me-2"></i>Password</label>
-                    </div>
-
+                <div class="button-container">
                     <button type="submit" class="btn btn-login">
                         <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
                     </button>
-
-                    <div class="text-center mt-4">
-                        <p class="text-muted">
-                            Don't have an account? 
-                            <a href="{{ route('register') }}" class="text-decoration-none">Register here</a>
-                        </p>
-                    </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
 </body>
