@@ -6,17 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Inventory extends Model
 {
-    protected $table = 'Inventory';
+    protected $table = 'inventory';
+    protected $primaryKey = 'InventoryId';
     public $timestamps = false;
-
-    protected $primaryKey = null;
-    public $incrementing = false;
 
     protected $fillable = [
         'ItemId',
-        'ClassificationId',
-        'StocksAvailable',
-        'StocksAdded',
+        'Quantity',
+        'EmployeeId',
         'DateCreated',
         'CreatedById',
         'DateModified',
@@ -28,11 +25,21 @@ class Inventory extends Model
 
     public function item()
     {
-        return $this->belongsTo(Item::class, 'ItemId');
+        return $this->belongsTo(Item::class, 'ItemId', 'ItemId');
     }
 
-    public function classification()
+    public function employee()
     {
-        return $this->belongsTo(Classification::class, 'ClassificationId');
+        return $this->belongsTo(Employee::class, 'EmployeeId', 'EmployeeId');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountId');
+    }
+
+    public function modifiedBy()
+    {
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountId');
     }
 } 

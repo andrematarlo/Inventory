@@ -46,7 +46,7 @@ class UserAccount extends Authenticatable
 
     public function getAuthIdentifier()
     {
-        \Log::info('Auth identifier check', [
+        Log::info('Auth identifier check', [
             'primary_key' => $this->primaryKey,
             'value' => $this->{$this->primaryKey},
             'raw_attributes' => $this->attributes

@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\UnitOfMeasure;
+use App\Models\Unit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class UnitController extends Controller
 {
@@ -12,7 +13,9 @@ class UnitController extends Controller
      */
     public function index()
     {
-        $units = UnitOfMeasure::with('createdBy')->get();
+        $units = Unit::where('IsDeleted', false)
+            ->with('createdBy')
+            ->get();
         return view('units.index', compact('units'));
     }
 
@@ -33,9 +36,9 @@ class UnitController extends Controller
             'UnitName' => 'required|unique:UnitOfMeasure,UnitName'
         ]);
 
-        $unit = new UnitOfMeasure();
+        $unit = new Unit();
         $unit->UnitName = $request->UnitName;
-        $unit->CreatedById = auth()->id();
+        $unit->CreatedById = Auth::id();
         $unit->DateCreated = now();
         $unit->save();
 
@@ -63,7 +66,7 @@ class UnitController extends Controller
      */
     public function update(Request $request, $unit)
     {
-        $unitOfMeasure = UnitOfMeasure::findOrFail($unit);
+        $unitOfMeasure = Unit::findOrFail($unit);
         
         $request->validate([
             'UnitName' => 'required|unique:UnitOfMeasure,UnitName,' . $unitOfMeasure->UnitOfMeasureId . ',UnitOfMeasureId'
@@ -80,7 +83,7 @@ class UnitController extends Controller
      */
     public function destroy($unit)
     {
-        $unitOfMeasure = UnitOfMeasure::findOrFail($unit);
+        $unitOfMeasure = Unit::findOrFail($unit);
         $unitOfMeasure->delete();
 
         return redirect()->route('units.index')->with('success', 'Unit deleted successfully');

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Supplier extends Model
 {
-    protected $table = 'Suppliers';
+    protected $table = 'suppliers';
     protected $primaryKey = 'SupplierID';
     public $timestamps = false;
 
@@ -23,8 +23,21 @@ class Supplier extends Model
         'IsDeleted'
     ];
 
+    // Add a boot method to ensure SupplierName is never null
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($supplier) {
+            if (empty($supplier->SupplierName)) {
+                $supplier->SupplierName = 'Unknown Supplier';
+            }
+        });
+    }
+
     public function items()
     {
-        return $this->hasMany(Item::class, 'SupplierID');
+        return $this->hasMany(Item::class, 'SupplierID', 'SupplierID')
+                    ->where('IsDeleted', 0);
     }
 } 

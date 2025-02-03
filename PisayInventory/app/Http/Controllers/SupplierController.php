@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class SupplierController extends Controller
 {
@@ -40,7 +41,7 @@ class SupplierController extends Controller
             'SupplierName' => $request->SupplierName,
             'ContactNum' => $request->ContactNum,
             'Address' => $request->Address,
-            'CreatedById' => auth()->id(),
+            'CreatedById' => Auth::id(),
             'DateCreated' => Carbon::now(),
             'IsDeleted' => false
         ]);
@@ -81,7 +82,7 @@ class SupplierController extends Controller
             'SupplierName' => $request->SupplierName,
             'ContactNum' => $request->ContactNum,
             'Address' => $request->Address,
-            'ModifiedById' => auth()->id(),
+            'ModifiedById' => Auth::id(),
             'DateModified' => Carbon::now()
         ]);
 
@@ -97,7 +98,7 @@ class SupplierController extends Controller
         $supplier = Supplier::findOrFail($id);
         $supplier->update([
             'IsDeleted' => true,
-            'DeletedById' => auth()->id(),
+            'DeletedById' => Auth::id(),
             'DateDeleted' => Carbon::now()
         ]);
 

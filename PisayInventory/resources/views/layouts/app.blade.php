@@ -4,11 +4,11 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title>@yield('title') - PSHS Inventory</title>
+        <title>@yield('title', 'PSHS Inventory')</title>
         <!-- Bootstrap CSS -->
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <!-- Bootstrap Icons -->
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
         <!-- Google Fonts -->
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <!-- DataTables CSS -->
@@ -424,86 +424,12 @@
         @yield('additional_styles')
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+        <link href="{{ asset('css/app.css') }}" rel="stylesheet">
     </head>
     <body>
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <h4>PSHS Inventory</h4>
-            </div>
-            <div class="sidebar-menu mt-4">
-                <a href="{{ route('dashboard') }}" class="menu-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <i class="bi bi-speedometer2"></i>
-                    <span>Dashboard</span>
-                </a>
-
-                @if(Auth::user()->role === 'Admin')
-                    <!-- Employee Management dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-people me-2"></i>
-                            <span>Employee Management</span>
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
-                            <li>
-                                <a class="dropdown-item" href="{{ route('roles.index') }}">
-                                    <i class="bi bi-shield me-2"></i>Roles
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{{ route('roles.policies') }}">
-                                    <i class="bi bi-key me-2"></i>Role Policies
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{{ route('employees.index') }}">
-                                    <i class="bi bi-person-badge me-2"></i>Employees
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                @endif
-
-                <!-- Menu items for both Admin and Inventory Manager -->
-                @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
-                    <a href="{{ route('items.index') }}" class="menu-item {{ request()->routeIs('items.*') ? 'active' : '' }}">
-                        <i class="bi bi-box"></i>
-                        <span>Items</span>
-                    </a>
-                    <a href="{{ route('inventory.index') }}" class="menu-item {{ request()->routeIs('inventory.*') ? 'active' : '' }}">
-                        <i class="bi bi-box-seam"></i>
-                        <span>Inventory</span>
-                    </a>
-                    <a href="{{ route('suppliers.index') }}" class="menu-item {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
-                        <i class="bi bi-truck"></i>
-                        <span>Suppliers</span>
-                    </a>
-                    <a href="{{ route('classifications.index') }}" class="menu-item {{ request()->routeIs('classifications.*') ? 'active' : '' }}">
-                        <i class="bi bi-diagram-3"></i>
-                        <span>Classifications</span>
-                    </a>
-                    <a href="{{ route('units.index') }}" class="menu-item {{ request()->routeIs('units.*') ? 'active' : '' }}">
-                        <i class="bi bi-rulers"></i>
-                        <span>Units</span>
-                    </a>
-                    <a href="{{ route('reports.index') }}" class="menu-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
-                        <i class="bi bi-file-earmark-text"></i>
-                        <span>Reports</span>
-                    </a>
-                @endif
-
-                <form method="POST" action="{{ route('logout') }}" class="mt-4">
-                    @csrf
-                    <button type="submit" class="menu-item w-100 text-start" style="background: none; border: none;">
-                        <i class="bi bi-box-arrow-right"></i>
-                        <span>Logout</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="main-content fade-in">
+        @include('layouts.sidebar')
+        
+        <div class="main-content">
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="bi bi-check-circle me-2"></i>
@@ -525,7 +451,7 @@
 
         <!-- Scripts -->
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
         <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
         <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
         <script>

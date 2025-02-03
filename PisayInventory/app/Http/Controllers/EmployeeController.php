@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EmployeeController extends Controller
 {
@@ -74,7 +75,7 @@ class EmployeeController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            \Log::error('Failed to create employee', [
+            Log::error('Failed to create employee', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile()
@@ -152,7 +153,7 @@ class EmployeeController extends Controller
                            ->with('success', 'Employee updated successfully');
         } catch (\Exception $e) {
             DB::rollback();
-            \Log::error('Employee Update Error', [
+            Log::error('Employee Update Error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request_data' => $request->all()
@@ -205,7 +206,7 @@ class EmployeeController extends Controller
             }
 
             // Debug logging
-            \Log::info('Restoring Employee', [
+            Log::info('Restoring Employee', [
                 'employee_id' => $id,
                 'employee' => $employee->toArray()
             ]);
@@ -233,7 +234,7 @@ class EmployeeController extends Controller
                 ]);
 
             // Debug logging after restore
-            \Log::info('Employee Restored', [
+            Log::info('Employee Restored', [
                 'employee' => DB::table('employee')->where('EmployeeID', $id)->first(),
                 'user_account' => DB::table('useraccount')->where('UserAccountID', $employee->UserAccountID)->first()
             ]);
@@ -243,7 +244,7 @@ class EmployeeController extends Controller
                 ->with('success', 'Employee restored successfully');
         } catch (\Exception $e) {
             DB::rollback();
-            \Log::error('Employee Restore Error', [
+            Log::error('Employee Restore Error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

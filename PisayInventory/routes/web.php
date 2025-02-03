@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
     
     // Items Management
     Route::resource('items', ItemController::class);
+    Route::get('/items/manage', [ItemController::class, 'manage'])->name('items.manage');
 
     // Inventory Management
     Route::resource('inventory', InventoryController::class);

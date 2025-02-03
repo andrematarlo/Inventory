@@ -1,68 +1,83 @@
 @extends('layouts.app')
 
-@section('title', 'Items')
-
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Items Management</h2>
-    <button type="button" class="btn btn-add" data-bs-toggle="modal" data-bs-target="#addItemModal">
-        <i class="bi bi-plus-lg"></i> Add New Item
-    </button>
-</div>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Manage Items</h5>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                        Add New Item
+                    </button>
+                </div>
 
-<!-- Items Table -->
-<div class="card table-card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Item Name</th>
-                        <th>Description</th>
-                        <th>Unit</th>
-                        <th>Classification</th>
-                        <th>Supplier</th>
-                        <th>Created By</th>
-                        <th>Date Created</th>
-                        <th>Modified By</th>
-                        <th>Date Modified</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($items as $item)
-                    <tr>
-                        <td>{{ $item->ItemName }}</td>
-                        <td>{{ $item->Description }}</td>
-                        <td>{{ optional($item->unitOfMeasure)->UnitName ?? 'N/A' }}</td>
-                        <td>{{ optional($item->classification)->ClassificationName ?? 'N/A' }}</td>
-                        <td>
-                            @if($item->supplier)
-                                {{ $item->supplier->SupplierName }}
-                            @else
-                                <span class="text-danger">No Supplier</span>
-                            @endif
-                        </td>
-                        <td>{{ optional($item->createdBy)->Username ?? 'N/A' }}</td>
-                        <td>{{ $item->DateCreated ? date('Y-m-d H:i', strtotime($item->DateCreated)) : 'N/A' }}</td>
-                        <td>{{ optional($item->modifiedBy)->Username ?? 'N/A' }}</td>
-                        <td>{{ $item->DateModified ? date('Y-m-d H:i', strtotime($item->DateModified)) : 'N/A' }}</td>
-                        <td class="action-buttons">
-                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteItemModal{{ $item->ItemId }}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="10" class="text-center">No items found</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                <div class="card-body">
+                    @if(session('success'))
+                        <div class="alert alert-success">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="alert alert-danger">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th>Description</th>
+                                    <th>Classification</th>
+                                    <th>Unit</th>
+                                    <th>Supplier</th>
+                                    <th>Stocks</th>
+                                    <th>Reorder Point</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($items as $item)
+                                    <tr>
+                                        <td>{{ $item->ItemName }}</td>
+                                        <td>{{ $item->Description }}</td>
+                                        <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
+                                        <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
+                                        <td>
+                                            @if($item->supplier)
+                                                {{ $item->supplier->SupplierName }}
+                                            @else
+                                                <span class="text-danger">No Supplier</span>
+                                            @endif
+                                        </td>
+                                        <td>{{ $item->StocksAvailable }}</td>
+                                        <td>{{ $item->ReorderPoint }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-primary" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editItemModal{{ $item->ItemId }}">
+                                                Edit
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteItemModal{{ $item->ItemId }}">
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="text-center">No items found</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -90,7 +105,7 @@
                     <div class="mb-3">
                         <label class="form-label">Description</label>
                         <textarea class="form-control @error('Description') is-invalid @enderror" 
-                                name="Description" rows="3">{{ old('Description') }}</textarea>
+                                name="Description">{{ old('Description') }}</textarea>
                         @error('Description')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -102,8 +117,7 @@
                                 name="ClassificationId" required>
                             <option value="">Select Classification</option>
                             @foreach($classifications as $classification)
-                                <option value="{{ $classification->ClassificationId }}"
-                                    {{ old('ClassificationId') == $classification->ClassificationId ? 'selected' : '' }}>
+                                <option value="{{ $classification->ClassificationId }}">
                                     {{ $classification->ClassificationName }}
                                 </option>
                             @endforeach
@@ -119,8 +133,7 @@
                                 name="UnitOfMeasureId" required>
                             <option value="">Select Unit</option>
                             @foreach($units as $unit)
-                                <option value="{{ $unit->UnitOfMeasureId }}"
-                                    {{ old('UnitOfMeasureId') == $unit->UnitOfMeasureId ? 'selected' : '' }}>
+                                <option value="{{ $unit->UnitOfMeasureId }}">
                                     {{ $unit->UnitName }}
                                 </option>
                             @endforeach
@@ -136,10 +149,12 @@
                                 name="SupplierID" required>
                             <option value="">Select Supplier</option>
                             @foreach($suppliers ?? [] as $supplier)
-                                <option value="{{ $supplier->SupplierID }}"
-                                    {{ old('SupplierID') == $supplier->SupplierID ? 'selected' : '' }}>
-                                    {{ $supplier->SupplierName }}
-                                </option>
+                                @if($supplier)
+                                    <option value="{{ $supplier->SupplierID }}"
+                                        {{ old('SupplierID') == $supplier->SupplierID ? 'selected' : '' }}>
+                                        {{ $supplier->SupplierName }}
+                                    </option>
+                                @endif
                             @endforeach
                         </select>
                         @error('SupplierID')
@@ -147,7 +162,7 @@
                         @enderror
                         @if(empty($suppliers) || $suppliers->count() == 0)
                             <div class="text-danger mt-1">
-                                <small>Please add suppliers first before creating items.</small>
+                                <small>No suppliers available. Please add suppliers first.</small>
                             </div>
                         @endif
                     </div>
@@ -179,7 +194,7 @@
     </div>
 </div>
 
-<!-- Edit Item Modal -->
+<!-- Edit Item Modals -->
 @foreach($items as $item)
 <div class="modal fade" id="editItemModal{{ $item->ItemId }}" tabindex="-1">
     <div class="modal-dialog">
@@ -229,26 +244,18 @@
 
                     <div class="mb-3">
                         <label class="form-label">Supplier</label>
-                        <select class="form-select" name="SupplierID" required>
+                        <select class="form-select @error('SupplierID') is-invalid @enderror" 
+                                name="SupplierID" required>
+                            <option value="">Select Supplier</option>
                             @foreach($suppliers as $supplier)
-                                <option value="{{ $supplier->SupplierID }}"
-                                    {{ $item->SupplierID == $supplier->SupplierID ? 'selected' : '' }}>
-                                    {{ $supplier->SupplierName }}
-                                </option>
+                                @if($supplier)
+                                    <option value="{{ $supplier->SupplierID }}"
+                                        {{ $item->SupplierID == $supplier->SupplierID ? 'selected' : '' }}>
+                                        {{ $supplier->SupplierName }}
+                                    </option>
+                                @endif
                             @endforeach
                         </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Stocks Available</label>
-                        <input type="number" class="form-control" name="StocksAvailable" 
-                               value="{{ old('StocksAvailable', $item->StocksAvailable) }}" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Reorder Point</label>
-                        <input type="number" class="form-control" name="ReorderPoint" 
-                               value="{{ old('ReorderPoint', $item->ReorderPoint) }}" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -259,10 +266,8 @@
         </div>
     </div>
 </div>
-@endforeach
 
 <!-- Delete Item Modal -->
-@foreach($items as $item)
 <div class="modal fade" id="deleteItemModal{{ $item->ItemId }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -286,4 +291,5 @@
     </div>
 </div>
 @endforeach
+
 @endsection 

@@ -16,13 +16,13 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($inventory as $item)
+            @forelse($inventoryItems as $inventory)
             <tr>
-                <td>{{ $item->item->ItemName }}</td>
-                <td>{{ $item->classification->ClassificationName }}</td>
-                <td>{{ $item->StocksAvailable }}</td>
-                <td>{{ $item->StocksAdded }}</td>
-                <td>{{ $item->DateModified }}</td>
+                <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
+                <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
+                <td>{{ $inventory->StocksAvailable ?? 0 }}</td>
+                <td>{{ $inventory->StocksAdded ?? 0 }}</td>
+                <td>{{ $inventory->DateModified ? date('Y-m-d H:i', strtotime($inventory->DateModified)) : 'N/A' }}</td>
             </tr>
             @empty
             <tr>

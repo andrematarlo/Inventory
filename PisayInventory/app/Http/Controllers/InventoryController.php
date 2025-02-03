@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Inventory;
 use App\Models\Item;
 use App\Models\Classification;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class InventoryController extends Controller
 {
@@ -15,13 +18,14 @@ class InventoryController extends Controller
      */
     public function index()
     {
-        $inventory = Inventory::with(['item', 'classification'])
-            ->where('IsDeleted', false)
-            ->get();
-        $items = Item::where('IsDeleted', false)->get();
-        $classifications = Classification::all();
+        $inventories = Inventory::with(['item', 'employee'])
+            ->where('IsDeleted', 0)
+            ->latest('DateCreated')
+            ->paginate(10);
+
+        $items = Item::where('IsDeleted', 0)->get();
         
-        return view('inventory.index', compact('inventory', 'items', 'classifications'));
+        return view('inventory.index', compact('inventories', 'items'));
     }
 
     /**
@@ -37,25 +41,42 @@ class InventoryController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'ItemId' => 'required|exists:Items,ItemId',
-            'ClassificationId' => 'required|exists:Classification,ClassificationId',
-            'StocksAvailable' => 'required|integer|min:0',
-            'StocksAdded' => 'required|integer|min:0'
-        ]);
+        try {
+            DB::beginTransaction();
 
-        Inventory::create([
-            'ItemId' => $request->ItemId,
-            'ClassificationId' => $request->ClassificationId,
-            'StocksAvailable' => $request->StocksAvailable,
-            'StocksAdded' => $request->StocksAdded,
-            'CreatedById' => auth()->id(),
-            'DateCreated' => Carbon::now(),
-            'IsDeleted' => false
-        ]);
+            // Validate request
+            $validated = $request->validate([
+                'ItemId' => 'required|exists:items,ItemId',
+                'StocksAdded' => 'required|numeric',
+                'remarks' => 'nullable|string'
+            ]);
 
-        return redirect()->route('inventory.index')
-            ->with('success', 'Inventory added successfully');
+            $item = Item::findOrFail($validated['ItemId']);
+
+            // Create inventory record
+            $inventory = new Inventory();
+            $inventory->ItemId = $validated['ItemId'];
+            $inventory->StocksAdded = $validated['StocksAdded'];
+            $inventory->StocksAvailable = $item->StocksAvailable + $validated['StocksAdded'];
+            $inventory->DateCreated = now();
+            $inventory->CreatedById = Auth::id();
+            $inventory->IsDeleted = false;
+            $inventory->save();
+
+            // Update item stock
+            $item->StocksAvailable = $inventory->StocksAvailable;
+            $item->ModifiedById = Auth::id();
+            $item->DateModified = now();
+            $item->save();
+
+            DB::commit();
+            return back()->with('success', 'Inventory updated successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Inventory update failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to update inventory. Please try again.')->withInput();
+        }
     }
 
     /**
@@ -77,44 +98,73 @@ class InventoryController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $itemId, $classificationId)
+    public function update(Request $request, $id)
     {
-        $request->validate([
-            'StocksAvailable' => 'required|integer|min:0',
-            'StocksAdded' => 'required|integer|min:0'
-        ]);
+        try {
+            DB::beginTransaction();
 
-        $inventory = Inventory::where('ItemId', $itemId)
-            ->where('ClassificationId', $classificationId)
-            ->firstOrFail();
+            $inventory = Inventory::findOrFail($id);
+            $oldQuantity = $inventory->Quantity;
 
-        $inventory->update([
-            'StocksAvailable' => $request->StocksAvailable,
-            'StocksAdded' => $request->StocksAdded,
-            'ModifiedById' => auth()->id(),
-            'DateModified' => Carbon::now()
-        ]);
+            $request->validate([
+                'Quantity' => 'required|integer',
+                'InventoryDate' => 'required|date'
+            ]);
 
-        return redirect()->route('inventory.index')
-            ->with('success', 'Inventory updated successfully');
+            // Update inventory record
+            $inventory->update([
+                'Quantity' => $request->Quantity,
+                'InventoryDate' => $request->InventoryDate,
+                'ModifiedById' => Auth::id(),
+                'DateModified' => now()
+            ]);
+
+            // Update item stock
+            $item = $inventory->item;
+            $item->StocksAvailable += ($request->Quantity - $oldQuantity);
+            $item->ModifiedById = Auth::id();
+            $item->DateModified = now();
+            $item->save();
+
+            DB::commit();
+            return back()->with('success', 'Inventory updated successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Inventory update failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to update inventory')->withInput();
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($itemId, $classificationId)
+    public function destroy($id)
     {
-        $inventory = Inventory::where('ItemId', $itemId)
-            ->where('ClassificationId', $classificationId)
-            ->firstOrFail();
+        try {
+            DB::beginTransaction();
 
-        $inventory->update([
-            'IsDeleted' => true,
-            'DeletedById' => auth()->id(),
-            'DateDeleted' => Carbon::now()
-        ]);
+            $inventory = Inventory::findOrFail($id);
+            
+            // Update item stock before deleting inventory record
+            $item = $inventory->item;
+            $item->StocksAvailable -= $inventory->Quantity;
+            $item->ModifiedById = Auth::id();
+            $item->DateModified = now();
+            $item->save();
 
-        return redirect()->route('inventory.index')
-            ->with('success', 'Inventory deleted successfully');
+            // Soft delete inventory record
+            $inventory->update([
+                'IsDeleted' => true,
+                'DeletedById' => Auth::id(),
+                'DateDeleted' => now()
+            ]);
+
+            DB::commit();
+            return back()->with('success', 'Inventory record deleted successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Inventory deletion failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete inventory record');
+        }
     }
 }
