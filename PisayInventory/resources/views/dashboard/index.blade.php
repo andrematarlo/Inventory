@@ -9,36 +9,56 @@
             <div class="row mt-4">
                 <div class="col-md-3">
                     <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Total Items</h5>
-                            <p class="card-text display-4">{{ $totalItems ?? 0 }}</p>
+                        <div class="card-body d-flex">
+                            <div>
+                                <h5 class="card-title fs-6">Total Items</h5>
+                                <p class="card-text display-4 mb-0">{{ $totalItems ?? 0 }}</p>
+                            </div>
+                            <div class="ms-auto d-flex align-items-center">
+                                <i class="bi bi-box-seam-fill text-primary opacity-75" style="font-size: 4rem;"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-md-3">
                     <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Total Employees</h5>
-                            <p class="card-text display-4">{{ $totalEmployees ?? 0 }}</p>
+                        <div class="card-body d-flex">
+                            <div>
+                                <h5 class="card-title fs-6">Total Employees</h5>
+                                <p class="card-text display-4 mb-0">{{ $totalEmployees ?? 0 }}</p>
+                            </div>
+                            <div class="ms-auto d-flex align-items-center">
+                                <i class="bi bi-people-fill text-success opacity-75" style="font-size: 4rem;"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-md-3">
                     <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Total Suppliers</h5>
-                            <p class="card-text display-4">{{ $totalSuppliers ?? 0 }}</p>
+                        <div class="card-body d-flex">
+                            <div>
+                                <h5 class="card-title fs-6">Total Suppliers</h5>
+                                <p class="card-text display-4 mb-0">{{ $totalSuppliers ?? 0 }}</p>
+                            </div>
+                            <div class="ms-auto d-flex align-items-center">
+                                <i class="bi bi-truck-front-fill text-danger opacity-75" style="font-size: 4rem;"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-md-3">
                     <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Low Stock Items</h5>
-                            <p class="card-text display-4">{{ $lowStockItems ?? 0 }}</p>
+                        <div class="card-body d-flex">
+                            <div>
+                                <h5 class="card-title fs-6">Low Stock Items</h5>
+                                <p class="card-text display-4 mb-0">{{ $lowStockItems ?? 0 }}</p>
+                            </div>
+                            <div class="ms-auto d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle-fill text-warning opacity-75" style="font-size: 4rem;"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
