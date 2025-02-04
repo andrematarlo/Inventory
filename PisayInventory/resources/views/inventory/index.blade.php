@@ -30,6 +30,7 @@
                             <th>Item</th>
                             <th>Classification</th>
                             <th>Stocks Added</th>
+                            <th>Stocks Out</th>
                             <th>Stocks Available</th>
                             <th>Created By</th>
                             <th>Date Created</th>
@@ -47,6 +48,7 @@
                             <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
                             <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
                             <td>{{ $inventory->StocksAdded }}</td>
+                            <td>{{ $inventory->StockOut }}</td>
                             <td>{{ $inventory->StocksAvailable }}</td>
                             <td>{{ $inventory->created_by_user->Username ?? 'N/A' }}</td>
                             <td>{{ $inventory->DateCreated ? date('Y-m-d H:i', strtotime($inventory->DateCreated)) : 'N/A' }}</td>
@@ -88,7 +90,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="12" class="text-center">No inventory records found</td>
+                            <td colspan="13" class="text-center">No inventory records found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -192,56 +194,72 @@ $(document).ready(function() {
         
         const formData = {
             ItemId: $('#ItemId').val(),
-            ClassificationId: $('#ClassificationId').val(),
+            type: $('select[name="type"]').val(),
             StocksAdded: $('#StocksAdded').val(),
             _token: $('meta[name="csrf-token"]').attr('content')
         };
+
+        console.log('Sending data:', formData);
 
         $.ajax({
             url: "{{ route('inventory.store') }}",
             type: 'POST',
             data: formData,
             success: function(response) {
+                console.log('Success response:', response);
                 if (response.success) {
-                    // Add new row to table
                     const newRow = `
                         <tr data-inventory-id="${response.data.InventoryID}">
                             <td>${response.data.ItemName}</td>
                             <td>${response.data.ClassificationName}</td>
-                            <td class="stocks-added">${response.data.StocksAdded}</td>
-                            <td class="stock-out">0</td>
-                            <td class="stocks-available">${response.data.StocksAvailable}</td>
+                            <td>${response.data.StocksAdded}</td>
+                            <td>${response.data.StockOut}</td>
+                            <td>${response.data.StocksAvailable}</td>
+                            <td>${response.data.CreatedBy}</td>
+                            <td>${response.data.DateCreated}</td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                            <td><span class="badge bg-success">Active</span></td>
                             <td>
-                                <div class="action-buttons d-flex gap-2">
-                                    <button type="button" class="btn btn-sm btn-primary" title="Edit"
-                                            data-bs-toggle="modal" data-bs-target="#editModal${response.data.InventoryID}">
-                                        <i class="bi bi-pencil"></i>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editInventoryModal${response.data.InventoryID}">
+                                        <i class="bi bi-pencil"></i> Edit
                                     </button>
                                     <form action="/inventory/${response.data.InventoryID}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete"
-                                                onclick="return confirm('Are you sure?')">
-                                            <i class="bi bi-trash"></i>
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+                                            <i class="bi bi-trash"></i> Delete
                                         </button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
                     `;
-                    $('#inventoryTable tbody').prepend(newRow);
                     
-                    // Clear form and close modal
+                    $('#inventoryTable tbody').prepend(newRow);
                     $('#addInventoryForm')[0].reset();
                     $('#addInventoryModal').modal('hide');
                     
-                    // Show success message
-                    alert('Inventory added successfully!');
+                    alert('Inventory ' + (formData.type === 'in' ? 'added' : 'removed') + ' successfully!');
+                    location.reload(); // Reload to update all values
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error:', error);
-                alert('Failed to add inventory');
+                console.error('Error details:', {
+                    xhr: xhr.responseJSON,
+                    status: status,
+                    error: error
+                });
+                
+                let errorMessage = 'Failed to add inventory';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                
+                alert(errorMessage);
             }
         });
     });
