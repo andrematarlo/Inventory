@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmployeeDashboardController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\SupplierController;
@@ -13,10 +14,14 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\EmployeeController;
 use Illuminate\Support\Facades\Route;
 
+
 // Welcome page as the default route
 Route::get('/', function () {
     return view('welcome');
 })->name('welcome');
+
+Route::get('/', [EmployeeDashboardController::class, 'index'])->name('employee.dashboard');
+
 
 // Authentication Routes
 Route::middleware('guest')->group(function () {
