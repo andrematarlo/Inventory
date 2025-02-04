@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Classification;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ClassificationController extends Controller
 {
@@ -14,10 +15,8 @@ class ClassificationController extends Controller
      */
     public function index()
     {
-        $classifications = Classification::active()->get();
-        $trashedClassifications = Classification::trashed()->get();
-        $parentClassifications = Classification::active()->whereNull('ParentClassificationId')->get();
-        return view('classifications.index', compact('classifications', 'trashedClassifications', 'parentClassifications'));
+        $classifications = Classification::where('IsDeleted', 0)->get();
+        return view('classifications.index', compact('classifications'));
     }
 
     /**
@@ -33,21 +32,27 @@ class ClassificationController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'ClassificationName' => 'required|string|max:255',
-            'ParentClassificationId' => 'nullable|exists:classification,ClassificationId'
-        ]);
+        try {
+            DB::beginTransaction();
 
-        Classification::create([
-            'ClassificationName' => $request->ClassificationName,
-            'ParentClassificationId' => $request->ParentClassificationId,
-            'CreatedById' => auth()->user()->UserAccountID,
-            'DateCreated' => Carbon::now()->format('Y-m-d H:i:s'),
-            'IsDeleted' => false
-        ]);
+            $validated = $request->validate([
+                'ClassificationName' => 'required|string|max:255|unique:classification,ClassificationName'
+            ]);
 
-        return redirect()->route('classifications.index')
-            ->with('success', 'Classification added successfully');
+            Classification::create([
+                'ClassificationName' => $validated['ClassificationName'],
+                'CreatedById' => Auth::user()->UserAccountID,
+                'DateCreated' => Carbon::now()->format('Y-m-d H:i:s'),
+                'IsDeleted' => false
+            ]);
+
+            DB::commit();
+            return back()->with('success', 'Classification created successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to create classification: ' . $e->getMessage())
+                        ->withInput();
+        }
     }
 
     /**

@@ -8,12 +8,14 @@ class Inventory extends Model
 {
     protected $table = 'inventory';
     protected $primaryKey = 'InventoryId';
+    public $incrementing = false;
     public $timestamps = false;
 
     protected $fillable = [
         'ItemId',
-        'Quantity',
-        'EmployeeId',
+        'ClassificationId',
+        'StocksAdded',
+        'StocksAvailable',
         'DateCreated',
         'CreatedById',
         'DateModified',
@@ -23,23 +25,41 @@ class Inventory extends Model
         'IsDeleted'
     ];
 
+    // Query scopes
+    public function scopeActive($query)
+    {
+        return $query->where('IsDeleted', false);
+    }
+
+    public function scopeTrashed($query)
+    {
+        return $query->where('IsDeleted', true);
+    }
+
+    // Relationships
     public function item()
     {
         return $this->belongsTo(Item::class, 'ItemId', 'ItemId');
     }
 
-    public function employee()
+    public function created_by_user()
     {
-        return $this->belongsTo(Employee::class, 'EmployeeId', 'EmployeeId');
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
     }
 
-    public function createdBy()
+    public function modified_by_user()
     {
-        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountId');
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
     }
 
-    public function modifiedBy()
+    public function deleted_by_user()
     {
-        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountId');
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
     }
 } 

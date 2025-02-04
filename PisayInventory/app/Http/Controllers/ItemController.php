@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\Classification;
-use App\Models\UnitOfMeasure;
+use App\Models\Unit;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ItemController extends Controller
 {
@@ -19,10 +20,9 @@ class ItemController extends Controller
             // Basic query without relationships first
             $items = Item::where('IsDeleted', 0);
             
-            // Log the basic query
-            \Log::info('Basic items query:', ['count' => $items->count()]);
+            Log::info('Basic items query:', ['count' => $items->count()]);
             
-            // Now add relationships
+            // Now add relationships with correct names
             $items = $items->with([
                 'classification' => function($query) {
                     $query->where('IsDeleted', 0);
@@ -33,16 +33,15 @@ class ItemController extends Controller
                 'supplier' => function($query) {
                     $query->where('IsDeleted', 0);
                 },
-                'createdBy',
-                'modifiedBy'
+                'created_by_user',
+                'modified_by_user'
             ])->get();
 
             $classifications = Classification::where('IsDeleted', 0)->get();
-            $units = UnitOfMeasure::where('IsDeleted', 0)->get();
+            $units = Unit::where('IsDeleted', 0)->get();
             $suppliers = Supplier::where('IsDeleted', 0)->get();
 
-            // Log loaded data
-            \Log::info('Data loaded:', [
+            Log::info('Data loaded:', [
                 'items_count' => $items->count(),
                 'classifications_count' => $classifications->count(),
                 'units_count' => $units->count(),
@@ -51,18 +50,16 @@ class ItemController extends Controller
 
             return view('items.index', compact('items', 'classifications', 'units', 'suppliers'));
         } catch (\Exception $e) {
-            // Log the full error details
-            \Log::error('Error in ItemController@index: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Error in ItemController@index: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             
-            // Return a more specific error message
             return back()->with('error', 'Unable to load items. Error: ' . $e->getMessage());
         }
     }
 
     public function create()
     {
-        $units = UnitOfMeasure::all();
+        $units = Unit::all();
         $suppliers = Supplier::all();
         $classifications = Classification::all();
         return view('items.create', compact('units', 'suppliers', 'classifications'));
@@ -72,9 +69,6 @@ class ItemController extends Controller
     {
         DB::beginTransaction();
         try {
-            // Log all request data
-            \Log::info('Item creation request data:', $request->all());
-
             $validated = $request->validate([
                 'ItemName' => 'required|string|max:255',
                 'Description' => 'nullable|string',
@@ -85,8 +79,14 @@ class ItemController extends Controller
                 'ReorderPoint' => 'required|integer|min:0'
             ]);
 
-            // Log validated data
-            \Log::info('Validated data:', $validated);
+            // Check if classification exists and is active
+            $classification = Classification::where('ClassificationId', $validated['ClassificationId'])
+                ->where('IsDeleted', 0)
+                ->first();
+
+            if (!$classification) {
+                throw new \Exception('Selected classification is not valid or has been deleted.');
+            }
 
             $item = Item::create([
                 'ItemName' => $validated['ItemName'],
@@ -96,8 +96,8 @@ class ItemController extends Controller
                 'SupplierID' => $validated['SupplierID'],
                 'StocksAvailable' => $validated['StocksAvailable'],
                 'ReorderPoint' => $validated['ReorderPoint'],
-                'CreatedById' => Auth::id(),
-                'DateCreated' => Carbon::now(),
+                'CreatedById' => Auth::user()->UserAccountID,
+                'DateCreated' => Carbon::now()->format('Y-m-d H:i:s'),
                 'IsDeleted' => false
             ]);
 
@@ -106,7 +106,6 @@ class ItemController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Item creation failed: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return back()->with('error', 'Error creating item: ' . $e->getMessage())
                         ->withInput();
         }
@@ -147,7 +146,7 @@ class ItemController extends Controller
             return redirect()->route('items.index')->with('success', 'Item updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Update failed: ' . $e->getMessage());
+            Log::error('Update failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to update item')->withInput();
         }
     }
@@ -168,7 +167,7 @@ class ItemController extends Controller
             return redirect()->route('items.index')->with('success', 'Item deleted successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Item deletion failed: ' . $e->getMessage());
+            Log::error('Item deletion failed: ' . $e->getMessage());
             return back()->with('error', 'Error deleting item: ' . $e->getMessage());
         }
     }
@@ -176,23 +175,26 @@ class ItemController extends Controller
     public function manage()
     {
         try {
-            // Eager load relationships with null checks
-            $items = Item::with(['classification' => function($query) {
+            // Eager load relationships with correct names
+            $items = Item::with([
+                'classification' => function($query) {
                     $query->where('IsDeleted', 0);
-                }, 'unitOfMeasure' => function($query) {
+                },
+                'unitOfMeasure' => function($query) {
                     $query->where('IsDeleted', 0);
-                }, 'supplier' => function($query) {
+                },
+                'supplier' => function($query) {
                     $query->where('IsDeleted', 0);
-                }])
-                ->where('IsDeleted', 0)
-                ->get();
+                }
+            ])
+            ->where('IsDeleted', 0)
+            ->get();
             
             $classifications = Classification::where('IsDeleted', 0)->get();
-            $units = UnitOfMeasure::where('IsDeleted', 0)->get();
+            $units = Unit::where('IsDeleted', 0)->get();
             $suppliers = Supplier::where('IsDeleted', 0)->get();
 
-            // Log data for debugging
-            \Log::info('Items loaded:', [
+            Log::info('Items loaded:', [
                 'items_count' => $items->count(),
                 'items_with_null_supplier' => $items->whereNull('supplier')->count(),
                 'suppliers_count' => $suppliers->count()
@@ -200,8 +202,8 @@ class ItemController extends Controller
 
             return view('items.manage', compact('items', 'classifications', 'units', 'suppliers'));
         } catch (\Exception $e) {
-            \Log::error('Error in ItemController@manage: ' . $e->getMessage());
-            \Log::error($e->getTraceAsString());
+            Log::error('Error in ItemController@manage: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
             return back()->with('error', 'Error loading items management page');
         }
     }

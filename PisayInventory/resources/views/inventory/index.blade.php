@@ -18,26 +18,30 @@
                     <thead>
                         <tr>
                             <th>Item</th>
-                            <th>Quantity</th>
-                            <th>Type</th>
-                            <th>Employee</th>
-                            <th>Date</th>
-                            <th>Remarks</th>
+                            <th>Classification</th>
+                            <th>Stocks Added</th>
+                            <th>Stocks Available</th>
+                            <th>Created By</th>
+                            <th>Date Created</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($inventories as $inventory)
                         <tr>
                             <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
-                            <td>{{ $inventory->quantity ?? 0 }}</td>
-                            <td>{{ ucfirst($inventory->type ?? 'N/A') }}</td>
-                            <td>{{ $inventory->employee->FirstName ?? 'N/A' }} {{ $inventory->employee->LastName ?? '' }}</td>
+                            <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
+                            <td>{{ $inventory->StocksAdded }}</td>
+                            <td>{{ $inventory->StocksAvailable }}</td>
+                            <td>{{ $inventory->created_by_user->Username ?? 'N/A' }}</td>
                             <td>{{ $inventory->DateCreated ? date('Y-m-d H:i', strtotime($inventory->DateCreated)) : 'N/A' }}</td>
-                            <td>{{ $inventory->remarks ?? 'N/A' }}</td>
+                            <td>
+                                <!-- Add your action buttons here -->
+                            </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="text-center">No inventory records found</td>
+                            <td colspan="7" class="text-center">No inventory records found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -65,7 +69,12 @@
                         <select class="form-select" name="ItemId" required>
                             <option value="">Select Item</option>
                             @foreach($items as $item)
-                                <option value="{{ $item->ItemId }}">{{ $item->ItemName }}</option>
+                                <option value="{{ $item->ItemId }}">
+                                    {{ $item->ItemName }} 
+                                    (ID: {{ $item->ItemId }})
+                                    - {{ $item->classification->ClassificationName ?? 'No Category' }}
+                                    - Available: {{ $item->StocksAvailable }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
@@ -78,11 +87,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Quantity</label>
-                        <input type="number" class="form-control" name="quantity" min="1" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Remarks</label>
-                        <textarea class="form-control" name="remarks" rows="3"></textarea>
+                        <input type="number" class="form-control" name="StocksAdded" min="1" required>
                     </div>
                 </div>
                 <div class="modal-footer">

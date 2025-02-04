@@ -13,8 +13,8 @@ class Item extends Model
     protected $fillable = [
         'ItemName',
         'Description',
-        'ClassificationId',
         'UnitOfMeasureId',
+        'ClassificationId',
         'SupplierID',
         'StocksAvailable',
         'ReorderPoint',
@@ -27,36 +27,51 @@ class Item extends Model
         'IsDeleted'
     ];
 
+    // Add query scopes
+    public function scopeActive($query)
+    {
+        return $query->where('IsDeleted', false);
+    }
+
+    public function scopeTrashed($query)
+    {
+        return $query->where('IsDeleted', true);
+    }
+
+    // Relationships
     public function classification()
     {
-        return $this->belongsTo(Classification::class, 'ClassificationId', 'ClassificationId')
-                    ->where('IsDeleted', 0)
-                    ->withDefault(['ClassificationName' => 'N/A']);
+        return $this->belongsTo(Classification::class, 'ClassificationId', 'ClassificationId');
     }
 
     public function unitOfMeasure()
     {
-        return $this->belongsTo(UnitOfMeasure::class, 'UnitOfMeasureId', 'UnitOfMeasureId')
-                    ->where('IsDeleted', 0)
-                    ->withDefault(['UnitName' => 'N/A']);
+        return $this->belongsTo(UnitOfMeasure::class, 'UnitOfMeasureId', 'UnitOfMeasureId');
     }
 
     public function supplier()
     {
-        return $this->belongsTo(Supplier::class, 'SupplierID', 'SupplierID')
-                    ->where('IsDeleted', 0)
-                    ->withDefault(['SupplierName' => 'N/A']);
+        return $this->belongsTo(Supplier::class, 'SupplierID', 'SupplierID');
     }
 
-    public function createdBy()
+    public function created_by_user()
     {
-        return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID')
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
+                    ->from('UserAccount')
                     ->withDefault(['Username' => 'N/A']);
     }
 
-    public function modifiedBy()
+    public function modified_by_user()
     {
-        return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID')
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    public function deleted_by_user()
+    {
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
+                    ->from('UserAccount')
                     ->withDefault(['Username' => 'N/A']);
     }
 

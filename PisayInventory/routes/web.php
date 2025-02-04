@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
 
     // Inventory Management
     Route::resource('inventory', InventoryController::class);
+    Route::post('inventory/{id}/restore', [InventoryController::class, 'restore'])->name('inventory.restore');
 
     // Suppliers Management
     Route::resource('suppliers', SupplierController::class);
