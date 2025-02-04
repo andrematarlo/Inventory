@@ -94,21 +94,21 @@
                             <td class="align-middle">{{ $supplier->SupplierName }}</td>
                             <td class="align-middle">{{ $supplier->ContactNum }}</td>
                             <td class="align-middle">{{ $supplier->Address }}</td>
-                            <td class="align-middle">{{ $supplier->createdBy->Username ?? 'N/A' }}</td>
+                            <td class="align-middle">{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
                             <td class="align-middle">{{ $supplier->DateCreated ? date('Y-m-d H:i', strtotime($supplier->DateCreated)) : 'N/A' }}</td>
-                            <td class="align-middle">{{ $supplier->modifiedBy->Username ?? 'N/A' }}</td>
+                            <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
                             <td class="align-middle">{{ $supplier->DateModified ? date('Y-m-d H:i', strtotime($supplier->DateModified)) : 'N/A' }}</td>
                             <td class="align-middle text-center">
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-primary" 
                                             data-bs-toggle="modal" 
-                                            data-bs-target="#editSupplierModal{{ $supplier->SupplierId }}"
+                                            data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}"
                                             title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-danger" 
                                             data-bs-toggle="modal" 
-                                            data-bs-target="#deleteSupplierModal{{ $supplier->SupplierId }}"
+                                            data-bs-target="#deleteSupplierModal{{ $supplier->SupplierID }}"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -118,6 +118,52 @@
                         @empty
                         <tr>
                             <td colspan="8" class="text-center py-4">No suppliers found</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this after your main suppliers table -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Deleted Suppliers</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="trashedSuppliersTable">
+                    <thead>
+                        <tr>
+                            <th>Supplier Name</th>
+                            <th>Contact Number</th>
+                            <th>Address</th>
+                            <th>Deleted By</th>
+                            <th>Date Deleted</th>
+                            <th style="width: 10%; text-align: center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($trashedSuppliers as $supplier)
+                        <tr>
+                            <td>{{ $supplier->SupplierName }}</td>
+                            <td>{{ $supplier->ContactNum }}</td>
+                            <td>{{ $supplier->Address }}</td>
+                            <td>{{ $supplier->deleted_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
+                            <td class="text-center">
+                                <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-success" title="Restore">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="6" class="text-center">No deleted suppliers found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -226,6 +272,7 @@
 @section('scripts')
 <script>
     $(document).ready(function() {
+        // Initialize suppliers table
         if ($.fn.DataTable.isDataTable('#suppliersTable')) {
             $('#suppliersTable').DataTable().destroy();
         }
@@ -249,7 +296,38 @@
                  "<'row'<'col-sm-12'tr>>" +
                  "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
             drawCallback: function(settings) {
-                // Add Bootstrap classes to DataTables elements
+                $('.dataTables_wrapper .row').addClass('g-3');
+                $('.dataTables_length select').addClass('form-select form-select-sm');
+                $('.dataTables_filter input').addClass('form-control form-control-sm');
+                $('.dataTables_info').addClass('text-muted');
+                $('.pagination').addClass('pagination-sm');
+            }
+        });
+
+        // Initialize trashed suppliers table
+        if ($.fn.DataTable.isDataTable('#trashedSuppliersTable')) {
+            $('#trashedSuppliersTable').DataTable().destroy();
+        }
+
+        $('#trashedSuppliersTable').DataTable({
+            pageLength: 10,
+            ordering: true,
+            responsive: true,
+            columnDefs: [
+                { orderable: false, targets: -1 }
+            ],
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search deleted suppliers...",
+                lengthMenu: "_MENU_ deleted suppliers per page",
+                info: "Showing _START_ to _END_ of _TOTAL_ deleted suppliers",
+                infoEmpty: "Showing 0 to 0 of 0 deleted suppliers",
+                infoFiltered: "(filtered from _MAX_ total deleted suppliers)"
+            },
+            dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                 "<'row'<'col-sm-12'tr>>" +
+                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            drawCallback: function(settings) {
                 $('.dataTables_wrapper .row').addClass('g-3');
                 $('.dataTables_length select').addClass('form-select form-select-sm');
                 $('.dataTables_filter input').addClass('form-control form-control-sm');

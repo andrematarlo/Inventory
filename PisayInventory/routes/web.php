@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
 
     // Suppliers Management
     Route::resource('suppliers', SupplierController::class);
+    Route::post('suppliers/{id}/restore', [SupplierController::class, 'restore'])->name('suppliers.restore');
 
     // Classifications Management
     Route::resource('classifications', ClassificationController::class);

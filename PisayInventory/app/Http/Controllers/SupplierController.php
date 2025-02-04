@@ -14,8 +14,9 @@ class SupplierController extends Controller
      */
     public function index()
     {
-        $suppliers = Supplier::where('IsDeleted', false)->get();
-        return view('suppliers.index', compact('suppliers'));
+        $suppliers = Supplier::active()->get();
+        $trashedSuppliers = Supplier::trashed()->get();
+        return view('suppliers.index', compact('suppliers', 'trashedSuppliers'));
     }
 
     /**
@@ -41,8 +42,8 @@ class SupplierController extends Controller
             'SupplierName' => $request->SupplierName,
             'ContactNum' => $request->ContactNum,
             'Address' => $request->Address,
-            'CreatedById' => Auth::id(),
-            'DateCreated' => Carbon::now(),
+            'CreatedById' => auth()->user()->UserAccountID,
+            'DateCreated' => Carbon::now()->format('Y-m-d H:i:s'),
             'IsDeleted' => false
         ]);
 
@@ -78,12 +79,13 @@ class SupplierController extends Controller
         ]);
 
         $supplier = Supplier::findOrFail($id);
+        
         $supplier->update([
             'SupplierName' => $request->SupplierName,
             'ContactNum' => $request->ContactNum,
             'Address' => $request->Address,
-            'ModifiedById' => Auth::id(),
-            'DateModified' => Carbon::now()
+            'ModifiedById' => auth()->user()->UserAccountID,
+            'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
         ]);
 
         return redirect()->route('suppliers.index')
@@ -96,13 +98,30 @@ class SupplierController extends Controller
     public function destroy($id)
     {
         $supplier = Supplier::findOrFail($id);
+        
         $supplier->update([
             'IsDeleted' => true,
-            'DeletedById' => Auth::id(),
-            'DateDeleted' => Carbon::now()
+            'DeletedById' => auth()->user()->UserAccountID,
+            'DateDeleted' => Carbon::now()->format('Y-m-d H:i:s')
         ]);
 
         return redirect()->route('suppliers.index')
-            ->with('success', 'Supplier deleted successfully');
+            ->with('success', 'Supplier moved to trash successfully');
+    }
+
+    public function restore($id)
+    {
+        $supplier = Supplier::findOrFail($id);
+        
+        $supplier->update([
+            'IsDeleted' => false,
+            'DeletedById' => null,
+            'DateDeleted' => null,
+            'ModifiedById' => auth()->user()->UserAccountID,
+            'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
+        ]);
+
+        return redirect()->route('suppliers.index')
+            ->with('success', 'Supplier restored successfully');
     }
 }

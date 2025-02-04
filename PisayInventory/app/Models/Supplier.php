@@ -23,7 +23,29 @@ class Supplier extends Model
         'IsDeleted'
     ];
 
-    // Add a boot method to ensure SupplierName is never null
+    // Relationships
+    public function created_by_user()
+    {
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    public function modified_by_user()
+    {
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    public function deleted_by_user()
+    {
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    // Boot method
     protected static function boot()
     {
         parent::boot();
@@ -39,5 +61,16 @@ class Supplier extends Model
     {
         return $this->hasMany(Item::class, 'SupplierID', 'SupplierID')
                     ->where('IsDeleted', 0);
+    }
+
+    // Query scopes
+    public function scopeActive($query)
+    {
+        return $query->where('IsDeleted', false);
+    }
+
+    public function scopeTrashed($query)
+    {
+        return $query->where('IsDeleted', true);
     }
 } 
