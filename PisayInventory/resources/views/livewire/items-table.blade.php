@@ -1,16 +1,11 @@
-@extends('layouts.app')
-
-@section('title', 'Items')
-
-@section('content')
-<div class="container">
-    <div class="d-flex justify-content-end mb-3">
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">Add Item</button>
-    </div>
-
+<div>
     <!-- Active Items Card -->
     <div class="card mb-4">
         <div class="card-body">
+            <div class="d-flex justify-content-end mb-3">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">Add Item</button>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead>
@@ -57,8 +52,13 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-center mt-3">
-                {{ $items->links() }}
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    Showing {{ $items->firstItem() ?? 0 }} to {{ $items->lastItem() ?? 0 }} of {{ $items->total() }} entries
+                </div>
+                <div>
+                    {{ $items->links() }}
+                </div>
             </div>
         </div>
     </div>
@@ -110,18 +110,14 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-center mt-3">
-                {{ $trashedItems->links() }}
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    Showing {{ $trashedItems->firstItem() ?? 0 }} to {{ $trashedItems->lastItem() ?? 0 }} of {{ $trashedItems->total() }} entries
+                </div>
+                <div>
+                    {{ $trashedItems->links() }}
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Add Item Modal -->
-@include('items.partials.add-modal')
-
-<!-- Edit Item Modals -->
-@foreach($items as $item)
-    @include('items.partials.edit-modal', ['item' => $item])
-@endforeach
-@endsection
