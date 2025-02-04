@@ -94,10 +94,14 @@
                             <td class="align-middle">{{ $supplier->SupplierName }}</td>
                             <td class="align-middle">{{ $supplier->ContactNum }}</td>
                             <td class="align-middle">{{ $supplier->Address }}</td>
-                            <td class="align-middle">{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
-                            <td class="align-middle">{{ $supplier->DateCreated ? date('Y-m-d H:i', strtotime($supplier->DateCreated)) : 'N/A' }}</td>
-                            <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
-                            <td class="align-middle">{{ $supplier->DateModified ? date('Y-m-d H:i', strtotime($supplier->DateModified)) : 'N/A' }}</td>
+                            <td class="align-middle">{{ $supplier->createdBy->Username ?? 'N/A' }}</td>
+                            <td class="align-middle datetime-cell" data-timestamp="{{ strtotime($supplier->DateCreated) * 1000 }}">
+                                {{ $supplier->DateCreated ? date('M d, Y h:i A', strtotime($supplier->DateCreated)) : 'N/A' }}
+                            </td>
+                            <td class="align-middle">{{ $supplier->modifiedBy->Username ?? 'N/A' }}</td>
+                            <td class="align-middle datetime-cell" data-timestamp="{{ strtotime($supplier->DateModified) * 1000 }}">
+                                {{ $supplier->DateModified ? date('M d, Y h:i A', strtotime($supplier->DateModified)) : 'N/A' }}
+                            </td>
                             <td class="align-middle text-center">
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-primary" 
@@ -271,6 +275,34 @@
 
 @section('scripts')
 <script>
+    function updateDates() {
+        document.querySelectorAll('.datetime-cell').forEach(cell => {
+            const timestamp = parseInt(cell.getAttribute('data-timestamp'));
+            if (timestamp) {
+                const date = new Date(timestamp + (8 * 60 * 60 * 1000)); // Add 8 hours for PHT
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                const formattedHours = (hours % 12) || 12;
+                
+                const formatted = `${date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                })} ${formattedHours}:${minutes} ${ampm}`;
+                
+                cell.textContent = formatted;
+            }
+        });
+    }
+
+    // Update dates every second
+    setInterval(updateDates, 1000);
+
+    // Initial update
+    updateDates();
+
+    // Initialize DataTables with existing configuration
     $(document).ready(function() {
         // Initialize suppliers table
         if ($.fn.DataTable.isDataTable('#suppliersTable')) {
@@ -287,7 +319,7 @@
             language: {
                 search: "_INPUT_",
                 searchPlaceholder: "Search suppliers...",
-                lengthMenu: "_MENU_ suppliers per page",
+                lengthMenu: "Show _MENU_ suppliers per page",
                 info: "Showing _START_ to _END_ of _TOTAL_ suppliers",
                 infoEmpty: "Showing 0 to 0 of 0 suppliers",
                 infoFiltered: "(filtered from _MAX_ total suppliers)"
@@ -319,7 +351,7 @@
             language: {
                 search: "_INPUT_",
                 searchPlaceholder: "Search deleted suppliers...",
-                lengthMenu: "_MENU_ deleted suppliers per page",
+                lengthMenu: "Show _MENU_ deleted suppliers per page",
                 info: "Showing _START_ to _END_ of _TOTAL_ deleted suppliers",
                 infoEmpty: "Showing 0 to 0 of 0 deleted suppliers",
                 infoFiltered: "(filtered from _MAX_ total deleted suppliers)"
