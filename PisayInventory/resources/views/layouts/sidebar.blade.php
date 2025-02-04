@@ -20,7 +20,10 @@
                data-bs-toggle="dropdown" 
                aria-expanded="false">
                 <i class="bi bi-people"></i>
-                <span>Employee Management</span>
+                <div class="nav-text">
+                    <span>Employee</span>
+                    <span>Management</span>
+                </div>
                 <i class="bi bi-chevron-right dropdown-arrow"></i>
             </a>
             <ul class="dropdown-menu" aria-labelledby="employeeDropdown">

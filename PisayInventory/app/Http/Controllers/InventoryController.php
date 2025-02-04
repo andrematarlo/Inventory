@@ -106,6 +106,7 @@ class InventoryController extends Controller
                 $item->StocksAvailable = $newStock;
                 
                 // Record the stock in
+                $inventory->Type = 'IN';
                 $inventory->StocksAdded = $validated['StocksAdded'];
                 $inventory->StocksAvailable = $newStock;
             } else {
@@ -116,6 +117,7 @@ class InventoryController extends Controller
                     $item->StocksAvailable = $newStock;
                     
                     // Record the stock out as negative StocksAdded
+                    $inventory->Type = 'OUT';
                     $inventory->StocksAdded = -$validated['StocksAdded'];
                     $inventory->StocksAvailable = $newStock;
                 } else {
