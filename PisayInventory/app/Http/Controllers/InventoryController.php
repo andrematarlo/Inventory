@@ -10,18 +10,33 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class InventoryController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $inventories = Inventory::with(['item', 'created_by_user'])
-            ->active()
-            ->latest('DateCreated')
-            ->paginate(10);
+        $query = Inventory::with([
+            'item.classification',
+            'created_by_user',
+            'modified_by_user',
+            'deleted_by_user'
+        ])
+            ->select('inventory.*', 'items.StocksAvailable as ItemStocksAvailable')
+            ->join('items', 'inventory.ItemId', '=', 'items.ItemId')
+            ->where('items.IsDeleted', 0);
+
+        // Only show active records unless show_deleted is requested
+        if (!$request->has('show_deleted')) {
+            $query->where('inventory.IsDeleted', 0);
+        }
+
+        $inventories = $query->latest('inventory.DateCreated')
+            ->paginate(10)
+            ->withQueryString();
 
         // Get all active items
         $items = Item::with(['classification'])
@@ -75,80 +90,57 @@ class InventoryController extends Controller
                 'Requested' => $validated['StocksAdded']
             ]);
 
-            // Use updateOrCreate with complete default values
-            $inventory = Inventory::updateOrCreate(
-                [
-                    'ItemId' => $validated['ItemId'],
-                    'IsDeleted' => false
-                ],
-                [
-                    'ClassificationId' => $item->ClassificationId,
-                    'DateCreated' => Carbon::now()->format('Y-m-d H:i:s'),
-                    'CreatedById' => Auth::user()->UserAccountID,
-                    'StocksAdded' => 0,
-                    'StockOut' => 0,
-                    'StocksAvailable' => 0
-                ]
-            );
+            // Create new inventory record
+            $inventory = new Inventory();
+            $inventory->ItemId = $validated['ItemId'];
+            $inventory->ClassificationId = $item->ClassificationId;
+            $inventory->IsDeleted = false;
+            $inventory->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
+            $inventory->CreatedById = Auth::user()->UserAccountID;
+            $inventory->ModifiedById = Auth::user()->UserAccountID;
+            $inventory->DateModified = Carbon::now()->format('Y-m-d H:i:s');
 
             if ($validated['type'] === 'in') {
-                // STOCK IN: Add to both tables
-                DB::table('inventory')
-                    ->where('ItemId', $validated['ItemId'])
-                    ->where('IsDeleted', false)
-                    ->update([
-                        'StocksAdded' => DB::raw('COALESCE(StocksAdded, 0) + ' . $validated['StocksAdded']),
-                        'StocksAvailable' => DB::raw('COALESCE(StocksAvailable, 0) + ' . $validated['StocksAdded']),
-                        'DateModified' => Carbon::now()->format('Y-m-d H:i:s'),
-                        'ModifiedById' => Auth::user()->UserAccountID
-                    ]);
-
-                $item->StocksAvailable += $validated['StocksAdded'];
+                // STOCK IN: Add to item's stock
+                $newStock = $item->StocksAvailable + $validated['StocksAdded'];
+                $item->StocksAvailable = $newStock;
+                
+                // Record the stock in
+                $inventory->StocksAdded = $validated['StocksAdded'];
+                $inventory->StocksAvailable = $newStock;
             } else {
-                // STOCK OUT: Check if enough stock
-                $currentStock = DB::table('inventory')
-                    ->where('ItemId', $validated['ItemId'])
-                    ->where('IsDeleted', false)
-                    ->value('StocksAvailable');
-
-                \Log::info('Stock Out Check:', [
-                    'Current' => $currentStock,
-                    'Requested' => $validated['StocksAdded']
-                ]);
-
-                if ($currentStock >= $validated['StocksAdded']) {
-                    // Deduct from both tables using direct SQL
-                    DB::table('inventory')
-                        ->where('ItemId', $validated['ItemId'])
-                        ->where('IsDeleted', false)
-                        ->update([
-                            'StockOut' => DB::raw('COALESCE(StockOut, 0) + ' . $validated['StocksAdded']),
-                            'StocksAvailable' => DB::raw('StocksAvailable - ' . $validated['StocksAdded']),
-                            'DateModified' => Carbon::now()->format('Y-m-d H:i:s'),
-                            'ModifiedById' => Auth::user()->UserAccountID
-                        ]);
-
-                    $item->StocksAvailable -= $validated['StocksAdded'];
+                // STOCK OUT: Check if enough stock in items table
+                if ($item->StocksAvailable >= $validated['StocksAdded']) {
+                    // Deduct from item's stock
+                    $newStock = $item->StocksAvailable - $validated['StocksAdded'];
+                    $item->StocksAvailable = $newStock;
+                    
+                    // Record the stock out as negative StocksAdded
+                    $inventory->StocksAdded = -$validated['StocksAdded'];
+                    $inventory->StocksAvailable = $newStock;
                 } else {
                     DB::rollBack();
-                    return back()->with('error', 'Not enough stock available.')
+                    return back()->with('error', "Not enough stock available. Current stock: {$item->StocksAvailable}")
                                 ->withInput();
                 }
             }
 
-            // Save item changes
+            // Save changes
             $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
             $item->ModifiedById = Auth::user()->UserAccountID;
             $item->save();
+            
+            $inventory->save();
 
             DB::commit();
 
+            $action = $validated['type'] === 'in' ? 'added to' : 'removed from';
             return redirect()->route('inventory.index')
-                ->with('success', 'Inventory updated successfully');
+                ->with('success', "{$validated['StocksAdded']} items {$action} inventory. New stock: {$item->StocksAvailable}");
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Inventory update failed: ' . $e->getMessage());
+            Log::error('Inventory update failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to update inventory: ' . $e->getMessage())
                         ->withInput();
         }
@@ -179,34 +171,41 @@ class InventoryController extends Controller
             DB::beginTransaction();
 
             $inventory = Inventory::findOrFail($id);
-            $oldQuantity = $inventory->Quantity;
-
-            $request->validate([
-                'Quantity' => 'required|integer',
-                'InventoryDate' => 'required|date'
-            ]);
-
-            // Update inventory record
-            $inventory->update([
-                'Quantity' => $request->Quantity,
-                'InventoryDate' => $request->InventoryDate,
-                'ModifiedById' => Auth::id(),
-                'DateModified' => now()
-            ]);
-
-            // Update item stock
             $item = $inventory->item;
-            $item->StocksAvailable += ($request->Quantity - $oldQuantity);
-            $item->ModifiedById = Auth::id();
-            $item->DateModified = now();
+
+            // Calculate the difference in stock
+            $oldStockAdded = $inventory->StocksAdded;
+            $newStockAdded = (int)$request->StocksAdded;
+            $stockDifference = $newStockAdded - $oldStockAdded;
+
+            // Update item's stock
+            $newItemStock = $item->StocksAvailable + $stockDifference;
+            if ($newItemStock < 0) {
+                throw new \Exception("Cannot update: Would result in negative stock.");
+            }
+
+            // Update item
+            $item->StocksAvailable = $newItemStock;
+            $item->ModifiedById = Auth::user()->UserAccountID;
+            $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
             $item->save();
 
+            // Update inventory record
+            $inventory->StocksAdded = $newStockAdded;
+            $inventory->StocksAvailable = $newItemStock;
+            $inventory->ModifiedById = Auth::user()->UserAccountID;
+            $inventory->DateModified = Carbon::now()->format('Y-m-d H:i:s');
+            $inventory->save();
+
             DB::commit();
-            return back()->with('success', 'Inventory updated successfully');
+            return redirect()->route('inventory.index')
+                ->with('success', 'Inventory record updated successfully. New stock: ' . $newItemStock);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Inventory update failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to update inventory')->withInput();
+            Log::error('Inventory update failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to update inventory: ' . $e->getMessage())
+                        ->withInput();
         }
     }
 
@@ -220,25 +219,19 @@ class InventoryController extends Controller
 
             $inventory = Inventory::findOrFail($id);
             
-            // Update item stock before soft deleting
-            $item = $inventory->item;
-            $item->StocksAvailable -= $inventory->StocksAdded;
-            $item->ModifiedById = Auth::user()->UserAccountID;
-            $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
-            $item->save();
-
-            // Soft delete inventory record
-            $inventory->update([
-                'IsDeleted' => true,
-                'DeletedById' => Auth::user()->UserAccountID,
-                'DateDeleted' => Carbon::now()->format('Y-m-d H:i:s')
-            ]);
+            // Soft delete
+            $inventory->IsDeleted = true;
+            $inventory->DeletedById = Auth::user()->UserAccountID;
+            $inventory->DateDeleted = Carbon::now()->format('Y-m-d H:i:s');
+            $inventory->save();
 
             DB::commit();
-            return back()->with('success', 'Inventory record deleted successfully');
+            return redirect()->route('inventory.index')
+                ->with('success', 'Inventory record deleted successfully');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Inventory deletion failed: ' . $e->getMessage());
+            Log::error('Inventory deletion failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to delete inventory record: ' . $e->getMessage());
         }
     }
@@ -250,27 +243,21 @@ class InventoryController extends Controller
 
             $inventory = Inventory::findOrFail($id);
             
-            // Update item stock
-            $item = $inventory->item;
-            $item->StocksAvailable += $inventory->StocksAdded;
-            $item->ModifiedById = Auth::user()->UserAccountID;
-            $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
-            $item->save();
-
-            // Restore inventory record
-            $inventory->update([
-                'IsDeleted' => false,
-                'DeletedById' => null,
-                'DateDeleted' => null,
-                'ModifiedById' => Auth::user()->UserAccountID,
-                'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
-            ]);
+            // Restore
+            $inventory->IsDeleted = false;
+            $inventory->DeletedById = null;
+            $inventory->DateDeleted = null;
+            $inventory->ModifiedById = Auth::user()->UserAccountID;
+            $inventory->DateModified = Carbon::now()->format('Y-m-d H:i:s');
+            $inventory->save();
 
             DB::commit();
-            return back()->with('success', 'Inventory record restored successfully');
+            return redirect()->route('inventory.index')
+                ->with('success', 'Inventory record restored successfully');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Inventory restore failed: ' . $e->getMessage());
+            Log::error('Inventory restore failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to restore inventory record: ' . $e->getMessage());
         }
     }

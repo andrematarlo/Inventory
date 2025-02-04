@@ -39,10 +39,13 @@ Route::middleware('auth')->group(function () {
     // Items Management
     Route::resource('items', ItemController::class);
     Route::get('/items/manage', [ItemController::class, 'manage'])->name('items.manage');
+    Route::post('items/{id}/restore', [ItemController::class, 'restore'])->name('items.restore');
+    Route::post('items/{id}/stock-in', [ItemController::class, 'stockIn'])->name('items.stock-in');
+    Route::post('items/{id}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
 
     // Inventory Management
     Route::resource('inventory', InventoryController::class);
-    Route::post('inventory/{id}/restore', [InventoryController::class, 'restore'])->name('inventory.restore');
+    Route::put('inventory/{id}/restore', [InventoryController::class, 'restore'])->name('inventory.restore');
 
     // Suppliers Management
     Route::resource('suppliers', SupplierController::class);
@@ -50,6 +53,7 @@ Route::middleware('auth')->group(function () {
 
     // Classifications Management
     Route::resource('classifications', ClassificationController::class);
+    Route::get('classifications/trash', [ClassificationController::class, 'trash'])->name('classifications.trash');
     Route::post('classifications/{id}/restore', [ClassificationController::class, 'restore'])->name('classifications.restore');
 
     // Units Management
@@ -78,7 +82,7 @@ Route::middleware('auth')->group(function () {
     Route::put('roles/policies/{id}', [RoleController::class, 'updatePolicy'])->name('roles.policies.update');
 
     // Stock Management Routes
-    Route::post('/items/{item}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
+    // Route::post('/items/{item}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
 });
 
 Route::middleware('auth')->group(function () {

@@ -16,7 +16,8 @@ class ClassificationController extends Controller
     public function index()
     {
         $classifications = Classification::where('IsDeleted', 0)->get();
-        return view('classifications.index', compact('classifications'));
+        $trashedClassifications = Classification::where('IsDeleted', 1)->get();
+        return view('classifications.index', compact('classifications', 'trashedClassifications'));
     }
 
     /**
@@ -68,7 +69,11 @@ class ClassificationController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        $classification = Classification::findOrFail($id);
+        $classifications = Classification::where('IsDeleted', 0)
+            ->where('ClassificationId', '!=', $id)
+            ->get();
+        return view('classifications.edit', compact('classification', 'classifications'));
     }
 
     /**
@@ -124,5 +129,11 @@ class ClassificationController extends Controller
 
         return redirect()->route('classifications.index')
             ->with('success', 'Classification restored successfully');
+    }
+
+    public function trash()
+    {
+        $trashedClassifications = Classification::where('IsDeleted', 1)->get();
+        return view('classifications.trash', compact('trashedClassifications'));
     }
 }

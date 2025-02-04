@@ -17,7 +17,7 @@ class ItemController extends Controller
     public function index()
     {
         try {
-            // Get items with all relationships
+            // Get active items with all relationships
             $items = Item::with([
                 'classification',
                 'unitOfMeasure',
@@ -29,11 +29,22 @@ class ItemController extends Controller
             ->orderBy('ItemName')
             ->get();
 
+            // Get trashed items with relationships
+            $trashedItems = Item::with([
+                'classification',
+                'unitOfMeasure',
+                'supplier',
+                'deleted_by_user'
+            ])
+            ->where('IsDeleted', 1)
+            ->orderBy('ItemName')
+            ->get();
+
             $classifications = Classification::where('IsDeleted', 0)->get();
             $units = Unit::where('IsDeleted', 0)->get();
             $suppliers = Supplier::where('IsDeleted', 0)->get();
 
-            return view('items.index', compact('items', 'classifications', 'units', 'suppliers'));
+            return view('items.index', compact('items', 'trashedItems', 'classifications', 'units', 'suppliers'));
         } catch (\Exception $e) {
             \Log::error('Error in ItemController@index: ' . $e->getMessage());
             return back()->with('error', 'Unable to load items. Error: ' . $e->getMessage());
@@ -100,30 +111,17 @@ class ItemController extends Controller
             DB::beginTransaction();
 
             $item = Item::findOrFail($id);
-            $oldStock = $item->StocksAvailable;
             
-            // Update item
+            // Update item details
             $item->ItemName = $request->ItemName;
             $item->Description = $request->Description;
             $item->UnitOfMeasureId = $request->UnitOfMeasureId;
             $item->ClassificationId = $request->ClassificationId;
             $item->SupplierID = $request->SupplierID;
-            $item->StocksAvailable = $request->StocksAvailable;
             $item->ReorderPoint = $request->ReorderPoint;
             $item->ModifiedById = Auth::id();
             $item->DateModified = now();
             $item->save();
-
-            // Create inventory record if stock changed
-            if ($oldStock != $request->StocksAvailable) {
-                $item->inventories()->create([
-                    'Quantity' => $request->StocksAvailable - $oldStock,
-                    'InventoryDate' => now(),
-                    'CreatedById' => Auth::id(),
-                    'DateCreated' => now(),
-                    'IsDeleted' => false
-                ]);
-            }
 
             DB::commit();
             return redirect()->route('items.index')->with('success', 'Item updated successfully');
@@ -131,6 +129,95 @@ class ItemController extends Controller
             DB::rollBack();
             Log::error('Update failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to update item')->withInput();
+        }
+    }
+
+    public function stockIn(Request $request, $id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $item = Item::findOrFail($id);
+            $quantity = (int)$request->quantity;
+
+            if ($quantity <= 0) {
+                throw new \Exception('Quantity must be greater than 0');
+            }
+
+            // Calculate new stock by adding the quantity
+            $newStock = $item->StocksAvailable + $quantity;
+
+            // Update item's stock first
+            $item->StocksAvailable = $newStock;
+            $item->ModifiedById = Auth::id();
+            $item->DateModified = now();
+            $item->save();
+
+            // Create inventory record for stock in
+            $inventory = new \App\Models\Inventory();
+            $inventory->ItemId = $item->ItemId;
+            $inventory->ClassificationId = $item->ClassificationId;
+            $inventory->IsDeleted = false;
+            $inventory->DateCreated = now();
+            $inventory->CreatedById = Auth::id();
+            $inventory->StocksAdded = $quantity;
+            $inventory->StocksAvailable = $newStock;
+            $inventory->save();
+
+            DB::commit();
+            return redirect()->route('items.index')->with('success', "Successfully added $quantity items. New stock: $newStock");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Stock in failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to update inventory: ' . $e->getMessage());
+        }
+    }
+
+    public function stockOut(Request $request, $id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $item = Item::findOrFail($id);
+            $quantity = (int)$request->quantity;
+
+            if ($quantity <= 0) {
+                throw new \Exception('Quantity must be greater than 0');
+            }
+
+            // Get current stock from items table
+            $currentStock = $item->StocksAvailable;
+
+            if ($quantity > $currentStock) {
+                throw new \Exception("Not enough stock available. Current stock: $currentStock");
+            }
+
+            // Calculate new stock
+            $newStock = $currentStock - $quantity;
+            
+            // Update item's stock first
+            $item->StocksAvailable = $newStock;
+            $item->ModifiedById = Auth::id();
+            $item->DateModified = now();
+            $item->save();
+
+            // Create inventory record for stock out
+            $inventory = new \App\Models\Inventory();
+            $inventory->ItemId = $item->ItemId;
+            $inventory->ClassificationId = $item->ClassificationId;
+            $inventory->IsDeleted = false;
+            $inventory->DateCreated = now();
+            $inventory->CreatedById = Auth::id();
+            $inventory->StocksAdded = -$quantity; // Negative for stock out
+            $inventory->StocksAvailable = $newStock;
+            $inventory->save();
+
+            DB::commit();
+            return redirect()->route('items.index')->with('success', "Successfully removed $quantity items. New stock: $newStock");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Stock out failed: ' . $e->getMessage());
+            return back()->with('error', $e->getMessage());
         }
     }
 
@@ -152,6 +239,29 @@ class ItemController extends Controller
             DB::rollBack();
             Log::error('Item deletion failed: ' . $e->getMessage());
             return back()->with('error', 'Error deleting item: ' . $e->getMessage());
+        }
+    }
+
+    public function restore($id)
+    {
+        try {
+            DB::beginTransaction();
+            
+            $item = Item::findOrFail($id);
+            $item->update([
+                'IsDeleted' => false,
+                'DeletedById' => null,
+                'DateDeleted' => null,
+                'ModifiedById' => Auth::id(),
+                'DateModified' => Carbon::now()
+            ]);
+
+            DB::commit();
+            return redirect()->route('items.index')->with('success', 'Item restored successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Item restoration failed: ' . $e->getMessage());
+            return back()->with('error', 'Error restoring item: ' . $e->getMessage());
         }
     }
 

@@ -3,50 +3,54 @@
 @section('title', 'Items')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Items Management</h2>
-    <button type="button" class="btn btn-add" data-bs-toggle="modal" data-bs-target="#addItemModal">
-        <i class="bi bi-plus-lg"></i> Add New Item
-    </button>
-</div>
+<div class="container">
+    <!-- Active Items Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
+                    <span>Show</span>
+                    <select class="form-select form-select-sm mx-2" style="width: auto;">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span>items per page</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <input type="search" class="form-control form-control-sm" placeholder="Search items...">
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                        <i class="bi bi-plus-lg"></i> Add Item
+                    </button>
+                </div>
+            </div>
 
-<!-- Items Table -->
-<div class="card table-card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Item Name</th>
-                        <th>Description</th>
-                        <th>Unit</th>
-                        <th>Classification</th>
-                        <th>Supplier</th>
-                        <th>Created By</th>
-                        <th>Date Created</th>
-                        <th>Modified By</th>
-                        <th>Date Modified</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($items as $item)
-                    <tr>
-                        <td>{{ $item->ItemName }}</td>
-                        <td>{{ $item->Description }}</td>
-                        <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
-                        <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
-                        <td>{{ $item->supplier->SupplierName ?? 'N/A' }}</td>
-                        <td>{{ $item->created_by_user->Username ?? 'N/A' }}</td>
-                        <td data-timestamp="{{ strtotime($item->DateCreated) * 1000 }}" class="datetime-cell">
-                            {{ $item->DateCreated ? date('M d, Y h:i A', strtotime($item->DateCreated)) : 'N/A' }}
-                        </td>
-                        <td>{{ $item->modified_by_user->Username ?? 'N/A' }}</td>
-                        <td data-timestamp="{{ strtotime($item->DateModified) * 1000 }}" class="datetime-cell">
-                            {{ $item->DateModified ? date('M d, Y h:i A', strtotime($item->DateModified)) : 'N/A' }}
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Classification</th>
+                            <th>Unit</th>
+                            <th>Supplier</th>
+                            <th>Stocks</th>
+                            <th>Reorder Point</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($items as $item)
+                        <tr>
+                            <td>{{ $item->ItemName }}</td>
+                            <td>{{ $item->Description }}</td>
+                            <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
+                            <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
+                            <td>{{ $item->supplier->SupplierName ?? 'N/A' }}</td>
+                            <td>{{ $item->StocksAvailable }}</td>
+                            <td>{{ $item->ReorderPoint }}</td>
+                            <td class="text-end">
                                 <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -57,268 +61,122 @@
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="10" class="text-center">No items found</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="8" class="text-center py-4">No items found</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>Showing 1 to {{ $items->count() }} of {{ $items->count() }} items</div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                        <li class="page-item active">
+                            <span class="page-link">1</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deleted Items Card -->
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
+                    <span>Show</span>
+                    <select class="form-select form-select-sm mx-2" style="width: auto;">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span>deleted items per page</span>
+                </div>
+                <input type="search" class="form-control form-control-sm" style="width: 200px;" placeholder="Search deleted items...">
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Classification</th>
+                            <th>Deleted By</th>
+                            <th>Date Deleted</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($trashedItems as $item)
+                        <tr>
+                            <td>{{ $item->ItemName }}</td>
+                            <td>{{ $item->Description }}</td>
+                            <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
+                            <td>{{ $item->deleted_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ $item->DateDeleted ? date('M d, Y h:i A', strtotime($item->DateDeleted)) : 'N/A' }}</td>
+                            <td class="text-end">
+                                <form action="{{ route('items.restore', $item->ItemId) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="d-flex flex-column align-items-center">
+                                    <i class="bi bi-trash text-muted" style="font-size: 2rem;"></i>
+                                    <h5 class="mt-2 mb-1">No Deleted Items</h5>
+                                    <p class="text-muted mb-0">Deleted items will appear here</p>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>Showing 1 to {{ $trashedItems->count() }} of {{ $trashedItems->count() }} deleted items</div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                        <li class="page-item active">
+                            <span class="page-link">1</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Add Item Modal -->
-<div class="modal fade" id="addItemModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('items.store') }}" method="POST">
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Item Name</label>
-                        <input type="text" class="form-control @error('ItemName') is-invalid @enderror" 
-                               name="ItemName" value="{{ old('ItemName') }}" required>
-                        @error('ItemName')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+@include('items.partials.add-modal')
 
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control @error('Description') is-invalid @enderror" 
-                                name="Description" rows="3">{{ old('Description') }}</textarea>
-                        @error('Description')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Classification</label>
-                        <select class="form-select @error('ClassificationId') is-invalid @enderror" 
-                                name="ClassificationId" required>
-                            <option value="">Select Classification</option>
-                            @foreach($classifications as $classification)
-                                <option value="{{ $classification->ClassificationId }}"
-                                    {{ old('ClassificationId') == $classification->ClassificationId ? 'selected' : '' }}>
-                                    {{ $classification->ClassificationName }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('ClassificationId')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Unit of Measure</label>
-                        <select class="form-select @error('UnitOfMeasureId') is-invalid @enderror" 
-                                name="UnitOfMeasureId" required>
-                            <option value="">Select Unit</option>
-                            @foreach($units as $unit)
-                                <option value="{{ $unit->UnitOfMeasureId }}"
-                                    {{ old('UnitOfMeasureId') == $unit->UnitOfMeasureId ? 'selected' : '' }}>
-                                    {{ $unit->UnitName }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('UnitOfMeasureId')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Supplier</label>
-                        <select class="form-select @error('SupplierID') is-invalid @enderror" 
-                                name="SupplierID" required>
-                            <option value="">Select Supplier</option>
-                            @foreach($suppliers ?? [] as $supplier)
-                                <option value="{{ $supplier->SupplierID }}"
-                                    {{ old('SupplierID') == $supplier->SupplierID ? 'selected' : '' }}>
-                                    {{ $supplier->SupplierName }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('SupplierID')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        @if(empty($suppliers) || $suppliers->count() == 0)
-                            <div class="text-danger mt-1">
-                                <small>Please add suppliers first before creating items.</small>
-                            </div>
-                        @endif
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Initial Stock</label>
-                        <input type="number" class="form-control @error('StocksAvailable') is-invalid @enderror" 
-                               name="StocksAvailable" min="0" value="{{ old('StocksAvailable', 0) }}" required>
-                        @error('StocksAvailable')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Reorder Point</label>
-                        <input type="number" class="form-control @error('ReorderPoint') is-invalid @enderror" 
-                               name="ReorderPoint" min="0" value="{{ old('ReorderPoint', 0) }}" required>
-                        @error('ReorderPoint')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Item</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Item Modal -->
+<!-- Edit Item Modals -->
 @foreach($items as $item)
-<div class="modal fade" id="editItemModal{{ $item->ItemId }}" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('items.update', $item->ItemId) }}" method="POST">
-                @csrf
-                @method('PUT')
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Item Name</label>
-                        <input type="text" class="form-control" name="ItemName" 
-                               value="{{ old('ItemName', $item->ItemName) }}" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="Description">{{ old('Description', $item->Description) }}</textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Classification</label>
-                        <select class="form-select" name="ClassificationId" required>
-                            @foreach($classifications as $classification)
-                                <option value="{{ $classification->ClassificationId }}"
-                                    {{ $item->ClassificationId == $classification->ClassificationId ? 'selected' : '' }}>
-                                    {{ $classification->ClassificationName }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Unit of Measure</label>
-                        <select class="form-select" name="UnitOfMeasureId" required>
-                            @foreach($units as $unit)
-                                <option value="{{ $unit->UnitOfMeasureId }}"
-                                    {{ $item->UnitOfMeasureId == $unit->UnitOfMeasureId ? 'selected' : '' }}>
-                                    {{ $unit->UnitName }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Supplier</label>
-                        <select class="form-select" name="SupplierID" required>
-                            @foreach($suppliers as $supplier)
-                                <option value="{{ $supplier->SupplierID }}"
-                                    {{ $item->SupplierID == $supplier->SupplierID ? 'selected' : '' }}>
-                                    {{ $supplier->SupplierName }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Stocks Available</label>
-                        <input type="number" class="form-control" name="StocksAvailable" 
-                               value="{{ old('StocksAvailable', $item->StocksAvailable) }}" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Reorder Point</label>
-                        <input type="number" class="form-control" name="ReorderPoint" 
-                               value="{{ old('ReorderPoint', $item->ReorderPoint) }}" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Item</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endforeach
-
-<!-- Delete Item Modal -->
-@foreach($items as $item)
-<div class="modal fade" id="deleteItemModal{{ $item->ItemId }}" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Delete Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST">
-                @csrf
-                @method('DELETE')
-                <div class="modal-body">
-                    <p>Are you sure you want to delete this item?</p>
-                    <p class="text-danger"><strong>{{ $item->ItemName }}</strong></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete Item</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+    @include('items.partials.edit-modal', ['item' => $item])
 @endforeach
 @endsection
-
-@section('scripts')
-<script>
-    function updateDates() {
-        document.querySelectorAll('.datetime-cell').forEach(cell => {
-            const timestamp = parseInt(cell.getAttribute('data-timestamp'));
-            if (timestamp) {
-                const date = new Date(timestamp + (8 * 60 * 60 * 1000)); // Add 8 hours for PHT
-                const hours = date.getHours().toString().padStart(2, '0');
-                const minutes = date.getMinutes().toString().padStart(2, '0');
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                const formattedHours = (hours % 12) || 12;
-                
-                const formatted = `${date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                })} ${formattedHours}:${minutes} ${ampm}`;
-                
-                cell.textContent = formatted;
-            }
-        });
-    }
-
-    // Update dates every second
-    setInterval(updateDates, 1000);
-
-    // Initial update
-    updateDates();
-</script>
-@endsection 
