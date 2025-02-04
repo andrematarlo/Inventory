@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class InventoryController extends Controller
 {
@@ -75,41 +76,81 @@ class InventoryController extends Controller
         try {
             DB::beginTransaction();
 
+            // Find the item first
+            $item = Item::findOrFail($request->ItemId);
+            $quantity = abs((int)$request->StocksAdded);
+
+            // Create new inventory record
             $inventory = new Inventory();
             $inventory->ItemId = $request->ItemId;
-            $inventory->ClassificationId = $request->ClassificationId;
+            $inventory->ClassificationId = $item->ClassificationId;
             $inventory->IsDeleted = false;
             $inventory->DateCreated = now();
             $inventory->CreatedById = Auth::id();
             $inventory->ModifiedById = Auth::id();
             $inventory->DateModified = now();
-            $inventory->StocksAdded = $request->StocksAdded;
-            $inventory->StocksAvailable = $request->StocksAdded;
-            $inventory->save();
 
-            // Get related data for response
-            $item = Item::find($request->ItemId);
-            $classification = Classification::find($request->ClassificationId);
+            // Handle stock in/out based on type
+            if ($request->type === 'in') {
+                $inventory->StocksAdded = $quantity;
+                $inventory->StockOut = 0;
+                $inventory->StocksAvailable = $item->StocksAvailable + $quantity; // Update with new total
+                
+                // Update item's total stock
+                $item->StocksAvailable += $quantity;
+            } else {
+                // For stock out
+                if ($quantity > $item->StocksAvailable) {
+                    throw new \Exception("Not enough stocks available! Current stock: {$item->StocksAvailable}");
+                }
+                
+                $inventory->StocksAdded = 0;
+                $inventory->StockOut = $quantity;
+                $inventory->StocksAvailable = $item->StocksAvailable - $quantity; // Subtract from current total
+                
+                // Update item's total stock
+                $item->StocksAvailable -= $quantity;
+            }
+
+            \Log::info('Saving with data:', [
+                'type' => $request->type,
+                'quantity' => $quantity,
+                'old_stock' => $item->getOriginal('StocksAvailable'),
+                'new_stock' => $item->StocksAvailable,
+                'inventory_available' => $inventory->StocksAvailable
+            ]);
+
+            $inventory->save();
+            $item->save();
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Inventory added successfully',
+                'message' => 'Inventory ' . ($request->type === 'in' ? 'added' : 'removed') . ' successfully',
                 'data' => [
                     'InventoryID' => $inventory->InventoryID,
                     'ItemName' => $item->ItemName,
-                    'ClassificationName' => $classification->ClassificationName,
+                    'ClassificationName' => $item->classification->ClassificationName ?? 'N/A',
                     'StocksAdded' => $inventory->StocksAdded,
-                    'StocksAvailable' => $inventory->StocksAvailable
+                    'StockOut' => $inventory->StockOut,
+                    'StocksAvailable' => $inventory->StocksAvailable,
+                    'ItemStocksAvailable' => $item->StocksAvailable,
+                    'CreatedBy' => $inventory->created_by_user->Username ?? 'N/A',
+                    'DateCreated' => $inventory->DateCreated ? date('Y-m-d H:i', strtotime($inventory->DateCreated)) : 'N/A'
                 ]
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error in store:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to add inventory: ' . $e->getMessage()
+                'message' => 'Failed to update inventory: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -139,41 +180,46 @@ class InventoryController extends Controller
             DB::beginTransaction();
 
             $inventory = Inventory::findOrFail($id);
-            $item = $inventory->item;
+            $item = Item::findOrFail($inventory->ItemId);
 
-            // Calculate the difference in stock
-            $oldStockAdded = $inventory->StocksAdded;
-            $newStockAdded = (int)$request->StocksAdded;
-            $stockDifference = $newStockAdded - $oldStockAdded;
-
-            // Update item's stock
-            $newItemStock = $item->StocksAvailable + $stockDifference;
-            if ($newItemStock < 0) {
-                throw new \Exception("Cannot update: Would result in negative stock.");
-            }
-
-            // Update item
-            $item->StocksAvailable = $newItemStock;
-            $item->ModifiedById = Auth::user()->UserAccountID;
-            $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
-            $item->save();
-
+            // Calculate the difference in stocks
+            $oldStocksAdded = $inventory->StocksAdded;
+            $oldStockOut = $inventory->StockOut;
+            
             // Update inventory record
-            $inventory->StocksAdded = $newStockAdded;
-            $inventory->StocksAvailable = $newItemStock;
-            $inventory->ModifiedById = Auth::user()->UserAccountID;
-            $inventory->DateModified = Carbon::now()->format('Y-m-d H:i:s');
+            $inventory->StocksAdded = $request->StocksAdded ?? $oldStocksAdded;
+            $inventory->StockOut = $request->StockOut ?? $oldStockOut;
+            
+            // Calculate new available stocks
+            $stocksDifference = ($inventory->StocksAdded - $oldStocksAdded) - ($inventory->StockOut - $oldStockOut);
+            $inventory->StocksAvailable = $item->StocksAvailable + $stocksDifference;
+            
+            $inventory->ModifiedById = Auth::id();
+            $inventory->DateModified = now();
             $inventory->save();
 
+            // Update item's stock
+            $item->StocksAvailable += $stocksDifference;
+            $item->save();
+
             DB::commit();
-            return redirect()->route('inventory.index')
-                ->with('success', 'Inventory record updated successfully. New stock: ' . $newItemStock);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Inventory updated successfully',
+                'data' => [
+                    'StocksAdded' => $inventory->StocksAdded,
+                    'StockOut' => $inventory->StockOut,
+                    'StocksAvailable' => $inventory->StocksAvailable
+                ]
+            ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Inventory update failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to update inventory: ' . $e->getMessage())
-                        ->withInput();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update inventory: ' . $e->getMessage()
+            ], 500);
         }
     }
 
