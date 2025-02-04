@@ -94,11 +94,11 @@
                             <td class="align-middle">{{ $supplier->SupplierName }}</td>
                             <td class="align-middle">{{ $supplier->ContactNum }}</td>
                             <td class="align-middle">{{ $supplier->Address }}</td>
-                            <td class="align-middle">{{ $supplier->createdBy->Username ?? 'N/A' }}</td>
+                            <td class="align-middle">{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
                             <td class="align-middle datetime-cell" data-timestamp="{{ strtotime($supplier->DateCreated) * 1000 }}">
                                 {{ $supplier->DateCreated ? date('M d, Y h:i A', strtotime($supplier->DateCreated)) : 'N/A' }}
                             </td>
-                            <td class="align-middle">{{ $supplier->modifiedBy->Username ?? 'N/A' }}</td>
+                            <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
                             <td class="align-middle datetime-cell" data-timestamp="{{ strtotime($supplier->DateModified) * 1000 }}">
                                 {{ $supplier->DateModified ? date('M d, Y h:i A', strtotime($supplier->DateModified)) : 'N/A' }}
                             </td>
