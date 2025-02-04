@@ -71,6 +71,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('roles', RoleController::class, ['except' => ['show']]);
     Route::get('roles/policies', [RoleController::class, 'policies'])->name('roles.policies');
     Route::put('roles/policies/{id}', [RoleController::class, 'updatePolicy'])->name('roles.policies.update');
+
+    // Stock Management Routes
+    Route::post('/items/{item}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
 });
 
 Route::middleware('auth')->group(function () {

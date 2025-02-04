@@ -20,6 +20,7 @@
                             <th>Item</th>
                             <th>Classification</th>
                             <th>Stocks Added</th>
+                            <th>Stock Out</th>
                             <th>Stocks Available</th>
                             <th>Created By</th>
                             <th>Date Created</th>
@@ -32,6 +33,7 @@
                             <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
                             <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
                             <td>{{ $inventory->StocksAdded }}</td>
+                            <td>{{ $inventory->StockOut }}</td>
                             <td>{{ $inventory->StocksAvailable }}</td>
                             <td>{{ $inventory->created_by_user->Username ?? 'N/A' }}</td>
                             <td>{{ $inventory->DateCreated ? date('Y-m-d H:i', strtotime($inventory->DateCreated)) : 'N/A' }}</td>
@@ -41,7 +43,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center">No inventory records found</td>
+                            <td colspan="8" class="text-center">No inventory records found</td>
                         </tr>
                         @endforelse
                     </tbody>

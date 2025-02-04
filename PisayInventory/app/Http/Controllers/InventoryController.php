@@ -70,51 +70,77 @@ class InventoryController extends Controller
             // Get item with its classification
             $item = Item::findOrFail($validated['ItemId']);
             
-            if (!$item->ClassificationId) {
-                DB::rollBack();
-                return back()->with('error', 'Item does not have a classification assigned.')
-                            ->withInput();
-            }
-
-            // Calculate stocks based on type (in/out)
-            $stocksAdded = $validated['type'] === 'in' ? 
-                abs($validated['StocksAdded']) : 
-                -abs($validated['StocksAdded']);
-
-            // Check if there's enough stock for removal
-            if ($validated['type'] === 'out' && ($item->StocksAvailable + $stocksAdded) < 0) {
-                DB::rollBack();
-                return back()->with('error', 'Not enough stock available for removal.')
-                            ->withInput();
-            }
-
-            // Create or update inventory record
-            $inventory = Inventory::firstOrNew([
+            // Debug log
+            \Log::info('Before update:', [
                 'ItemId' => $validated['ItemId'],
-                'ClassificationId' => $item->ClassificationId,
-                'IsDeleted' => false
+                'Type' => $validated['type'],
+                'Quantity' => $validated['StocksAdded'],
+                'Current Item Stock' => $item->StocksAvailable
             ]);
 
-            // If it's a new record
-            if (!$inventory->exists) {
+            // Get existing inventory record or create new one
+            $inventory = Inventory::where('ItemId', $validated['ItemId'])
+                ->where('IsDeleted', false)
+                ->first();
+
+            // Debug log
+            \Log::info('Current Inventory:', [
+                'Found' => $inventory ? 'Yes' : 'No',
+                'Current Stock' => $inventory ? $inventory->StocksAvailable : 0
+            ]);
+
+            if (!$inventory) {
+                $inventory = new Inventory();
+                $inventory->ItemId = $validated['ItemId'];
+                $inventory->ClassificationId = $item->ClassificationId;
                 $inventory->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
                 $inventory->CreatedById = Auth::user()->UserAccountID;
-                $inventory->StocksAdded = $stocksAdded;
-                $inventory->StocksAvailable = $item->StocksAvailable + $stocksAdded;
-            } else {
-                // If record exists, update it
-                $inventory->StocksAdded += $stocksAdded;
-                $inventory->StocksAvailable = $item->StocksAvailable + $stocksAdded;
-                $inventory->DateModified = Carbon::now()->format('Y-m-d H:i:s');
-                $inventory->ModifiedById = Auth::user()->UserAccountID;
+                $inventory->IsDeleted = false;
+                $inventory->StocksAdded = 0;
+                $inventory->StockOut = 0;
+                $inventory->StocksAvailable = 0;
             }
 
-            $inventory->save();
+            if ($validated['type'] === 'in') {
+                // Stock In
+                $inventory->StocksAdded += $validated['StocksAdded'];
+                $inventory->StocksAvailable += $validated['StocksAdded'];
+                $item->StocksAvailable += $validated['StocksAdded'];
+            } else {
+                // Stock Out
+                if ($inventory->StocksAvailable < $validated['StocksAdded']) {
+                    DB::rollBack();
+                    return back()->with('error', 'Not enough stock available for removal.')
+                                ->withInput();
+                }
+                
+                // Direct SQL update for inventory table
+                DB::table('inventory')
+                    ->where('ItemId', $validated['ItemId'])
+                    ->where('IsDeleted', false)
+                    ->update([
+                        'StockOut' => DB::raw('StockOut + ' . $validated['StocksAdded']),
+                        'StocksAvailable' => DB::raw('StocksAvailable - ' . $validated['StocksAdded']),
+                        'DateModified' => Carbon::now()->format('Y-m-d H:i:s'),
+                        'ModifiedById' => Auth::user()->UserAccountID
+                    ]);
 
-            // Update item stock
-            $item->StocksAvailable = $inventory->StocksAvailable;
-            $item->ModifiedById = Auth::user()->UserAccountID;
+                // Update item table
+                $item->StocksAvailable -= $validated['StocksAdded'];
+            }
+
+            // Debug log
+            \Log::info('After update:', [
+                'New Item Stock' => $item->StocksAvailable,
+                'New Inventory Stock' => DB::table('inventory')
+                    ->where('ItemId', $validated['ItemId'])
+                    ->where('IsDeleted', false)
+                    ->value('StocksAvailable')
+            ]);
+
+            // Update item
             $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
+            $item->ModifiedById = Auth::user()->UserAccountID;
             $item->save();
 
             DB::commit();
