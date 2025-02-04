@@ -14,7 +14,10 @@ class RoleController extends Controller
         $roles = Role::where('IsDeleted', false)
             ->orderBy('DateCreated', 'desc')
             ->get();
-        return view('roles.index', compact('roles'));
+        $trashedRoles = Role::where('IsDeleted', true)
+            ->orderBy('DateDeleted', 'desc')
+            ->get();
+        return view('roles.index', compact('roles', 'trashedRoles'));
     }
 
     public function create()
@@ -98,12 +101,28 @@ class RoleController extends Controller
     public function destroy($id)
     {
         $role = Role::findOrFail($id);
+        
         $role->IsDeleted = true;
         $role->DateDeleted = now();
         $role->DeletedById = Auth::id();
         $role->save();
 
-        return redirect()->route('roles.index')->with('success', 'Role deleted successfully');
+        return redirect()->route('roles.index')
+            ->with('success', 'Role deleted successfully');
+    }
+
+    public function restore($id)
+    {
+        $role = Role::findOrFail($id);
+        $role->IsDeleted = false;
+        $role->DateDeleted = null;
+        $role->DeletedById = null;
+        $role->DateModified = now();
+        $role->ModifiedById = Auth::id();
+        $role->save();
+
+        return redirect()->route('roles.index')
+            ->with('success', 'Role restored successfully');
     }
 
     public function policies()

@@ -33,6 +33,7 @@ class User extends Authenticatable
     protected $fillable = [
         'Username',
         'Password',
+        'RoleId',
         'CreatedById',
         'DateCreated',
         'ModifiedById',
@@ -87,6 +88,11 @@ class User extends Authenticatable
     public function modifiedBy()
     {
         return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountId');
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'RoleId', 'RoleId');
     }
 
     public function setPasswordAttribute($value)

@@ -25,9 +25,4 @@ class Role extends Model
     {
         return $this->hasMany(RolePolicy::class, 'RoleId', 'RoleId');
     }
-
-    public function users()
-    {
-        return $this->hasMany(User::class, 'RoleId', 'RoleId');
-    }
-} 
+}

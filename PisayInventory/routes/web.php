@@ -16,12 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 
 // Welcome page as the default route
-Route::get('/', function () {
-    return view('welcome');
-})->name('welcome');
-
-Route::get('/', [EmployeeDashboardController::class, 'index'])->name('employee.dashboard');
-
+Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
 // Authentication Routes
 Route::middleware('guest')->group(function () {
@@ -33,7 +28,6 @@ Route::middleware('guest')->group(function () {
 
 // Protected routes - all routes that require authentication
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
     // Items Management
@@ -81,6 +75,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('roles', RoleController::class, ['except' => ['show']]);
     Route::get('roles/policies', [RoleController::class, 'policies'])->name('roles.policies');
     Route::put('roles/policies/{id}', [RoleController::class, 'updatePolicy'])->name('roles.policies.update');
+    Route::post('roles/{id}/restore', [RoleController::class, 'restore'])->name('roles.restore');
 
     // Stock Management Routes
     // Route::post('/items/{item}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');

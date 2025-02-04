@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
-use App\Models\Employee;
+use App\Models\Classification;
 use App\Models\Supplier;
 use App\Models\Inventory;
 use Illuminate\Http\Request;
@@ -20,51 +20,66 @@ class DashboardController extends Controller
     public function index()
     {
         try {
-            $user = Auth::user();
-            
-            // Initialize all variables with default values
-            $data = [
-                'user' => $user,
-                'totalItems' => 0,
-                'totalEmployees' => 0,
-                'totalSuppliers' => 0,
-                'lowStockItems' => 0,
-                'recentInventory' => collect([])  // Empty collection as default
-            ];
+            // Get statistics
+            $totalItems = Item::where('IsDeleted', false)->count();
+            $lowStockItems = Item::where('IsDeleted', false)
+                ->whereColumn('StocksAvailable', '<=', 'ReorderPoint')
+                ->count();
+            $totalSuppliers = Supplier::where('IsDeleted', false)->count();
+            $totalClassifications = Classification::where('IsDeleted', false)->count();
 
-            // Only try to get data if user is authenticated
-            if (Auth::check()) {
-                $data['totalItems'] = Item::where('IsDeleted', 0)->count();
-                $data['totalEmployees'] = Employee::where('IsDeleted', 0)->count();
-                $data['totalSuppliers'] = Supplier::where('IsDeleted', 0)->count();
-                $data['lowStockItems'] = Item::where('IsDeleted', 0)
-                    ->whereColumn('Quantity', '<=', 'ReorderPoint')
-                    ->count();
-                
-                $data['recentInventory'] = Inventory::with(['item', 'employee'])
-                    ->where('IsDeleted', 0)
-                    ->orderBy('DateCreated', 'desc')
-                    ->take(10)
-                    ->get();
+            // Get low stock items list
+            $lowStockItemsList = Item::where('IsDeleted', false)
+                ->whereColumn('StocksAvailable', '<=', 'ReorderPoint')
+                ->select('ItemName', 'StocksAvailable')
+                ->get();
 
-                Log::info('Dashboard data loaded successfully', $data);
-            }
+            // Get recent activities
+            $recentActivities = Inventory::with(['item', 'user'])
+                ->where('IsDeleted', false)
+                ->orderBy('DateCreated', 'desc')
+                ->take(10)
+                ->get()
+                ->map(function ($activity) {
+                    return [
+                        'item_name' => $activity->item->ItemName ?? 'Unknown Item',
+                        'action' => $this->getActionType($activity->Type),
+                        'action_color' => $this->getActionColor($activity->Type),
+                        'user_name' => $activity->user->Username ?? 'Unknown User',
+                        'date' => date('M d, Y h:i A', strtotime($activity->DateCreated))
+                    ];
+                });
 
-            return view('dashboard.index', $data);
+            return view('dashboard', compact(
+                'totalItems',
+                'lowStockItems',
+                'totalSuppliers',
+                'totalClassifications',
+                'lowStockItemsList',
+                'recentActivities'
+            ));
 
         } catch (\Exception $e) {
-            Log::error('Dashboard error: ' . $e->getMessage());
-            
-            // Return view with error message and default values
-            return view('dashboard.index', [
-                'user' => Auth::user(),
-                'error' => 'Error loading dashboard data',
-                'totalItems' => 0,
-                'totalEmployees' => 0,
-                'totalSuppliers' => 0,
-                'lowStockItems' => 0,
-                'recentInventory' => collect([])
-            ]);
+            Log::error('Error loading dashboard: ' . $e->getMessage());
+            return view('dashboard')->with('error', 'Error loading dashboard data');
         }
     }
-} 
+
+    private function getActionType($type)
+    {
+        return match ($type) {
+            'IN' => 'Stock In',
+            'OUT' => 'Stock Out',
+            default => 'Unknown'
+        };
+    }
+
+    private function getActionColor($type)
+    {
+        return match ($type) {
+            'IN' => 'success',
+            'OUT' => 'danger',
+            default => 'secondary'
+        };
+    }
+}

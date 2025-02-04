@@ -13,6 +13,7 @@ class Inventory extends Model
 
     protected $fillable = [
         'ItemId',
+        'Type',
         'ClassificationId',
         'StocksAdded',
         'StocksAvailable',
@@ -42,24 +43,27 @@ class Inventory extends Model
         return $this->belongsTo(Item::class, 'ItemId', 'ItemId');
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
     public function created_by_user()
     {
-        return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID')
-                    ->from('UserAccount')  // Specify the exact table name
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
                     ->withDefault(['Username' => 'N/A']);
     }
 
     public function modified_by_user()
     {
-        return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID')
-                    ->from('UserAccount')  // Specify the exact table name
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
                     ->withDefault(['Username' => 'N/A']);
     }
 
     public function deleted_by_user()
     {
-        return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID')
-                    ->from('UserAccount')  // Specify the exact table name
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
                     ->withDefault(['Username' => 'N/A']);
     }
 } 

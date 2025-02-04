@@ -102,14 +102,14 @@
                             <tbody>
                                 @forelse($recentActivities as $activity)
                                 <tr>
-                                    <td>{{ $activity->item_name }}</td>
+                                    <td>{{ $activity['item_name'] }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $activity->action_color }}">
-                                            {{ $activity->action }}
+                                        <span class="badge bg-{{ $activity['action_color'] }}">
+                                            {{ $activity['action'] }}
                                         </span>
                                     </td>
-                                    <td>{{ $activity->user_name }}</td>
-                                    <td>{{ $activity->date }}</td>
+                                    <td>{{ $activity['user_name'] }}</td>
+                                    <td>{{ $activity['date'] }}</td>
                                 </tr>
                                 @empty
                                 <tr>
@@ -167,27 +167,27 @@
 <script>
     $(document).ready(function() {
         // Initialize tables only if they have data
-        if ($('#activitiesTable tbody tr').length > 0) {
+        if ($('#activitiesTable tbody tr').length > 1) {
             $('#activitiesTable').DataTable({
                 pageLength: 5,
                 ordering: true,
                 responsive: true,
                 destroy: true,
                 language: {
-                    search: "INPUT",
+                    search: "Search",
                     searchPlaceholder: "Search activities..."
                 }
             });
         }
 
-        if ($('#stockTable tbody tr').length > 0) {
+        if ($('#stockTable tbody tr').length > 1) {
             $('#stockTable').DataTable({
                 pageLength: 5,
                 ordering: true,
                 responsive: true,
                 destroy: true,
                 language: {
-                    search: "INPUT",
+                    search: "Search",
                     searchPlaceholder: "Search items..."
                 }
             });
