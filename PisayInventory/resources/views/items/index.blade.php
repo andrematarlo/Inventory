@@ -38,9 +38,13 @@
                         <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
                         <td>{{ $item->supplier->SupplierName ?? 'N/A' }}</td>
                         <td>{{ $item->created_by_user->Username ?? 'N/A' }}</td>
-                        <td>{{ $item->DateCreated ? date('Y-m-d H:i', strtotime($item->DateCreated)) : 'N/A' }}</td>
+                        <td data-timestamp="{{ strtotime($item->DateCreated) * 1000 }}" class="datetime-cell">
+                            {{ $item->DateCreated ? date('M d, Y h:i A', strtotime($item->DateCreated)) : 'N/A' }}
+                        </td>
                         <td>{{ $item->modified_by_user->Username ?? 'N/A' }}</td>
-                        <td>{{ $item->DateModified ? date('Y-m-d H:i', strtotime($item->DateModified)) : 'N/A' }}</td>
+                        <td data-timestamp="{{ strtotime($item->DateModified) * 1000 }}" class="datetime-cell">
+                            {{ $item->DateModified ? date('M d, Y h:i A', strtotime($item->DateModified)) : 'N/A' }}
+                        </td>
                         <td>
                             <div class="btn-group" role="group">
                                 <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
@@ -286,4 +290,35 @@
     </div>
 </div>
 @endforeach
+@endsection
+
+@section('scripts')
+<script>
+    function updateDates() {
+        document.querySelectorAll('.datetime-cell').forEach(cell => {
+            const timestamp = parseInt(cell.getAttribute('data-timestamp'));
+            if (timestamp) {
+                const date = new Date(timestamp + (8 * 60 * 60 * 1000)); // Add 8 hours for PHT
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                const formattedHours = (hours % 12) || 12;
+                
+                const formatted = `${date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                })} ${formattedHours}:${minutes} ${ampm}`;
+                
+                cell.textContent = formatted;
+            }
+        });
+    }
+
+    // Update dates every second
+    setInterval(updateDates, 1000);
+
+    // Initial update
+    updateDates();
+</script>
 @endsection 
