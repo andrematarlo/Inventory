@@ -75,76 +75,42 @@ class InventoryController extends Controller
         try {
             DB::beginTransaction();
 
-            $validated = $request->validate([
-                'ItemId' => 'required|exists:items,ItemId',
-                'StocksAdded' => 'required|integer|min:1',
-                'type' => 'required|in:in,out'
-            ]);
-
-            // Get both records
-            $item = Item::findOrFail($validated['ItemId']);
-            
-            // Debug current stocks
-            \Log::info('Current Stocks:', [
-                'Item' => $item->StocksAvailable,
-                'Requested' => $validated['StocksAdded']
-            ]);
-
-            // Create new inventory record
             $inventory = new Inventory();
-            $inventory->ItemId = $validated['ItemId'];
-            $inventory->ClassificationId = $item->ClassificationId;
+            $inventory->ItemId = $request->ItemId;
+            $inventory->ClassificationId = $request->ClassificationId;
             $inventory->IsDeleted = false;
-            $inventory->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
-            $inventory->CreatedById = Auth::user()->UserAccountID;
-            $inventory->ModifiedById = Auth::user()->UserAccountID;
-            $inventory->DateModified = Carbon::now()->format('Y-m-d H:i:s');
-
-            if ($validated['type'] === 'in') {
-                // STOCK IN: Add to item's stock
-                $newStock = $item->StocksAvailable + $validated['StocksAdded'];
-                $item->StocksAvailable = $newStock;
-                
-                // Record the stock in
-                $inventory->Type = 'IN';
-                $inventory->StocksAdded = $validated['StocksAdded'];
-                $inventory->StocksAvailable = $newStock;
-            } else {
-                // STOCK OUT: Check if enough stock in items table
-                if ($item->StocksAvailable >= $validated['StocksAdded']) {
-                    // Deduct from item's stock
-                    $newStock = $item->StocksAvailable - $validated['StocksAdded'];
-                    $item->StocksAvailable = $newStock;
-                    
-                    // Record the stock out as negative StocksAdded
-                    $inventory->Type = 'OUT';
-                    $inventory->StocksAdded = -$validated['StocksAdded'];
-                    $inventory->StocksAvailable = $newStock;
-                } else {
-                    DB::rollBack();
-                    return back()->with('error', "Not enough stock available. Current stock: {$item->StocksAvailable}")
-                                ->withInput();
-                }
-            }
-
-            // Save changes
-            $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
-            $item->ModifiedById = Auth::user()->UserAccountID;
-            $item->save();
-            
+            $inventory->DateCreated = now();
+            $inventory->CreatedById = Auth::id();
+            $inventory->ModifiedById = Auth::id();
+            $inventory->DateModified = now();
+            $inventory->StocksAdded = $request->StocksAdded;
+            $inventory->StocksAvailable = $request->StocksAdded;
             $inventory->save();
+
+            // Get related data for response
+            $item = Item::find($request->ItemId);
+            $classification = Classification::find($request->ClassificationId);
 
             DB::commit();
 
-            $action = $validated['type'] === 'in' ? 'added to' : 'removed from';
-            return redirect()->route('inventory.index')
-                ->with('success', "{$validated['StocksAdded']} items {$action} inventory. New stock: {$item->StocksAvailable}");
+            return response()->json([
+                'success' => true,
+                'message' => 'Inventory added successfully',
+                'data' => [
+                    'InventoryID' => $inventory->InventoryID,
+                    'ItemName' => $item->ItemName,
+                    'ClassificationName' => $classification->ClassificationName,
+                    'StocksAdded' => $inventory->StocksAdded,
+                    'StocksAvailable' => $inventory->StocksAvailable
+                ]
+            ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Inventory update failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to update inventory: ' . $e->getMessage())
-                        ->withInput();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add inventory: ' . $e->getMessage()
+            ], 500);
         }
     }
 

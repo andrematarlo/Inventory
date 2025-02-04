@@ -1,70 +1,81 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <h1>Dashboard</h1>
-            
-            <div class="row mt-4">
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body d-flex">
-                            <div>
-                                <h5 class="card-title fs-6">Total Items</h5>
-                                <p class="card-text display-4 mb-0">{{ $totalItems ?? 0 }}</p>
-                            </div>
-                            <div class="ms-auto d-flex align-items-center">
-                                <i class="bi bi-box-seam-fill text-primary opacity-75" style="font-size: 4rem;"></i>
-                            </div>
+<div class="container-fluid px-4">
+    <h2 class="mt-4">Dashboard</h2>
+    
+    <!-- Statistics Cards -->
+    <div class="row mt-4">
+                <!-- Total Items -->
+                <div class="col-xl-3 col-md-6">
+                <div class="card mb-4 rounded-5" style="box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0 text-dark">{{ $totalItems }}</h3>
+                            <div class="text-muted">Total Items</div>
                         </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body d-flex">
-                            <div>
-                                <h5 class="card-title fs-6">Total Employees</h5>
-                                <p class="card-text display-4 mb-0">{{ $totalEmployees ?? 0 }}</p>
-                            </div>
-                            <div class="ms-auto d-flex align-items-center">
-                                <i class="bi bi-people-fill text-success opacity-75" style="font-size: 4rem;"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body d-flex">
-                            <div>
-                                <h5 class="card-title fs-6">Total Suppliers</h5>
-                                <p class="card-text display-4 mb-0">{{ $totalSuppliers ?? 0 }}</p>
-                            </div>
-                            <div class="ms-auto d-flex align-items-center">
-                                <i class="bi bi-truck-front-fill text-danger opacity-75" style="font-size: 4rem;"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body d-flex">
-                            <div>
-                                <h5 class="card-title fs-6">Low Stock Items</h5>
-                                <p class="card-text display-4 mb-0">{{ $lowStockItems ?? 0 }}</p>
-                            </div>
-                            <div class="ms-auto d-flex align-items-center">
-                                <i class="bi bi-exclamation-triangle-fill text-warning opacity-75" style="font-size: 4rem;"></i>
-                            </div>
+                        <div class="fs-1" style="font-size: 3.5rem !important; color: #0d6efd;">
+                            <i class="bi bi-box"></i>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="card mt-4">
+        <!-- Total Employees -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card mb-4 rounded-5 shadow-lg">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0 text-dark">{{ $totalEmployees }}</h3>
+                            <div class="text-muted">Total Employees</div>
+                        </div>
+                        <div class="fs-1" style="font-size: 3.5rem !important; color: #198754;">
+                            <i class="bi bi-people"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Suppliers -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card mb-4 rounded-5 shadow-lg">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0 text-dark">{{ $totalSuppliers }}</h3>
+                            <div class="text-muted">Total Suppliers</div>
+                        </div>
+                        <div class="fs-1" style="font-size: 3.5rem !important; color: #ffc107;">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Items -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card mb-4 rounded-5 shadow-lg">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0 text-dark">{{ $lowStockItems->count() }}</h3>
+                            <div class="text-muted">Low Stock Items</div>
+                        </div>
+                        <div class="fs-1" style="font-size: 3.5rem !important; color: #dc3545;">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
                 <div class="card-header">
                     Recent Inventory Changes
                 </div>

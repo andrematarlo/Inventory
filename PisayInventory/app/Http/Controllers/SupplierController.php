@@ -14,8 +14,16 @@ class SupplierController extends Controller
      */
     public function index()
     {
-        $suppliers = Supplier::active()->get();
-        $trashedSuppliers = Supplier::trashed()->get();
+        $suppliers = Supplier::with(['created_by_user', 'modified_by_user'])
+            ->where('IsDeleted', 0)
+            ->orderBy('SupplierName')
+            ->get();
+
+        $trashedSuppliers = Supplier::with(['created_by_user', 'modified_by_user', 'deleted_by_user'])
+            ->where('IsDeleted', 1)
+            ->orderBy('SupplierName')
+            ->get();
+
         return view('suppliers.index', compact('suppliers', 'trashedSuppliers'));
     }
 
@@ -44,6 +52,8 @@ class SupplierController extends Controller
             'Address' => $request->Address,
             'CreatedById' => auth()->user()->UserAccountID,
             'DateCreated' => Carbon::now()->format('Y-m-d H:i:s'),
+            'ModifiedById' => auth()->user()->UserAccountID,
+            'DateModified' => Carbon::now()->format('Y-m-d H:i:s'),
             'IsDeleted' => false
         ]);
 

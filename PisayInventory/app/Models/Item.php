@@ -58,19 +58,22 @@ class Item extends Model
 
     public function created_by_user()
     {
-        return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID')
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
+                    ->from('UserAccount')
                     ->withDefault(['Username' => 'N/A']);
     }
 
     public function modified_by_user()
     {
-        return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID')
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
+                    ->from('UserAccount')
                     ->withDefault(['Username' => 'N/A']);
     }
 
     public function deleted_by_user()
     {
-        return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID')
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
+                    ->from('UserAccount')
                     ->withDefault(['Username' => 'N/A']);
     }
 

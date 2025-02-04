@@ -144,12 +144,12 @@
                 <h5 class="modal-title">Add Inventory</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('inventory.store') }}" method="POST">
+            <form id="addInventoryForm">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Item</label>
-                        <select class="form-select" name="ItemId" required>
+                        <select class="form-select" name="ItemId" id="ItemId" required>
                             <option value="">Select Item</option>
                             @foreach($items as $item)
                                 <option value="{{ $item->ItemId }}">
@@ -170,7 +170,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Quantity</label>
-                        <input type="number" class="form-control" name="StocksAdded" min="1" required>
+                        <input type="number" class="form-control" name="StocksAdded" id="StocksAdded" min="1" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -181,4 +181,70 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+$(document).ready(function() {
+    // Add Inventory Form Submit
+    $('#addInventoryForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            ItemId: $('#ItemId').val(),
+            ClassificationId: $('#ClassificationId').val(),
+            StocksAdded: $('#StocksAdded').val(),
+            _token: $('meta[name="csrf-token"]').attr('content')
+        };
+
+        $.ajax({
+            url: "{{ route('inventory.store') }}",
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                if (response.success) {
+                    // Add new row to table
+                    const newRow = `
+                        <tr data-inventory-id="${response.data.InventoryID}">
+                            <td>${response.data.ItemName}</td>
+                            <td>${response.data.ClassificationName}</td>
+                            <td class="stocks-added">${response.data.StocksAdded}</td>
+                            <td class="stock-out">0</td>
+                            <td class="stocks-available">${response.data.StocksAvailable}</td>
+                            <td>
+                                <div class="action-buttons d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-primary" title="Edit"
+                                            data-bs-toggle="modal" data-bs-target="#editModal${response.data.InventoryID}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form action="/inventory/${response.data.InventoryID}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete"
+                                                onclick="return confirm('Are you sure?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    $('#inventoryTable tbody').prepend(newRow);
+                    
+                    // Clear form and close modal
+                    $('#addInventoryForm')[0].reset();
+                    $('#addInventoryModal').modal('hide');
+                    
+                    // Show success message
+                    alert('Inventory added successfully!');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+                alert('Failed to add inventory');
+            }
+        });
+    });
+});
+</script>
 @endsection 

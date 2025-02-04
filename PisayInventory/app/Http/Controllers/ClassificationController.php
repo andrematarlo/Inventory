@@ -15,8 +15,16 @@ class ClassificationController extends Controller
      */
     public function index()
     {
-        $classifications = Classification::where('IsDeleted', 0)->get();
-        $trashedClassifications = Classification::where('IsDeleted', 1)->get();
+        $classifications = Classification::with(['created_by_user', 'modified_by_user'])
+            ->where('IsDeleted', 0)
+            ->orderBy('ClassificationName')
+            ->paginate(10);
+
+        $trashedClassifications = Classification::with(['created_by_user', 'modified_by_user', 'deleted_by_user'])
+            ->where('IsDeleted', 1)
+            ->orderBy('ClassificationName')
+            ->paginate(10);
+
         return view('classifications.index', compact('classifications', 'trashedClassifications'));
     }
 

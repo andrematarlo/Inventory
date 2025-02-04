@@ -86,7 +86,17 @@ class ItemController extends Controller
             $item->ReorderPoint = $validated['ReorderPoint'];
             $item->Description = $validated['Description'];
             $item->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
+            
+            // Debug user info
+            \Log::info('User info:', [
+                'Auth::id()' => Auth::id(),
+                'Auth::user()' => Auth::user(),
+                'UserAccountID' => Auth::user()->UserAccountID ?? 'null'
+            ]);
+            
             $item->CreatedById = Auth::user()->UserAccountID;
+            $item->ModifiedById = Auth::user()->UserAccountID;
+            $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
             $item->IsDeleted = false;
             $item->save();
 
@@ -100,6 +110,8 @@ class ItemController extends Controller
                 $inventory->StocksAvailable = $validated['StocksAvailable'];
                 $inventory->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
                 $inventory->CreatedById = Auth::user()->UserAccountID;
+                $inventory->ModifiedById = Auth::user()->UserAccountID;
+                $inventory->DateModified = Carbon::now()->format('Y-m-d H:i:s');
                 $inventory->IsDeleted = false;
                 $inventory->save();
             }
@@ -130,8 +142,8 @@ class ItemController extends Controller
             $item->ClassificationId = $request->ClassificationId;
             $item->SupplierID = $request->SupplierID;
             $item->ReorderPoint = $request->ReorderPoint;
-            $item->ModifiedById = Auth::id();
-            $item->DateModified = now();
+            $item->ModifiedById = Auth::user()->UserAccountID;
+            $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
             $item->save();
 
             DB::commit();
@@ -171,6 +183,8 @@ class ItemController extends Controller
             $inventory->IsDeleted = false;
             $inventory->DateCreated = now();
             $inventory->CreatedById = Auth::id();
+            $inventory->ModifiedById = Auth::id();
+            $inventory->DateModified = now();
             $inventory->StocksAdded = $quantity;
             $inventory->StocksAvailable = $newStock;
             $inventory->save();
@@ -219,6 +233,8 @@ class ItemController extends Controller
             $inventory->IsDeleted = false;
             $inventory->DateCreated = now();
             $inventory->CreatedById = Auth::id();
+            $inventory->ModifiedById = Auth::id();
+            $inventory->DateModified = now();
             $inventory->StocksAdded = -$quantity; // Negative for stock out
             $inventory->StocksAvailable = $newStock;
             $inventory->save();

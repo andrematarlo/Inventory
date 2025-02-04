@@ -29,7 +29,7 @@
                 left: 0;
                 top: 0;
                 height: 100vh;
-                width: 250px;
+                width: 320px;
                 background: white;
                 box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.05);
                 overflow-y: auto;
@@ -55,12 +55,12 @@
             .nav-link {
                 display: flex;
                 align-items: center;
-                padding: 0.75rem 1.5rem;
+                padding: 0.75rem 1.25rem; /* Adjusted padding */
                 color: #64748b;
                 text-decoration: none;
                 transition: all 0.2s;
                 border-radius: 0.375rem;
-                margin: 0 0.5rem;
+                margin: 0 0.75rem; /* Adjusted margin */
                 gap: 0.75rem;
             }
 
@@ -160,24 +160,41 @@
             }
 
             /* Main content adjustment */
-            .main-content {
-    margin-left: 280px;
-    min-height: 100vh;
-}
-
-.content-wrapper {
-    padding: 2rem;  /* This adds the padding around your content */
-}
-
-/* Responsive Styles */
-@media (max-width: 768px) {
-    .main-content {
-        margin-left: 0;
+    body .main-content {
+        margin-left: 320px;
+        padding: 0 0 0 10px; /* Left padding for space after sidebar */
     }
-    .content-wrapper {
-        padding: 1rem;
+
+    body .main-content .content-wrapper {
+        padding: 2rem 3rem;
+        margin: 0 auto;
     }
-}
+
+    body .container, 
+    body .container-fluid {
+        max-width: 1800px;
+        margin: 0 auto;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        body .main-content {
+            margin-left: 0;
+            padding-left: 0;
+        }
+    }
+
+    /* Responsive styles */
+    @media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+    }
         </style>
         @yield('additional_styles')
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>

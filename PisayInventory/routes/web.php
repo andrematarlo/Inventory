@@ -15,8 +15,10 @@ use App\Http\Controllers\EmployeeController;
 use Illuminate\Support\Facades\Route;
 
 
-// Welcome page as the default route
-Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+// Change the welcome route to redirect to dashboard
+Route::get('/', function () {
+    return redirect()->route('dashboard');
+})->name('welcome');
 
 // Authentication Routes
 Route::middleware('guest')->group(function () {
@@ -79,6 +81,8 @@ Route::middleware('auth')->group(function () {
 
     // Stock Management Routes
     // Route::post('/items/{item}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 
 Route::middleware('auth')->group(function () {

@@ -13,18 +13,18 @@
 
 
         <!-- Employee Management Dropdown -->
-<li class="nav-item dropdown {{ request()->routeIs('employees.*', 'roles.*') ? 'show' : '' }}">
-    <a class="nav-link dropdown-toggle text-white d-flex justify-content-between align-items-center" 
-       href="#" 
-       id="employeeDropdown" 
-       role="button" 
-       data-bs-toggle="dropdown" 
-       aria-expanded="{{ request()->routeIs('employees.*', 'roles.*') ? 'true' : 'false' }}">
-        <div>
-            <i class="bi bi-people"></i>
-            <span>Employee Management</span>
+        <li class="nav-item dropdown {{ request()->routeIs('employees.*', 'roles.*') ? 'show' : '' }}">
+            <a class="nav-link dropdown-toggle text-white" 
+            href="#" 
+            id="employeeDropdown" 
+            role="button" 
+            data-bs-toggle="dropdown" 
+                aria-expanded="{{ request()->routeIs('employees.*', 'roles.*') ? 'true' : 'false' }}">
+        <div class="d-flex w-100 align-items-center">
+            <i class="bi bi-people me-2"></i>
+            <span class="flex-grow-1">Employee Management</span>
+            <i class="bi bi-chevron-down ms-1"></i>
         </div>
-        <i class="bi bi-chevron-down dropdown-arrow"></i>
     </a>
     <ul class="dropdown-menu dropdown-menu-dark {{ request()->routeIs('employees.*', 'roles.*') ? 'show' : '' }}" 
         aria-labelledby="employeeDropdown">
@@ -108,7 +108,7 @@
 <style>
 .sidebar {
     min-height: 100vh;
-    width: 280px;
+    width: 320px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     position: fixed;
     left: 0;
@@ -137,51 +137,57 @@
 
 /* Dropdown specific styles */
 .sidebar .dropdown-menu {
-    background-color:rgb(48, 50, 53) !important;
+    background-color: rgb(48, 50, 53) !important;
     border: none !important;
     border-radius: 0;
     margin: 0;
-    width: 280px;
+    width: 320px; /* Match sidebar width */
     position: static !important;
-    padding: 0;
+    padding: 0.75rem; /* Match nav-link margin */
     transform: none !important;
     box-shadow: none;
 }
 .sidebar .nav-item.dropdown.show .dropdown-menu {
     display: block;
 }
-.sidebar .nav-item.dropdown:not(.show) .dropdown-menu.show {
-    display: block;
-}
+
 
 .sidebar .dropdown-item {
     color: white !important;
-    padding-left: 2.5rem;
+    padding: 0.75rem; /* Match nav-link padding */
     white-space: nowrap;
+    border-radius: 0.375rem; /* Match nav-link border-radius */
 }
 
-.dropdown-arrow {
-    /*float: right;*/
-    /*margin-top: 3px;*/
+.sidebar .dropdown-item:focus,
+.sidebar .dropdown-item:active {
+    background-color: rgba(177, 155, 221, 0.6) !important;
+    color: white !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.sidebar .nav-link:focus,
+.sidebar .nav-link:active {
+    color: white !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.nav-link.dropdown-toggle,
+.dropdown-menu {
+    margin: 0 !important;
+}
+.nav-link .bi-chevron-down {
+    font-size: 10px; /* Adjust this value to your preferred size */
+}
+
+.nav-link.dropdown-toggle .bi-chevron-down {
     transition: transform 0.3s;
-    margin-left: 8px; /* Add some space between text and arrow */
-
-}
-.nav-link.dropdown-toggle {
-    padding-right: 1rem; /* Ensure consistent padding */
-}
-.nav-link.dropdown-toggle > div {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px; /* Space between icon and text */
 }
 
-
-.show .dropdown-arrow {
-    transform: rotate(180deg);
+.show .nav-link.dropdown-toggle .bi-chevron-down {
+    transform: rotate(90deg);
 }
-
-
 .sidebar .nav-item {
     width: 100%;
 }
@@ -216,22 +222,27 @@
 /* Script rani para sa dropdown */
 
 document.addEventListener('DOMContentLoaded', function() {
-    
     const dropdownToggle = document.querySelector('#employeeDropdown');
+    const parentLi = dropdownToggle.closest('.nav-item');
     
-    // Add click event listener
+    // Toggle dropdown
     dropdownToggle.addEventListener('click', function(e) {
-        const dropdownMenu = this.nextElementSibling;
-        const parentLi = this.closest('.nav-item');
+        e.preventDefault();
+        e.stopPropagation(); // Prevent event bubbling
         
-        // If we're on an active route and dropdown is shown
-        if (parentLi.classList.contains('show')) {
-            // Toggle the show class
-            parentLi.classList.toggle('show');
-            dropdownMenu.classList.toggle('show');
-            this.setAttribute('aria-expanded', 
-                this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true'
-            );
+        // Toggle the show class regardless of active state
+        parentLi.classList.toggle('show');
+        this.setAttribute('aria-expanded', 
+            parentLi.classList.contains('show') ? 'true' : 'false'
+        );
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        // Only close if click is outside the dropdown
+        if (!parentLi.contains(e.target)) {
+            parentLi.classList.remove('show');
+            dropdownToggle.setAttribute('aria-expanded', 'false');
         }
     });
 });
