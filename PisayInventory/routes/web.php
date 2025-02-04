@@ -68,6 +68,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('reports')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/inventory', [ReportController::class, 'generateInventoryReport'])->name('reports.inventory');
+        Route::get('/inventory/pdf', [ReportController::class, 'generateInventoryPDF'])->name('reports.inventory.pdf');
         Route::get('/sales', [ReportController::class, 'generateSalesReport'])->name('reports.sales');
         Route::get('/low-stock', [ReportController::class, 'generateLowStockReport'])->name('reports.low-stock');
     });

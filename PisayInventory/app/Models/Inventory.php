@@ -42,19 +42,19 @@ class Inventory extends Model
         return $this->belongsTo(Item::class, 'ItemId', 'ItemId');
     }
 
-    public function created_by_user()
+    public function createdByUser()
     {
         return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID')
                     ->withDefault(['Username' => 'N/A']);
     }
 
-    public function modified_by_user()
+    public function modifiedByUser()
     {
         return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID')
                     ->withDefault(['Username' => 'N/A']);
     }
 
-    public function deleted_by_user()
+    public function deletedByUser()
     {
         return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID')
                     ->withDefault(['Username' => 'N/A']);

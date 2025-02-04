@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Item;
+use App\Models\Inventory;
 
 class UserAccount extends Authenticatable
 {
@@ -35,6 +37,43 @@ class UserAccount extends Authenticatable
         'DateModified' => 'datetime',
         'DateDeleted' => 'datetime',
     ];
+
+    // Accessor for Username
+    public function getUsernameAttribute()
+    {
+        return $this->attributes['Username'];
+    }
+
+    // Relationships
+    public function created_items()
+    {
+        return $this->hasMany(Item::class, 'CreatedById', 'UserAccountID');
+    }
+
+    public function modified_items()
+    {
+        return $this->hasMany(Item::class, 'ModifiedById', 'UserAccountID');
+    }
+
+    public function deleted_items()
+    {
+        return $this->hasMany(Item::class, 'DeletedById', 'UserAccountID');
+    }
+
+    public function created_inventories()
+    {
+        return $this->hasMany(Inventory::class, 'CreatedById', 'UserAccountID');
+    }
+
+    public function modified_inventories()
+    {
+        return $this->hasMany(Inventory::class, 'ModifiedById', 'UserAccountID');
+    }
+
+    public function deleted_inventories()
+    {
+        return $this->hasMany(Inventory::class, 'DeletedById', 'UserAccountID');
+    }
 
     // Authentication methods
     public function getAuthIdentifierName()

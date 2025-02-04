@@ -85,12 +85,22 @@
             <form action="{{ route('reports.inventory') }}" method="GET">
                 <div class="modal-body">
                     <div class="mb-3">
+                        <label class="form-label">Report Type</label>
+                        <select name="report_type" class="form-select">
+                            <option value="all">All Movements</option>
+                            <option value="in">Stock In Only</option>
+                            <option value="out">Stock Out Only</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Start Date</label>
-                        <input type="date" class="form-control" name="start_date" required>
+                        <input type="date" class="form-control" name="start_date" required 
+                               value="{{ now()->subDays(30)->format('Y-m-d') }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">End Date</label>
-                        <input type="date" class="form-control" name="end_date" required>
+                        <input type="date" class="form-control" name="end_date" required
+                               value="{{ now()->format('Y-m-d') }}">
                     </div>
                 </div>
                 <div class="modal-footer">
