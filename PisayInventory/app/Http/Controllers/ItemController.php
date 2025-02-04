@@ -17,42 +17,25 @@ class ItemController extends Controller
     public function index()
     {
         try {
-            // Basic query without relationships first
-            $items = Item::where('IsDeleted', 0);
-            
-            Log::info('Basic items query:', ['count' => $items->count()]);
-            
-            // Now add relationships with correct names
-            $items = $items->with([
-                'classification' => function($query) {
-                    $query->where('IsDeleted', 0);
-                },
-                'unitOfMeasure' => function($query) {
-                    $query->where('IsDeleted', 0);
-                },
-                'supplier' => function($query) {
-                    $query->where('IsDeleted', 0);
-                },
+            // Get items with all relationships
+            $items = Item::with([
+                'classification',
+                'unitOfMeasure',
+                'supplier',
                 'created_by_user',
                 'modified_by_user'
-            ])->get();
+            ])
+            ->where('IsDeleted', 0)
+            ->orderBy('ItemName')
+            ->get();
 
             $classifications = Classification::where('IsDeleted', 0)->get();
             $units = Unit::where('IsDeleted', 0)->get();
             $suppliers = Supplier::where('IsDeleted', 0)->get();
 
-            Log::info('Data loaded:', [
-                'items_count' => $items->count(),
-                'classifications_count' => $classifications->count(),
-                'units_count' => $units->count(),
-                'suppliers_count' => $suppliers->count()
-            ]);
-
             return view('items.index', compact('items', 'classifications', 'units', 'suppliers'));
         } catch (\Exception $e) {
-            Log::error('Error in ItemController@index: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
-            
+            \Log::error('Error in ItemController@index: ' . $e->getMessage());
             return back()->with('error', 'Unable to load items. Error: ' . $e->getMessage());
         }
     }

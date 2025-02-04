@@ -34,26 +34,26 @@
                     <tr>
                         <td>{{ $item->ItemName }}</td>
                         <td>{{ $item->Description }}</td>
-                        <td>{{ optional($item->unitOfMeasure)->UnitName ?? 'N/A' }}</td>
-                        <td>{{ optional($item->classification)->ClassificationName ?? 'N/A' }}</td>
-                        <td>
-                            @if($item->supplier)
-                                {{ $item->supplier->SupplierName }}
-                            @else
-                                <span class="text-danger">No Supplier</span>
-                            @endif
-                        </td>
-                        <td>{{ optional($item->createdBy)->Username ?? 'N/A' }}</td>
+                        <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
+                        <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
+                        <td>{{ $item->supplier->SupplierName ?? 'N/A' }}</td>
+                        <td>{{ $item->created_by_user->Username ?? 'N/A' }}</td>
                         <td>{{ $item->DateCreated ? date('Y-m-d H:i', strtotime($item->DateCreated)) : 'N/A' }}</td>
-                        <td>{{ optional($item->modifiedBy)->Username ?? 'N/A' }}</td>
+                        <td>{{ $item->modified_by_user->Username ?? 'N/A' }}</td>
                         <td>{{ $item->DateModified ? date('Y-m-d H:i', strtotime($item->DateModified)) : 'N/A' }}</td>
-                        <td class="action-buttons">
-                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteItemModal{{ $item->ItemId }}">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this item?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     @empty
