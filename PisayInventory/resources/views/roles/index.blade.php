@@ -6,9 +6,9 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Role Management</h2>
-        <a href="{{ route('roles.create') }}" class="btn btn-primary">
-            <i class="bi bi-shield-plus me-2"></i>Add Role
-        </a>
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+            <i class="bi bi-plus-lg me-2"></i>Add Role
+        </button>
     </div>
 
     <div class="card">
@@ -24,6 +24,7 @@
                 <table class="table table-hover" id="rolesTable">
                     <thead>
                         <tr>
+                            <th>Role ID</th>
                             <th>Role Name</th>
                             <th>Description</th>
                             <th>Created Date</th>
@@ -34,6 +35,7 @@
                     <tbody>
                         @forelse($roles as $role)
                             <tr>
+                                <td>{{ $role->RoleId }}</td>
                                 <td>{{ $role->RoleName }}</td>
                                 <td>{{ $role->Description }}</td>
                                 <td>{{ $role->DateCreated ? date('M d, Y', strtotime($role->DateCreated)) : 'N/A' }}</td>
@@ -66,7 +68,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center">No roles found</td>
+                                <td colspan="6" class="text-center">No roles found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -75,12 +77,40 @@
         </div>
     </div>
 </div>
+
+<!-- Add Role Modal -->
+<div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addRoleModalLabel">Add New Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('roles.store') }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="RoleName" class="form-label">Role Name</label>
+                        <input type="text" class="form-control" id="RoleName" name="RoleName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Description" class="form-label">Description</label>
+                        <textarea class="form-control" id="Description" name="Description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Save Role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
     $(document).ready(function() {
-        // Check if DataTable is already initialized
         if (!$.fn.DataTable.isDataTable('#rolesTable')) {
             $('#rolesTable').DataTable({
                 pageLength: 10,
@@ -90,9 +120,19 @@
                     search: "Search:",
                     searchPlaceholder: "Search roles..."
                 },
-                destroy: true // Allow table to be reinitialized
+                destroy: true
             });
         }
+
+        // Clear modal form when modal is closed
+        $('#addRoleModal').on('hidden.bs.modal', function () {
+            $(this).find('form')[0].reset();
+        });
+
+        // Show validation errors in modal if any
+        @if($errors->any())
+            $('#addRoleModal').modal('show');
+        @endif
     });
 </script>
 @endsection 
