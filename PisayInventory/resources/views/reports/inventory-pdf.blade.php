@@ -90,7 +90,7 @@
                         {{ $movement->StocksAdded > 0 ? '+' : '' }}{{ number_format($movement->StocksAdded) }}
                     </span>
                 </td>
-                <td>{{ $movement->createdByUser->Username ?? 'N/A' }}</td>
+                <td>{{ optional($movement->created_by_user)->Username ?? 'N/A' }}</td>
             </tr>
             @empty
             <tr>

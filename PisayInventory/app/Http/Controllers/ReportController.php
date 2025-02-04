@@ -73,21 +73,20 @@ class ReportController extends Controller
             'report_type' => 'nullable|in:all,in,out'
         ]);
 
-        $startDate = Carbon::parse($request->start_date)->startOfDay();
-        $endDate = Carbon::parse($request->end_date)->endOfDay();
-        $reportType = $request->get('report_type', 'all');
+        $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+        $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+        $reportType = $request->input('report_type', 'all');
 
-        // Get inventory movements
+        // Base query with relationships
         $query = Inventory::with([
             'item.classification',
-            'createdByUser',
-            'modifiedByUser',
-            'deletedByUser'
+            'created_by_user',
+            'modified_by_user'
         ])
-            ->whereBetween('DateCreated', [$startDate, $endDate])
+            ->whereBetween('DateCreated', [$startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')])
             ->where('IsDeleted', 0);
 
-        // Filter by movement type
+        // Apply movement type filter
         if ($reportType === 'in') {
             $query->where('StocksAdded', '>', 0);
         } elseif ($reportType === 'out') {
@@ -96,12 +95,12 @@ class ReportController extends Controller
 
         $movements = $query->orderBy('DateCreated', 'desc')->get();
 
-        // Get summary statistics
+        // Calculate summary statistics
         $summary = [
             'total_items' => $movements->count(),
             'total_in' => $movements->where('StocksAdded', '>', 0)->sum('StocksAdded'),
             'total_out' => abs($movements->where('StocksAdded', '<', 0)->sum('StocksAdded')),
-            'unique_items' => $movements->unique('ItemId')->count(),
+            'unique_items' => $movements->unique('ItemId')->count()
         ];
 
         // Get current stock levels
@@ -112,13 +111,19 @@ class ReportController extends Controller
                 $stockIn = Inventory::where('ItemId', $item->ItemId)
                     ->where('IsDeleted', 0)
                     ->where('StocksAdded', '>', 0)
-                    ->whereBetween('DateCreated', [$startDate, $endDate])
+                    ->whereBetween('DateCreated', [
+                        $startDate->format('Y-m-d H:i:s'),
+                        $endDate->format('Y-m-d H:i:s')
+                    ])
                     ->sum('StocksAdded');
 
                 $stockOut = abs(Inventory::where('ItemId', $item->ItemId)
                     ->where('IsDeleted', 0)
                     ->where('StocksAdded', '<', 0)
-                    ->whereBetween('DateCreated', [$startDate, $endDate])
+                    ->whereBetween('DateCreated', [
+                        $startDate->format('Y-m-d H:i:s'),
+                        $endDate->format('Y-m-d H:i:s')
+                    ])
                     ->sum('StocksAdded'));
 
                 return (object)[
@@ -132,39 +137,25 @@ class ReportController extends Controller
                 ];
             });
 
-        return view('reports.inventory', compact(
-            'movements',
-            'currentStock',
-            'summary',
-            'startDate',
-            'endDate',
-            'reportType'
-        ));
+        return view('reports.inventory', compact('movements', 'summary', 'startDate', 'endDate', 'reportType', 'currentStock'));
     }
 
     public function generateInventoryPDF(Request $request)
     {
-        $request->validate([
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'report_type' => 'nullable|in:all,in,out'
-        ]);
+        $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+        $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+        $reportType = $request->input('report_type', 'all');
 
-        $startDate = Carbon::parse($request->start_date)->startOfDay();
-        $endDate = Carbon::parse($request->end_date)->endOfDay();
-        $reportType = $request->get('report_type', 'all');
-
-        // Get inventory movements
+        // Base query with relationships
         $query = Inventory::with([
             'item.classification',
-            'createdByUser',
-            'modifiedByUser',
-            'deletedByUser'
+            'created_by_user',
+            'modified_by_user'
         ])
-            ->whereBetween('DateCreated', [$startDate, $endDate])
-            ->where('IsDeleted', 0);
+        ->whereBetween('DateCreated', [$startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')])
+        ->where('IsDeleted', 0);
 
-        // Filter by movement type
+        // Apply movement type filter
         if ($reportType === 'in') {
             $query->where('StocksAdded', '>', 0);
         } elseif ($reportType === 'out') {
@@ -173,15 +164,15 @@ class ReportController extends Controller
 
         $movements = $query->orderBy('DateCreated', 'desc')->get();
 
-        // Get summary statistics
+        // Calculate summary statistics
         $summary = [
             'total_items' => $movements->count(),
             'total_in' => $movements->where('StocksAdded', '>', 0)->sum('StocksAdded'),
             'total_out' => abs($movements->where('StocksAdded', '<', 0)->sum('StocksAdded')),
-            'unique_items' => $movements->unique('ItemId')->count(),
+            'unique_items' => $movements->unique('ItemId')->count()
         ];
 
-        // Get current stock levels
+        // Get current stock levels with eager loading
         $currentStock = Item::with(['classification'])
             ->where('IsDeleted', 0)
             ->get()
@@ -189,13 +180,19 @@ class ReportController extends Controller
                 $stockIn = Inventory::where('ItemId', $item->ItemId)
                     ->where('IsDeleted', 0)
                     ->where('StocksAdded', '>', 0)
-                    ->whereBetween('DateCreated', [$startDate, $endDate])
+                    ->whereBetween('DateCreated', [
+                        $startDate->format('Y-m-d H:i:s'),
+                        $endDate->format('Y-m-d H:i:s')
+                    ])
                     ->sum('StocksAdded');
 
                 $stockOut = abs(Inventory::where('ItemId', $item->ItemId)
                     ->where('IsDeleted', 0)
                     ->where('StocksAdded', '<', 0)
-                    ->whereBetween('DateCreated', [$startDate, $endDate])
+                    ->whereBetween('DateCreated', [
+                        $startDate->format('Y-m-d H:i:s'),
+                        $endDate->format('Y-m-d H:i:s')
+                    ])
                     ->sum('StocksAdded'));
 
                 return (object)[
@@ -209,16 +206,27 @@ class ReportController extends Controller
                 ];
             });
 
-        $pdf = PDF::loadView('reports.inventory-pdf', compact(
+        // Load the PDF view with data
+        $view = view('reports.inventory-pdf', compact(
             'movements',
             'currentStock',
             'summary',
             'startDate',
             'endDate',
             'reportType'
-        ));
+        ))->render();
 
-        return $pdf->download('inventory-report.pdf');
+        // Create PDF with specific options
+        $pdf = PDF::loadHTML($view);
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'isRemoteEnabled' => true,
+            'defaultFont' => 'Arial'
+        ]);
+
+        return $pdf->download('inventory-report-' . now()->format('Y-m-d') . '.pdf');
     }
 
     public function generateSalesReport(Request $request)

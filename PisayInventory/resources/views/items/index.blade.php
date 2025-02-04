@@ -72,22 +72,7 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                <div>Showing 1 to {{ $items->count() }} of {{ $items->count() }} items</div>
-                <nav>
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item disabled">
-                            <span class="page-link">Previous</span>
-                        </li>
-                        <li class="page-item active">
-                            <span class="page-link">1</span>
-                        </li>
-                        <li class="page-item disabled">
-                            <span class="page-link">Next</span>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
+            {{ $items->links() }}
         </div>
     </div>
 
@@ -152,22 +137,7 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                <div>Showing 1 to {{ $trashedItems->count() }} of {{ $trashedItems->count() }} deleted items</div>
-                <nav>
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item disabled">
-                            <span class="page-link">Previous</span>
-                        </li>
-                        <li class="page-item active">
-                            <span class="page-link">1</span>
-                        </li>
-                        <li class="page-item disabled">
-                            <span class="page-link">Next</span>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
+            {{ $trashedItems->links() }}
         </div>
     </div>
 </div>

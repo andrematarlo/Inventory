@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\Classification;
-use App\Models\Unit;
+use App\Models\UnitOfMeasure;
 use App\Models\Supplier;
 use App\Models\Inventory;
 use Illuminate\Http\Request;
@@ -28,7 +28,7 @@ class ItemController extends Controller
             ])
             ->where('IsDeleted', 0)
             ->orderBy('ItemName')
-            ->get();
+            ->paginate(10);
 
             // Get trashed items with relationships
             $trashedItems = Item::with([
@@ -39,10 +39,10 @@ class ItemController extends Controller
             ])
             ->where('IsDeleted', 1)
             ->orderBy('ItemName')
-            ->get();
+            ->paginate(10);
 
             $classifications = Classification::where('IsDeleted', 0)->get();
-            $units = Unit::where('IsDeleted', 0)->get();
+            $units = UnitOfMeasure::all();
             $suppliers = Supplier::where('IsDeleted', 0)->get();
 
             return view('items.index', compact('items', 'trashedItems', 'classifications', 'units', 'suppliers'));
@@ -54,7 +54,7 @@ class ItemController extends Controller
 
     public function create()
     {
-        $units = Unit::all();
+        $units = UnitOfMeasure::all();
         $suppliers = Supplier::all();
         $classifications = Classification::all();
         return view('items.create', compact('units', 'suppliers', 'classifications'));
@@ -69,7 +69,10 @@ class ItemController extends Controller
             $validated = $request->validate([
                 'ItemName' => 'required|string|max:255',
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
-                'StocksAvailable' => 'required|integer|min:0', // Initial stock
+                'UnitOfMeasureId' => 'required|exists:UnitOfMeasure,UnitOfMeasureId',
+                'SupplierID' => 'required|exists:suppliers,SupplierID',
+                'StocksAvailable' => 'required|integer|min:0',
+                'ReorderPoint' => 'required|integer|min:0',
                 'Description' => 'nullable|string'
             ]);
 
@@ -77,7 +80,10 @@ class ItemController extends Controller
             $item = new Item();
             $item->ItemName = $validated['ItemName'];
             $item->ClassificationId = $validated['ClassificationId'];
+            $item->UnitOfMeasureId = $validated['UnitOfMeasureId'];
+            $item->SupplierID = $validated['SupplierID'];
             $item->StocksAvailable = $validated['StocksAvailable'];
+            $item->ReorderPoint = $validated['ReorderPoint'];
             $item->Description = $validated['Description'];
             $item->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
             $item->CreatedById = Auth::user()->UserAccountID;
@@ -289,7 +295,7 @@ class ItemController extends Controller
             ->get();
             
             $classifications = Classification::where('IsDeleted', 0)->get();
-            $units = Unit::where('IsDeleted', 0)->get();
+            $units = UnitOfMeasure::where('IsDeleted', 0)->get();
             $suppliers = Supplier::where('IsDeleted', 0)->get();
 
             Log::info('Items loaded:', [
