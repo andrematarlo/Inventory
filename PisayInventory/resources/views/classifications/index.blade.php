@@ -37,9 +37,9 @@
                                 <span class="text-muted">None</span>
                             @endif
                         </td>
-                        <td>{{ $classification->createdBy->Username ?? 'N/A' }}</td>
+                        <td>{{ $classification->created_by_user->Username ?? 'N/A' }}</td>
                         <td>{{ $classification->DateCreated ? date('Y-m-d H:i', strtotime($classification->DateCreated)) : 'N/A' }}</td>
-                        <td>{{ $classification->modifiedBy->Username ?? 'N/A' }}</td>
+                        <td>{{ $classification->modified_by_user->Username ?? 'N/A' }}</td>
                         <td>{{ $classification->DateModified ? date('Y-m-d H:i', strtotime($classification->DateModified)) : 'N/A' }}</td>
                         <td class="action-buttons">
                             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" 
@@ -55,6 +55,56 @@
                     @empty
                     <tr>
                         <td colspan="3" class="text-center">No classifications found</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add this after your main classifications table -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h3>Deleted Classifications</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="trashedClassificationsTable">
+                <thead>
+                    <tr>
+                        <th>Classification Name</th>
+                        <th>Parent Classification</th>
+                        <th>Deleted By</th>
+                        <th>Date Deleted</th>
+                        <th style="width: 10%; text-align: center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($trashedClassifications as $classification)
+                    <tr>
+                        <td>{{ $classification->ClassificationName }}</td>
+                        <td>
+                            @if($classification->parent)
+                                {{ $classification->parent->ClassificationName }}
+                            @else
+                                <span class="text-muted">None</span>
+                            @endif
+                        </td>
+                        <td>{{ $classification->deleted_by_user->Username ?? 'N/A' }}</td>
+                        <td>{{ $classification->DateDeleted ? date('Y-m-d H:i', strtotime($classification->DateDeleted)) : 'N/A' }}</td>
+                        <td class="text-center">
+                            <form action="{{ route('classifications.restore', $classification->ClassificationId) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-success" title="Restore">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="5" class="text-center">No deleted classifications found</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -172,4 +222,28 @@
     </div>
 </div>
 @endforeach
+
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        // Initialize trashed classifications table
+        if ($.fn.DataTable.isDataTable('#trashedClassificationsTable')) {
+            $('#trashedClassificationsTable').DataTable().destroy();
+        }
+
+        $('#trashedClassificationsTable').DataTable({
+            pageLength: 10,
+            ordering: true,
+            responsive: true,
+            columnDefs: [
+                { orderable: false, targets: -1 }
+            ],
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search deleted classifications..."
+            }
+        });
+    });
+</script>
+@endsection
 @endsection 

@@ -22,6 +22,40 @@ class Classification extends Model
         'IsDeleted'
     ];
 
+    // Query scopes for soft delete
+    public function scopeActive($query)
+    {
+        return $query->where('IsDeleted', false);
+    }
+
+    public function scopeTrashed($query)
+    {
+        return $query->where('IsDeleted', true);
+    }
+
+    // User relationships
+    public function created_by_user()
+    {
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    public function modified_by_user()
+    {
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    public function deleted_by_user()
+    {
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    // Classification relationships
     public function parent()
     {
         return $this->belongsTo(Classification::class, 'ParentClassificationId', 'ClassificationId');
@@ -34,6 +68,7 @@ class Classification extends Model
 
     public function items()
     {
-        return $this->hasMany(Item::class, 'ClassificationId', 'ClassificationId');
+        return $this->hasMany(Item::class, 'ClassificationId', 'ClassificationId')
+                    ->where('IsDeleted', false);
     }
 } 

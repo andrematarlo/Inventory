@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Classification;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class ClassificationController extends Controller
 {
@@ -12,9 +14,10 @@ class ClassificationController extends Controller
      */
     public function index()
     {
-        $classifications = Classification::all();
-        $parentClassifications = Classification::whereNull('ParentClassificationId')->get();
-        return view('classifications.index', compact('classifications', 'parentClassifications'));
+        $classifications = Classification::active()->get();
+        $trashedClassifications = Classification::trashed()->get();
+        $parentClassifications = Classification::active()->whereNull('ParentClassificationId')->get();
+        return view('classifications.index', compact('classifications', 'trashedClassifications', 'parentClassifications'));
     }
 
     /**
@@ -32,12 +35,15 @@ class ClassificationController extends Controller
     {
         $request->validate([
             'ClassificationName' => 'required|string|max:255',
-            'ParentClassificationId' => 'nullable|exists:Classification,ClassificationId'
+            'ParentClassificationId' => 'nullable|exists:classification,ClassificationId'
         ]);
 
         Classification::create([
             'ClassificationName' => $request->ClassificationName,
-            'ParentClassificationId' => $request->ParentClassificationId
+            'ParentClassificationId' => $request->ParentClassificationId,
+            'CreatedById' => auth()->user()->UserAccountID,
+            'DateCreated' => Carbon::now()->format('Y-m-d H:i:s'),
+            'IsDeleted' => false
         ]);
 
         return redirect()->route('classifications.index')
@@ -67,13 +73,15 @@ class ClassificationController extends Controller
     {
         $request->validate([
             'ClassificationName' => 'required|string|max:255',
-            'ParentClassificationId' => 'nullable|exists:Classification,ClassificationId'
+            'ParentClassificationId' => 'nullable|exists:classification,ClassificationId'
         ]);
 
         $classification = Classification::findOrFail($id);
         $classification->update([
             'ClassificationName' => $request->ClassificationName,
-            'ParentClassificationId' => $request->ParentClassificationId
+            'ParentClassificationId' => $request->ParentClassificationId,
+            'ModifiedById' => auth()->user()->UserAccountID,
+            'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
         ]);
 
         return redirect()->route('classifications.index')
@@ -86,9 +94,30 @@ class ClassificationController extends Controller
     public function destroy($id)
     {
         $classification = Classification::findOrFail($id);
-        $classification->delete();
+        
+        $classification->update([
+            'IsDeleted' => true,
+            'DeletedById' => Auth::user()->UserAccountID,
+            'DateDeleted' => Carbon::now()->format('Y-m-d H:i:s')
+        ]);
 
         return redirect()->route('classifications.index')
-            ->with('success', 'Classification deleted successfully');
+            ->with('success', 'Classification moved to trash successfully');
+    }
+
+    public function restore($id)
+    {
+        $classification = Classification::findOrFail($id);
+        
+        $classification->update([
+            'IsDeleted' => false,
+            'DeletedById' => null,
+            'DateDeleted' => null,
+            'ModifiedById' => Auth::user()->UserAccountID,
+            'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
+        ]);
+
+        return redirect()->route('classifications.index')
+            ->with('success', 'Classification restored successfully');
     }
 }

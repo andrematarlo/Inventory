@@ -44,6 +44,7 @@ Route::middleware('auth')->group(function () {
 
     // Classifications Management
     Route::resource('classifications', ClassificationController::class);
+    Route::post('classifications/{id}/restore', [ClassificationController::class, 'restore'])->name('classifications.restore');
 
     // Units Management
     Route::controller(UnitController::class)->group(function () {
