@@ -6,6 +6,7 @@ use App\Models\Item;
 use App\Models\Classification;
 use App\Models\Unit;
 use App\Models\Supplier;
+use App\Models\Inventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -61,46 +62,50 @@ class ItemController extends Controller
 
     public function store(Request $request)
     {
-        DB::beginTransaction();
         try {
+            DB::beginTransaction();
+
+            // Validate the request
             $validated = $request->validate([
                 'ItemName' => 'required|string|max:255',
-                'Description' => 'nullable|string',
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
-                'UnitOfMeasureId' => 'required|exists:unitofmeasure,UnitOfMeasureId',
-                'SupplierID' => 'required|exists:suppliers,SupplierID',
-                'StocksAvailable' => 'required|integer|min:0',
-                'ReorderPoint' => 'required|integer|min:0'
+                'StocksAvailable' => 'required|integer|min:0', // Initial stock
+                'Description' => 'nullable|string'
             ]);
 
-            // Check if classification exists and is active
-            $classification = Classification::where('ClassificationId', $validated['ClassificationId'])
-                ->where('IsDeleted', 0)
-                ->first();
+            // Create the item
+            $item = new Item();
+            $item->ItemName = $validated['ItemName'];
+            $item->ClassificationId = $validated['ClassificationId'];
+            $item->StocksAvailable = $validated['StocksAvailable'];
+            $item->Description = $validated['Description'];
+            $item->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
+            $item->CreatedById = Auth::user()->UserAccountID;
+            $item->IsDeleted = false;
+            $item->save();
 
-            if (!$classification) {
-                throw new \Exception('Selected classification is not valid or has been deleted.');
+            // Create initial inventory record if there's initial stock
+            if ($validated['StocksAvailable'] > 0) {
+                $inventory = new Inventory();
+                $inventory->ItemId = $item->ItemId;
+                $inventory->ClassificationId = $validated['ClassificationId'];
+                $inventory->StocksAdded = $validated['StocksAvailable'];
+                $inventory->StockOut = 0;
+                $inventory->StocksAvailable = $validated['StocksAvailable'];
+                $inventory->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
+                $inventory->CreatedById = Auth::user()->UserAccountID;
+                $inventory->IsDeleted = false;
+                $inventory->save();
             }
 
-            $item = Item::create([
-                'ItemName' => $validated['ItemName'],
-                'Description' => $validated['Description'],
-                'ClassificationId' => $validated['ClassificationId'],
-                'UnitOfMeasureId' => $validated['UnitOfMeasureId'],
-                'SupplierID' => $validated['SupplierID'],
-                'StocksAvailable' => $validated['StocksAvailable'],
-                'ReorderPoint' => $validated['ReorderPoint'],
-                'CreatedById' => Auth::user()->UserAccountID,
-                'DateCreated' => Carbon::now()->format('Y-m-d H:i:s'),
-                'IsDeleted' => false
-            ]);
-
             DB::commit();
-            return redirect()->route('items.index')->with('success', 'Item created successfully');
+            return redirect()->route('items.index')
+                ->with('success', 'Item created successfully');
+
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Item creation failed: ' . $e->getMessage());
-            return back()->with('error', 'Error creating item: ' . $e->getMessage())
+            return back()->with('error', 'Failed to create item: ' . $e->getMessage())
                         ->withInput();
         }
     }

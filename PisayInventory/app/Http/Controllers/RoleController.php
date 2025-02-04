@@ -24,16 +24,17 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'RoleName' => 'required|unique:roles,RoleName',
-            'Description' => 'nullable'
+        $validated = $request->validate([
+            'RoleName' => 'required|string|max:255|unique:roles,RoleName',
+            'Description' => 'nullable|string'
         ]);
 
         $role = new Role();
-        $role->RoleName = $request->RoleName;
-        $role->Description = $request->Description;
+        $role->RoleName = $validated['RoleName'];
+        $role->Description = $validated['Description'];
         $role->DateCreated = now();
-        $role->CreatedById = Auth::id();
+        $role->CreatedById = auth()->id();
+        $role->IsDeleted = false;
         $role->save();
 
         // Create default policies for the role
@@ -51,7 +52,8 @@ class RoleController extends Controller
             ]);
         }
 
-        return redirect()->route('roles.index')->with('success', 'Role created successfully');
+        return redirect()->route('roles.index')
+            ->with('success', 'Role created successfully');
     }
 
     public function edit($id)
