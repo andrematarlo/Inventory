@@ -189,13 +189,13 @@ class InventoryController extends Controller
             $item = Item::findOrFail($inventory->ItemId);
             
             $quantity = abs((int)$request->StocksAdded);
+            $type = $request->type;
 
-            // Validate stock out quantity
-            if ($quantity > $item->StocksAvailable) {
+            if ($type === 'out' && $quantity > $item->StocksAvailable) {
                 throw new \Exception("Cannot stock out more than available quantity. Current stock: {$item->StocksAvailable}");
             }
 
-            // Create new inventory record for stock out
+            // Create new inventory record
             $newInventory = new Inventory();
             $newInventory->ItemId = $inventory->ItemId;
             $newInventory->ClassificationId = $inventory->ClassificationId;
@@ -204,12 +204,20 @@ class InventoryController extends Controller
             $newInventory->CreatedById = Auth::id();
             $newInventory->ModifiedById = Auth::id();
             $newInventory->DateModified = Carbon::now('Asia/Manila');
-            $newInventory->StocksAdded = 0;
-            $newInventory->StockOut = $quantity;
-            $newInventory->StocksAvailable = $item->StocksAvailable - $quantity;
 
-            // Update item stock
-            $item->StocksAvailable -= $quantity;
+            if ($type === 'in') {
+                $newInventory->StocksAdded = $quantity;
+                $newInventory->StockOut = 0;
+                $newInventory->StocksAvailable = $item->StocksAvailable + $quantity;
+                $item->StocksAvailable += $quantity;
+                $message = "Successfully added {$quantity} items";
+            } else {
+                $newInventory->StocksAdded = 0;
+                $newInventory->StockOut = $quantity;
+                $newInventory->StocksAvailable = $item->StocksAvailable - $quantity;
+                $item->StocksAvailable -= $quantity;
+                $message = "Successfully removed {$quantity} items";
+            }
 
             $newInventory->save();
             $item->save();
@@ -217,7 +225,7 @@ class InventoryController extends Controller
             DB::commit();
 
             return redirect()->route('inventory.index')
-                ->with('success', "Successfully stocked out {$quantity} items");
+                ->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
