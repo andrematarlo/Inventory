@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Inventory;
-use App\Models\POS;
+use App\Models\Purchase;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -64,7 +64,8 @@ class ReportController extends Controller
                 return view('reports.low_stock', compact('data', 'startDate', 'endDate'));
 
             case 'pos':
-                $posData = POS::with(['item', 'unitOfMeasure', 'classification'])
+                $posData = Purchase::withTrashed()
+                    ->with(['item', 'unit_of_measure', 'classification'])
                     ->whereBetween('DateCreated', [$startDate, $endDate])
                     ->where('IsDeleted', 0)
                     ->orderBy('DateCreated', 'desc')
@@ -244,10 +245,10 @@ class ReportController extends Controller
         $startDate = Carbon::parse($request->start_date);
         $endDate = Carbon::parse($request->end_date)->endOfDay();
 
-        // Fetch sales data with more detailed analysis
-        $salesData = POS::with(['item', 'unitOfMeasure', 'classification'])
+        // Fetch sales data with more detailed analysis, including soft deleted records
+        $salesData = Purchase::withTrashed()
+            ->with(['item', 'unit_of_measure', 'classification'])
             ->whereBetween('DateCreated', [$startDate, $endDate])
-            ->where('IsDeleted', false)
             ->get();
 
         // Calculate sales summary
@@ -255,7 +256,7 @@ class ReportController extends Controller
             'total_sales_volume' => $salesData->sum('Quantity'),
             'total_unique_items' => $salesData->unique('ItemId')->count(),
             'total_sales_value' => $salesData->sum(function($sale) {
-                // Assuming you want to calculate sales value, you might need to add a price field to POS model
+                // Assuming you want to calculate sales value
                 return $sale->Quantity * ($sale->item->UnitPrice ?? 0);
             })
         ];
