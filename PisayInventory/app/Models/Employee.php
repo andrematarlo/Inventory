@@ -37,24 +37,23 @@ class Employee extends Model
         'DateDeleted' => 'datetime',
     ];
 
-    // Relationships
+    // Define relationships
     public function userAccount()
     {
-        return $this->belongsTo(UserAccount::class, 'UserAccountID', 'UserAccountID')
-                    ->withDefault(['Username' => 'No Account']);
+        return $this->belongsTo(UserAccount::class, 'UserAccountID', 'UserAccountID');
     }
 
-    public function created_by_user()
+    public function createdBy()
     {
         return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID');
     }
 
-    public function modified_by_user()
+    public function modifiedBy()
     {
         return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID');
     }
 
-    public function deleted_by_user()
+    public function deletedBy()
     {
         return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID');
     }

@@ -17,21 +17,15 @@ class EmployeeController extends Controller
     public function index()
     {
         try {
-            $employees = Employee::with(['userAccount'])->where('IsDeleted', 0)->get();
-            
-            // Debug each employee safely
-            foreach($employees as $employee) {
-                \Log::info('Employee Debug:', [
-                    'EmployeeID' => $employee->EmployeeID ?? 'No ID',
-                    'UserAccountID' => $employee->UserAccountID ?? 'No UserAccountID',
-                    'Has UserAccount?' => isset($employee->userAccount) ? 'Yes' : 'No',
-                    'Username' => $employee->userAccount->Username ?? 'No Username',
-                    'Raw Employee' => $employee->toArray()
-                ]);
-            }
+            // Use the correct relationship names
+            $employees = Employee::with(['userAccount', 'createdBy', 'modifiedBy', 'deletedBy'])
+                ->where('IsDeleted', 0)
+                ->orderBy('LastName')
+                ->get();
 
-            $trashedEmployees = Employee::with(['userAccount'])
+            $trashedEmployees = Employee::with(['userAccount', 'createdBy', 'modifiedBy', 'deletedBy'])
                 ->where('IsDeleted', 1)
+                ->orderBy('LastName')
                 ->get();
 
             $roles = [
@@ -43,12 +37,12 @@ class EmployeeController extends Controller
             return view('employees.index', compact('employees', 'trashedEmployees', 'roles'));
 
         } catch (\Exception $e) {
-            \Log::error('Error in index:', [
+            \Log::error('Error in employee index:', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return view('employees.index')->with('error', 'Error loading employees');
+            return redirect()->back()->with('error', 'Error loading employees');
         }
     }
 

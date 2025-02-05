@@ -82,7 +82,7 @@ class DashboardController extends Controller
             ];
         });
 
-    $employeeActivities = Employee::with(['creator', 'modifier', 'deleter'])
+    $employeeActivities = Employee::with(['createdBy', 'modifiedBy', 'deletedBy'])
         ->where(function($query) use ($lastWeek) {
             $query->where('DateCreated', '>=', $lastWeek)
                   ->orWhere('DateModified', '>=', $lastWeek)
@@ -96,9 +96,9 @@ class DashboardController extends Controller
                 'created_at' => $employee->DateCreated,
                 'modified_at' => $employee->DateModified,
                 'deleted_at' => $employee->DateDeleted,
-                'created_by' => optional($employee->creator)->Username ?? 'System',
-                'modified_by' => optional($employee->modifier)->Username ?? 'System',
-                'deleted_by' => optional($employee->deleter)->Username ?? 'System',
+                'created_by' => optional($employee->createdBy)->Username ?? 'System',
+                'modified_by' => optional($employee->modifiedBy)->Username ?? 'System',
+                'deleted_by' => optional($employee->deletedBy)->Username ?? 'System',
                 'is_deleted' => $employee->IsDeleted,
                 'details' => $employee->Email ? "(Email: {$employee->Email})" : ''
             ];

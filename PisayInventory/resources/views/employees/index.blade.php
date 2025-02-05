@@ -13,15 +13,16 @@
         @endif
     </div>
 
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
     <div class="card">
         <div class="card-body">
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
             <div class="table-responsive">
                 <table class="table table-hover" id="employeesTable">
                     <thead>
@@ -32,6 +33,8 @@
                             <th>Role</th>
                             <th>Gender</th>
                             <th>Status</th>
+                            <th>Created By</th>
+                            <th>Modified By</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -64,10 +67,16 @@
                                 <td>{{ $employee->Gender }}</td>
                                 <td>
                                     @if($employee->IsDeleted)
-                                        <span class="badge bg-danger">Deleted</span>
+                                        <span class="badge bg-danger">Inactive</span>
                                     @else
                                         <span class="badge bg-success">Active</span>
                                     @endif
+                                </td>
+                                <td>
+                                    {{ optional($employee->createdBy)->Username ?? 'System' }}
+                                </td>
+                                <td>
+                                    {{ optional($employee->modifiedBy)->Username ?? 'System' }}
                                 </td>
                                 <td>
                                     <div class="action-buttons">
