@@ -125,6 +125,9 @@ class InventoryController extends Controller
             $inventory->save();
             $item->save();
 
+            // Reload the inventory to get fresh data
+            $inventory = $inventory->fresh();
+
             DB::commit();
 
             return response()->json([
@@ -139,8 +142,8 @@ class InventoryController extends Controller
                     'StocksAvailable' => $inventory->StocksAvailable,
                     'ItemStocksAvailable' => $item->StocksAvailable,
                     'CreatedBy' => $inventory->created_by_user->Username ?? 'N/A',
-                    'DateCreated' => $inventory->DateCreated->format('Y-m-d h:i:s A'),
-                    'DateModified' => $inventory->DateModified->format('Y-m-d h:i:s A')
+                    'DateCreated' => date('Y-m-d h:i:s A', strtotime($inventory->DateCreated)),
+                    'DateModified' => date('Y-m-d h:i:s A', strtotime($inventory->DateModified))
                 ]
             ]);
 
