@@ -72,8 +72,11 @@ Route::middleware('auth')->group(function () {
     });
 
     // Employee Management
-    Route::resource('employees', EmployeeController::class);
-    Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+    Route::get('employees/{employeeId}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
+    Route::put('employees/{employeeId}', [EmployeeController::class, 'update'])->name('employees.update');
+    Route::delete('employees/{employeeId}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+    Route::post('employees/{employeeId}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+    Route::resource('employees', EmployeeController::class)->except(['edit', 'update', 'destroy']);
 
     // Role Management
     Route::resource('roles', RoleController::class, ['except' => ['show']]);

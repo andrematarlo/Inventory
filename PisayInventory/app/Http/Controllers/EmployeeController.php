@@ -16,239 +16,253 @@ class EmployeeController extends Controller
 {
     public function index()
     {
-        $employees = Employee::with('userAccount')
-            ->get();
-        return view('employees.index', compact('employees'));
+        try {
+            $employees = Employee::with(['userAccount'])->where('IsDeleted', 0)->get();
+            
+            // Debug each employee safely
+            foreach($employees as $employee) {
+                \Log::info('Employee Debug:', [
+                    'EmployeeID' => $employee->EmployeeID ?? 'No ID',
+                    'UserAccountID' => $employee->UserAccountID ?? 'No UserAccountID',
+                    'Has UserAccount?' => isset($employee->userAccount) ? 'Yes' : 'No',
+                    'Username' => $employee->userAccount->Username ?? 'No Username',
+                    'Raw Employee' => $employee->toArray()
+                ]);
+            }
+
+            $trashedEmployees = Employee::with(['userAccount'])
+                ->where('IsDeleted', 1)
+                ->get();
+
+            $roles = [
+                'Admin' => 'Admin',
+                'InventoryStaff' => 'Inventory Staff',
+                'InventoryManager' => 'Inventory Manager'
+            ];
+
+            return view('employees.index', compact('employees', 'trashedEmployees', 'roles'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error in index:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return view('employees.index')->with('error', 'Error loading employees');
+        }
     }
 
     public function create()
     {
-        $roles = Role::where('IsDeleted', false)->get();
+        $roles = [
+            'Admin' => 'Admin',
+            'InventoryStaff' => 'Inventory Staff',
+            'InventoryManager' => 'Inventory Manager'
+        ];
+
         return view('employees.create', compact('roles'));
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'FirstName' => 'required|string|max:100',
-            'LastName' => 'required|string|max:100',
-            'Email' => 'required|email|unique:employee,Email',
-            'Gender' => 'required|in:Male,Female',
-            'Address' => 'required|string',
-            'Username' => 'required|unique:useraccount,Username',
-            'Password' => 'required|min:8|confirmed',
-            'RoleId' => 'required|exists:roles,RoleId'
-        ]);
-
-        DB::beginTransaction();
         try {
-            $role = Role::findOrFail($validated['RoleId']);
-            $now = now();
-
-            // Create UserAccount
-            $userAccountId = DB::table('useraccount')->insertGetId([
-                'Username' => $validated['Username'],
-                'Password' => Hash::make($validated['Password']),
-                'role' => substr($role->RoleName, 0, 50), // Ensure it doesn't exceed 50 chars
-                'DateCreated' => $now,
-                'CreatedById' => Auth::id(),
-                'IsDeleted' => 0
+            $request->validate([
+                'FirstName' => 'required|string|max:255',
+                'LastName' => 'required|string|max:255',
+                'Address' => 'nullable|string',
+                'Email' => 'required|email|max:255|unique:employee,Email',
+                'Gender' => 'required|string|in:Male,Female',
+                'Role' => 'required|string|in:Admin,InventoryStaff,InventoryManager',
+                'Username' => 'required|string|unique:useraccount,Username',
+                'Password' => 'required|string|min:6'
             ]);
 
-            // Create Employee
-            DB::table('employee')->insert([
-                'UserAccountID' => $userAccountId,
-                'FirstName' => $validated['FirstName'],
-                'LastName' => $validated['LastName'],
-                'Email' => $validated['Email'],
-                'Gender' => $validated['Gender'],
-                'Address' => $validated['Address'],
-                'Role' => substr($role->RoleName, 0, 50), // Ensure it doesn't exceed 50 chars
-                'DateCreated' => $now,
-                'CreatedById' => Auth::id(),
-                'IsDeleted' => 0
+            DB::beginTransaction();
+
+            // Let MySQL handle the UserAccountID
+            $userAccount = new UserAccount();
+            $userAccount->Username = $request->Username;
+            $userAccount->Password = bcrypt($request->Password);
+            $userAccount->role = $request->Role;
+            $userAccount->CreatedById = auth()->user()->UserAccountID;
+            $userAccount->DateCreated = now();
+            $userAccount->ModifiedById = auth()->user()->UserAccountID;
+            $userAccount->DateModified = now();
+            $userAccount->IsDeleted = false;
+            $userAccount->save();
+
+            if (!$userAccount->UserAccountID) {
+                throw new \Exception('UserAccount creation failed');
+            }
+
+            \Log::info('UserAccount created:', [
+                'ID' => $userAccount->UserAccountID,
+                'Username' => $userAccount->Username
+            ]);
+
+            // Get the last EmployeeID
+            $lastEmployee = Employee::orderBy('EmployeeID', 'desc')->first();
+            $nextEmployeeID = $lastEmployee ? ($lastEmployee->EmployeeID + 1) : 1;
+
+            // Create employee
+            $employee = Employee::create([
+                'EmployeeID' => $nextEmployeeID,
+                'UserAccountID' => $userAccount->UserAccountID,
+                'FirstName' => $request->FirstName,
+                'LastName' => $request->LastName,
+                'Address' => $request->Address,
+                'Email' => $request->Email,
+                'Gender' => $request->Gender,
+                'Role' => $request->Role,
+                'CreatedById' => auth()->user()->UserAccountID,
+                'DateCreated' => now(),
+                'ModifiedById' => auth()->user()->UserAccountID,
+                'DateModified' => now(),
+                'IsDeleted' => false
             ]);
 
             DB::commit();
-            return redirect()->route('employees.index')
-                           ->with('success', 'Employee added successfully');
+            return redirect()->route('employees.index')->with('success', 'Employee added successfully');
 
         } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Failed to create employee', [
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile()
+            DB::rollBack();
+            \Log::error('Error in store:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
-            return back()
-                ->withInput()
-                ->withErrors(['error' => 'Failed to create employee: ' . $e->getMessage()]);
+            return redirect()->route('employees.index')
+                ->with('error', 'Failed to add employee: ' . $e->getMessage());
         }
     }
 
-    public function edit($id)
+    public function edit($employeeId)
     {
-        $employee = Employee::with('userAccount')
-            ->where('EmployeeID', $id)
-            ->firstOrFail();
-        $roles = Role::where('IsDeleted', false)->get();
+        $employee = Employee::findOrFail($employeeId);
+        $roles = [
+            'Admin' => 'Admin',
+            'InventoryStaff' => 'Inventory Staff',
+            'InventoryManager' => 'Inventory Manager'
+        ];
+
         return view('employees.edit', compact('employee', 'roles'));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $employeeId)
     {
-        $employee = Employee::with('userAccount')
-            ->where('EmployeeID', $id)
-            ->firstOrFail();
-
-        $validated = $request->validate([
-            'FirstName' => 'required|string|max:100',
-            'LastName' => 'required|string|max:100',
-            'Email' => 'required|email|unique:employee,Email,' . $id . ',EmployeeID',
-            'Gender' => 'required|in:Male,Female',
-            'Address' => 'required|string',
-            'Username' => 'required|unique:useraccount,Username,' . $employee->userAccount->UserAccountID . ',UserAccountID',
-            'RoleId' => 'required|exists:roles,RoleId',
-            'Password' => 'nullable|min:8|confirmed'
-        ]);
-
-        DB::beginTransaction();
         try {
-            $role = Role::findOrFail($validated['RoleId']);
-            $now = now();
+            DB::beginTransaction();
 
-            // Update employee record
-            DB::table('employee')
-                ->where('EmployeeID', $id)
-                ->update([
-                    'FirstName' => $validated['FirstName'],
-                    'LastName' => $validated['LastName'],
-                    'Email' => $validated['Email'],
-                    'Gender' => $validated['Gender'],
-                    'Address' => $validated['Address'],
-                    'Role' => substr($role->RoleName, 0, 50), // Ensure it doesn't exceed 50 chars
-                    'DateModified' => $now,
-                    'ModifiedById' => Auth::id()
-                ]);
+            $employee = Employee::findOrFail($employeeId);
 
-            // Update user account
-            $updateData = [
-                'Username' => $validated['Username'],
-                'role' => substr($role->RoleName, 0, 50), // Ensure it doesn't exceed 50 chars
-                'DateModified' => $now,
-                'ModifiedById' => Auth::id()
-            ];
-
-            if ($request->filled('Password')) {
-                $updateData['Password'] = Hash::make($validated['Password']);
-            }
-
-            DB::table('useraccount')
-                ->where('UserAccountID', $employee->userAccount->UserAccountID)
-                ->update($updateData);
-
-            DB::commit();
-            return redirect()->route('employees.index')
-                           ->with('success', 'Employee updated successfully');
-        } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Employee Update Error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all()
+            $request->validate([
+                'FirstName' => 'required|string|max:255',
+                'LastName' => 'required|string|max:255',
+                'Address' => 'nullable|string',
+                'Email' => 'required|email|max:255|unique:employee,Email,' . $employeeId . ',EmployeeID',
+                'Gender' => 'required|string|in:Male,Female',
+                'Role' => 'required|string|in:Admin,InventoryStaff,InventoryManager',
             ]);
-            return back()->withInput()
-                        ->withErrors(['error' => 'Failed to update employee. ' . $e->getMessage()]);
-        }
-    }
 
-    public function destroy($id)
-    {
-        DB::beginTransaction();
-        try {
-            $employee = Employee::with('userAccount')->findOrFail($id);
-            
-            // Update employee record
             $employee->update([
-                'IsDeleted' => true,
-                'DateDeleted' => now(),
-                'DeletedById' => Auth::id()
+                'FirstName' => $request->FirstName,
+                'LastName' => $request->LastName,
+                'Address' => $request->Address,
+                'Email' => $request->Email,
+                'Gender' => $request->Gender,
+                'Role' => $request->Role,
+                'ModifiedById' => auth()->user()->UserAccountID,
+                'DateModified' => now(),
             ]);
 
-            // Update user account
-            $employee->userAccount->update([
-                'IsDeleted' => true,
-                'DateDeleted' => now(),
-                'DeletedById' => Auth::id()
-            ]);
-
-            DB::commit();
-            return redirect()->route('employees.index')
-                ->with('success', 'Employee deleted successfully');
-        } catch (\Exception $e) {
-            DB::rollback();
-            return back()->withErrors(['error' => 'Failed to delete employee. ' . $e->getMessage()]);
-        }
-    }
-
-    public function restore($id)
-    {
-        DB::beginTransaction();
-        try {
-            // Find the employee without withTrashed since we're using IsDeleted flag
-            $employee = Employee::with('userAccount')
-                ->where('EmployeeID', $id)
-                ->first();
-
-            if (!$employee) {
-                throw new \Exception('Employee not found');
+            if ($employee->userAccount) {
+                $employee->userAccount->update([
+                    'Role' => $request->Role,
+                    'ModifiedById' => auth()->user()->UserAccountID,
+                    'DateModified' => now(),
+                ]);
             }
 
-            // Debug logging
-            Log::info('Restoring Employee', [
-                'employee_id' => $id,
-                'employee' => $employee->toArray()
-            ]);
-
-            // Restore employee record
-            DB::table('employee')
-                ->where('EmployeeID', $id)
-                ->update([
-                    'IsDeleted' => false,
-                    'DateDeleted' => null,
-                    'DeletedById' => null,
-                    'DateModified' => now(),
-                    'ModifiedById' => Auth::id()
-                ]);
-
-            // Restore user account
-            DB::table('useraccount')
-                ->where('UserAccountID', $employee->UserAccountID)
-                ->update([
-                    'IsDeleted' => false,
-                    'DateDeleted' => null,
-                    'DeletedById' => null,
-                    'DateModified' => now(),
-                    'ModifiedById' => Auth::id()
-                ]);
-
-            // Debug logging after restore
-            Log::info('Employee Restored', [
-                'employee' => DB::table('employee')->where('EmployeeID', $id)->first(),
-                'user_account' => DB::table('useraccount')->where('UserAccountID', $employee->UserAccountID)->first()
-            ]);
-
             DB::commit();
+
             return redirect()->route('employees.index')
-                ->with('success', 'Employee restored successfully');
+                ->with('success', 'Employee updated successfully');
+
         } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Employee Restore Error', [
-                'error' => $e->getMessage(),
+            DB::rollBack();
+            \Log::error('Error updating employee:', [
+                'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return back()->withErrors(['error' => 'Failed to restore employee. ' . $e->getMessage()]);
+
+            return redirect()->route('employees.index')
+                ->with('error', 'Failed to update employee: ' . $e->getMessage());
+        }
+    }
+
+    public function destroy($employeeId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $employee = Employee::findOrFail($employeeId);
+            
+            $employee->update([
+                'IsDeleted' => true,
+                'DeletedById' => auth()->user()->UserAccountID,
+                'DateDeleted' => now()
+            ]);
+
+            if ($employee->userAccount) {
+                $employee->userAccount->update([
+                    'IsDeleted' => true,
+                    'DeletedById' => auth()->user()->UserAccountID,
+                    'DateDeleted' => now()
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('employees.index')
+                ->with('success', 'Employee deleted successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('employees.index')
+                ->with('error', 'Failed to delete employee: ' . $e->getMessage());
+        }
+    }
+
+    public function restore($employeeId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $employee = Employee::findOrFail($employeeId);
+            
+            $employee->update([
+                'IsDeleted' => false,
+                'DeletedById' => null,
+                'DateDeleted' => null
+            ]);
+
+            if ($employee->userAccount) {
+                $employee->userAccount->update([
+                    'IsDeleted' => false,
+                    'DeletedById' => null,
+                    'DateDeleted' => null
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('employees.index')
+                ->with('success', 'Employee restored successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('employees.index')
+                ->with('error', 'Failed to restore employee: ' . $e->getMessage());
         }
     }
 } 

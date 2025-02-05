@@ -76,18 +76,14 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="RoleId" class="form-label">Role</label>
-                        <select class="form-select @error('RoleId') is-invalid @enderror" 
-                                id="RoleId" name="RoleId" required>
+                        <label for="Role" class="form-label">Role</label>
+                        <select name="Role" id="Role" class="form-control @error('Role') is-invalid @enderror" required>
                             <option value="">Select Role</option>
-                            @foreach($roles as $role)
-                                <option value="{{ $role->RoleId }}" 
-                                    {{ old('RoleId') == $role->RoleId ? 'selected' : '' }}>
-                                    {{ $role->RoleName }}
-                                </option>
+                            @foreach($roles as $value => $label)
+                                <option value="{{ $value }}" {{ old('Role') == $value ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
-                        @error('RoleId')
+                        @error('Role')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>

@@ -39,7 +39,22 @@
                         @forelse($employees as $employee)
                             <tr>
                                 <td>{{ $employee->FirstName }} {{ $employee->LastName }}</td>
-                                <td>{{ $employee->userAccount->Username }}</td>
+                                <td>
+                                    @php
+                                        \Log::info('User Account Debug:', [
+                                            'Employee' => $employee->toArray(),
+                                            'UserAccount' => $employee->userAccount ? $employee->userAccount->toArray() : 'null'
+                                        ]);
+                                    @endphp
+                                    
+                                    @if($employee->userAccount)
+                                        {{ $employee->userAccount->Username }}
+                                    @elseif($employee->UserAccountID)
+                                        <span class="text-muted">Account ID: {{ $employee->UserAccountID }}</span>
+                                    @else
+                                        <span class="text-muted">No Account</span>
+                                    @endif
+                                </td>
                                 <td>{{ $employee->Email }}</td>
                                 <td>
                                     <span class="badge bg-{{ $employee->Role === 'Admin' ? 'primary' : 'info' }}">
@@ -57,26 +72,34 @@
                                 <td>
                                     <div class="action-buttons">
                                         @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
+                                            @php
+                                                \Log::info('Employee ID:', [
+                                                    'EmployeeId' => $employee->EmployeeID,
+                                                    'Raw Employee' => $employee->toArray()
+                                                ]);
+                                            @endphp
+
                                             @if($employee->IsDeleted)
-                                                <form action="{{ route('employees.restore', $employee->EmployeeID) }}" 
+                                                <form action="{{ route('employees.restore', ['employeeId' => $employee->EmployeeID]) }}" 
                                                       method="POST" 
                                                       class="d-inline">
                                                     @csrf
                                                     <button type="submit" 
                                                             class="btn btn-sm btn-success" 
-                                                            title="Restore"
-                                                            onclick="return confirm('Are you sure you want to restore this employee?')">
+                                                            title="Restore">
                                                         <i class="bi bi-arrow-counterclockwise"></i>
                                                     </button>
                                                 </form>
                                             @else
-                                                <a href="{{ route('employees.edit', $employee->EmployeeID) }}" 
+                                                <span class="d-none">Debug ID: {{ $employee->EmployeeID }}</span>
+                                                
+                                                <a href="{{ route('employees.edit', ['employeeId' => $employee->EmployeeID]) }}" 
                                                    class="btn btn-sm btn-primary" 
                                                    title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                                 
-                                                <form action="{{ route('employees.destroy', $employee->EmployeeID) }}" 
+                                                <form action="{{ route('employees.destroy', ['employeeId' => $employee->EmployeeID]) }}" 
                                                       method="POST" 
                                                       class="d-inline">
                                                     @csrf
@@ -95,7 +118,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center">No employees found</td>
+                                <td colspan="7" class="text-center">No employees found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -104,6 +127,9 @@
         </div>
     </div>
 </div>
+
+<!-- Add Employee Modal -->
+<!-- <div class="modal fade" id="addEmployeeModal" tabindex="-1"> ... </div> -->
 @endsection
 
 @section('scripts')
