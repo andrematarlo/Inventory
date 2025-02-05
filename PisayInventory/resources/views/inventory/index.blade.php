@@ -29,7 +29,7 @@
                         <tr>
                             <th>Item</th>
                             <th>Classification</th>
-                            <th>Stocks Added</th>
+                            <th>Stocks In</th>
                             <th>Stocks Out</th>
                             <th>Stocks Available</th>
                             <th>Created By</th>
@@ -65,19 +65,17 @@
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    @if($inventory->IsDeleted)
-                                        <form action="{{ route('inventory.restore', $inventory->InventoryId) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('PUT')
-                                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Are you sure you want to restore this record?');">
-                                                <i class="bi bi-arrow-counterclockwise"></i> Restore
-                                            </button>
-                                        </form>
-                                    @else
-                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editInventoryModal{{ $inventory->InventoryId }}">
-                                            <i class="bi bi-pencil"></i> Edit
-                                        </button>
-                                        <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                    <button type="button" class="btn btn-sm btn-warning" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#stockOutModal{{ $inventory->InventoryId }}"
+                                            title="Stock Out">
+                                        <i class="bi bi-box-arrow-right"></i> Stock Out
+                                    </button>
+                                    @if(!$inventory->IsDeleted)
+                                        <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
+                                              method="POST" 
+                                              class="d-inline" 
+                                              onsubmit="return confirm('Are you sure you want to delete this record?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger">
@@ -131,6 +129,43 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="stockOutModal{{ $inventory->InventoryId }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Stock Out - {{ $inventory->item->ItemName }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('inventory.update', $inventory->InventoryId) }}" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Current Stock</label>
+                        <input type="text" class="form-control" value="{{ $inventory->StocksAvailable }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantity to Remove</label>
+                        <input type="number" 
+                               class="form-control" 
+                               name="StocksAdded" 
+                               min="1" 
+                               max="{{ $inventory->StocksAvailable }}" 
+                               required>
+                        <input type="hidden" name="type" value="out">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-box-arrow-right"></i> Stock Out
+                    </button>
                 </div>
             </form>
         </div>

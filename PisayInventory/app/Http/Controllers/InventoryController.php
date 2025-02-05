@@ -185,76 +185,44 @@ class InventoryController extends Controller
         try {
             DB::beginTransaction();
 
-            // Validate input
-            $request->validate([
-                'StocksAdded' => 'nullable|numeric|min:0',
-                'StockOut' => 'nullable|numeric|min:0'
-            ]);
+            $inventory = Inventory::findOrFail($id);
+            $item = Item::findOrFail($inventory->ItemId);
+            
+            $quantity = abs((int)$request->StocksAdded);
 
-            // Find inventory by InventoryId
-            $inventory = Inventory::find($id);
-
-            if (!$inventory) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Inventory record with ID $id not found"
-                ], 404);
+            // Validate stock out quantity
+            if ($quantity > $item->StocksAvailable) {
+                throw new \Exception("Cannot stock out more than available quantity. Current stock: {$item->StocksAvailable}");
             }
 
-            // Find associated item
-            $item = Item::find($inventory->ItemId);
-            if (!$item) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Item associated with this inventory not found"
-                ], 404);
-            }
+            // Create new inventory record for stock out
+            $newInventory = new Inventory();
+            $newInventory->ItemId = $inventory->ItemId;
+            $newInventory->ClassificationId = $inventory->ClassificationId;
+            $newInventory->IsDeleted = false;
+            $newInventory->DateCreated = Carbon::now('Asia/Manila');
+            $newInventory->CreatedById = Auth::id();
+            $newInventory->ModifiedById = Auth::id();
+            $newInventory->DateModified = Carbon::now('Asia/Manila');
+            $newInventory->StocksAdded = 0;
+            $newInventory->StockOut = $quantity;
+            $newInventory->StocksAvailable = $item->StocksAvailable - $quantity;
 
-            // Calculate the difference in stocks
-            $oldStocksAdded = $inventory->StocksAdded;
-            $oldStockOut = $inventory->StockOut;
-            
-            // Update inventory record
-            $inventory->StocksAdded = $request->input('StocksAdded', $oldStocksAdded);
-            $inventory->StockOut = $request->input('StockOut', $oldStockOut);
-            
-            // Calculate new available stocks
-            $stocksDifference = ($inventory->StocksAdded - $oldStocksAdded) - ($inventory->StockOut - $oldStockOut);
-            $inventory->StocksAvailable = max(0, $item->StocksAvailable + $stocksDifference);
-            
-            $inventory->ModifiedById = Auth::id();
-            $inventory->DateModified = now();
-            $inventory->save();
+            // Update item stock
+            $item->StocksAvailable -= $quantity;
 
-            // Update item's stock
-            $item->StocksAvailable = max(0, $item->StocksAvailable + $stocksDifference);
+            $newInventory->save();
             $item->save();
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Inventory updated successfully',
-                'data' => [
-                    'InventoryID' => $inventory->InventoryId,
-                    'StocksAdded' => $inventory->StocksAdded,
-                    'StockOut' => $inventory->StockOut,
-                    'StocksAvailable' => $inventory->StocksAvailable
-                ]
-            ]);
+            return redirect()->route('inventory.index')
+                ->with('success', "Successfully stocked out {$quantity} items");
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Inventory Update Error: ' . $e->getMessage(), [
-                'id' => $id,
-                'request' => $request->all(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update inventory: ' . $e->getMessage()
-            ], 500);
+            return redirect()->route('inventory.index')
+                ->with('error', $e->getMessage());
         }
     }
 
