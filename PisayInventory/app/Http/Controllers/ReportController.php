@@ -21,7 +21,7 @@ class ReportController extends Controller
         $validated = $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'report_type' => 'required|in:inventory,items,low_stock'
+            'report_type' => 'required|in:inventory,items,low_stock,pos'
         ]);
 
         $startDate = Carbon::parse($validated['start_date']);
@@ -62,6 +62,21 @@ class ReportController extends Controller
                     ->whereRaw('StocksAvailable <= ReorderPoint')
                     ->get();
                 return view('reports.low_stock', compact('data', 'startDate', 'endDate'));
+
+            case 'pos':
+                $posData = POS::with(['item', 'unitOfMeasure', 'classification'])
+                    ->whereBetween('DateCreated', [$startDate, $endDate])
+                    ->where('IsDeleted', 0)
+                    ->orderBy('DateCreated', 'desc')
+                    ->get();
+
+                $summary = [
+                    'total_purchases' => $posData->count(),
+                    'total_quantity' => $posData->sum('Quantity'),
+                    'total_stocks_added' => $posData->sum('StocksAdded')
+                ];
+
+                return view('reports.pos', compact('posData', 'summary', 'startDate', 'endDate'));
         }
     }
 
@@ -77,7 +92,6 @@ class ReportController extends Controller
         $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
         $reportType = $request->input('report_type', 'all');
 
-        // Base query with relationships
         $query = Inventory::with([
             'item.classification',
             'created_by_user',
@@ -86,7 +100,6 @@ class ReportController extends Controller
             ->whereBetween('DateCreated', [$startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')])
             ->where('IsDeleted', 0);
 
-        // Apply movement type filter
         if ($reportType === 'in') {
             $query->where('StocksAdded', '>', 0);
         } elseif ($reportType === 'out') {
@@ -95,7 +108,6 @@ class ReportController extends Controller
 
         $movements = $query->orderBy('DateCreated', 'desc')->get();
 
-        // Calculate summary statistics
         $summary = [
             'total_items' => $movements->count(),
             'total_in' => $movements->where('StocksAdded', '>', 0)->sum('StocksAdded'),
@@ -103,7 +115,6 @@ class ReportController extends Controller
             'unique_items' => $movements->unique('ItemId')->count()
         ];
 
-        // Get current stock levels
         $currentStock = Item::with(['classification'])
             ->where('IsDeleted', 0)
             ->get()
@@ -146,7 +157,6 @@ class ReportController extends Controller
         $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
         $reportType = $request->input('report_type', 'all');
 
-        // Base query with relationships
         $query = Inventory::with([
             'item.classification',
             'created_by_user',
@@ -155,7 +165,6 @@ class ReportController extends Controller
         ->whereBetween('DateCreated', [$startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')])
         ->where('IsDeleted', 0);
 
-        // Apply movement type filter
         if ($reportType === 'in') {
             $query->where('StocksAdded', '>', 0);
         } elseif ($reportType === 'out') {
@@ -164,7 +173,6 @@ class ReportController extends Controller
 
         $movements = $query->orderBy('DateCreated', 'desc')->get();
 
-        // Calculate summary statistics
         $summary = [
             'total_items' => $movements->count(),
             'total_in' => $movements->where('StocksAdded', '>', 0)->sum('StocksAdded'),
@@ -172,7 +180,6 @@ class ReportController extends Controller
             'unique_items' => $movements->unique('ItemId')->count()
         ];
 
-        // Get current stock levels with eager loading
         $currentStock = Item::with(['classification'])
             ->where('IsDeleted', 0)
             ->get()
@@ -206,7 +213,6 @@ class ReportController extends Controller
                 ];
             });
 
-        // Load the PDF view with data
         $view = view('reports.inventory-pdf', compact(
             'movements',
             'currentStock',
@@ -216,7 +222,6 @@ class ReportController extends Controller
             'reportType'
         ))->render();
 
-        // Create PDF with specific options
         $pdf = PDF::loadHTML($view);
         $pdf->setPaper('A4', 'portrait');
         $pdf->setOptions([
@@ -236,15 +241,36 @@ class ReportController extends Controller
             'end_date' => 'required|date|after_or_equal:start_date'
         ]);
 
-        $sales = POS::with(['item', 'unitOfMeasure', 'classification'])
-            ->whereBetween('DateCreated', [
-                $request->start_date,
-                Carbon::parse($request->end_date)->endOfDay()
-            ])
+        $startDate = Carbon::parse($request->start_date);
+        $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+        // Fetch sales data with more detailed analysis
+        $salesData = POS::with(['item', 'unitOfMeasure', 'classification'])
+            ->whereBetween('DateCreated', [$startDate, $endDate])
             ->where('IsDeleted', false)
             ->get();
 
-        return view('reports.sales', compact('sales'));
+        // Calculate sales summary
+        $summary = [
+            'total_sales_volume' => $salesData->sum('Quantity'),
+            'total_unique_items' => $salesData->unique('ItemId')->count(),
+            'total_sales_value' => $salesData->sum(function($sale) {
+                // Assuming you want to calculate sales value, you might need to add a price field to POS model
+                return $sale->Quantity * ($sale->item->UnitPrice ?? 0);
+            })
+        ];
+
+        // Group sales by item for detailed breakdown
+        $salesByItem = $salesData->groupBy('ItemId')->map(function($group) {
+            $firstItem = $group->first();
+            return [
+                'item_name' => $firstItem->item->ItemName ?? 'Unknown',
+                'total_quantity' => $group->sum('Quantity'),
+                'classification' => $firstItem->classification->ClassificationName ?? 'Uncategorized'
+            ];
+        });
+
+        return view('reports.sales', compact('salesData', 'summary', 'salesByItem', 'startDate', 'endDate'));
     }
 
     public function generateLowStockReport()

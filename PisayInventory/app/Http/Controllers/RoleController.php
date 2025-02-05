@@ -80,18 +80,20 @@ class RoleController extends Controller
         $role->ModifiedById = Auth::id();
         $role->save();
 
-        // Update policies
-        foreach ($request->policies as $policyId => $permissions) {
-            $policy = RolePolicy::find($policyId);
-            if ($policy) {
-                $policy->update([
-                    'CanView' => isset($permissions['view']),
-                    'CanAdd' => isset($permissions['add']),
-                    'CanEdit' => isset($permissions['edit']),
-                    'CanDelete' => isset($permissions['delete']),
-                    'DateModified' => now(),
-                    'ModifiedById' => Auth::id()
-                ]);
+        // Update policies with null check
+        if (!empty($request->policies) && is_array($request->policies)) {
+            foreach ($request->policies as $policyId => $permissions) {
+                $policy = RolePolicy::find($policyId);
+                if ($policy) {
+                    $policy->update([
+                        'CanView' => isset($permissions['view']),
+                        'CanAdd' => isset($permissions['add']),
+                        'CanEdit' => isset($permissions['edit']),
+                        'CanDelete' => isset($permissions['delete']),
+                        'DateModified' => now(),
+                        'ModifiedById' => Auth::id()
+                    ]);
+                }
             }
         }
 
@@ -133,7 +135,8 @@ class RoleController extends Controller
             })
             ->orderBy('RoleId')
             ->orderBy('Module')
-            ->get();
+            ->get() ?? collect(); // Ensure we always have a collection
+
         return view('roles.policies', compact('policies'));
     }
 

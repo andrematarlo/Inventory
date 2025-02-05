@@ -12,6 +12,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\PurchaseController; // Added PurchaseController
 use Illuminate\Support\Facades\Route;
 
 
@@ -67,6 +68,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/inventory/pdf', [ReportController::class, 'generateInventoryPDF'])->name('reports.inventory.pdf');
         Route::get('/sales', [ReportController::class, 'generateSalesReport'])->name('reports.sales');
         Route::get('/low-stock', [ReportController::class, 'generateLowStockReport'])->name('reports.low-stock');
+        Route::get('/generate', [ReportController::class, 'generate'])->name('reports.generate');
     });
 
     // Employee Management
@@ -78,6 +80,10 @@ Route::middleware('auth')->group(function () {
     Route::get('roles/policies', [RoleController::class, 'policies'])->name('roles.policies');
     Route::put('roles/policies/{id}', [RoleController::class, 'updatePolicy'])->name('roles.policies.update');
     Route::post('roles/{id}/restore', [RoleController::class, 'restore'])->name('roles.restore');
+
+    // Purchases Management
+    Route::resource('purchases', PurchaseController::class);
+    Route::put('purchases/{id}/restore', [PurchaseController::class, 'restore'])->name('purchases.restore');
 
     // Stock Management Routes
     // Route::post('/items/{item}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');

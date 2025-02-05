@@ -3,20 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UnitOfMeasure extends Model
 {
-    protected $table = 'UnitOfMeasure';
+    protected $table = 'unitofmeasure';
     protected $primaryKey = 'UnitOfMeasureId';
     public $timestamps = false;
-    public $incrementing = true;
-
-    protected $attributes = [
-        'IsDeleted' => 0
-    ];
 
     protected $fillable = [
-        'UnitOfMeasureId',
         'UnitName',
         'CreatedById',
         'DateCreated',
@@ -27,18 +23,58 @@ class UnitOfMeasure extends Model
         'IsDeleted'
     ];
 
-    public function createdBy()
+    protected $dates = [
+        'DateCreated',
+        'DateModified',
+        'DateDeleted'
+    ];
+
+    // Override the default table name resolution
+    public function getTable()
+    {
+        return 'unitofmeasure';
+    }
+
+    // Scope for active units
+    public function scopeActive($query)
+    {
+        return $query->where('IsDeleted', 0);
+    }
+
+    // Relationships
+    public function created_by()
     {
         return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID');
     }
 
-    public function modifiedBy()
+    public function modified_by()
     {
         return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID');
     }
 
-    public function deletedBy()
+    public function deleted_by()
     {
         return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID');
+    }
+
+    // Safe fetching method
+    public static function safeGetUnits()
+    {
+        try {
+            // Try model query first
+            return self::active()->orderBy('UnitName')->get();
+        } catch (\Exception $e) {
+            try {
+                // Fallback to direct database query
+                return DB::table('unitofmeasure')
+                    ->where('IsDeleted', 0)
+                    ->orderBy('UnitName')
+                    ->get();
+            } catch (\Exception $dbError) {
+                // Log error and return empty collection
+                Log::error('Unit of Measure fetch failed: ' . $dbError->getMessage());
+                return collect();
+            }
+        }
     }
 } 
