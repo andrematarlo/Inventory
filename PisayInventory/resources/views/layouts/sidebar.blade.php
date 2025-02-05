@@ -87,6 +87,13 @@
         </li>
 
         <li class="nav-item">
+            <a href="{{ route('purchases.index') }}" class="nav-link text-white {{ request()->routeIs('purchases.*') ? 'active bg-primary' : '' }}">
+                <i class="bi bi-cart4"></i>
+                <span>Point of Sale</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
             <a href="{{ route('reports.index') }}" class="nav-link text-white {{ request()->routeIs('reports.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-file-earmark-text"></i>
                 <span>Reports</span>

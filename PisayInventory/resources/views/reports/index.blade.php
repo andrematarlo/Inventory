@@ -30,8 +30,8 @@
                 <div class="report-icon text-success">
                     <i class="bi bi-graph-up"></i>
                 </div>
-                <h5 class="card-title">Sales Report</h5>
-                <p class="card-text">Track sales and transaction history</p>
+                <h5 class="card-title">Sales Analysis Report</h5>
+                <p class="card-text">Comprehensive sales performance and trends</p>
             </div>
         </div>
     </div>
