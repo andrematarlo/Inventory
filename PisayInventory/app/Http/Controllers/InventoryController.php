@@ -76,6 +76,8 @@ class InventoryController extends Controller
         try {
             DB::beginTransaction();
 
+            $currentDateTime = now();
+            
             // Find the item first
             $item = Item::findOrFail($request->ItemId);
             $quantity = abs((int)$request->StocksAdded);
@@ -85,10 +87,10 @@ class InventoryController extends Controller
             $inventory->ItemId = $request->ItemId;
             $inventory->ClassificationId = $item->ClassificationId;
             $inventory->IsDeleted = false;
-            $inventory->DateCreated = now();
+            $inventory->DateCreated = $currentDateTime;
             $inventory->CreatedById = Auth::id();
             $inventory->ModifiedById = Auth::id();
-            $inventory->DateModified = now();
+            $inventory->DateModified = $currentDateTime;
 
             // Handle stock in/out based on type
             if ($request->type === 'in') {
@@ -137,7 +139,8 @@ class InventoryController extends Controller
                     'StocksAvailable' => $inventory->StocksAvailable,
                     'ItemStocksAvailable' => $item->StocksAvailable,
                     'CreatedBy' => $inventory->created_by_user->Username ?? 'N/A',
-                    'DateCreated' => $inventory->DateCreated ? date('Y-m-d H:i', strtotime($inventory->DateCreated)) : 'N/A'
+                    'DateCreated' => $inventory->DateCreated->format('Y-m-d h:i:s A'),
+                    'DateModified' => $inventory->DateModified->format('Y-m-d h:i:s A')
                 ]
             ]);
 

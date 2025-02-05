@@ -51,9 +51,9 @@
                             <td>{{ $inventory->StockOut }}</td>
                             <td>{{ $inventory->StocksAvailable }}</td>
                             <td>{{ $inventory->created_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $inventory->DateCreated ? date('Y-m-d H:i', strtotime($inventory->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $inventory->DateCreated ? $inventory->DateCreated->format('Y-m-d h:i:s A') : 'N/A' }}</td>
                             <td>{{ optional($inventory->modified_by_user)->Username ?? 'N/A' }}</td>
-                            <td>{{ $inventory->DateModified ? date('Y-m-d H:i', strtotime($inventory->DateModified)) : 'N/A' }}</td>
+                            <td>{{ $inventory->DateModified ? $inventory->DateModified->format('Y-m-d h:i:s A') : 'N/A' }}</td>
                             <td>{{ optional($inventory->deleted_by_user)->Username ?? 'N/A' }}</td>
                             <td>{{ $inventory->DateDeleted ? date('Y-m-d H:i', strtotime($inventory->DateDeleted)) : 'N/A' }}</td>
                             <td>
