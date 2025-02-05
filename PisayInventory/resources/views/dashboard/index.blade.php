@@ -1,4 +1,41 @@
 @extends('layouts.app')
+<style>
+    .activity-feed {
+        padding: 0;
+    }
+
+    .activity-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background-color 0.2s ease;
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-item:hover {
+        background-color: #f8fafc;
+    }
+
+    .activity-item small {
+        display: inline-block;
+        margin-left: 5px;
+        font-size: 0.85rem;
+    }
+
+    .activity-item strong {
+        color: #0f172a;
+    }
+
+    .activity-item i {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
 
 @section('content')
 <div class="container-fluid px-4">
@@ -76,43 +113,84 @@
     </div>
 
     <div class="card mt-4">
-                <div class="card-header">
-                    Recent Inventory Changes
-                </div>
-                <div class="card-body">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Employee</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if(isset($recentInventory) && count($recentInventory) > 0)
-                                @foreach($recentInventory as $inventory)
-                                    <tr>
-                                        <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
-                                        <td>
-                                            @if($inventory->employee)
-                                                {{ $inventory->employee->FirstName }} {{ $inventory->employee->LastName }}
-                                            @else
-                                                N/A
-                                            @endif
-                                        </td>
-                                        <td>{{ $inventory->DateCreated ?? 'N/A' }}</td>
-                                    </tr>
-                                @endforeach
-                            @else
-                                <tr>
-                                    <td colspan="3" class="text-center">No recent inventory changes</td>
-                                </tr>
-                            @endif
-                        </tbody>
-                    </table>
-                </div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Recent Activities</span>
+            <div class="badge bg-primary">Last 7 Days</div>
+        </div>
+        <div class="card-body">
+        <div class="activity-feed">
+    @forelse($recentActivities as $activity)
+        <div class="activity-item mb-3 d-flex align-items-center">
+            <div class="me-3">
+                @php
+                    $isNewlyCreated = $activity->DateCreated && (!$activity->DateModified || $activity->DateCreated == $activity->DateModified) && !$activity->DateDeleted;
+                    $isRestored = !$activity->IsDeleted && $activity->DateDeleted;
+                    $isDeleted = $activity->IsDeleted && $activity->DateDeleted;
+                    $isModified = $activity->DateModified && $activity->DateModified > $activity->DateCreated && !$activity->DateDeleted;
+                @endphp
+
+                @if($isDeleted)
+                    <i class="bi bi-trash text-danger fs-5"></i>
+                @elseif($isRestored)
+                    <i class="bi bi-arrow-counterclockwise text-info fs-5"></i>
+                @elseif($isModified)
+                    <i class="bi bi-pencil text-warning fs-5"></i>
+                @else
+                    <i class="bi bi-plus-circle text-success fs-5"></i>
+                @endif
+            </div>
+            <div class="flex-grow-1">
+                <strong>
+                    @if($activity->entity_type === 'employee')
+                        {{ $activity->creator->Username ?? $activity->modifier->Username ?? $activity->deleter->Username ?? 'N/A' }}
+                    @else
+                        {{ $activity->created_by_user->Username ?? $activity->modified_by_user->Username ?? $activity->deleted_by_user->Username ?? 'N/A' }}
+                    @endif
+                </strong>
+
+                @if($isDeleted)
+                    deleted
+                @elseif($isRestored)
+                    restored
+                @elseif($isModified)
+                    modified
+                @else
+                    added
+                @endif
+
+                @switch($activity->entity_type)
+                    @case('item')
+                        item "<strong>{{ $activity->ItemName }}</strong>"
+                        @if($activity->classification)
+                            ({{ $activity->classification->ClassificationName }})
+                        @endif
+                        @break
+                    @case('supplier')
+                        supplier "<strong>{{ $activity->SupplierName }}</strong>"
+                        @break
+                    @case('employee')
+                        employee "<strong>{{ $activity->FirstName }} {{ $activity->LastName }}</strong>"
+                        @break
+                    @case('classification')
+                        classification "<strong>{{ $activity->ClassificationName }}</strong>"
+                        @break
+                    @case('unit')
+                        unit "<strong>{{ $activity->UnitName }}</strong>"
+                        @break
+                @endswitch
+
+                <small class="text-muted">
+                    {{ \Carbon\Carbon::parse($activity->DateDeleted ?? $activity->DateModified ?? $activity->DateCreated)->diffForHumans() }}
+                </small>
             </div>
         </div>
+    @empty
+        <p class="text-center text-muted">No recent activities</p>
+    @endforelse
+</div>
+        </div>
+    </div>
     </div>
 </div>
 @endsection 
+

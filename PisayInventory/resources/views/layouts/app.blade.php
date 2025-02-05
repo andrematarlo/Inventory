@@ -22,6 +22,7 @@
             body {
                 background-color: #f8fafc;
             }
+            
 
             /* Sidebar Styles */
             .sidebar {
