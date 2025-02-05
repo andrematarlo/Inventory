@@ -4,19 +4,26 @@
 
 @section('content')
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Inventory Management</h2>
-        <div class="d-flex gap-2">
+    <!-- Header Section -->
+    <div class="mb-4">
+        <h2 class="mb-3">Inventory Management</h2>
+        <div class="d-flex justify-content-between align-items-center">
             <div class="btn-group" role="group">
-                <a href="{{ route('inventory.index') }}" class="btn btn-outline-primary {{ !request('show_deleted') ? 'active' : '' }}">
+                <a href="{{ route('inventory.index') }}" 
+                   class="btn btn-outline-primary {{ !request('show_deleted') ? 'active' : '' }}">
                     Active Records
                 </a>
-                <a href="{{ route('inventory.index', ['show_deleted' => 1]) }}" class="btn btn-outline-primary {{ request('show_deleted') ? 'active' : '' }}">
+                <a href="{{ route('inventory.index', ['show_deleted' => 1]) }}" 
+                   class="btn btn-outline-primary {{ request('show_deleted') ? 'active' : '' }}">
                     Show All Records
                 </a>
             </div>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addInventoryModal">
-                <i class="bi bi-plus-lg"></i> Add Inventory
+            <button type="button" 
+                    class="btn btn-primary d-flex align-items-center gap-1" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#addInventoryModal">
+                <i class="bi bi-plus-lg"></i>
+                Add Inventory
             </button>
         </div>
     </div>
@@ -65,25 +72,25 @@
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    <button type="button" 
-                                            class="btn btn-sm btn-success flex-grow-1 d-flex align-items-center justify-content-center" 
-                                            style="width: 100px; height: 31px;"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#stockInModal{{ $inventory->InventoryId }}"
-                                            title="Stock In">
-                                        <i class="bi bi-box-arrow-in-right me-1"></i>
-                                        Stock In
-                                    </button>
-                                    <button type="button" 
-                                            class="btn btn-sm btn-warning flex-grow-1 d-flex align-items-center justify-content-center" 
-                                            style="width: 100px; height: 31px;"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#stockOutModal{{ $inventory->InventoryId }}"
-                                            title="Stock Out">
-                                        <i class="bi bi-box-arrow-right me-1"></i>
-                                        Stock Out
-                                    </button>
                                     @if(!$inventory->IsDeleted)
+                                        <button type="button" 
+                                                class="btn btn-sm btn-success flex-grow-1 d-flex align-items-center justify-content-center" 
+                                                style="width: 100px; height: 31px;"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#stockInModal{{ $inventory->InventoryId }}"
+                                                title="Stock In">
+                                            <i class="bi bi-box-arrow-in-right me-1"></i>
+                                            Stock In
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-warning flex-grow-1 d-flex align-items-center justify-content-center" 
+                                                style="width: 100px; height: 31px;"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#stockOutModal{{ $inventory->InventoryId }}"
+                                                title="Stock Out">
+                                            <i class="bi bi-box-arrow-right me-1"></i>
+                                            Stock Out
+                                        </button>
                                         <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
                                               method="POST" 
                                               style="margin: 0;">
@@ -95,6 +102,20 @@
                                                     onclick="return confirm('Are you sure you want to delete this record?');">
                                                 <i class="bi bi-trash me-1"></i>
                                                 Delete
+                                            </button>
+                                        </form>
+                                    @else
+                                        <form action="{{ route('inventory.restore', $inventory->InventoryId) }}" 
+                                              method="POST" 
+                                              style="margin: 0;">
+                                            @csrf
+                                            @method('PUT')
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-success d-flex align-items-center justify-content-center" 
+                                                    style="width: 100px; height: 31px;"
+                                                    onclick="return confirm('Are you sure you want to restore this record?');">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i>
+                                                Restore
                                             </button>
                                         </form>
                                     @endif
@@ -389,5 +410,37 @@ $(document).ready(function() {
         line-height: 1;
         padding-top: 0;
         padding-bottom: 0;
+    }
+
+    /* Header styles */
+    h2 {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .btn-group .btn {
+        padding: 0.5rem 1rem;
+    }
+
+    .btn-primary {
+        background-color: #3498db;
+        border-color: #3498db;
+    }
+
+    .btn-primary:hover {
+        background-color: #2980b9;
+        border-color: #2980b9;
+    }
+
+    .btn-outline-primary {
+        color: #3498db;
+        border-color: #3498db;
+    }
+
+    .btn-outline-primary:hover,
+    .btn-outline-primary.active {
+        background-color: #3498db;
+        border-color: #3498db;
+        color: white;
     }
 </style> 
