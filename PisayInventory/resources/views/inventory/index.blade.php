@@ -64,28 +64,37 @@
                                 @endif
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-success" 
+                                <div class="d-flex gap-2">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-success flex-grow-1 d-flex align-items-center justify-content-center" 
+                                            style="width: 100px; height: 31px;"
                                             data-bs-toggle="modal" 
                                             data-bs-target="#stockInModal{{ $inventory->InventoryId }}"
                                             title="Stock In">
-                                        <i class="bi bi-box-arrow-in-right"></i> Stock In
+                                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                                        Stock In
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-warning" 
+                                    <button type="button" 
+                                            class="btn btn-sm btn-warning flex-grow-1 d-flex align-items-center justify-content-center" 
+                                            style="width: 100px; height: 31px;"
                                             data-bs-toggle="modal" 
                                             data-bs-target="#stockOutModal{{ $inventory->InventoryId }}"
                                             title="Stock Out">
-                                        <i class="bi bi-box-arrow-right"></i> Stock Out
+                                        <i class="bi bi-box-arrow-right me-1"></i>
+                                        Stock Out
                                     </button>
                                     @if(!$inventory->IsDeleted)
                                         <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
                                               method="POST" 
-                                              class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                              style="margin: 0;">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <i class="bi bi-trash"></i> Delete
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-danger d-flex align-items-center justify-content-center" 
+                                                    style="width: 100px; height: 31px;"
+                                                    onclick="return confirm('Are you sure you want to delete this record?');">
+                                                <i class="bi bi-trash me-1"></i>
+                                                Delete
                                             </button>
                                         </form>
                                     @endif
@@ -144,9 +153,12 @@
 <div class="modal fade" id="stockInModal{{ $inventory->InventoryId }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Stock In - {{ $inventory->item->ItemName }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-box-arrow-in-right me-1"></i>
+                    Stock In - {{ $inventory->item->ItemName }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ route('inventory.update', $inventory->InventoryId) }}" method="POST">
                 @csrf
@@ -180,8 +192,11 @@
 <div class="modal fade" id="stockOutModal{{ $inventory->InventoryId }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Stock Out - {{ $inventory->item->ItemName }}</h5>
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-box-arrow-right me-1"></i>
+                    Stock Out - {{ $inventory->item->ItemName }}
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ route('inventory.update', $inventory->InventoryId) }}" method="POST">
@@ -342,4 +357,37 @@ $(document).ready(function() {
     });
 });
 </script>
-@endsection 
+@endsection
+
+<style>
+    /* Consistent button styles */
+    .btn {
+        transition: all 0.3s ease;
+        font-size: 0.875rem; /* Consistent font size */
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Remove form margins */
+    form {
+        margin: 0;
+        padding: 0;
+    }
+    
+    /* Action buttons container */
+    .d-flex.gap-2 {
+        min-width: 320px;
+    }
+    
+    /* Make all buttons in the action column the same height */
+    .d-flex.gap-2 .btn,
+    .d-flex.gap-2 form .btn {
+        height: 31px !important;
+        line-height: 1;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+</style> 
