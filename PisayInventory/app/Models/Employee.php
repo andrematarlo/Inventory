@@ -10,20 +10,23 @@ class Employee extends Model
     protected $primaryKey = 'EmployeeID';
     public $timestamps = false;
 
+    protected $with = ['userAccount'];
+
     protected $fillable = [
+        'EmployeeID',
         'UserAccountID',
         'FirstName',
         'LastName',
+        'Address',
         'Email',
         'Gender',
-        'Address',
-        'role',
-        'DateCreated',
+        'Role',
         'CreatedById',
-        'DateModified',
+        'DateCreated',
         'ModifiedById',
-        'DateDeleted',
+        'DateModified',
         'DeletedById',
+        'DateDeleted',
         'IsDeleted'
     ];
 
@@ -34,26 +37,24 @@ class Employee extends Model
         'DateDeleted' => 'datetime',
     ];
 
-    // Relationship with UserAccount
+    // Relationships
     public function userAccount()
     {
-        return $this->belongsTo(UserAccount::class, 'UserAccountID', 'UserAccountID');
+        return $this->belongsTo(UserAccount::class, 'UserAccountID', 'UserAccountID')
+                    ->withDefault(['Username' => 'No Account']);
     }
 
-    // Relationship with creator
-    public function creator()
+    public function created_by_user()
     {
         return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID');
     }
 
-    // Relationship with modifier
-    public function modifier()
+    public function modified_by_user()
     {
         return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID');
     }
 
-    // Relationship with deleter
-    public function deleter()
+    public function deleted_by_user()
     {
         return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID');
     }

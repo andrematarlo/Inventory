@@ -11,20 +11,23 @@ class UserAccount extends Authenticatable
 {
     use Notifiable;
 
-    protected $table = 'UserAccount';
+    protected $table = 'useraccount';
     protected $primaryKey = 'UserAccountID';
     public $timestamps = false;
+    public $incrementing = true;
 
     protected $fillable = [
+        'UserAccountID',
         'Username',
         'Password',
-        'IsDeleted',
-        'DateCreated',
+        'role',
         'CreatedById',
-        'DateModified',
+        'DateCreated',
         'ModifiedById',
+        'DateModified',
+        'DeletedById',
         'DateDeleted',
-        'DeletedById'
+        'IsDeleted'
     ];
 
     protected $hidden = [
