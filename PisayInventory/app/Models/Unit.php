@@ -9,6 +9,13 @@ class Unit extends Model
     protected $table = 'unitofmeasure';
     protected $primaryKey = 'UnitOfMeasureId';
     public $timestamps = false;
+    public $incrementing = false;  // Disable auto-incrementing
+
+    protected $keyType = 'int';  // Ensure primary key is treated as integer
+
+    protected $attributes = [
+        'IsDeleted' => 0
+    ];
 
     protected $fillable = [
         'UnitOfMeasureId',

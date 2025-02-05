@@ -9,11 +9,22 @@ class UnitOfMeasure extends Model
     protected $table = 'UnitOfMeasure';
     protected $primaryKey = 'UnitOfMeasureId';
     public $timestamps = false;
+    public $incrementing = true;
+
+    protected $attributes = [
+        'IsDeleted' => 0
+    ];
 
     protected $fillable = [
+        'UnitOfMeasureId',
         'UnitName',
         'CreatedById',
-        'DateCreated'
+        'DateCreated',
+        'ModifiedById',
+        'DateModified',
+        'DeletedById',
+        'DateDeleted',
+        'IsDeleted'
     ];
 
     public function createdBy()

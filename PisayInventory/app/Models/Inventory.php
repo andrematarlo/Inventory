@@ -8,15 +8,24 @@ class Inventory extends Model
 {
     protected $table = 'inventory';
     protected $primaryKey = 'InventoryId';
-    public $incrementing = false;
+    public $incrementing = true;
     public $timestamps = false;
 
+    protected $attributes = [
+        'StocksAdded' => 0,
+        'StocksAvailable' => 0,
+        'StockOut' => 0,
+        'IsDeleted' => 0
+    ];
+
     protected $fillable = [
+        'InventoryId',
         'ItemId',
-        'Type',
         'ClassificationId',
+        'Type',
         'StocksAdded',
         'StocksAvailable',
+        'StockOut',
         'DateCreated',
         'CreatedById',
         'DateModified',
