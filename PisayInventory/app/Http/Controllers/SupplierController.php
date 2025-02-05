@@ -40,25 +40,43 @@ class SupplierController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'SupplierName' => 'required|string|max:255',
-            'ContactNum' => 'nullable|string|max:20',
-            'Address' => 'nullable|string',
-        ]);
+        try {
+            $request->validate([
+                'SupplierName' => 'required|string|max:255',
+                'ContactNum' => 'nullable|string|max:20',
+                'Address' => 'nullable|string',
+            ]);
 
-        Supplier::create([
-            'SupplierName' => $request->SupplierName,
-            'ContactNum' => $request->ContactNum,
-            'Address' => $request->Address,
-            'CreatedById' => auth()->user()->UserAccountID,
-            'DateCreated' => Carbon::now()->format('Y-m-d H:i:s'),
-            'ModifiedById' => auth()->user()->UserAccountID,
-            'DateModified' => Carbon::now()->format('Y-m-d H:i:s'),
-            'IsDeleted' => false
-        ]);
+            // Get the last SupplierID
+            $lastSupplier = Supplier::orderBy('SupplierID', 'desc')->first();
+            $nextSupplierId = $lastSupplier ? $lastSupplier->SupplierID + 1 : 1;
 
-        return redirect()->route('suppliers.index')
-            ->with('success', 'Supplier added successfully');
+            $now = Carbon::now('Asia/Manila');
+
+            Supplier::create([
+                'SupplierID' => $nextSupplierId,
+                'SupplierName' => $request->SupplierName,
+                'ContactNum' => $request->ContactNum,
+                'Address' => $request->Address,
+                'CreatedById' => auth()->user()->UserAccountID,
+                'DateCreated' => $now,
+                'ModifiedById' => auth()->user()->UserAccountID,
+                'DateModified' => $now,
+                'IsDeleted' => false
+            ]);
+
+            return redirect()->route('suppliers.index')
+                ->with('success', 'Supplier added successfully');
+
+        } catch (\Exception $e) {
+            \Log::error('Error adding supplier:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->route('suppliers.index')
+                ->with('error', 'Failed to add supplier: ' . $e->getMessage());
+        }
     }
 
     /**

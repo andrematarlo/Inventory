@@ -36,13 +36,28 @@ class UnitController extends Controller
             'UnitName' => 'required|unique:UnitOfMeasure,UnitName'
         ]);
 
-        $unit = new Unit();
-        $unit->UnitName = $request->UnitName;
-        $unit->CreatedById = Auth::id();
-        $unit->DateCreated = now();
-        $unit->save();
+        try {
+            // Find the last UnitOfMeasureId
+            $lastUnit = Unit::orderBy('UnitOfMeasureId', 'desc')->first();
+            $nextId = $lastUnit ? $lastUnit->UnitOfMeasureId + 1 : 1;
 
-        return redirect()->route('units.index')->with('success', 'Unit added successfully');
+            $unit = new Unit();
+            $unit->UnitOfMeasureId = $nextId;  // Manually set the ID
+            $unit->UnitName = $request->UnitName;
+            $unit->CreatedById = Auth::id();
+            $unit->DateCreated = now();
+            $unit->IsDeleted = 0;  // Explicitly set IsDeleted
+            $unit->save();
+
+            return redirect()->route('units.index')->with('success', 'Unit added successfully');
+        } catch (\Exception $e) {
+            \Log::error('Unit Creation Error: ' . $e->getMessage(), [
+                'request' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to create unit: ' . $e->getMessage());
+        }
     }
 
     /**

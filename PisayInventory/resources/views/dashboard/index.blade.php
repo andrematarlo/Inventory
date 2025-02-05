@@ -1,11 +1,14 @@
 @extends('layouts.app')
+
 <style>
     .activity-feed {
         padding: 0;
+        max-height: 600px;
+        overflow-y: auto;
     }
 
     .activity-item {
-        padding: 10px 0;
+        padding: 15px;
         border-bottom: 1px solid #f1f5f9;
         transition: background-color 0.2s ease;
     }
@@ -18,22 +21,17 @@
         background-color: #f8fafc;
     }
 
-    .activity-item small {
-        display: inline-block;
-        margin-left: 5px;
-        font-size: 0.85rem;
-    }
-
-    .activity-item strong {
-        color: #0f172a;
-    }
-
-    .activity-item i {
-        width: 24px;
-        height: 24px;
+    .activity-icon .badge {
+        width: 35px;
+        height: 35px;
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 1rem;
+    }
+
+    .activity-content {
+        font-size: 0.95rem;
     }
 </style>
 
@@ -43,9 +41,9 @@
     
     <!-- Statistics Cards -->
     <div class="row mt-4">
-                <!-- Total Items -->
-                <div class="col-xl-3 col-md-6">
-                <div class="card mb-4 rounded-5" style="box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <!-- Total Items -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card mb-4 rounded-5" style="box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -112,85 +110,105 @@
         </div>
     </div>
 
-    <div class="card mt-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span>Recent Activities</span>
-            <div class="badge bg-primary">Last 7 Days</div>
-        </div>
-        <div class="card-body">
+    <!-- Activity Feed -->
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Recent Activities</span>
+        <div class="badge bg-primary">Last 7 Days</div>
+    </div>
+    <div class="card-body">
         <div class="activity-feed">
-    @forelse($recentActivities as $activity)
-        <div class="activity-item mb-3 d-flex align-items-center">
-            <div class="me-3">
-                @php
-                    $isNewlyCreated = $activity->DateCreated && (!$activity->DateModified || $activity->DateCreated == $activity->DateModified) && !$activity->DateDeleted;
-                    $isRestored = !$activity->IsDeleted && $activity->DateDeleted;
-                    $isDeleted = $activity->IsDeleted && $activity->DateDeleted;
-                    $isModified = $activity->DateModified && $activity->DateModified > $activity->DateCreated && !$activity->DateDeleted;
-                @endphp
+            @forelse($recentActivities as $activity)
+                <div class="activity-item">
+                    <div class="d-flex align-items-start">
+                        <div class="activity-icon me-3">
+                            @php
+                                // Check for restoration specifically
+                                $isRestored = $activity['restored_at'] ?? false;
+                                $isNewlyCreated = $activity['created_at'] && 
+                                    (!$activity['modified_at'] || $activity['created_at'] == $activity['modified_at']) && 
+                                    !$activity['deleted_at'];
+                                $isDeleted = $activity['is_deleted'] && $activity['deleted_at'];
+                                $isModified = $activity['modified_at'] && 
+                                    $activity['modified_at'] > $activity['created_at'] && 
+                                    !$activity['deleted_at'] &&
+                                    !$isRestored;
 
-                @if($isDeleted)
-                    <i class="bi bi-trash text-danger fs-5"></i>
-                @elseif($isRestored)
-                    <i class="bi bi-arrow-counterclockwise text-info fs-5"></i>
-                @elseif($isModified)
-                    <i class="bi bi-pencil text-warning fs-5"></i>
-                @else
-                    <i class="bi bi-plus-circle text-success fs-5"></i>
-                @endif
-            </div>
-            <div class="flex-grow-1">
-                <strong>
-                    @if($activity->entity_type === 'employee')
-                        {{ $activity->creator->Username ?? $activity->modifier->Username ?? $activity->deleter->Username ?? 'N/A' }}
-                    @else
-                        {{ $activity->created_by_user->Username ?? $activity->modified_by_user->Username ?? $activity->deleted_by_user->Username ?? 'N/A' }}
-                    @endif
-                </strong>
+                                if ($isRestored) {
+                                    $action = 'Restored';
+                                    $icon = 'arrow-counterclockwise';
+                                    $color = 'warning';
+                                    $timestamp = $activity['restored_at'];
+                                    $user = $activity['restored_by'];
+                                } elseif ($isNewlyCreated) {
+                                    $action = 'Added';
+                                    $icon = 'plus-circle';
+                                    $color = 'success';
+                                    $timestamp = $activity['created_at'];
+                                    $user = $activity['created_by'];
+                                } elseif ($isDeleted) {
+                                    $action = 'Deleted';
+                                    $icon = 'trash';
+                                    $color = 'danger';
+                                    $timestamp = $activity['deleted_at'];
+                                    $user = $activity['deleted_by'];
+                                } elseif ($isModified) {
+                                    $action = 'Modified';
+                                    $icon = 'pencil';
+                                    $color = 'primary';
+                                    $timestamp = $activity['modified_at'];
+                                    $user = $activity['modified_by'];
+                                }
+                            @endphp
+                            <span class="badge rounded-pill bg-{{ $color }}-subtle text-{{ $color }}">
+                                <i class="bi bi-{{ $icon }}"></i>
+                            </span>
+                        </div>
+                        <div class="activity-content flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong class="text-{{ $color }}">{{ $action }}</strong>
+                                    <span class="text-body">
+                                        {{ ucfirst($activity['type']) }}:
+                                        <strong>{{ $activity['name'] }}</strong>
+                                        
+                                        @if($isModified && isset($activity['changes']))
+                                            <div class="mt-1">
+                                                @foreach($activity['changes'] as $field => $change)
+                                                    <div class="text-muted small">
+                                                        <span class="fw-medium">{{ $field }}:</span> 
+                                                        <span class="text-danger">'{{ $change['old'] }}'</span> → 
+                                                        <span class="text-success">'{{ $change['new'] }}'</span>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
 
-                @if($isDeleted)
-                    deleted
-                @elseif($isRestored)
-                    restored
-                @elseif($isModified)
-                    modified
-                @else
-                    added
-                @endif
-
-                @switch($activity->entity_type)
-                    @case('item')
-                        item "<strong>{{ $activity->ItemName }}</strong>"
-                        @if($activity->classification)
-                            ({{ $activity->classification->ClassificationName }})
-                        @endif
-                        @break
-                    @case('supplier')
-                        supplier "<strong>{{ $activity->SupplierName }}</strong>"
-                        @break
-                    @case('employee')
-                        employee "<strong>{{ $activity->FirstName }} {{ $activity->LastName }}</strong>"
-                        @break
-                    @case('classification')
-                        classification "<strong>{{ $activity->ClassificationName }}</strong>"
-                        @break
-                    @case('unit')
-                        unit "<strong>{{ $activity->UnitName }}</strong>"
-                        @break
-                @endswitch
-
-                <small class="text-muted">
-                    {{ \Carbon\Carbon::parse($activity->DateDeleted ?? $activity->DateModified ?? $activity->DateCreated)->diffForHumans() }}
-                </small>
+                                        @if(!empty($activity['details']))
+                                            <small class="text-muted">{{ $activity['details'] }}</small>
+                                        @endif
+                                    </span>
+                                </div>
+                                <small class="text-muted ms-2">
+                                    {{ \Carbon\Carbon::parse($timestamp)->diffForHumans() }}
+                                </small>
+                            </div>
+                            <div class="activity-details mt-1">
+                                <small class="text-muted">
+                                    by <span class="text-body">{{ $user ?? 'System' }}</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="text-center py-4">
+                    <i class="bi bi-calendar-x text-muted mb-2" style="font-size: 2rem;"></i>
+                    <p class="text-muted mb-0">No recent activities found</p>
+                </div>
+            @endforelse
             </div>
         </div>
-    @empty
-        <p class="text-center text-muted">No recent activities</p>
-    @endforelse
-</div>
-        </div>
-    </div>
     </div>
 </div>
-@endsection 
-
+@endsection

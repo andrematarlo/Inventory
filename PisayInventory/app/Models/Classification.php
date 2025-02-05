@@ -3,12 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Classification extends Model
 {
     protected $table = 'classification';
     protected $primaryKey = 'ClassificationId';
     public $timestamps = false;
+
+    // Override the default table name resolution
+    public function getTable()
+    {
+        return 'classification';
+    }
 
     protected $fillable = [
         'ClassificationName',
@@ -70,5 +78,26 @@ class Classification extends Model
     {
         return $this->hasMany(Item::class, 'ClassificationId', 'ClassificationId')
                     ->where('IsDeleted', false);
+    }
+
+    // Add a method to safely fetch classifications
+    public static function safeGetClassifications()
+    {
+        try {
+            // Try model query first
+            return self::where('IsDeleted', 0)->orderBy('ClassificationName')->get();
+        } catch (\Exception $e) {
+            try {
+                // Fallback to direct database query
+                return DB::table('classification')
+                    ->where('IsDeleted', 0)
+                    ->orderBy('ClassificationName')
+                    ->get();
+            } catch (\Exception $dbError) {
+                // Log error and return empty collection
+                Log::error('Classification fetch failed: ' . $dbError->getMessage());
+                return collect();
+            }
+        }
     }
 } 

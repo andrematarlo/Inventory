@@ -95,13 +95,9 @@
                             <td class="align-middle">{{ $supplier->ContactNum }}</td>
                             <td class="align-middle">{{ $supplier->Address }}</td>
                             <td class="align-middle">{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
-                            <td class="align-middle datetime-cell" data-timestamp="{{ strtotime($supplier->DateCreated) * 1000 }}">
-                                {{ $supplier->DateCreated ? date('M d, Y h:i A', strtotime($supplier->DateCreated)) : 'N/A' }}
-                            </td>
+                            <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateCreated)->format('Y-m-d h:i:s A') }}</td>
                             <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
-                            <td class="align-middle datetime-cell" data-timestamp="{{ strtotime($supplier->DateModified) * 1000 }}">
-                                {{ $supplier->DateModified ? date('M d, Y h:i A', strtotime($supplier->DateModified)) : 'N/A' }}
-                            </td>
+                            <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateModified)->format('Y-m-d h:i:s A') }}</td>
                             <td class="align-middle text-center">
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-primary" 

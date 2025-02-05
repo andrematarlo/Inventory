@@ -6,11 +6,9 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Sales Report</h3>
+                    <h3 class="card-title">Point of Sale (POS) Report</h3>
                     <div class="card-tools">
-                        <span class="badge badge-primary">
-                            {{ $startDate->format('M d, Y') }} - {{ $endDate->format('M d, Y') }}
-                        </span>
+                        <span class="badge badge-primary">{{ $startDate->format('M d, Y') }} - {{ $endDate->format('M d, Y') }}</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -19,52 +17,31 @@
                             <div class="info-box">
                                 <span class="info-box-icon bg-info"><i class="fas fa-shopping-cart"></i></span>
                                 <div class="info-box-content">
-                                    <span class="info-box-text">Total Sales Volume</span>
-                                    <span class="info-box-number">{{ $summary['total_sales_volume'] }}</span>
+                                    <span class="info-box-text">Total Purchases</span>
+                                    <span class="info-box-number">{{ $summary['total_purchases'] }}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="info-box">
-                                <span class="info-box-icon bg-success"><i class="fas fa-box"></i></span>
+                                <span class="info-box-icon bg-success"><i class="fas fa-boxes"></i></span>
                                 <div class="info-box-content">
-                                    <span class="info-box-text">Unique Items Sold</span>
-                                    <span class="info-box-number">{{ $summary['total_unique_items'] }}</span>
+                                    <span class="info-box-text">Total Quantity</span>
+                                    <span class="info-box-number">{{ $summary['total_quantity'] }}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="info-box">
-                                <span class="info-box-icon bg-warning"><i class="fas fa-dollar-sign"></i></span>
+                                <span class="info-box-icon bg-warning"><i class="fas fa-cubes"></i></span>
                                 <div class="info-box-content">
-                                    <span class="info-box-text">Total Sales Value</span>
-                                    <span class="info-box-number">{{ number_format($summary['total_sales_value'], 2) }}</span>
+                                    <span class="info-box-text">Total Stocks Added</span>
+                                    <span class="info-box-number">{{ $summary['total_stocks_added'] }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <h4 class="mt-4 mb-3">Sales by Item</h4>
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th>Item Name</th>
-                                <th>Classification</th>
-                                <th>Total Quantity</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($salesByItem as $itemSales)
-                            <tr>
-                                <td>{{ $itemSales['item_name'] }}</td>
-                                <td>{{ $itemSales['classification'] }}</td>
-                                <td>{{ $itemSales['total_quantity'] }}</td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-
-                    <h4 class="mt-4 mb-3">Detailed Sales Transactions</h4>
                     <table class="table table-bordered table-striped">
                         <thead>
                             <tr>
@@ -73,16 +50,18 @@
                                 <th>Classification</th>
                                 <th>Unit of Measure</th>
                                 <th>Quantity</th>
+                                <th>Stocks Added</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($salesData as $sale)
+                            @foreach($posData as $purchase)
                             <tr>
-                                <td>{{ \Carbon\Carbon::parse($sale->DateCreated)->format('M d, Y H:i') }}</td>
-                                <td>{{ $sale->item->ItemName ?? 'N/A' }}</td>
-                                <td>{{ $sale->classification->ClassificationName ?? 'N/A' }}</td>
-                                <td>{{ $sale->unitOfMeasure->UnitName ?? 'N/A' }}</td>
-                                <td>{{ $sale->Quantity }}</td>
+                                <td>{{ $purchase->DateCreated ? \Carbon\Carbon::parse($purchase->DateCreated)->format('M d, Y H:i') : 'N/A' }}</td>
+                                <td>{{ $purchase->item->ItemName ?? 'N/A' }}</td>
+                                <td>{{ $purchase->classification->ClassificationName ?? 'N/A' }}</td>
+                                <td>{{ $purchase->unitOfMeasure->UnitName ?? 'N/A' }}</td>
+                                <td>{{ $purchase->Quantity }}</td>
+                                <td>{{ $purchase->StocksAdded }}</td>
                             </tr>
                             @endforeach
                         </tbody>
