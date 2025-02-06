@@ -73,8 +73,14 @@ class ItemController extends Controller
                 'SupplierID' => 'required|exists:suppliers,SupplierID',
                 'StocksAvailable' => 'required|integer|min:0',
                 'ReorderPoint' => 'required|integer|min:0',
-                'Description' => 'nullable|string'
+                'Description' => 'nullable|string',
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
+
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('items', 'public');
+            }
 
             // Create the item
             $item = new Item();
@@ -85,6 +91,7 @@ class ItemController extends Controller
             $item->StocksAvailable = $validated['StocksAvailable'];
             $item->ReorderPoint = $validated['ReorderPoint'];
             $item->Description = $validated['Description'];
+            $item->ImagePath = $imagePath ?? null;
             $item->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
             
             // Debug user info

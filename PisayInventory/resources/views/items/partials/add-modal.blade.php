@@ -5,7 +5,7 @@
                 <h5 class="modal-title">Add New Item</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('items.store') }}" method="POST">
+            <form action="{{ route('items.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -80,6 +80,16 @@
                                 <small>Please add suppliers first before creating items.</small>
                             </div>
                         @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Item Image</label>
+                        <input type="file" class="form-control @error('image') is-invalid @enderror" 
+                               name="image" accept="image/*" required>
+                        <small class="form-text text-muted">Upload an image of the item (JPG, PNG, or GIF)</small>
+                        @error('image')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="mb-3">

@@ -21,6 +21,7 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <th>Image</th>
                             <th>Name</th>
                             <th>Description</th>
                             <th>Classification</th>
@@ -36,6 +37,19 @@
                     <tbody>
                         @forelse($items as $item)
                         <tr>
+                            <td>
+                                @if($item->ImagePath)
+                                    <img src="{{ asset('storage/' . $item->ImagePath) }}" 
+                                         alt="{{ $item->ItemName }}" 
+                                         class="img-thumbnail" 
+                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                @else
+                                    <div class="bg-light d-flex align-items-center justify-content-center" 
+                                         style="width: 50px; height: 50px;">
+                                        <i class="bi bi-image text-muted"></i>
+                                    </div>
+                                @endif
+                            </td>
                             <td>{{ $item->ItemName }}</td>
                             <td>{{ $item->Description }}</td>
                             <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
@@ -70,7 +84,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" class="text-center py-4">No items found</td>
+                            <td colspan="11" class="text-center py-4">No items found</td>
                         </tr>
                         @endforelse
                     </tbody>
