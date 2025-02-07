@@ -27,6 +27,7 @@ class UserAccount extends Authenticatable
         'DateModified',
         'DeletedById',
         'DateDeleted',
+        'RestoredById',
         'IsDeleted'
     ];
 
@@ -76,6 +77,15 @@ class UserAccount extends Authenticatable
     public function deleted_inventories()
     {
         return $this->hasMany(Inventory::class, 'DeletedById', 'UserAccountID');
+    }
+    public function restored_items()
+    {
+    return $this->hasMany(Item::class, 'RestoredById', 'UserAccountID');
+    }
+
+    public function restored_inventories()
+    {
+    return $this->hasMany(Inventory::class, 'RestoredById', 'UserAccountID');
     }
 
     // Authentication methods

@@ -119,88 +119,94 @@
     <div class="card-body">
         <div class="activity-feed">
             @forelse($recentActivities as $activity)
-                <div class="activity-item">
-                    <div class="d-flex align-items-start">
-                        <div class="activity-icon me-3">
-                            @php
-                                // Check for restoration specifically
-                                $isRestored = $activity['restored_at'] ?? false;
-                                $isNewlyCreated = $activity['created_at'] && 
-                                    (!$activity['modified_at'] || $activity['created_at'] == $activity['modified_at']) && 
-                                    !$activity['deleted_at'];
-                                $isDeleted = $activity['is_deleted'] && $activity['deleted_at'];
-                                $isModified = $activity['modified_at'] && 
-                                    $activity['modified_at'] > $activity['created_at'] && 
-                                    !$activity['deleted_at'] &&
-                                    !$isRestored;
+            <div class="activity-item">
+    <div class="d-flex align-items-start">
+        <div class="activity-icon me-3">
+@php
+    $isDeleted = $activity['is_deleted'];
+    
+    $isNewlyCreated = !empty($activity['created_at']) && 
+                      empty($activity['deleted_at']) && 
+                      (empty($activity['modified_at']) || $activity['created_at'] == $activity['modified_at']);
+    
+    // If there are changes, it's a modification
+    $isModified = !empty($activity['changes']);
+    
+    // If restored_by is set, it's a restore
+    $isRestored = !empty($activity['restored_by']);
 
-                                if ($isRestored) {
-                                    $action = 'Restored';
-                                    $icon = 'arrow-counterclockwise';
-                                    $color = 'warning';
-                                    $timestamp = $activity['restored_at'];
-                                    $user = $activity['restored_by'];
-                                } elseif ($isNewlyCreated) {
-                                    $action = 'Added';
-                                    $icon = 'plus-circle';
-                                    $color = 'success';
-                                    $timestamp = $activity['created_at'];
-                                    $user = $activity['created_by'];
-                                } elseif ($isDeleted) {
-                                    $action = 'Deleted';
-                                    $icon = 'trash';
-                                    $color = 'danger';
-                                    $timestamp = $activity['deleted_at'];
-                                    $user = $activity['deleted_by'];
-                                } elseif ($isModified) {
-                                    $action = 'Modified';
-                                    $icon = 'pencil';
-                                    $color = 'primary';
-                                    $timestamp = $activity['modified_at'];
-                                    $user = $activity['modified_by'];
-                                }
-                            @endphp
-                            <span class="badge rounded-pill bg-{{ $color }}-subtle text-{{ $color }}">
-                                <i class="bi bi-{{ $icon }}"></i>
-                            </span>
-                        </div>
-                        <div class="activity-content flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <strong class="text-{{ $color }}">{{ $action }}</strong>
-                                    <span class="text-body">
-                                        {{ ucfirst($activity['type']) }}:
-                                        <strong>{{ $activity['name'] }}</strong>
-                                        
-                                        @if($isModified && isset($activity['changes']))
-                                            <div class="mt-1">
-                                                @foreach($activity['changes'] as $field => $change)
-                                                    <div class="text-muted small">
-                                                        <span class="fw-medium">{{ $field }}:</span> 
-                                                        <span class="text-danger">'{{ $change['old'] }}'</span> → 
-                                                        <span class="text-success">'{{ $change['new'] }}'</span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
-
-                                        @if(!empty($activity['details']))
-                                            <small class="text-muted">{{ $activity['details'] }}</small>
-                                        @endif
-                                    </span>
+    if ($isDeleted) {
+        $action = 'Deleted';
+        $icon = 'trash';
+        $color = 'danger';
+        $timestamp = $activity['deleted_at'];
+        $user = $activity['deleted_by'];
+    } elseif ($isNewlyCreated) {
+        $action = 'Added';
+        $icon = 'plus-circle';
+        $color = 'success';
+        $timestamp = $activity['created_at'];
+        $user = $activity['created_by'];
+    } elseif ($isRestored) {
+        $action = 'Restored';
+        $icon = 'arrow-counterclockwise';
+        $color = 'warning';
+        $timestamp = $activity['modified_at'];
+        $user = $activity['restored_by'];
+    } elseif ($isModified) {
+        $action = 'Modified';
+        $icon = 'pencil';
+        $color = 'primary';
+        $timestamp = $activity['modified_at'];
+        $user = $activity['modified_by'];
+    } else {
+        $action = 'Modified';
+        $icon = 'pencil';
+        $color = 'primary';
+        $timestamp = $activity['modified_at'];
+        $user = $activity['modified_by'];
+    }
+    
+@endphp
+            
+            <div class="badge bg-{{ $color }}">
+                <i class="bi bi-{{ $icon }}"></i>
+            </div>
+        </div>
+        <div class="activity-content flex-grow-1">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="fw-medium">{{ $action }} {{ ucfirst($activity['type']) }}</span>
+                    <strong>{{ $activity['name'] }}</strong>
+                    
+                    @if($isModified && !empty($activity['changes']))
+                        <div class="mt-2">
+                            @foreach($activity['changes'] as $field => $change)
+                                <div class="text-muted small">
+                                    <span class="fw-medium">{{ $field }}:</span> 
+                                    <span class="text-danger">'{{ $change['old'] }}'</span> → 
+                                    <span class="text-success">'{{ $change['new'] }}'</span>
                                 </div>
-                                <small class="text-muted ms-2">
-                                    {{ \Carbon\Carbon::parse($timestamp)->diffForHumans() }}
-                                </small>
-                            </div>
-                            <div class="activity-details mt-1">
-                                <small class="text-muted">
-                                    by <span class="text-body">{{ $user ?? 'System' }}</span>
-                                </small>
-                            </div>
+                            @endforeach
                         </div>
-                    </div>
+                    @endif
+
+                    @if(!empty($activity['details']))
+                        <div class="text-muted small mt-1">{{ $activity['details'] }}</div>
+                    @endif
                 </div>
+                <small class="text-muted ms-2">
+                    {{ \Carbon\Carbon::parse($timestamp)->diffForHumans() }}
+                </small>
+            </div>
+            <div class="mt-1">
+                <small class="text-muted">
+                    by <span class="text-body-secondary">{{ $user }}</span>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
             @empty
                 <div class="text-center py-4">
                     <i class="bi bi-calendar-x text-muted mb-2" style="font-size: 2rem;"></i>

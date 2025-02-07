@@ -27,6 +27,7 @@ class Employee extends Model
         'DateModified',
         'DeletedById',
         'DateDeleted',
+        'RestoredById',
         'IsDeleted'
     ];
 
@@ -57,6 +58,10 @@ class Employee extends Model
     {
         return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID');
     }
+    public function restoredBy()
+{
+    return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
+}
 
     // Get full name attribute
     public function getFullNameAttribute()

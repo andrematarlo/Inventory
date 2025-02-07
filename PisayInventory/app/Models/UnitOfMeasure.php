@@ -20,6 +20,7 @@ class UnitOfMeasure extends Model
         'DateModified',
         'DeletedById',
         'DateDeleted',
+        'RestoredById',
         'IsDeleted'
     ];
 
@@ -55,6 +56,10 @@ class UnitOfMeasure extends Model
     public function deleted_by()
     {
         return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID');
+    }
+    public function restored_By()
+    {
+        return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
     }
 
     // Safe fetching method

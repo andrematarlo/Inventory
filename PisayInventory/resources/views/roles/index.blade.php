@@ -44,7 +44,7 @@
                                 <td class="text-end">
                                     <a href="{{ route('roles.edit', $role->RoleId) }}" 
                                        class="btn btn-sm btn-primary">
-                                        <i class="bi bi-pencil"></i>
+                                        <i class="bi bi-pencil"></i> Edit
                                     </a>
                                     <form action="{{ route('roles.destroy', $role->RoleId) }}" 
                                           method="POST" 
@@ -53,7 +53,7 @@
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="bi bi-trash"></i>
+                                            <i class="bi bi-trash"></i> Delete
                                         </button>
                                     </form>
                                 </td>

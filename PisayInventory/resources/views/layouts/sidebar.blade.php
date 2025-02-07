@@ -193,7 +193,7 @@
 }
 
 .show .nav-link.dropdown-toggle .bi-chevron-down {
-    transform: rotate(90deg);
+    transform: rotate(180deg);
 }
 .sidebar .nav-item {
     width: 100%;

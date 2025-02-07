@@ -32,6 +32,7 @@ class Inventory extends Model
         'ModifiedById',
         'DateDeleted',
         'DeletedById',
+        'RestoredById',
         'IsDeleted'
     ];
 
@@ -73,6 +74,12 @@ class Inventory extends Model
     public function deleted_by_user()
     {
         return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+    public function restored_by_user()
+    {
+        return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID')
+                    ->from('UserAccount')
                     ->withDefault(['Username' => 'N/A']);
     }
 } 

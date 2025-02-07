@@ -22,11 +22,32 @@ class RolePolicy extends Model
         'ModifiedById',
         'DateDeleted',
         'DeletedById',
+        'RestoredById',
         'IsDeleted'
     ];
 
     public function role()
     {
-        return $this->belongsTo(Role::class, 'RoleId', 'RoleId');
+        return $this->belongsTo(Role::class, 'RoleId', 'RoleId')
+                    ->withDefault(['RoleName' => 'Unknown Role']);
+    }
+    public function created_by_user()
+    {
+        return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID');
+    }
+
+    public function modified_by_user()
+    {
+        return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID');
+    }
+
+    public function deleted_by_user()
+    {
+        return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID');
+    }
+
+    public function restored_by_user()
+    {
+        return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
     }
 } 

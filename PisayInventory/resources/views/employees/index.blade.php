@@ -79,7 +79,7 @@
                                     {{ optional($employee->modifiedBy)->Username ?? 'System' }}
                                 </td>
                                 <td>
-                                    <div class="action-buttons">
+                                    <div class="d-flex gap-2">
                                         @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
                                             @php
                                                 \Log::info('Employee ID:', [
@@ -90,8 +90,7 @@
 
                                             @if($employee->IsDeleted)
                                                 <form action="{{ route('employees.restore', ['employeeId' => $employee->EmployeeID]) }}" 
-                                                      method="POST" 
-                                                      class="d-inline">
+                                                      method="POST">
                                                     @csrf
                                                     <button type="submit" 
                                                             class="btn btn-sm btn-success" 
@@ -100,26 +99,24 @@
                                                     </button>
                                                 </form>
                                             @else
-                                                <span class="d-none">Debug ID: {{ $employee->EmployeeID }}</span>
-                                                
-                                                <a href="{{ route('employees.edit', ['employeeId' => $employee->EmployeeID]) }}" 
-                                                   class="btn btn-sm btn-primary" 
-                                                   title="Edit">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                                
-                                                <form action="{{ route('employees.destroy', ['employeeId' => $employee->EmployeeID]) }}" 
-                                                      method="POST" 
-                                                      class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" 
-                                                            class="btn btn-sm btn-danger" 
-                                                            title="Delete"
-                                                            onclick="return confirm('Are you sure you want to delete this employee?')">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </form>
+                                            <a href="{{ route('employees.edit', ['employeeId' => $employee->EmployeeID]) }}" 
+                                                class="btn btn-sm btn-primary d-flex align-items-center" 
+                                                title="Edit">
+                                                <i class="bi bi-pencil me-1"></i> Edit
+                                            </a>
+
+                                    <form action="{{ route('employees.destroy', ['employeeId' => $employee->EmployeeID]) }}" 
+                                                method="POST" 
+                                                class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                        <button type="submit" 
+                                            class="btn btn-sm btn-danger d-flex align-items-center" 
+                                            title="Delete"
+                                            onclick="return confirm('Are you sure you want to delete this employee?')">
+                                            <i class="bi bi-trash me-1"></i> Delete
+                                        </button>
+                                    </form>
                                             @endif
                                         @endif
                                     </div>
@@ -127,7 +124,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center">No employees found</td>
+                                <td colspan="9" class="text-center">No employees found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -137,8 +134,6 @@
     </div>
 </div>
 
-<!-- Add Employee Modal -->
-<!-- <div class="modal fade" id="addEmployeeModal" tabindex="-1"> ... </div> -->
 @endsection
 
 @section('scripts')
@@ -159,4 +154,4 @@
         }
     });
 </script>
-@endsection 
+@endsection

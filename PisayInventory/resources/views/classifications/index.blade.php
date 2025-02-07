@@ -36,14 +36,14 @@
                             <td>{{ $classification->modified_by_user->Username ?? 'N/A' }}</td>
                             <td>{{ $classification->DateModified ? date('M d, Y h:i A', strtotime($classification->DateModified)) : 'N/A' }}</td>
                             <td class="text-end">
-                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editClassificationModal{{ $classification->ClassificationId }}">
-                                    <i class="bi bi-pencil"></i>
+                                <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#editClassificationModal{{ $classification->ClassificationId }}">
+                                    <i class="bi bi-pencil"></i> Edit
                                 </button>
                                 <form action="{{ route('classifications.destroy', $classification->ClassificationId) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this classification?')">
-                                        <i class="bi bi-trash"></i>
+                                    <button type="submit" class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1" onclick="return confirm('Are you sure you want to delete this classification?')">
+                                        <i class="bi bi-trash"></i> Delete
                                     </button>
                                 </form>
                             </td>

@@ -177,7 +177,7 @@ class ItemController extends Controller
             $item->save();
 
             // Create inventory record for stock in
-            $inventory = new \App\Models\Inventory();
+            $inventory = new Inventory();
             $inventory->ItemId = $item->ItemId;
             $inventory->ClassificationId = $item->ClassificationId;
             $inventory->IsDeleted = false;
@@ -227,7 +227,7 @@ class ItemController extends Controller
             $item->save();
 
             // Create inventory record for stock out
-            $inventory = new \App\Models\Inventory();
+            $inventory = new Inventory();
             $inventory->ItemId = $item->ItemId;
             $inventory->ClassificationId = $item->ClassificationId;
             $inventory->IsDeleted = false;
@@ -280,6 +280,7 @@ class ItemController extends Controller
                 'DeletedById' => null,
                 'DateDeleted' => null,
                 'ModifiedById' => Auth::id(),
+                'RestoredById' => Auth::id(),
                 'DateModified' => Carbon::now()
             ]);
 
