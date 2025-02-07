@@ -73,11 +73,19 @@
                                     @endif
                                 </td>
                                 <td>
-                                    {{ optional($employee->createdBy)->Username ?? 'System' }}
+                                    @php
+                                        \Log::info('Employee Debug Info:', [
+                                            'EmployeeID' => $employee->EmployeeID,
+                                            'Name' => $employee->FirstName . ' ' . $employee->LastName,
+                                            'CreatedById' => $employee->CreatedById,
+                                            'ModifiedById' => $employee->ModifiedById,
+                                            'CreatedBy' => $employee->createdBy ? $employee->createdBy->toArray() : null,
+                                            'ModifiedBy' => $employee->modifiedBy ? $employee->modifiedBy->toArray() : null
+                                        ]);
+                                    @endphp
+                                    {{ $employee->created_by_name }}
                                 </td>
-                                <td>
-                                    {{ optional($employee->modifiedBy)->Username ?? 'System' }}
-                                </td>
+                                <td>{{ $employee->modified_by_name }}</td>
                                 <td>
                                     <div class="action-buttons">
                                         @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
@@ -127,7 +135,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center">No employees found</td>
+                                <td colspan="9" class="text-center">No employees found</td>
                             </tr>
                         @endforelse
                     </tbody>
