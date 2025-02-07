@@ -21,11 +21,11 @@ class Employee extends Model
         'Email',
         'Gender',
         'Role',
-        'CreatedById',
+        'CreatedByID',
         'DateCreated',
-        'ModifiedById',
+        'ModifiedByID',
         'DateModified',
-        'DeletedById',
+        'DeletedByID',
         'DateDeleted',
         'IsDeleted'
     ];
@@ -45,7 +45,7 @@ class Employee extends Model
 
     public function createdBy()
     {
-        $relation = $this->belongsTo(Employee::class, 'CreatedById', 'EmployeeID')
+        $relation = $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID')
             ->withDefault([
                 'FirstName' => 'Unknown',
                 'LastName' => 'User'
@@ -54,7 +54,7 @@ class Employee extends Model
         // Debug log the SQL query
         \Log::info('CreatedBy Query:', [
             'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->CreatedById,
+            'created_by_id' => $this->CreatedByID,
             'sql' => $relation->toSql(),
             'bindings' => $relation->getBindings()
         ]);
@@ -64,7 +64,7 @@ class Employee extends Model
 
     public function modifiedBy()
     {
-        $relation = $this->belongsTo(Employee::class, 'ModifiedById', 'EmployeeID')
+        $relation = $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID')
             ->withDefault([
                 'FirstName' => 'Unknown',
                 'LastName' => 'User'
@@ -73,7 +73,7 @@ class Employee extends Model
         // Debug log the SQL query
         \Log::info('ModifiedBy Query:', [
             'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->ModifiedById,
+            'modified_by_id' => $this->ModifiedByID,
             'sql' => $relation->toSql(),
             'bindings' => $relation->getBindings()
         ]);
@@ -83,7 +83,7 @@ class Employee extends Model
 
     public function deletedBy()
     {
-        return $this->belongsTo(Employee::class, 'DeletedById', 'EmployeeID')
+        return $this->belongsTo(Employee::class, 'DeletedByID', 'EmployeeID')
             ->withDefault([
                 'FirstName' => 'Unknown',
                 'LastName' => 'User'
@@ -102,8 +102,8 @@ class Employee extends Model
         // Get raw values from database
         \Log::info('Raw CreatedBy Values:', [
             'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->attributes['CreatedById'] ?? null,
-            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedById', 'ModifiedById']))
+            'created_by_id' => $this->attributes['CreatedByID'] ?? null,
+            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedByID', 'ModifiedByID']))
         ]);
         
         $creator = $this->createdBy;
@@ -116,8 +116,8 @@ class Employee extends Model
         // Get raw values from database
         \Log::info('Raw ModifiedBy Values:', [
             'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->attributes['ModifiedById'] ?? null,
-            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedById', 'ModifiedById']))
+            'modified_by_id' => $this->attributes['ModifiedByID'] ?? null,
+            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedByID', 'ModifiedByID']))
         ]);
         
         $modifier = $this->modifiedBy;

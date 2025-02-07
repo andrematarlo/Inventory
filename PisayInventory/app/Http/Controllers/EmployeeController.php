@@ -104,9 +104,9 @@ class EmployeeController extends Controller
             $userAccount->Username = $request->Username;
             $userAccount->Password = bcrypt($request->Password);
             $userAccount->Role = $request->Role;
-            $userAccount->CreatedById = $currentEmployee->EmployeeID;
+            $userAccount->CreatedByID = $currentEmployee->EmployeeID;
             $userAccount->DateCreated = now();
-            $userAccount->ModifiedById = $currentEmployee->EmployeeID;
+            $userAccount->ModifiedByID = $currentEmployee->EmployeeID;
             $userAccount->DateModified = now();
             $userAccount->IsDeleted = false;
             $userAccount->save();
@@ -135,9 +135,9 @@ class EmployeeController extends Controller
                 'Email' => $request->Email,
                 'Gender' => $request->Gender,
                 'Role' => $request->Role,
-                'CreatedById' => $currentEmployee->EmployeeID,
+                'CreatedByID' => $currentEmployee->EmployeeID,
                 'DateCreated' => now(),
-                'ModifiedById' => $currentEmployee->EmployeeID,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
                 'DateModified' => now(),
                 'IsDeleted' => false
             ]);
@@ -212,7 +212,7 @@ class EmployeeController extends Controller
                 'Email' => $request->Email,
                 'Gender' => $request->Gender,
                 'Role' => $request->Role,
-                'ModifiedById' => $currentEmployee->EmployeeID,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
                 'DateModified' => now(),
             ]);
 
@@ -220,7 +220,7 @@ class EmployeeController extends Controller
                 $employee->userAccount->update([
                     'Username' => $request->Username,
                     'Role' => $request->Role,
-                    'ModifiedById' => $currentEmployee->EmployeeID,
+                    'ModifiedByID' => $currentEmployee->EmployeeID,
                     'DateModified' => now(),
                 ]);
 
@@ -265,14 +265,14 @@ class EmployeeController extends Controller
             
             $employee->update([
                 'IsDeleted' => true,
-                'DeletedById' => auth()->user()->UserAccountID,
+                'DeletedByID' => auth()->user()->UserAccountID,
                 'DateDeleted' => now()
             ]);
 
             if ($employee->userAccount) {
                 $employee->userAccount->update([
                     'IsDeleted' => true,
-                    'DeletedById' => auth()->user()->UserAccountID,
+                    'DeletedByID' => auth()->user()->UserAccountID,
                     'DateDeleted' => now()
                 ]);
             }
@@ -298,14 +298,14 @@ class EmployeeController extends Controller
             
             $employee->update([
                 'IsDeleted' => false,
-                'DeletedById' => null,
+                'DeletedByID' => null,
                 'DateDeleted' => null
             ]);
 
             if ($employee->userAccount) {
                 $employee->userAccount->update([
                     'IsDeleted' => false,
-                    'DeletedById' => null,
+                    'DeletedByID' => null,
                     'DateDeleted' => null
                 ]);
             }
