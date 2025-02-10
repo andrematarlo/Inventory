@@ -137,7 +137,7 @@
 .sidebar .nav-link.active,
 .sidebar .dropdown-item.active,
 .sidebar .nav-link.dropdown-toggle.active {
-    background-color: rgba(147, 112, 219, 0.6) !important;
+    background-color: #198754 !important;
     font-weight: 500;
     color: white !important;  
 }

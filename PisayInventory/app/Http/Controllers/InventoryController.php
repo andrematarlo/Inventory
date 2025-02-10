@@ -274,6 +274,8 @@ class InventoryController extends Controller
             $inventory->DateDeleted = null;
             $inventory->ModifiedById = Auth::user()->UserAccountID;
             $inventory->DateModified = Carbon::now()->format('Y-m-d H:i:s');
+            $inventory->RestoredById = Auth::user()->UserAccountID;
+
             $inventory->save();
 
             DB::commit();

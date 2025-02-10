@@ -22,6 +22,7 @@ class RolePolicy extends Model
         'ModifiedById',
         'DateDeleted',
         'DeletedById',
+        'DateRestored',
         'RestoredById',
         'IsDeleted'
     ];

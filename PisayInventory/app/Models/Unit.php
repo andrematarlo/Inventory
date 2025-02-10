@@ -27,6 +27,7 @@ class Unit extends Model
         'DeletedById',
         'DateDeleted',
         'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 
@@ -47,6 +48,6 @@ class Unit extends Model
     }
     public function restoredBy()
 {
-    return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
+    return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID');
 }
 } 

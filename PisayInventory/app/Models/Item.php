@@ -13,6 +13,7 @@ class Item extends Model
     protected $fillable = [
         'ItemName',
         'Description',
+        'ImagePath',
         'UnitOfMeasureId',
         'ClassificationId',
         'SupplierID',
@@ -25,6 +26,7 @@ class Item extends Model
         'DeletedById',
         'DateDeleted',
         'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 

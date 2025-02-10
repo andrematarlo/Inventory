@@ -28,6 +28,7 @@ class Employee extends Model
         'DeletedById',
         'DateDeleted',
         'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 

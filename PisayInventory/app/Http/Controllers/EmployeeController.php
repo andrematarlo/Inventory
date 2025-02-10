@@ -227,36 +227,29 @@ class EmployeeController extends Controller
         }
     }
 
-    public function restore($employeeId)
-    {
-        try {
-            DB::beginTransaction();
+    public function restore($id)
+{
+    try {
+        DB::beginTransaction();
+        
+        $employee = Employee::findOrFail($id);
+        $employee->update([
+            'IsDeleted' => false,
+            'DeletedById' => null,
+            'DateDeleted' => null,
+            'RestoredById' => Auth::id(),
+            'DateRestored' => now(),
+            'ModifiedById' => null,
+            'DateModified' => null
+        ]);
 
-            $employee = Employee::findOrFail($employeeId);
-            
-            $employee->update([
-                'IsDeleted' => false,
-                'DeletedById' => null,
-                'DateDeleted' => null
-            ]);
-
-            if ($employee->userAccount) {
-                $employee->userAccount->update([
-                    'IsDeleted' => false,
-                    'DeletedById' => null,
-                    'DateDeleted' => null
-                ]);
-            }
-
-            DB::commit();
-
-            return redirect()->route('employees.index')
-                ->with('success', 'Employee restored successfully');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->route('employees.index')
-                ->with('error', 'Failed to restore employee: ' . $e->getMessage());
-        }
+        DB::commit();
+        return redirect()->route('employees.index')
+            ->with('success', 'Employee restored successfully');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Employee restore failed: ' . $e->getMessage());
+        return back()->with('error', 'Failed to restore employee: ' . $e->getMessage());
     }
+}
 } 

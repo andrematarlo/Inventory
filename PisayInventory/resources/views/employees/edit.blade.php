@@ -15,7 +15,7 @@
                     <pre>
                         Employee Role: {{ $employee->role }}
                         UserAccount Role: {{ $employee->userAccount->role }}
-                        Old Role: {{ old('RoleId') }}
+                        Old Role: {{ old('Role') }}
                     </pre>
                 </div>
             @endif
@@ -87,18 +87,15 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="RoleId" class="form-label">Role</label>
-                        <select class="form-select @error('RoleId') is-invalid @enderror" 
-                                id="RoleId" name="RoleId" required>
+                        <label for="Role" class="form-label">Role</label>
+                        <select class="form-select @error('Role') is-invalid @enderror" 
+                                id="Role" name="Role" required>
                             <option value="">Select Role</option>
-                            @foreach($roles as $role)
-                                <option value="{{ $role->RoleId }}" 
-                                    {{ old('RoleId', $employee->userAccount->role) == $role->RoleName ? 'selected' : '' }}>
-                                    {{ $role->RoleName }}
-                                </option>
-                            @endforeach
+                            <option value="Admin" {{ old('Role', $employee->Role) == 'Admin' ? 'selected' : '' }}>Admin</option>
+                            <option value="InventoryStaff" {{ old('Role', $employee->Role) == 'InventoryStaff' ? 'selected' : '' }}>Inventory Staff</option>
+                            <option value="InventoryManager" {{ old('Role', $employee->Role) == 'InventoryManager' ? 'selected' : '' }}>Inventory Manager</option>
                         </select>
-                        @error('RoleId')
+                        @error('Role')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>

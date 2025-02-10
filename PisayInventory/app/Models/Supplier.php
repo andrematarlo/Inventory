@@ -22,6 +22,7 @@ class Supplier extends Model
         'DeletedById',
         'DateDeleted',
         'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 

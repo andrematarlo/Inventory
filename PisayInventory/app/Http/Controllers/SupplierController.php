@@ -1,7 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -138,18 +139,28 @@ class SupplierController extends Controller
     }
 
     public function restore($id)
-    {
-        $supplier = Supplier::findOrFail($id);
+{
+    try {
+        DB::beginTransaction();
         
+        $supplier = Supplier::findOrFail($id);
         $supplier->update([
             'IsDeleted' => false,
             'DeletedById' => null,
             'DateDeleted' => null,
-            'ModifiedById' => auth()->user()->UserAccountID,
-            'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
+            'RestoredById' => Auth::id(),
+            'DateRestored' => now(),
+            'ModifiedById' => null,
+            'DateModified' => null
         ]);
 
+        DB::commit();
         return redirect()->route('suppliers.index')
             ->with('success', 'Supplier restored successfully');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Supplier restore failed: ' . $e->getMessage());
+        return back()->with('error', 'Failed to restore supplier: ' . $e->getMessage());
     }
+}
 }

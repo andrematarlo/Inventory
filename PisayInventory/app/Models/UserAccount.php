@@ -28,6 +28,7 @@ class UserAccount extends Authenticatable
         'DeletedById',
         'DateDeleted',
         'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 

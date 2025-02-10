@@ -19,6 +19,7 @@ class Role extends Model
         'DateDeleted',
         'DeletedById',
         'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 

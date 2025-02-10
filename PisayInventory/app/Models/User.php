@@ -40,6 +40,8 @@ class User extends Authenticatable
         'DateModified',
         'DeletedById',
         'DateDeleted',
+        'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 
@@ -89,6 +91,7 @@ class User extends Authenticatable
     {
         return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountId');
     }
+    
 
     public function role()
     {
