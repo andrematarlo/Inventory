@@ -31,29 +31,53 @@
     }
 
     /* Adjust column widths */
-    .suppliers-table .table th:nth-child(1), /* Supplier Name */
+    .suppliers-table .table th:nth-child(1), /* Actions */
     .suppliers-table .table td:nth-child(1) {
+        width: 10%;
+        min-width: 120px;
+        text-align: center;
+    }
+
+    .suppliers-table .table th:nth-child(2), /* Supplier Name */
+    .suppliers-table .table td:nth-child(2) {
         width: 25%;
         min-width: 200px;
     }
 
-    .suppliers-table .table th:nth-child(2), /* Contact Number */
-    .suppliers-table .table td:nth-child(2) {
+    .suppliers-table .table th:nth-child(3), /* Contact Number */
+    .suppliers-table .table td:nth-child(3) {
         width: 15%;
         min-width: 150px;
     }
 
-    .suppliers-table .table th:nth-child(3), /* Address */
-    .suppliers-table .table td:nth-child(3) {
+    .suppliers-table .table th:nth-child(4), /* Address */
+    .suppliers-table .table td:nth-child(4) {
         width: 30%;
         min-width: 250px;
     }
 
-    /* Action buttons column */
-    .suppliers-table .table th:last-child,
-    .suppliers-table .table td:last-child {
-        width: 120px;
-        text-align: center;
+    .suppliers-table .table th:nth-child(5), /* Created By */
+    .suppliers-table .table td:nth-child(5) {
+        width: 10%;
+        min-width: 100px;
+    }
+
+    .suppliers-table .table th:nth-child(6), /* Date Created */
+    .suppliers-table .table td:nth-child(6) {
+        width: 10%;
+        min-width: 150px;
+    }
+
+    .suppliers-table .table th:nth-child(7), /* Modified By */
+    .suppliers-table .table td:nth-child(7) {
+        width: 10%;
+        min-width: 100px;
+    }
+
+    .suppliers-table .table th:nth-child(8), /* Date Modified */
+    .suppliers-table .table td:nth-child(8) {
+        width: 10%;
+        min-width: 150px;
     }
 
     /* Hover effect for rows */
@@ -98,6 +122,7 @@
                 <table class="table table-hover" id="suppliersTable">
                     <thead>
                         <tr>
+                            <th style="width: 10%; text-align: center">Actions</th>
                             <th style="width: 20%">Supplier Name</th>
                             <th style="width: 15%">Contact Number</th>
                             <th style="width: 25%">Address</th>
@@ -105,12 +130,25 @@
                             <th style="width: 10%">Date Created</th>
                             <th style="width: 10%">Modified By</th>
                             <th style="width: 10%">Date Modified</th>
-                            <th style="width: 10%; text-align: center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($suppliers as $supplier)
                         <tr>
+                            <td class="align-middle text-center">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this supplier?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
                             <td class="align-middle">{{ $supplier->SupplierName }}</td>
                             <td class="align-middle">{{ $supplier->ContactNum }}</td>
                             <td class="align-middle">{{ $supplier->Address }}</td>
@@ -118,6 +156,7 @@
                             <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateCreated)->format('Y-m-d h:i:s A') }}</td>
                             <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
                             <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateModified)->format('Y-m-d h:i:s A') }}</td>
+<<<<<<< HEAD
                             <td class="align-middle text-center">
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-primary btn-icon-text" 
@@ -134,6 +173,8 @@
                                     </button>
                                 </div>
                             </td>
+=======
+>>>>>>> 6451b6f6d5d6e2d47e99201e656fb31e033152f9
                         </tr>
                         @empty
                         <tr>
@@ -330,7 +371,7 @@
             ordering: true,
             responsive: true,
             columnDefs: [
-                { orderable: false, targets: -1 }
+                { orderable: false, targets: 0 }
             ],
             language: {
                 search: "_INPUT_",

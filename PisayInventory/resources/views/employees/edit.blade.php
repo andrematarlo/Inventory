@@ -103,6 +103,15 @@
 
                 <div class="row mb-3">
                     <div class="col-md-6">
+                        <p class="text-muted">
+                            Created by: {{ $employee->created_by_name }}<br>
+                            Last modified by: {{ $employee->modified_by_name }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
                         <label for="Password" class="form-label">Password (leave blank to keep current)</label>
                         <input type="password" class="form-control @error('Password') is-invalid @enderror" 
                                id="Password" name="Password">

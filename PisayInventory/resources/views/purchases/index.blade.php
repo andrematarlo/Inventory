@@ -33,6 +33,7 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            <th>Actions</th>
                             <th>Item</th>
                             <th>Classification</th>
                             <th>Unit of Measure</th>
@@ -41,26 +42,11 @@
                             <th>Created By</th>
                             <th>Date Created</th>
                             <th>Status</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($purchases as $purchase)
                         <tr>
-                            <td>{{ $purchase->item->ItemName ?? 'N/A' }}</td>
-                            <td>{{ $purchase->item->classification->ClassificationName ?? 'N/A' }}</td>
-                            <td>{{ $purchase->unit_of_measure->UnitName ?? 'N/A' }}</td>
-                            <td>{{ $purchase->Quantity }}</td>
-                            <td>{{ $purchase->StocksAdded }}</td>
-                            <td>{{ $purchase->created_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ date('Y-m-d h:i:s A', strtotime($purchase->DateCreated)) }}</td>
-                            <td>
-                                @if($purchase->IsDeleted)
-                                    <span class="badge bg-danger">Deleted</span>
-                                @else
-                                    <span class="badge bg-success">Active</span>
-                                @endif
-                            </td>
                             <td>
                                 <div class="d-flex gap-2">
                                     @if(!$purchase->IsDeleted)
@@ -90,7 +76,6 @@
                                               method="POST" 
                                               style="margin: 0;">
                                             @csrf
-                                            @method('PUT')
                                             <button type="submit" 
                                                     class="btn btn-sm btn-success d-flex align-items-center justify-content-center" 
                                                     style="width: 100px; height: 31px;"
@@ -101,6 +86,20 @@
                                         </form>
                                     @endif
                                 </div>
+                            </td>
+                            <td>{{ $purchase->item->ItemName ?? 'N/A' }}</td>
+                            <td>{{ $purchase->item->classification->ClassificationName ?? 'N/A' }}</td>
+                            <td>{{ $purchase->unit_of_measure->UnitName ?? 'N/A' }}</td>
+                            <td>{{ $purchase->Quantity }}</td>
+                            <td>{{ $purchase->StocksAdded }}</td>
+                            <td>{{ $purchase->created_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ date('Y-m-d h:i:s A', strtotime($purchase->DateCreated)) }}</td>
+                            <td>
+                                @if($purchase->IsDeleted)
+                                    <span class="badge bg-danger">Deleted</span>
+                                @else
+                                    <span class="badge bg-success">Active</span>
+                                @endif
                             </td>
                         </tr>
                         @empty

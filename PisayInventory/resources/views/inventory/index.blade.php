@@ -34,6 +34,7 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            <th>Actions</th>
                             <th>Item</th>
                             <th>Classification</th>
                             <th>Stocks In</th>
@@ -46,30 +47,11 @@
                             <th>Deleted By</th>
                             <th>Date Deleted</th>
                             <th>Status</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($inventories as $inventory)
                         <tr>
-                            <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
-                            <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
-                            <td>{{ $inventory->StocksAdded }}</td>
-                            <td>{{ $inventory->StockOut }}</td>
-                            <td>{{ $inventory->StocksAvailable }}</td>
-                            <td>{{ $inventory->created_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ date('Y-m-d h:i:s A', strtotime($inventory->DateCreated)) }}</td>
-                            <td>{{ optional($inventory->modified_by_user)->Username ?? 'N/A' }}</td>
-                            <td>{{ date('Y-m-d h:i:s A', strtotime($inventory->DateModified)) }}</td>
-                            <td>{{ optional($inventory->deleted_by_user)->Username ?? 'N/A' }}</td>
-                            <td>{{ $inventory->DateDeleted ? date('Y-m-d H:i', strtotime($inventory->DateDeleted)) : 'N/A' }}</td>
-                            <td>
-                                @if($inventory->IsDeleted)
-                                    <span class="badge bg-danger">Deleted</span>
-                                @else
-                                    <span class="badge bg-success">Active</span>
-                                @endif
-                            </td>
                             <td>
                                 <div class="d-flex gap-2">
                                     @if(!$inventory->IsDeleted)
@@ -120,6 +102,24 @@
                                         </form>
                                     @endif
                                 </div>
+                            </td>
+                            <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
+                            <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
+                            <td>{{ $inventory->StocksAdded }}</td>
+                            <td>{{ $inventory->StockOut }}</td>
+                            <td>{{ $inventory->StocksAvailable }}</td>
+                            <td>{{ $inventory->created_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ date('Y-m-d h:i:s A', strtotime($inventory->DateCreated)) }}</td>
+                            <td>{{ optional($inventory->modified_by_user)->Username ?? 'N/A' }}</td>
+                            <td>{{ date('Y-m-d h:i:s A', strtotime($inventory->DateModified)) }}</td>
+                            <td>{{ optional($inventory->deleted_by_user)->Username ?? 'N/A' }}</td>
+                            <td>{{ $inventory->DateDeleted ? date('Y-m-d H:i', strtotime($inventory->DateDeleted)) : 'N/A' }}</td>
+                            <td>
+                                @if($inventory->IsDeleted)
+                                    <span class="badge bg-danger">Deleted</span>
+                                @else
+                                    <span class="badge bg-success">Active</span>
+                                @endif
                             </td>
                         </tr>
                         @empty
@@ -323,6 +323,33 @@ $(document).ready(function() {
                 if (response.success) {
                     const newRow = `
                         <tr data-inventory-id="${response.data.InventoryID}">
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-success flex-grow-1 d-flex align-items-center justify-content-center" 
+                                            style="width: 100px; height: 31px;"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#stockInModal${response.data.InventoryID}">
+                                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                                        Stock In
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-warning flex-grow-1 d-flex align-items-center justify-content-center" 
+                                            style="width: 100px; height: 31px;"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#stockOutModal${response.data.InventoryID}">
+                                        <i class="bi bi-box-arrow-right me-1"></i>
+                                        Stock Out
+                                    </button>
+                                    <form action="/inventory/${response.data.InventoryID}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
                             <td>${response.data.ItemName}</td>
                             <td>${response.data.ClassificationName}</td>
                             <td>${response.data.StocksAdded}</td>
@@ -335,20 +362,6 @@ $(document).ready(function() {
                             <td>N/A</td>
                             <td>N/A</td>
                             <td><span class="badge bg-success">Active</span></td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editInventoryModal${response.data.InventoryID}">
-                                        <i class="bi bi-pencil"></i> Edit
-                                    </button>
-                                    <form action="/inventory/${response.data.InventoryID}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
                         </tr>
                     `;
                     

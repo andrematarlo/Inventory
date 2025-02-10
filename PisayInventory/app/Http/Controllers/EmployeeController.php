@@ -17,13 +17,30 @@ class EmployeeController extends Controller
     public function index()
     {
         try {
-            // Use the correct relationship names
-            $employees = Employee::with(['userAccount', 'createdBy', 'modifiedBy', 'deletedBy'])
+            // Debug the query being executed
+            \DB::enableQueryLog();
+            
+            $employees = Employee::with(['userAccount', 'createdBy', 'modifiedBy'])
                 ->where('IsDeleted', 0)
                 ->orderBy('LastName')
                 ->get();
 
-            $trashedEmployees = Employee::with(['userAccount', 'createdBy', 'modifiedBy', 'deletedBy'])
+            // Log the executed queries
+            \Log::info('Employee Query Log:', [
+                'queries' => \DB::getQueryLog()
+            ]);
+
+            // Log the first employee's data for debugging
+            if ($employees->isNotEmpty()) {
+                $firstEmployee = $employees->first();
+                \Log::info('First Employee Data:', [
+                    'employee' => $firstEmployee->toArray(),
+                    'created_by' => $firstEmployee->createdBy ? $firstEmployee->createdBy->toArray() : null,
+                    'modified_by' => $firstEmployee->modifiedBy ? $firstEmployee->modifiedBy->toArray() : null
+                ]);
+            }
+
+            $trashedEmployees = Employee::with(['userAccount', 'createdBy', 'modifiedBy'])
                 ->where('IsDeleted', 1)
                 ->orderBy('LastName')
                 ->get();
@@ -60,6 +77,15 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         try {
+            // Check if current user is admin
+            $currentEmployee = Employee::where('UserAccountID', auth()->user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->first();
+                
+            if (!$currentEmployee || $currentEmployee->Role !== 'Admin') {
+                return redirect()->back()->with('error', 'Only administrators can add employees.');
+            }
+
             $request->validate([
                 'FirstName' => 'required|string|max:255',
                 'LastName' => 'required|string|max:255',
@@ -73,14 +99,14 @@ class EmployeeController extends Controller
 
             DB::beginTransaction();
 
-            // Let MySQL handle the UserAccountID
+            // Create user account with admin user as creator
             $userAccount = new UserAccount();
             $userAccount->Username = $request->Username;
             $userAccount->Password = bcrypt($request->Password);
-            $userAccount->role = $request->Role;
-            $userAccount->CreatedById = auth()->user()->UserAccountID;
+            $userAccount->Role = $request->Role;
+            $userAccount->CreatedByID = $currentEmployee->EmployeeID;
             $userAccount->DateCreated = now();
-            $userAccount->ModifiedById = auth()->user()->UserAccountID;
+            $userAccount->ModifiedByID = $currentEmployee->EmployeeID;
             $userAccount->DateModified = now();
             $userAccount->IsDeleted = false;
             $userAccount->save();
@@ -89,16 +115,17 @@ class EmployeeController extends Controller
                 throw new \Exception('UserAccount creation failed');
             }
 
-            \Log::info('UserAccount created:', [
-                'ID' => $userAccount->UserAccountID,
-                'Username' => $userAccount->Username
+            \Log::info('UserAccount created by admin:', [
+                'admin_id' => $currentEmployee->EmployeeID,
+                'created_account_id' => $userAccount->UserAccountID,
+                'username' => $userAccount->Username
             ]);
 
             // Get the last EmployeeID
             $lastEmployee = Employee::orderBy('EmployeeID', 'desc')->first();
             $nextEmployeeID = $lastEmployee ? ($lastEmployee->EmployeeID + 1) : 1;
 
-            // Create employee
+            // Create employee with admin user as creator
             $employee = Employee::create([
                 'EmployeeID' => $nextEmployeeID,
                 'UserAccountID' => $userAccount->UserAccountID,
@@ -108,19 +135,28 @@ class EmployeeController extends Controller
                 'Email' => $request->Email,
                 'Gender' => $request->Gender,
                 'Role' => $request->Role,
-                'CreatedById' => auth()->user()->UserAccountID,
+                'CreatedByID' => $currentEmployee->EmployeeID,
                 'DateCreated' => now(),
-                'ModifiedById' => auth()->user()->UserAccountID,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
                 'DateModified' => now(),
                 'IsDeleted' => false
             ]);
 
             DB::commit();
-            return redirect()->route('employees.index')->with('success', 'Employee added successfully');
+
+            \Log::info('Employee created by admin:', [
+                'admin_id' => $currentEmployee->EmployeeID,
+                'employee_id' => $employee->EmployeeID,
+                'name' => $employee->FirstName . ' ' . $employee->LastName
+            ]);
+
+            return redirect()->route('employees.index')
+                ->with('success', 'Employee added successfully by ' . $currentEmployee->FirstName . ' ' . $currentEmployee->LastName);
 
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error in store:', [
+                'admin_id' => $currentEmployee->EmployeeID ?? null,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -145,6 +181,15 @@ class EmployeeController extends Controller
     public function update(Request $request, $employeeId)
     {
         try {
+            // Check if current user is admin
+            $currentEmployee = Employee::where('UserAccountID', auth()->user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->first();
+                
+            if (!$currentEmployee || $currentEmployee->Role !== 'Admin') {
+                return redirect()->back()->with('error', 'Only administrators can update employees.');
+            }
+
             DB::beginTransaction();
 
             $employee = Employee::findOrFail($employeeId);
@@ -156,8 +201,10 @@ class EmployeeController extends Controller
                 'Email' => 'required|email|max:255|unique:employee,Email,' . $employeeId . ',EmployeeID',
                 'Gender' => 'required|string|in:Male,Female',
                 'Role' => 'required|string|in:Admin,InventoryStaff,InventoryManager',
+                'Username' => 'required|string|unique:useraccount,Username,' . $employee->UserAccountID . ',UserAccountID',
             ]);
 
+            // Update employee with admin user as modifier
             $employee->update([
                 'FirstName' => $request->FirstName,
                 'LastName' => $request->LastName,
@@ -165,26 +212,41 @@ class EmployeeController extends Controller
                 'Email' => $request->Email,
                 'Gender' => $request->Gender,
                 'Role' => $request->Role,
-                'ModifiedById' => auth()->user()->UserAccountID,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
                 'DateModified' => now(),
             ]);
 
             if ($employee->userAccount) {
                 $employee->userAccount->update([
+                    'Username' => $request->Username,
                     'Role' => $request->Role,
-                    'ModifiedById' => auth()->user()->UserAccountID,
+                    'ModifiedByID' => $currentEmployee->EmployeeID,
                     'DateModified' => now(),
                 ]);
+
+                // Update password if provided
+                if ($request->filled('Password')) {
+                    $employee->userAccount->update([
+                        'Password' => bcrypt($request->Password)
+                    ]);
+                }
             }
 
             DB::commit();
 
+            \Log::info('Employee updated by admin:', [
+                'admin_id' => $currentEmployee->EmployeeID,
+                'employee_id' => $employee->EmployeeID,
+                'name' => $employee->FirstName . ' ' . $employee->LastName
+            ]);
+
             return redirect()->route('employees.index')
-                ->with('success', 'Employee updated successfully');
+                ->with('success', 'Employee updated successfully by ' . $currentEmployee->FirstName . ' ' . $currentEmployee->LastName);
 
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error updating employee:', [
+                'admin_id' => $currentEmployee->EmployeeID ?? null,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -203,14 +265,14 @@ class EmployeeController extends Controller
             
             $employee->update([
                 'IsDeleted' => true,
-                'DeletedById' => auth()->user()->UserAccountID,
+                'DeletedByID' => auth()->user()->UserAccountID,
                 'DateDeleted' => now()
             ]);
 
             if ($employee->userAccount) {
                 $employee->userAccount->update([
                     'IsDeleted' => true,
-                    'DeletedById' => auth()->user()->UserAccountID,
+                    'DeletedByID' => auth()->user()->UserAccountID,
                     'DateDeleted' => now()
                 ]);
             }

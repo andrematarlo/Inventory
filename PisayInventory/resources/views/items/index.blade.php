@@ -21,6 +21,7 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <th>Actions</th>
                             <th>Image</th>
                             <th>Name</th>
                             <th>Description</th>
@@ -31,12 +32,23 @@
                             <th>Reorder Point</th>
                             <th>Created</th>
                             <th>Modified</th>
-                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($items as $item)
                         <tr>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this item?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
                             <td>
                                 @if($item->ImagePath)
                                     <img src="{{ asset('storage/' . $item->ImagePath) }}" 
@@ -69,6 +81,7 @@
                                     <span class="text-muted">By: {{ $item->modified_by_user->Username ?? 'N/A' }}</span>
                                 </small>
                             </td>
+<<<<<<< HEAD
                             <td class="text-end d-flex gap-2">
                                 <button type="button" class="btn btn-sm btn-primary d-flex align-items-center" 
                                         data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
@@ -83,6 +96,8 @@
                                     </button>
                                 </form>
                             </td>
+=======
+>>>>>>> 6451b6f6d5d6e2d47e99201e656fb31e033152f9
                         </tr>
                         @empty
                         <tr>
