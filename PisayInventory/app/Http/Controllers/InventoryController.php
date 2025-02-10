@@ -27,11 +27,12 @@ class InventoryController extends Controller
             'deleted_by_user'
         ])
             ->select('inventory.*', 'items.StocksAvailable as ItemStocksAvailable')
-            ->join('items', 'inventory.ItemId', '=', 'items.ItemId')
-            ->where('items.IsDeleted', 0);
+            ->join('items', 'inventory.ItemId', '=', 'items.ItemId');
 
-        // Only show active records unless show_deleted is requested
-        if (!$request->has('show_deleted')) {
+        // Show either active or deleted records based on request
+        if ($request->has('show_deleted')) {
+            $query->where('inventory.IsDeleted', 1);
+        } else {
             $query->where('inventory.IsDeleted', 0);
         }
 
@@ -39,7 +40,7 @@ class InventoryController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        // Get all active items
+        // Get all active items for the Add Inventory modal
         $items = Item::with(['classification'])
             ->where('IsDeleted', 0)
             ->orderBy('ItemName')

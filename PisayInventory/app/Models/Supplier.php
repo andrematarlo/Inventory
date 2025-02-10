@@ -12,7 +12,9 @@ class Supplier extends Model
 
     protected $fillable = [
         'SupplierID',
-        'SupplierName',
+        'CompanyName',
+        'ContactPerson',
+        'TelephoneNumber',
         'ContactNum',
         'Address',
         'CreatedById',
@@ -60,8 +62,8 @@ class Supplier extends Model
         parent::boot();
 
         static::creating(function ($supplier) {
-            if (empty($supplier->SupplierName)) {
-                $supplier->SupplierName = 'Unknown Supplier';
+            if (empty($supplier->CompanyName)) {
+                $supplier->CompanyName = 'Unknown Supplier';
             }
         });
     }

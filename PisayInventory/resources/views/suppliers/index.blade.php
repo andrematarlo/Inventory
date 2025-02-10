@@ -38,44 +38,56 @@
         text-align: center;
     }
 
-    .suppliers-table .table th:nth-child(2), /* Supplier Name */
+    .suppliers-table .table th:nth-child(2), /* Company Name */
     .suppliers-table .table td:nth-child(2) {
-        width: 25%;
+        width: 20%;
         min-width: 200px;
     }
 
-    .suppliers-table .table th:nth-child(3), /* Contact Number */
+    .suppliers-table .table th:nth-child(3), /* Contact Person */
     .suppliers-table .table td:nth-child(3) {
         width: 15%;
         min-width: 150px;
     }
 
-    .suppliers-table .table th:nth-child(4), /* Address */
+    .suppliers-table .table th:nth-child(4), /* Telephone Number */
     .suppliers-table .table td:nth-child(4) {
-        width: 30%;
-        min-width: 250px;
-    }
-
-    .suppliers-table .table th:nth-child(5), /* Created By */
-    .suppliers-table .table td:nth-child(5) {
-        width: 10%;
-        min-width: 100px;
-    }
-
-    .suppliers-table .table th:nth-child(6), /* Date Created */
-    .suppliers-table .table td:nth-child(6) {
-        width: 10%;
+        width: 15%;
         min-width: 150px;
     }
 
-    .suppliers-table .table th:nth-child(7), /* Modified By */
+    .suppliers-table .table th:nth-child(5), /* Mobile Number */
+    .suppliers-table .table td:nth-child(5) {
+        width: 15%;
+        min-width: 150px;
+    }
+
+    .suppliers-table .table th:nth-child(6), /* Address */
+    .suppliers-table .table td:nth-child(6) {
+        width: 25%;
+        min-width: 250px;
+    }
+
+    .suppliers-table .table th:nth-child(7), /* Created By */
     .suppliers-table .table td:nth-child(7) {
         width: 10%;
         min-width: 100px;
     }
 
-    .suppliers-table .table th:nth-child(8), /* Date Modified */
+    .suppliers-table .table th:nth-child(8), /* Date Created */
     .suppliers-table .table td:nth-child(8) {
+        width: 10%;
+        min-width: 150px;
+    }
+
+    .suppliers-table .table th:nth-child(9), /* Modified By */
+    .suppliers-table .table td:nth-child(9) {
+        width: 10%;
+        min-width: 100px;
+    }
+
+    .suppliers-table .table th:nth-child(10), /* Date Modified */
+    .suppliers-table .table td:nth-child(10) {
         width: 10%;
         min-width: 150px;
     }
@@ -104,6 +116,64 @@
         gap: 5px; /* Adds space between the icon and text */
         white-space: nowrap; /* Prevents wrapping */
     }
+
+    /* Table styles */
+    .table th {
+        padding: 12px 16px;
+        white-space: nowrap;
+    }
+
+    .table th .small-icon {
+        font-size: 10px;
+        color: #6c757d;
+        margin-left: 3px;
+    }
+
+    .table td {
+        padding: 12px 16px;
+        vertical-align: middle;
+    }
+
+    /* Sortable columns */
+    .sortable {
+        cursor: pointer;
+    }
+
+    .sortable i {
+        font-size: 12px;
+        color: #6c757d;
+    }
+
+    .sortable:hover i {
+        color: #000;
+    }
+
+    /* Action buttons */
+    .btn-group .btn {
+        padding: 4px 8px;
+    }
+
+    /* Table container */
+    .table-responsive {
+        margin: 0;
+        border-radius: 0.375rem;
+        box-shadow: 0 0 10px rgba(0,0,0,0.02);
+    }
+
+    /* Striped rows */
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(0,0,0,.02);
+    }
+
+    /* Hover effect */
+    .table-hover tbody tr:hover {
+        background-color: rgba(0,0,0,.04);
+    }
+
+    /* DataTables customization */
+    .dataTables_wrapper .dataTables_length select {
+        min-width: 60px;
+    }
 </style>
 @endsection
 
@@ -122,20 +192,22 @@
                 <table class="table table-hover" id="suppliersTable">
                     <thead>
                         <tr>
-                            <th style="width: 10%; text-align: center">Actions</th>
-                            <th style="width: 20%">Supplier Name</th>
-                            <th style="width: 15%">Contact Number</th>
-                            <th style="width: 25%">Address</th>
-                            <th style="width: 10%">Created By</th>
-                            <th style="width: 10%">Date Created</th>
-                            <th style="width: 10%">Modified By</th>
-                            <th style="width: 10%">Date Modified</th>
+                            <th style="width: 100px">Actions</th>
+                            <th>Company Name <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Contact Person <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Telephone <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Mobile <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Address <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Created <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Modified <i class="bi bi-arrow-down-up small-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($suppliers as $supplier)
                         <tr>
-                            <td class="align-middle text-center">
+                            <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
                                         <i class="bi bi-pencil"></i>
@@ -143,23 +215,25 @@
                                     <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this supplier?')">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
                                 </div>
                             </td>
-                            <td class="align-middle">{{ $supplier->SupplierName }}</td>
-                            <td class="align-middle">{{ $supplier->ContactNum }}</td>
-                            <td class="align-middle">{{ $supplier->Address }}</td>
-                            <td class="align-middle">{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
-                            <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateCreated)->format('Y-m-d h:i:s A') }}</td>
-                            <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
-                            <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateModified)->format('Y-m-d h:i:s A') }}</td>
+                            <td>{{ $supplier->CompanyName }}</td>
+                            <td>{{ $supplier->ContactPerson }}</td>
+                            <td>{{ $supplier->TelephoneNumber }}</td>
+                            <td>{{ $supplier->ContactNum }}</td>
+                            <td>{{ $supplier->Address }}</td>
+                            <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ $supplier->DateCreated ? date('M d, Y h:i A', strtotime($supplier->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ $supplier->DateModified ? date('M d, Y h:i A', strtotime($supplier->DateModified)) : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="text-center py-4">No suppliers found</td>
+                            <td colspan="10" class="text-center">No suppliers found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -227,11 +301,19 @@
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Supplier Name</label>
-                        <input type="text" class="form-control" name="SupplierName" required>
+                        <label class="form-label">Company Name</label>
+                        <input type="text" class="form-control" name="CompanyName" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Contact Number</label>
+                        <label class="form-label">Contact Person</label>
+                        <input type="text" class="form-control" name="ContactPerson">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telephone Number</label>
+                        <input type="text" class="form-control" name="TelephoneNumber">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mobile Number</label>
                         <input type="text" class="form-control" name="ContactNum">
                     </div>
                     <div class="mb-3">
@@ -262,11 +344,19 @@
                 @method('PUT')
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Supplier Name</label>
-                        <input type="text" class="form-control" name="SupplierName" value="{{ $supplier->SupplierName }}" required>
+                        <label class="form-label">Company Name</label>
+                        <input type="text" class="form-control" name="CompanyName" value="{{ $supplier->CompanyName }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Contact Number</label>
+                        <label class="form-label">Contact Person</label>
+                        <input type="text" class="form-control" name="ContactPerson" value="{{ $supplier->ContactPerson }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telephone Number</label>
+                        <input type="text" class="form-control" name="TelephoneNumber" value="{{ $supplier->TelephoneNumber }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mobile Number</label>
                         <input type="text" class="form-control" name="ContactNum" value="{{ $supplier->ContactNum }}">
                     </div>
                     <div class="mb-3">
@@ -298,7 +388,7 @@
                 @method('DELETE')
                 <div class="modal-body">
                     <p>Are you sure you want to delete this supplier?</p>
-                    <p class="text-danger"><strong>{{ $supplier->SupplierName }}</strong></p>
+                    <p class="text-danger"><strong>{{ $supplier->CompanyName }}</strong></p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -349,10 +439,9 @@
         
         $('#suppliersTable').DataTable({
             pageLength: 10,
-            ordering: true,
-            responsive: true,
+            order: [[1, 'asc']], // Sort by Company Name by default
             columnDefs: [
-                { orderable: false, targets: 0 }
+                { orderable: false, targets: 0 } // Disable sorting on Actions column
             ],
             language: {
                 search: "_INPUT_",
@@ -365,12 +454,17 @@
             dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
                  "<'row'<'col-sm-12'tr>>" +
                  "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-            drawCallback: function(settings) {
-                $('.dataTables_wrapper .row').addClass('g-3');
-                $('.dataTables_length select').addClass('form-select form-select-sm');
-                $('.dataTables_filter input').addClass('form-control form-control-sm');
-                $('.dataTables_info').addClass('text-muted');
-                $('.pagination').addClass('pagination-sm');
+            drawCallback: function() {
+                $('.table th').each(function() {
+                    const th = $(this);
+                    if (th.hasClass('sorting_asc')) {
+                        th.find('i').removeClass('bi-arrow-down-up').addClass('bi-arrow-up');
+                    } else if (th.hasClass('sorting_desc')) {
+                        th.find('i').removeClass('bi-arrow-down-up').addClass('bi-arrow-down');
+                    } else {
+                        th.find('i').removeClass('bi-arrow-up bi-arrow-down').addClass('bi-arrow-down-up');
+                    }
+                });
             }
         });
 
