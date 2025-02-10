@@ -156,22 +156,6 @@
                             <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateCreated)->format('Y-m-d h:i:s A') }}</td>
                             <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
                             <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateModified)->format('Y-m-d h:i:s A') }}</td>
-                            <td class="align-middle text-center">
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-primary btn-icon-text" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}"
-                                            title="Edit">
-                                        <i class="bi bi-pencil"></i><span>Edit</span>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-danger btn-icon-text" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#deleteSupplierModal{{ $supplier->SupplierID }}"
-                                            title="Delete">
-                                        <i class="bi bi-trash"></i><span>Delete</span>
-                                    </button>
-                                </div>
-                            </td>
                         </tr>
                         @empty
                         <tr>

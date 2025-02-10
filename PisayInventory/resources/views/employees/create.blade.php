@@ -76,16 +76,25 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="Role" class="form-label">Role</label>
-                        <select name="Role" id="Role" class="form-control @error('Role') is-invalid @enderror" required>
-                            <option value="">Select Role</option>
+                        <label class="form-label">Roles</label>
+                        <div class="border rounded p-3">
                             @foreach($roles as $value => $label)
-                                <option value="{{ $value }}" {{ old('Role') == $value ? 'selected' : '' }}>{{ $label }}</option>
+                                <div class="form-check">
+                                    <input type="checkbox" 
+                                           class="form-check-input @error('roles') is-invalid @enderror" 
+                                           id="role_{{ $value }}" 
+                                           name="roles[]" 
+                                           value="{{ $value }}"
+                                           {{ in_array($value, old('roles', [])) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="role_{{ $value }}">
+                                        {{ $label }}
+                                    </label>
+                                </div>
                             @endforeach
-                        </select>
-                        @error('Role')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                            @error('roles')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
                 </div>
 

@@ -100,80 +100,60 @@ class EmployeeController extends Controller
             $request->validate([
                 'FirstName' => 'required|string|max:255',
                 'LastName' => 'required|string|max:255',
-                'Address' => 'nullable|string',
-                'Email' => 'required|email|max:255|unique:employee,Email',
-                'Gender' => 'required|string|in:Male,Female',
-                'Role' => 'required|string|in:Admin,InventoryStaff,InventoryManager',
+                'Email' => 'required|email|max:255',
+                'Gender' => 'required|in:Male,Female',
+                'Address' => 'required|string',
                 'Username' => 'required|string|unique:useraccount,Username',
-                'Password' => 'required|string|min:6'
+                'Password' => 'required|string|min:6',
+                'roles' => 'required|array|min:1',
+                'roles.*' => 'required|string|in:Admin,InventoryStaff,InventoryManager'
             ]);
 
             DB::beginTransaction();
 
-            // Create user account with admin user as creator
-            $userAccount = new UserAccount();
-            $userAccount->Username = $request->Username;
-            $userAccount->Password = bcrypt($request->Password);
-            $userAccount->Role = $request->Role;
-            $userAccount->CreatedByID = $currentEmployee->EmployeeID;
-            $userAccount->DateCreated = now();
-            $userAccount->ModifiedByID = $currentEmployee->EmployeeID;
-            $userAccount->DateModified = now();
-            $userAccount->IsDeleted = false;
-            $userAccount->save();
-
-            if (!$userAccount->UserAccountID) {
-                throw new \Exception('UserAccount creation failed');
-            }
-
-            \Log::info('UserAccount created by admin:', [
-                'admin_id' => $currentEmployee->EmployeeID,
-                'created_account_id' => $userAccount->UserAccountID,
-                'username' => $userAccount->Username
+            // Create user account first
+            $userAccount = UserAccount::create([
+                'Username' => $request->Username,
+                'Password' => Hash::make($request->Password),
+                'CreatedById' => auth()->user()->UserAccountID,
+                'DateCreated' => now(),
+                'IsDeleted' => false
             ]);
 
-            // Get the last EmployeeID
+            // Get the next EmployeeID
             $lastEmployee = Employee::orderBy('EmployeeID', 'desc')->first();
-            $nextEmployeeID = $lastEmployee ? ($lastEmployee->EmployeeID + 1) : 1;
+            $nextEmployeeID = $lastEmployee ? $lastEmployee->EmployeeID + 1 : 1;
 
-            // Create employee with admin user as creator
+            // Create employee with multiple roles
             $employee = Employee::create([
                 'EmployeeID' => $nextEmployeeID,
-                'UserAccountID' => $userAccount->UserAccountID,
                 'FirstName' => $request->FirstName,
                 'LastName' => $request->LastName,
-                'Address' => $request->Address,
                 'Email' => $request->Email,
                 'Gender' => $request->Gender,
-                'Role' => $request->Role,
-                'CreatedByID' => $currentEmployee->EmployeeID,
+                'Address' => $request->Address,
+                'UserAccountID' => $userAccount->UserAccountID,
+                'Role' => implode(', ', $request->roles), // Add space after comma for better readability
+                'CreatedByID' => auth()->user()->UserAccountID,
                 'DateCreated' => now(),
-                'ModifiedByID' => $currentEmployee->EmployeeID,
-                'DateModified' => now(),
                 'IsDeleted' => false
             ]);
 
             DB::commit();
 
-            \Log::info('Employee created by admin:', [
-                'admin_id' => $currentEmployee->EmployeeID,
-                'employee_id' => $employee->EmployeeID,
-                'name' => $employee->FirstName . ' ' . $employee->LastName
-            ]);
-
             return redirect()->route('employees.index')
-                ->with('success', 'Employee added successfully by ' . $currentEmployee->FirstName . ' ' . $currentEmployee->LastName);
+                ->with('success', 'Employee created successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error in store:', [
-                'admin_id' => $currentEmployee->EmployeeID ?? null,
+            Log::error('Error creating employee:', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return redirect()->route('employees.index')
-                ->with('error', 'Failed to add employee: ' . $e->getMessage());
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to create employee: ' . $e->getMessage());
         }
     }
 
