@@ -22,7 +22,6 @@
             body {
                 background-color:rgba(214, 255, 236, 0.09);
             }
-            
 
             /* Sidebar Styles */
             .sidebar {
@@ -161,42 +160,47 @@
             }
 
             /* Main content adjustment */
-    body .main-content {
-        margin-left: 320px;
-        padding: 0 0 0 10px; /* Left padding for space after sidebar */
-    }
+            body .main-content {
+                margin-left: 320px;
+                padding: 0 0 0 10px; /* Left padding for space after sidebar */
+            }
 
-    body .main-content .content-wrapper {
-        padding: 2rem 3rem;
-        margin: 0 auto;
-    }
+            body .main-content .content-wrapper {
+                padding: 2rem 3rem;
+                margin: 0 auto;
+            }
 
-    body .container, 
-    body .container-fluid {
-        max-width: 1800px;
-        margin: 0 auto;
-    }
+            body .container, 
+            body .container-fluid {
+                max-width: 1800px;
+                margin: 0 auto;
+            }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-        body .main-content {
-            margin-left: 0;
-            padding-left: 0;
-        }
-    }
+            /* Responsive */
+            @media (max-width: 768px) {
+                body .main-content {
+                    margin-left: 0;
+                    padding-left: 0;
+                }
 
-    /* Responsive styles */
-    @media (max-width: 768px) {
-        .sidebar {
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-        }
+                .sidebar {
+                    transform: translateX(-100%);
+                    transition: transform 0.3s ease;
+                }
 
-        .sidebar.show {
-            transform: translateX(0);
-        }
-    }
-    
+                .sidebar.show {
+                    transform: translateX(0);
+                }
+            }
+
+            /* Add styles for welcome text */
+            .welcome-message {
+                position: absolute;
+                top: 20px;
+                right: 30px;
+                font-size: 1rem;
+                color:rgba(25, 135, 84, 0.74);
+            }
         </style>
         @yield('additional_styles')
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -205,27 +209,32 @@
     </head>
     <body>
         @include('layouts.sidebar')
-        
+
         <div class="main-content">
-    <div class="content-wrapper">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+            <div class="content-wrapper">
+                <!-- Welcome back message -->
+                <div class="welcome-message">
+                    Welcome back, {{ Auth::user()->Username }}
+                </div>
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-circle me-2"></i>
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
 
-        @yield('content')
-    </div>
-</div>
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        {{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                @yield('content')
+            </div>
+        </div>
 
         <!-- Scripts -->
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
