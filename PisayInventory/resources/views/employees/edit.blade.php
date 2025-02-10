@@ -9,16 +9,6 @@
             <h4 class="mb-0">Edit Employee</h4>
         </div>
         <div class="card-body">
-            @if(app()->environment('local'))
-                <div class="alert alert-info">
-                    <p>Debug Info:</p>
-                    <pre>
-                        Employee Role: {{ $employee->role }}
-                        UserAccount Role: {{ $employee->userAccount->role }}
-                        Old Role: {{ old('Role') }}
-                    </pre>
-                </div>
-            @endif
             <form method="POST" action="{{ route('employees.update', $employee->EmployeeID) }}">
                 @csrf
                 @method('PUT')
@@ -87,17 +77,28 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="Role" class="form-label">Role</label>
-                        <select class="form-select @error('Role') is-invalid @enderror" 
-                                id="Role" name="Role" required>
-                            <option value="">Select Role</option>
-                            <option value="Admin" {{ old('Role', $employee->Role) == 'Admin' ? 'selected' : '' }}>Admin</option>
-                            <option value="InventoryStaff" {{ old('Role', $employee->Role) == 'InventoryStaff' ? 'selected' : '' }}>Inventory Staff</option>
-                            <option value="InventoryManager" {{ old('Role', $employee->Role) == 'InventoryManager' ? 'selected' : '' }}>Inventory Manager</option>
-                        </select>
-                        @error('Role')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                        <label class="form-label">Roles</label>
+                        <div class="border rounded p-3">
+                            @php
+                                $currentRoles = explode(', ', $employee->Role);
+                            @endphp
+                            @foreach($roles as $value => $label)
+                                <div class="form-check">
+                                    <input type="checkbox" 
+                                           class="form-check-input @error('roles') is-invalid @enderror" 
+                                           id="role_{{ $value }}" 
+                                           name="roles[]" 
+                                           value="{{ $value }}"
+                                           {{ in_array($value, old('roles', $currentRoles)) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="role_{{ $value }}">
+                                        {{ $label }}
+                                    </label>
+                                </div>
+                            @endforeach
+                            @error('roles')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
                 </div>
 

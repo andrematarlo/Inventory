@@ -29,9 +29,7 @@ class EmployeeController extends Controller
                 'mb.FirstName as ModifiedByFirstName',
                 'mb.LastName as ModifiedByLastName'
             )
-            ->leftJoin('useraccount as ua', function($join) {
-                $join->on('employee.UserAccountID', '=', 'ua.UserAccountID');
-            })
+            ->leftJoin('useraccount as ua', 'employee.UserAccountID', '=', 'ua.UserAccountID')
             ->leftJoin('employee as cb', function($join) {
                 $join->on('employee.CreatedByID', '=', 'cb.EmployeeID');
             })
@@ -40,11 +38,20 @@ class EmployeeController extends Controller
             })
             ->where('employee.IsDeleted', 0)
             ->orderBy('employee.LastName')
-            ->paginate(25);
+            ->get();
 
-            // Log the executed query for debugging
-            \Log::info('Employee Query:', [
-                'query' => \DB::getQueryLog()
+            // Debug log to check the data
+            \Log::info('Employee Data:', [
+                'employees' => $employees->map(function($emp) {
+                    return [
+                        'id' => $emp->EmployeeID,
+                        'name' => $emp->FirstName . ' ' . $emp->LastName,
+                        'created_by_id' => $emp->CreatedByID,
+                        'created_by_name' => $emp->CreatedByFirstName . ' ' . $emp->CreatedByLastName,
+                        'modified_by_id' => $emp->ModifiedByID,
+                        'modified_by_name' => $emp->ModifiedByFirstName . ' ' . $emp->ModifiedByLastName,
+                    ];
+                })
             ]);
 
             // Only load trashed employees if specifically requested
@@ -93,7 +100,7 @@ class EmployeeController extends Controller
                 ->where('IsDeleted', false)
                 ->first();
                 
-            if (!$currentEmployee || $currentEmployee->Role !== 'Admin') {
+            if (!$currentEmployee || !str_contains($currentEmployee->Role, 'Admin')) {
                 return redirect()->back()->with('error', 'Only administrators can add employees.');
             }
 
@@ -115,7 +122,7 @@ class EmployeeController extends Controller
             $userAccount = UserAccount::create([
                 'Username' => $request->Username,
                 'Password' => Hash::make($request->Password),
-                'CreatedById' => auth()->user()->UserAccountID,
+                'CreatedByID' => $currentEmployee->EmployeeID,
                 'DateCreated' => now(),
                 'IsDeleted' => false
             ]);
@@ -133,13 +140,22 @@ class EmployeeController extends Controller
                 'Gender' => $request->Gender,
                 'Address' => $request->Address,
                 'UserAccountID' => $userAccount->UserAccountID,
-                'Role' => implode(', ', $request->roles), // Add space after comma for better readability
-                'CreatedByID' => auth()->user()->UserAccountID,
+                'Role' => implode(', ', $request->roles),
+                'CreatedByID' => $currentEmployee->EmployeeID,
                 'DateCreated' => now(),
+                'ModifiedByID' => $currentEmployee->EmployeeID,
+                'DateModified' => now(),
                 'IsDeleted' => false
             ]);
 
             DB::commit();
+
+            // Log the creation for debugging
+            \Log::info('Employee created:', [
+                'employee_id' => $employee->EmployeeID,
+                'created_by_id' => $currentEmployee->EmployeeID,
+                'creator_name' => $currentEmployee->FirstName . ' ' . $currentEmployee->LastName
+            ]);
 
             return redirect()->route('employees.index')
                 ->with('success', 'Employee created successfully');
@@ -169,80 +185,68 @@ class EmployeeController extends Controller
         return view('employees.edit', compact('employee', 'roles'));
     }
 
-    public function update(Request $request, $employeeId)
+    public function update(Request $request, $id)
     {
         try {
+            $employee = Employee::findOrFail($id);
+            
             // Check if current user is admin
             $currentEmployee = Employee::where('UserAccountID', auth()->user()->UserAccountID)
                 ->where('IsDeleted', false)
                 ->first();
                 
             if (!$currentEmployee || $currentEmployee->Role !== 'Admin') {
-                return redirect()->back()->with('error', 'Only administrators can update employees.');
+                return redirect()->back()->with('error', 'Only administrators can edit employees.');
             }
-
-            DB::beginTransaction();
-
-            $employee = Employee::findOrFail($employeeId);
 
             $request->validate([
                 'FirstName' => 'required|string|max:255',
                 'LastName' => 'required|string|max:255',
-                'Address' => 'nullable|string',
-                'Email' => 'required|email|max:255|unique:employee,Email,' . $employeeId . ',EmployeeID',
-                'Gender' => 'required|string|in:Male,Female',
-                'Role' => 'required|string|in:Admin,InventoryStaff,InventoryManager',
+                'Email' => 'required|email|max:255',
+                'Gender' => 'required|in:Male,Female',
+                'Address' => 'required|string',
                 'Username' => 'required|string|unique:useraccount,Username,' . $employee->UserAccountID . ',UserAccountID',
+                'roles' => 'required|array|min:1',
+                'roles.*' => 'required|string|in:Admin,InventoryStaff,InventoryManager'
             ]);
 
-            // Update employee with admin user as modifier
+            DB::beginTransaction();
+
+            // Update employee
             $employee->update([
                 'FirstName' => $request->FirstName,
                 'LastName' => $request->LastName,
-                'Address' => $request->Address,
                 'Email' => $request->Email,
                 'Gender' => $request->Gender,
-                'Role' => $request->Role,
+                'Address' => $request->Address,
+                'Role' => implode(', ', $request->roles),
                 'ModifiedByID' => $currentEmployee->EmployeeID,
-                'DateModified' => now(),
+                'DateModified' => now()
             ]);
 
-            if ($employee->userAccount) {
+            // Update user account if username changed
+            if ($employee->userAccount->Username !== $request->Username) {
                 $employee->userAccount->update([
                     'Username' => $request->Username,
-                    'Role' => $request->Role,
                     'ModifiedByID' => $currentEmployee->EmployeeID,
-                    'DateModified' => now(),
+                    'DateModified' => now()
                 ]);
-
-                // Update password if provided
-                if ($request->filled('Password')) {
-                    $employee->userAccount->update([
-                        'Password' => bcrypt($request->Password)
-                    ]);
-                }
             }
 
             DB::commit();
 
-            \Log::info('Employee updated by admin:', [
-                'admin_id' => $currentEmployee->EmployeeID,
-                'employee_id' => $employee->EmployeeID,
-                'name' => $employee->FirstName . ' ' . $employee->LastName
-            ]);
-
             return redirect()->route('employees.index')
-                ->with('success', 'Employee updated successfully by ' . $currentEmployee->FirstName . ' ' . $currentEmployee->LastName);
+                ->with('success', 'Employee updated successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error updating employee:', [
-                'admin_id' => $currentEmployee->EmployeeID ?? null,
+            Log::error('Error updating employee:', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return redirect()->route('employees.index')
+            return redirect()->back()
+                ->withInput()
                 ->with('error', 'Failed to update employee: ' . $e->getMessage());
         }
     }
