@@ -251,29 +251,35 @@
                 @php
                     $isDeleted = $activity['is_deleted'];
                     
-                    $isNewlyCreated = !empty($activity['created_at']) && 
-                    $activity['created_at'] === $activity['modified_at'];
+                    // Check if this is a new record by comparing dates
+                    $createdTime = strtotime($activity['created_at']);
+                    $modifiedTime = strtotime($activity['modified_at'] ?? '0');
+                    $deletedTime = strtotime($activity['deleted_at'] ?? '0');
+                    $restoredTime = strtotime($activity['restored_at'] ?? '0');
                     
-                    $isRestored = !empty($activity['restored_at']);
+                    // Find the most recent action
+                    $times = [
+                        'created' => $createdTime,
+                        'modified' => $modifiedTime,
+                        'deleted' => $deletedTime,
+                        'restored' => $restoredTime
+                    ];
                     
+                    $mostRecentAction = array_search(max($times), $times);
                     
-                    $isModified = !empty($activity['modified_at']) && 
-                                empty($activity['restored_at']) &&  
-                                !$isNewlyCreated;
-
                     if ($isDeleted) {
                         $action = 'Deleted';
                         $icon = 'trash';
                         $color = 'danger';
                         $timestamp = $activity['deleted_at'];
                         $user = $activity['deleted_by'];
-                    } elseif ($isNewlyCreated) {
+                    } elseif ($mostRecentAction === 'created') {
                         $action = 'Added';
                         $icon = 'plus-circle';
                         $color = 'success';
                         $timestamp = $activity['created_at'];
                         $user = $activity['created_by'];
-                    } elseif ($isRestored) {
+                    } elseif ($mostRecentAction === 'restored') {
                         $action = 'Restored';
                         $icon = 'arrow-counterclockwise';
                         $color = 'warning';
@@ -297,7 +303,7 @@
                                     <span class="fw-medium">{{ $action }} {{ ucfirst($activity['type']) }}</span>
                                     <strong>{{ $activity['name'] }}</strong>
                                     
-                                    @if($isModified && !empty($activity['changes']))
+                                    @if($mostRecentAction === 'modified' && !empty($activity['changes']))
                                         <div class="mt-2">
                                             @foreach($activity['changes'] as $field => $change)
                                                 <div class="text-muted small">
