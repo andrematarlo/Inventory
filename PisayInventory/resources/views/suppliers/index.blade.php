@@ -156,7 +156,6 @@
                             <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateCreated)->format('Y-m-d h:i:s A') }}</td>
                             <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
                             <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateModified)->format('Y-m-d h:i:s A') }}</td>
-<<<<<<< HEAD
                             <td class="align-middle text-center">
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-primary btn-icon-text" 
@@ -173,8 +172,6 @@
                                     </button>
                                 </div>
                             </td>
-=======
->>>>>>> 6451b6f6d5d6e2d47e99201e656fb31e033152f9
                         </tr>
                         @empty
                         <tr>
