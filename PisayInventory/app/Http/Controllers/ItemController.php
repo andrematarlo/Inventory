@@ -184,7 +184,7 @@ class ItemController extends Controller
             $item->save();
 
             // Create inventory record for stock in
-            $inventory = new \App\Models\Inventory();
+            $inventory = new Inventory();
             $inventory->ItemId = $item->ItemId;
             $inventory->ClassificationId = $item->ClassificationId;
             $inventory->IsDeleted = false;
@@ -234,7 +234,7 @@ class ItemController extends Controller
             $item->save();
 
             // Create inventory record for stock out
-            $inventory = new \App\Models\Inventory();
+            $inventory = new Inventory();
             $inventory->ItemId = $item->ItemId;
             $inventory->ClassificationId = $item->ClassificationId;
             $inventory->IsDeleted = false;
@@ -277,27 +277,30 @@ class ItemController extends Controller
     }
 
     public function restore($id)
-    {
-        try {
-            DB::beginTransaction();
-            
-            $item = Item::findOrFail($id);
-            $item->update([
-                'IsDeleted' => false,
-                'DeletedById' => null,
-                'DateDeleted' => null,
-                'ModifiedById' => Auth::id(),
-                'DateModified' => Carbon::now()
-            ]);
+{
+    try {
+        DB::beginTransaction();
+        
+        $item = Item::findOrFail($id);
+        $item->update([
+            'IsDeleted' => false,
+            'DeletedById' => null,
+            'DateDeleted' => null,
+            'RestoredById' => Auth::id(),
+            'DateRestored' => now(),
+            'ModifiedById' => null,
+            'DateModified' => null
+        ]);
 
-            DB::commit();
-            return redirect()->route('items.index')->with('success', 'Item restored successfully');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Item restoration failed: ' . $e->getMessage());
-            return back()->with('error', 'Error restoring item: ' . $e->getMessage());
-        }
+        DB::commit();
+        return redirect()->route('items.index')
+            ->with('success', 'Item restored successfully');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Item restoration failed: ' . $e->getMessage());
+        return back()->with('error', 'Error restoring item: ' . $e->getMessage());
     }
+}
 
     public function manage()
     {

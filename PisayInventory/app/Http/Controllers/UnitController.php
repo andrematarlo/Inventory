@@ -1,7 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Unit;
@@ -103,4 +104,29 @@ class UnitController extends Controller
 
         return redirect()->route('units.index')->with('success', 'Unit deleted successfully');
     }
+    public function restore($id)
+{
+    try {
+        DB::beginTransaction();
+        
+        $unit = Unit::findOrFail($id);
+        $unit->update([
+            'IsDeleted' => false,
+            'DeletedById' => null,
+            'DateDeleted' => null,
+            'RestoredById' => Auth::id(),
+            'DateRestored' => now(),
+            'ModifiedById' => null,
+            'DateModified' => null
+        ]);
+
+        DB::commit();
+        return redirect()->route('units.index')
+            ->with('success', 'Unit restored successfully');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Unit restore failed: ' . $e->getMessage());
+        return back()->with('error', 'Failed to restore unit: ' . $e->getMessage());
+    }
+}
 }

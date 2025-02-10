@@ -28,6 +28,8 @@ class Employee extends Model
         'DateModified',
         'DeletedByID',
         'DateDeleted',
+        'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 
@@ -90,6 +92,10 @@ class Employee extends Model
                 'LastName' => 'User'
             ]);
     }
+    public function restoredBy()
+{
+    return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
+}
 
     // Get full name attribute
     public function getFullNameAttribute()

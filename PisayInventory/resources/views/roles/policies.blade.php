@@ -46,7 +46,7 @@
                                                 class="btn btn-sm btn-primary" 
                                                 onclick="openPolicyModal('{{ $policy->RolePolicyId }}')"
                                                 title="Edit">
-                                            <i class="bi bi-pencil"></i>
+                                            <i class="bi bi-pencil"></i>  Edit
                                         </button>
                                     </div>
                                 </td>

@@ -6,7 +6,7 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Items Management</h2>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+        <button type="button" class="btn btn-primary d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#addItemModal">
             <i class="bi bi-plus-lg me-1"></i> Add Item
         </button>
     </div>
@@ -81,6 +81,20 @@
                                     <span class="text-muted">By: {{ $item->modified_by_user->Username ?? 'N/A' }}</span>
                                 </small>
                             </td>
+                            <td class="text-end d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-primary d-flex align-items-center" 
+                                        data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
+                                    <i class="bi bi-pencil me-1"></i> Edit
+                                </button>
+                                <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center" 
+                                            onclick="return confirm('Are you sure you want to delete this item?')">
+                                        <i class="bi bi-trash me-1"></i> Delete
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                         @empty
                         <tr>
@@ -143,8 +157,8 @@
                             <td class="text-end">
                                 <form action="{{ route('items.restore', $item->ItemId) }}" method="POST" class="d-inline">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm btn-success">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    <button type="submit" class="btn btn-sm btn-success d-flex align-items-center">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restore
                                     </button>
                                 </form>
                             </td>

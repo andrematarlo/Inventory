@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ClassificationController extends Controller
 {
@@ -124,24 +125,28 @@ class ClassificationController extends Controller
     }
 
     public function restore($id)
-    {
-        $classification = Classification::findOrFail($id);
+{
+    try {
+        DB::beginTransaction();
         
+        $classification = Classification::findOrFail($id);
         $classification->update([
             'IsDeleted' => false,
             'DeletedById' => null,
             'DateDeleted' => null,
-            'ModifiedById' => Auth::user()->UserAccountID,
-            'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
+            'RestoredById' => Auth::id(),
+            'DateRestored' => now(),
+            'ModifiedById' => null,
+            'DateModified' => null
         ]);
 
+        DB::commit();
         return redirect()->route('classifications.index')
             ->with('success', 'Classification restored successfully');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Classification restore failed: ' . $e->getMessage());
+        return back()->with('error', 'Failed to restore classification: ' . $e->getMessage());
     }
-
-    public function trash()
-    {
-        $trashedClassifications = Classification::where('IsDeleted', 1)->get();
-        return view('classifications.trash', compact('trashedClassifications'));
-    }
+}
 }

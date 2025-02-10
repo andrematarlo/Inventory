@@ -21,7 +21,7 @@
             }
 
             body {
-                background-color: #f8fafc;
+                background-color:rgba(214, 255, 236, 0.09);
             }
             
 
@@ -197,6 +197,7 @@
             transform: translateX(0);
         }
     }
+    
         </style>
         @yield('additional_styles')
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -232,27 +233,7 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
         <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
         <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-        <script>
-            // Initialize DataTables
-            $(document).ready(function() {
-                $('.table').DataTable({
-                    responsive: true,
-                    pageLength: 10,
-                    order: [[0, 'asc']],
-                    language: {
-                        search: "_INPUT_",
-                        searchPlaceholder: "Search..."
-                    }
-                });
-
-                // Auto-hide alerts
-                setTimeout(function() {
-                    $('.alert').alert('close');
-                }, 5000);
-
-                $('.dropdown-toggle').dropdown();
-            });
-        </script>
+        
         @yield('scripts')
     </body>
 </html>

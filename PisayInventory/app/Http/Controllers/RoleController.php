@@ -1,11 +1,13 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Role;
 use App\Models\RolePolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+
 
 class RoleController extends Controller
 {
@@ -114,18 +116,30 @@ class RoleController extends Controller
     }
 
     public function restore($id)
-    {
+{
+    try {
+        DB::beginTransaction();
+        
         $role = Role::findOrFail($id);
-        $role->IsDeleted = false;
-        $role->DateDeleted = null;
-        $role->DeletedById = null;
-        $role->DateModified = now();
-        $role->ModifiedById = Auth::id();
-        $role->save();
+        $role->update([
+            'IsDeleted' => false,
+            'DeletedById' => null,
+            'DateDeleted' => null,
+            'RestoredById' => Auth::id(),
+            'DateRestored' => now(),
+            'ModifiedById' => null,
+            'DateModified' => null
+        ]);
 
+        DB::commit();
         return redirect()->route('roles.index')
             ->with('success', 'Role restored successfully');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Role restore failed: ' . $e->getMessage());
+        return back()->with('error', 'Failed to restore role: ' . $e->getMessage());
     }
+}
 
     public function policies()
     {

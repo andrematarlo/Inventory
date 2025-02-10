@@ -84,6 +84,26 @@
     .suppliers-table .table tbody tr:hover {
         background-color: #f1f5f9;
     }
+    .btn-icon-text {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px; /* Space between icon and text */
+    }
+
+
+    .btn-group .btn {
+        margin-right: 8px;
+    }
+
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+    .btn-success {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px; /* Adds space between the icon and text */
+        white-space: nowrap; /* Prevents wrapping */
+    }
 </style>
 @endsection
 
@@ -136,6 +156,25 @@
                             <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateCreated)->format('Y-m-d h:i:s A') }}</td>
                             <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
                             <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateModified)->format('Y-m-d h:i:s A') }}</td>
+<<<<<<< HEAD
+                            <td class="align-middle text-center">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-primary btn-icon-text" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}"
+                                            title="Edit">
+                                        <i class="bi bi-pencil"></i><span>Edit</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger btn-icon-text" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteSupplierModal{{ $supplier->SupplierID }}"
+                                            title="Delete">
+                                        <i class="bi bi-trash"></i><span>Delete</span>
+                                    </button>
+                                </div>
+                            </td>
+=======
+>>>>>>> 6451b6f6d5d6e2d47e99201e656fb31e033152f9
                         </tr>
                         @empty
                         <tr>
@@ -177,8 +216,8 @@
                             <td class="text-center">
                                 <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" method="POST" class="d-inline">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm btn-success" title="Restore">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center" title="Restore">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Restore
                                     </button>
                                 </form>
                             </td>

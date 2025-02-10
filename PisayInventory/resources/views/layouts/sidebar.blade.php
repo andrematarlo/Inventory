@@ -137,7 +137,7 @@
 .sidebar .nav-link.active,
 .sidebar .dropdown-item.active,
 .sidebar .nav-link.dropdown-toggle.active {
-    background-color: rgba(147, 112, 219, 0.6) !important;
+    background-color: #198754 !important;
     font-weight: 500;
     color: white !important;  
 }
@@ -168,7 +168,7 @@
 
 .sidebar .dropdown-item:focus,
 .sidebar .dropdown-item:active {
-    background-color: rgba(177, 155, 221, 0.6) !important;
+    background-color: #198754 !important;
     color: white !important;
     outline: none !important;
     box-shadow: none !important;
@@ -193,7 +193,7 @@
 }
 
 .show .nav-link.dropdown-toggle .bi-chevron-down {
-    transform: rotate(90deg);
+    transform: rotate(180deg);
 }
 .sidebar .nav-item {
     width: 100%;
