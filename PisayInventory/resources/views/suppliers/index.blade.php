@@ -40,7 +40,7 @@
 
     .suppliers-table .table th:nth-child(2), /* Supplier Name */
     .suppliers-table .table td:nth-child(2) {
-        width: 25%;
+        width: 20%;
         min-width: 200px;
     }
 
@@ -52,30 +52,18 @@
 
     .suppliers-table .table th:nth-child(4), /* Address */
     .suppliers-table .table td:nth-child(4) {
-        width: 30%;
+        width: 25%;
         min-width: 250px;
     }
 
-    .suppliers-table .table th:nth-child(5), /* Created By */
+    .suppliers-table .table th:nth-child(5), /* Created */
     .suppliers-table .table td:nth-child(5) {
         width: 10%;
         min-width: 100px;
     }
 
-    .suppliers-table .table th:nth-child(6), /* Date Created */
+    .suppliers-table .table th:nth-child(6), /* Modified */
     .suppliers-table .table td:nth-child(6) {
-        width: 10%;
-        min-width: 150px;
-    }
-
-    .suppliers-table .table th:nth-child(7), /* Modified By */
-    .suppliers-table .table td:nth-child(7) {
-        width: 10%;
-        min-width: 100px;
-    }
-
-    .suppliers-table .table th:nth-child(8), /* Date Modified */
-    .suppliers-table .table td:nth-child(8) {
         width: 10%;
         min-width: 150px;
     }
@@ -122,63 +110,50 @@
                 <table class="table table-hover" id="suppliersTable">
                     <thead>
                         <tr>
-                            <th style="width: 10%; text-align: center">Actions</th>
+                            <th style="width: 10%">Actions</th>
                             <th style="width: 20%">Supplier Name</th>
                             <th style="width: 15%">Contact Number</th>
                             <th style="width: 25%">Address</th>
-                            <th style="width: 10%">Created By</th>
-                            <th style="width: 10%">Date Created</th>
-                            <th style="width: 10%">Modified By</th>
-                            <th style="width: 10%">Date Modified</th>
+                            <th style="width: 10%">Created</th>
+                            <th style="width: 10%">Modified</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($suppliers as $supplier)
                         <tr>
-                            <td class="align-middle text-center">
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
-                                        <i class="bi bi-pencil"></i>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary d-flex align-items-center" 
+                                        data-bs-toggle="modal" data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
+                                    <i class="bi bi-pencil me-1"></i> Edit
+                                </button>
+                                <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center" 
+                                            onclick="return confirm('Are you sure you want to delete this supplier?')">
+                                        <i class="bi bi-trash me-1"></i> Delete
                                     </button>
-                                    <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this supplier?')">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
+                                </form>
                             </td>
                             <td class="align-middle">{{ $supplier->SupplierName }}</td>
                             <td class="align-middle">{{ $supplier->ContactNum }}</td>
                             <td class="align-middle">{{ $supplier->Address }}</td>
-                            <td class="align-middle">{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
-                            <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateCreated)->format('Y-m-d h:i:s A') }}</td>
-                            <td class="align-middle">{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
-                            <td class="align-middle">{{ Carbon\Carbon::parse($supplier->DateModified)->format('Y-m-d h:i:s A') }}</td>
-<<<<<<< HEAD
-                            <td class="align-middle text-center">
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-primary btn-icon-text" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}"
-                                            title="Edit">
-                                        <i class="bi bi-pencil"></i><span>Edit</span>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-danger btn-icon-text" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#deleteSupplierModal{{ $supplier->SupplierID }}"
-                                            title="Delete">
-                                        <i class="bi bi-trash"></i><span>Delete</span>
-                                    </button>
-                                </div>
+                            <td class="align-middle">
+                                <small>
+                                    {{ Carbon\Carbon::parse($supplier->DateCreated)->format('M d, Y h:i A') }}<br>
+                                    <span class="text-muted">By: {{ $supplier->created_by_user->Username ?? 'N/A' }}</span>
+                                </small>
                             </td>
-=======
->>>>>>> 6451b6f6d5d6e2d47e99201e656fb31e033152f9
+                            <td class="align-middle">
+                                <small>
+                                    {{ Carbon\Carbon::parse($supplier->DateModified)->format('M d, Y h:i A') }}<br>
+                                    <span class="text-muted">By: {{ $supplier->modified_by_user->Username ?? 'N/A' }}</span>
+                                </small>
+                            </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="text-center py-4">No suppliers found</td>
+                            <td colspan="6" class="text-center py-4">No suppliers found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -197,34 +172,51 @@
                 <table class="table table-hover" id="trashedSuppliersTable">
                     <thead>
                         <tr>
+                            <th>Actions</th>
                             <th>Supplier Name</th>
                             <th>Contact Number</th>
                             <th>Address</th>
-                            <th>Deleted By</th>
-                            <th>Date Deleted</th>
-                            <th style="width: 10%; text-align: center">Actions</th>
+                            <th>Created</th>
+                            <th>Deleted</th>
+                            <th>Modified</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($trashedSuppliers as $supplier)
                         <tr>
+                            <td>
+                                <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-success d-flex align-items-center" title="Restore">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restore
+                                    </button>
+                                </form>
+                            </td>
                             <td>{{ $supplier->SupplierName }}</td>
                             <td>{{ $supplier->ContactNum }}</td>
                             <td>{{ $supplier->Address }}</td>
-                            <td>{{ $supplier->deleted_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
-                            <td class="text-center">
-                                <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center" title="Restore">
-                                        <i class="bi bi-arrow-counterclockwise"></i> Restore
-                                    </button>
-                                </form>
+                            <td>
+                                <small>
+                                    {{ Carbon\Carbon::parse($supplier->DateCreated)->format('M d, Y h:i A') }}<br>
+                                    <span class="text-muted">By: {{ $supplier->created_by_user->Username ?? 'N/A' }}</span>
+                                </small>
+                            </td>
+                            <td>
+                                <small>
+                                    {{ $supplier->DateDeleted ? date('M d, Y h:i A', strtotime($supplier->DateDeleted)) : 'N/A' }}<br>
+                                    <span class="text-muted">By: {{ $supplier->deleted_by_user->Username ?? 'N/A' }}</span>
+                                </small>
+                            </td>
+                            <td>
+                                <small>
+                                    {{ Carbon\Carbon::parse($supplier->DateModified)->format('M d, Y h:i A') }}<br>
+                                    <span class="text-muted">By: {{ $supplier->modified_by_user->Username ?? 'N/A' }}</span>
+                                </small>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="text-center">No deleted suppliers found</td>
+                            <td colspan="7" class="text-center">No deleted suppliers found</td>
                         </tr>
                         @endforelse
                     </tbody>

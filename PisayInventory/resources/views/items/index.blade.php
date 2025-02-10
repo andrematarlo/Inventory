@@ -37,15 +37,17 @@
                     <tbody>
                         @forelse($items as $item)
                         <tr>
-                            <td class="text-end">
-                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
-                                    <i class="bi bi-pencil"></i>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary d-flex align-items-center" 
+                                        data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
+                                    <i class="bi bi-pencil me-1"></i> Edit
                                 </button>
                                 <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this item?')">
-                                        <i class="bi bi-trash"></i>
+                                    <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center" 
+                                            onclick="return confirm('Are you sure you want to delete this item?')">
+                                        <i class="bi bi-trash me-1"></i> Delete
                                     </button>
                                 </form>
                             </td>
@@ -81,23 +83,6 @@
                                     <span class="text-muted">By: {{ $item->modified_by_user->Username ?? 'N/A' }}</span>
                                 </small>
                             </td>
-<<<<<<< HEAD
-                            <td class="text-end d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-primary d-flex align-items-center" 
-                                        data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
-                                    <i class="bi bi-pencil me-1"></i> Edit
-                                </button>
-                                <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center" 
-                                            onclick="return confirm('Are you sure you want to delete this item?')">
-                                        <i class="bi bi-trash me-1"></i> Delete
-                                    </button>
-                                </form>
-                            </td>
-=======
->>>>>>> 6451b6f6d5d6e2d47e99201e656fb31e033152f9
                         </tr>
                         @empty
                         <tr>
@@ -124,18 +109,26 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <th>Actions</th>
                             <th>Name</th>
                             <th>Description</th>
                             <th>Classification</th>
                             <th>Created</th>
-                            <th>Modified</th>
                             <th>Deleted</th>
-                            <th class="text-end">Actions</th>
+                            <th>Modified</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($trashedItems as $item)
                         <tr>
+                            <td>
+                                <form action="{{ route('items.restore', $item->ItemId) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-success d-flex align-items-center">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restore
+                                    </button>
+                                </form>
+                            </td>
                             <td>{{ $item->ItemName }}</td>
                             <td>{{ $item->Description }}</td>
                             <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
@@ -147,23 +140,15 @@
                             </td>
                             <td>
                                 <small>
-                                    {{ $item->DateModified ? date('M d, Y h:i A', strtotime($item->DateModified)) : 'N/A' }}<br>
-                                    <span class="text-muted">By: {{ $item->modified_by_user->Username ?? 'N/A' }}</span>
-                                </small>
-                            </td>
-                            <td>
-                                <small>
                                     {{ $item->DateDeleted ? date('M d, Y h:i A', strtotime($item->DateDeleted)) : 'N/A' }}<br>
                                     <span class="text-muted">By: {{ $item->deleted_by_user->Username ?? 'N/A' }}</span>
                                 </small>
                             </td>
-                            <td class="text-end">
-                                <form action="{{ route('items.restore', $item->ItemId) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-success d-flex align-items-center">
-                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restore
-                                    </button>
-                                </form>
+                            <td>
+                                <small>
+                                    {{ $item->DateModified ? date('M d, Y h:i A', strtotime($item->DateModified)) : 'N/A' }}<br>
+                                    <span class="text-muted">By: {{ $item->modified_by_user->Username ?? 'N/A' }}</span>
+                                </small>
                             </td>
                         </tr>
                         @empty
