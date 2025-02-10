@@ -44,12 +44,6 @@
                                 <td>
                                     <div class="action-buttons">
                                         @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
-                                            @php
-                                                \Log::info('Employee ID:', [
-                                                    'EmployeeId' => $employee->EmployeeID,
-                                                    'Raw Employee' => $employee
-                                                ]);
-                                            @endphp
                                             <a href="{{ route('employees.edit', $employee->EmployeeID) }}" class="btn btn-sm btn-primary me-2">
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
@@ -66,38 +60,17 @@
                                     </div>
                                 </td>
                                 <td>{{ $employee->FirstName }} {{ $employee->LastName }}</td>
-                                <td>
-                                    @php
-                                        \Log::info('User Account Debug:', [
-                                            'Employee' => $employee->toArray(),
-                                            'UserAccount' => $employee->userAccount ? $employee->userAccount->toArray() : 'null'
-                                        ]);
-                                    @endphp
-                                    
-                                    @if($employee->userAccount)
-                                        {{ $employee->userAccount->Username }}
-                                    @elseif($employee->UserAccountID)
-                                        <span class="text-muted">Account ID: {{ $employee->UserAccountID }}</span>
-                                    @else
-                                        <span class="text-muted">No Account</span>
-                                    @endif
-                                </td>
+                                <td>{{ $employee->Username ?? 'No Account' }}</td>
                                 <td>{{ $employee->Email }}</td>
-                                <td>
-                                    <span class="badge bg-{{ $employee->Role === 'Admin' ? 'primary' : 'info' }}">
-                                        {{ $employee->Role }}
-                                    </span>
-                                </td>
+                                <td>{{ $employee->Role }}</td>
                                 <td>{{ $employee->Gender }}</td>
                                 <td>
-                                    @if($employee->IsDeleted)
-                                        <span class="badge bg-danger">Inactive</span>
-                                    @else
-                                        <span class="badge bg-success">Active</span>
-                                    @endif
+                                    <span class="badge bg-{{ $employee->IsDeleted ? 'danger' : 'success' }}">
+                                        {{ $employee->IsDeleted ? 'Inactive' : 'Active' }}
+                                    </span>
                                 </td>
-                                <td>{{ $employee->created_by_name }}</td>
-                                <td>{{ $employee->modified_by_name }}</td>
+                                <td>{{ $employee->CreatedByFirstName }} {{ $employee->CreatedByLastName }}</td>
+                                <td>{{ $employee->ModifiedByFirstName }} {{ $employee->ModifiedByLastName }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -133,4 +106,4 @@
         }
     });
 </script>
-@endsection 
+@endsection

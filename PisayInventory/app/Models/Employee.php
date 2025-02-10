@@ -10,7 +10,8 @@ class Employee extends Model
     protected $primaryKey = 'EmployeeID';
     public $timestamps = false;
 
-    protected $with = ['userAccount', 'createdBy', 'modifiedBy'];
+    // Remove automatic eager loading as it conflicts with our optimized queries
+    // protected $with = ['userAccount', 'createdBy', 'modifiedBy'];
 
     protected $fillable = [
         'EmployeeID',

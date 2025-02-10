@@ -16,9 +16,9 @@ use App\Http\Controllers\PurchaseController; // Added PurchaseController
 use Illuminate\Support\Facades\Route;
 
 
-// Change the welcome route to redirect to dashboard
+// Welcome route
 Route::get('/', function () {
-    return redirect()->route('dashboard');
+    return view('welcome');
 })->name('welcome');
 
 // Authentication Routes

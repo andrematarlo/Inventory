@@ -17,33 +17,44 @@ class EmployeeController extends Controller
     public function index()
     {
         try {
-            // Debug the query being executed
+            // Enable query logging for debugging
             \DB::enableQueryLog();
-            
-            $employees = Employee::with(['userAccount', 'createdBy', 'modifiedBy'])
-                ->where('IsDeleted', 0)
-                ->orderBy('LastName')
-                ->get();
 
-            // Log the executed queries
-            \Log::info('Employee Query Log:', [
-                'queries' => \DB::getQueryLog()
+            // Optimize query with specific selects and joins
+            $employees = Employee::select(
+                'employee.*',
+                'ua.Username',
+                'cb.FirstName as CreatedByFirstName',
+                'cb.LastName as CreatedByLastName',
+                'mb.FirstName as ModifiedByFirstName',
+                'mb.LastName as ModifiedByLastName'
+            )
+            ->leftJoin('useraccount as ua', function($join) {
+                $join->on('employee.UserAccountID', '=', 'ua.UserAccountID');
+            })
+            ->leftJoin('employee as cb', function($join) {
+                $join->on('employee.CreatedByID', '=', 'cb.EmployeeID');
+            })
+            ->leftJoin('employee as mb', function($join) {
+                $join->on('employee.ModifiedByID', '=', 'mb.EmployeeID');
+            })
+            ->where('employee.IsDeleted', 0)
+            ->orderBy('employee.LastName')
+            ->paginate(25);
+
+            // Log the executed query for debugging
+            \Log::info('Employee Query:', [
+                'query' => \DB::getQueryLog()
             ]);
 
-            // Log the first employee's data for debugging
-            if ($employees->isNotEmpty()) {
-                $firstEmployee = $employees->first();
-                \Log::info('First Employee Data:', [
-                    'employee' => $firstEmployee->toArray(),
-                    'created_by' => $firstEmployee->createdBy ? $firstEmployee->createdBy->toArray() : null,
-                    'modified_by' => $firstEmployee->modifiedBy ? $firstEmployee->modifiedBy->toArray() : null
-                ]);
+            // Only load trashed employees if specifically requested
+            $trashedEmployees = null;
+            if (request()->has('showTrashed')) {
+                $trashedEmployees = Employee::with(['userAccount'])
+                    ->where('IsDeleted', 1)
+                    ->orderBy('LastName')
+                    ->paginate(25);
             }
-
-            $trashedEmployees = Employee::with(['userAccount', 'createdBy', 'modifiedBy'])
-                ->where('IsDeleted', 1)
-                ->orderBy('LastName')
-                ->get();
 
             $roles = [
                 'Admin' => 'Admin',
@@ -59,7 +70,7 @@ class EmployeeController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return redirect()->back()->with('error', 'Error loading employees');
+            return redirect()->back()->with('error', 'Error loading employees: ' . $e->getMessage());
         }
     }
 
