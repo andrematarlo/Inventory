@@ -146,10 +146,23 @@
     .activity-feed::-webkit-scrollbar-thumb:hover {
         background: #a0aec0;
     }
+    .welcome-message {
+                position: absolute;
+                top: 30px;
+                right: 30px;
+                font-size: 14px;
+                color:rgba(25, 135, 84, 0.74);
+                font-style: italic;
+            }
 </style>
 
 @section('content')
 <div class="container-fluid px-4">
+<div class="row">
+        <div class="col-12 text-end mt-3">
+            <span class="welcome-message">Welcome back, {{ Auth::user()->Username }}</span>
+        </div>
+    </div>
     <h2 class="mt-4">Dashboard</h2>
 
     <!-- Statistics Cards -->

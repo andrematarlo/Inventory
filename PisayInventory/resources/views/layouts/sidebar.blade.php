@@ -168,7 +168,7 @@
 
 .sidebar .dropdown-item:focus,
 .sidebar .dropdown-item:active {
-    background-color: rgba(177, 155, 221, 0.6) !important;
+    background-color: #198754 !important;
     color: white !important;
     outline: none !important;
     box-shadow: none !important;
