@@ -17,12 +17,12 @@ class SupplierController extends Controller
     {
         $suppliers = Supplier::with(['created_by_user', 'modified_by_user'])
             ->where('IsDeleted', 0)
-            ->orderBy('SupplierName')
+            ->orderBy('CompanyName')
             ->get();
 
         $trashedSuppliers = Supplier::with(['created_by_user', 'modified_by_user', 'deleted_by_user'])
             ->where('IsDeleted', 1)
-            ->orderBy('SupplierName')
+            ->orderBy('CompanyName')
             ->get();
 
         return view('suppliers.index', compact('suppliers', 'trashedSuppliers'));
@@ -43,7 +43,9 @@ class SupplierController extends Controller
     {
         try {
             $request->validate([
-                'SupplierName' => 'required|string|max:255',
+                'CompanyName' => 'required|string|max:255',
+                'ContactPerson' => 'nullable|string|max:255',
+                'TelephoneNumber' => 'nullable|string|max:20',
                 'ContactNum' => 'nullable|string|max:20',
                 'Address' => 'nullable|string',
             ]);
@@ -56,7 +58,9 @@ class SupplierController extends Controller
 
             Supplier::create([
                 'SupplierID' => $nextSupplierId,
-                'SupplierName' => $request->SupplierName,
+                'CompanyName' => $request->CompanyName,
+                'ContactPerson' => $request->ContactPerson,
+                'TelephoneNumber' => $request->TelephoneNumber,
                 'ContactNum' => $request->ContactNum,
                 'Address' => $request->Address,
                 'CreatedById' => auth()->user()->UserAccountID,
@@ -102,7 +106,9 @@ class SupplierController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'SupplierName' => 'required|string|max:255',
+            'CompanyName' => 'required|string|max:255',
+            'ContactPerson' => 'nullable|string|max:255',
+            'TelephoneNumber' => 'nullable|string|max:20',
             'ContactNum' => 'nullable|string|max:20',
             'Address' => 'nullable|string',
         ]);
@@ -110,7 +116,9 @@ class SupplierController extends Controller
         $supplier = Supplier::findOrFail($id);
         
         $supplier->update([
-            'SupplierName' => $request->SupplierName,
+            'CompanyName' => $request->CompanyName,
+            'ContactPerson' => $request->ContactPerson,
+            'TelephoneNumber' => $request->TelephoneNumber,
             'ContactNum' => $request->ContactNum,
             'Address' => $request->Address,
             'ModifiedById' => auth()->user()->UserAccountID,
@@ -139,28 +147,28 @@ class SupplierController extends Controller
     }
 
     public function restore($id)
-{
-    try {
-        DB::beginTransaction();
-        
-        $supplier = Supplier::findOrFail($id);
-        $supplier->update([
-            'IsDeleted' => false,
-            'DeletedById' => null,
-            'DateDeleted' => null,
-            'RestoredById' => Auth::id(),
-            'DateRestored' => now(),
-            'ModifiedById' => null,
-            'DateModified' => null
-        ]);
+    {
+        try {
+            DB::beginTransaction();
+            
+            $supplier = Supplier::findOrFail($id);
+            $supplier->update([
+                'IsDeleted' => false,
+                'DeletedById' => null,
+                'DateDeleted' => null,
+                'RestoredById' => Auth::id(),
+                'DateRestored' => now(),
+                'ModifiedById' => null,
+                'DateModified' => null
+            ]);
 
-        DB::commit();
-        return redirect()->route('suppliers.index')
-            ->with('success', 'Supplier restored successfully');
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Supplier restore failed: ' . $e->getMessage());
-        return back()->with('error', 'Failed to restore supplier: ' . $e->getMessage());
+            DB::commit();
+            return redirect()->route('suppliers.index')
+                ->with('success', 'Supplier restored successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Supplier restore failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to restore supplier: ' . $e->getMessage());
+        }
     }
-}
 }

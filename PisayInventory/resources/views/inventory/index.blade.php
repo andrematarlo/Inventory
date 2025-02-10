@@ -14,8 +14,8 @@
                     Active Records
                 </a>
                 <a href="{{ route('inventory.index', ['show_deleted' => 1]) }}" 
-                   class="btn btn-outline-primary {{ request('show_deleted') ? 'active' : '' }}">
-                    Show All Records
+                   class="btn btn-danger {{ request('show_deleted') ? 'active' : '' }}">
+                    <i class="bi bi-trash"></i> Show Deleted Records
                 </a>
             </div>
             <button type="button" 
@@ -34,19 +34,19 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Actions</th>
-                            <th>Item</th>
-                            <th>Classification</th>
-                            <th>Stocks In</th>
-                            <th>Stocks Out</th>
-                            <th>Stocks Available</th>
-                            <th>Created By</th>
-                            <th>Date Created</th>
-                            <th>Modified By</th>
-                            <th>Date Modified</th>
-                            <th>Deleted By</th>
-                            <th>Date Deleted</th>
-                            <th>Status</th>
+                            <th style="width: 320px">Actions</th>
+                            <th>Item <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Classification <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Stocks In <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Stocks Out <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Stocks Available <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Created <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Modified <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Deleted By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Deleted <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Status <i class="bi bi-arrow-down-up small-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -393,7 +393,29 @@ $(document).ready(function() {
 </script>
 @endsection
 
+@section('additional_styles')
 <style>
+    .table th {
+        padding: 12px 16px;
+        white-space: nowrap;
+    }
+
+    .table th .small-icon {
+        font-size: 10px;
+        color: #6c757d;
+        margin-left: 3px;
+    }
+
+    .table td {
+        padding: 12px 16px;
+        vertical-align: middle;
+    }
+
+    /* Action buttons container */
+    .d-flex.gap-2 {
+        min-width: 320px;
+    }
+
     /* Consistent button styles */
     .btn {
         transition: all 0.3s ease;
@@ -409,11 +431,6 @@ $(document).ready(function() {
     form {
         margin: 0;
         padding: 0;
-    }
-    
-    /* Action buttons container */
-    .d-flex.gap-2 {
-        min-width: 320px;
     }
     
     /* Make all buttons in the action column the same height */
@@ -456,4 +473,27 @@ $(document).ready(function() {
         border-color: #3498db;
         color: white;
     }
-</style> 
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #bb2d3b;
+        border-color: #b02a37;
+        color: white;
+    }
+
+    .btn-danger.active {
+        background-color: #bb2d3b !important;
+        border-color: #b02a37 !important;
+        color: white !important;
+    }
+
+    .btn-group .btn i {
+        margin-right: 0.25rem;
+    }
+</style>
+@endsection 
