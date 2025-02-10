@@ -10,7 +10,7 @@ class Employee extends Model
     protected $primaryKey = 'EmployeeID';
     public $timestamps = false;
 
-    protected $with = ['userAccount'];
+    protected $with = ['userAccount', 'createdBy', 'modifiedBy'];
 
     protected $fillable = [
         'EmployeeID',
@@ -21,11 +21,11 @@ class Employee extends Model
         'Email',
         'Gender',
         'Role',
-        'CreatedById',
+        'CreatedByID',
         'DateCreated',
-        'ModifiedById',
+        'ModifiedByID',
         'DateModified',
-        'DeletedById',
+        'DeletedByID',
         'DateDeleted',
         'RestoredById',
         'DateRestored',
@@ -47,17 +47,49 @@ class Employee extends Model
 
     public function createdBy()
     {
-        return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID');
+        $relation = $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID')
+            ->withDefault([
+                'FirstName' => 'Unknown',
+                'LastName' => 'User'
+            ]);
+            
+        // Debug log the SQL query
+        \Log::info('CreatedBy Query:', [
+            'employee_id' => $this->EmployeeID,
+            'created_by_id' => $this->CreatedByID,
+            'sql' => $relation->toSql(),
+            'bindings' => $relation->getBindings()
+        ]);
+            
+        return $relation;
     }
 
     public function modifiedBy()
     {
-        return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID');
+        $relation = $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID')
+            ->withDefault([
+                'FirstName' => 'Unknown',
+                'LastName' => 'User'
+            ]);
+            
+        // Debug log the SQL query
+        \Log::info('ModifiedBy Query:', [
+            'employee_id' => $this->EmployeeID,
+            'modified_by_id' => $this->ModifiedByID,
+            'sql' => $relation->toSql(),
+            'bindings' => $relation->getBindings()
+        ]);
+            
+        return $relation;
     }
 
     public function deletedBy()
     {
-        return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'DeletedByID', 'EmployeeID')
+            ->withDefault([
+                'FirstName' => 'Unknown',
+                'LastName' => 'User'
+            ]);
     }
     public function restoredBy()
 {
@@ -68,5 +100,33 @@ class Employee extends Model
     public function getFullNameAttribute()
     {
         return "{$this->FirstName} {$this->LastName}";
+    }
+
+    // Helper method to get full name of creator
+    public function getCreatedByNameAttribute()
+    {
+        // Get raw values from database
+        \Log::info('Raw CreatedBy Values:', [
+            'employee_id' => $this->EmployeeID,
+            'created_by_id' => $this->attributes['CreatedByID'] ?? null,
+            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedByID', 'ModifiedByID']))
+        ]);
+        
+        $creator = $this->createdBy;
+        return $creator ? "{$creator->FirstName} {$creator->LastName}" : 'Unknown User';
+    }
+
+    // Helper method to get full name of modifier
+    public function getModifiedByNameAttribute()
+    {
+        // Get raw values from database
+        \Log::info('Raw ModifiedBy Values:', [
+            'employee_id' => $this->EmployeeID,
+            'modified_by_id' => $this->attributes['ModifiedByID'] ?? null,
+            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedByID', 'ModifiedByID']))
+        ]);
+        
+        $modifier = $this->modifiedBy;
+        return $modifier ? "{$modifier->FirstName} {$modifier->LastName}" : 'Unknown User';
     }
 } 
