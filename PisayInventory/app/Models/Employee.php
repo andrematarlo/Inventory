@@ -48,10 +48,17 @@ class Employee extends Model
 
     public function createdBy()
     {
+        // Debug log before creating relation
+        \Log::info('Creating CreatedBy Relation:', [
+            'employee_id' => $this->EmployeeID,
+            'created_by_id' => $this->CreatedByID,
+            'all_attributes' => $this->attributes
+        ]);
+
         $relation = $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID')
             ->withDefault([
-                'FirstName' => 'Unknown',
-                'LastName' => 'User'
+                'FirstName' => 'System',
+                'LastName' => ''
             ]);
             
         // Debug log the SQL query
@@ -67,10 +74,17 @@ class Employee extends Model
 
     public function modifiedBy()
     {
+        // Debug log before creating relation
+        \Log::info('Creating ModifiedBy Relation:', [
+            'employee_id' => $this->EmployeeID,
+            'modified_by_id' => $this->ModifiedByID,
+            'all_attributes' => $this->attributes
+        ]);
+
         $relation = $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID')
             ->withDefault([
-                'FirstName' => 'Unknown',
-                'LastName' => 'User'
+                'FirstName' => 'System',
+                'LastName' => ''
             ]);
             
         // Debug log the SQL query
@@ -88,14 +102,19 @@ class Employee extends Model
     {
         return $this->belongsTo(Employee::class, 'DeletedByID', 'EmployeeID')
             ->withDefault([
-                'FirstName' => 'Unknown',
-                'LastName' => 'User'
+                'FirstName' => 'System',
+                'LastName' => ''
             ]);
     }
+
     public function restoredBy()
-{
-    return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
-}
+    {
+        return $this->belongsTo(Employee::class, 'RestoredById', 'EmployeeID')
+            ->withDefault([
+                'FirstName' => 'System',
+                'LastName' => ''
+            ]);
+    }
 
     // Get full name attribute
     public function getFullNameAttribute()

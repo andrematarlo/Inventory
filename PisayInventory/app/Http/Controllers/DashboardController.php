@@ -114,22 +114,47 @@ class DashboardController extends Controller
             })
             ->get()
             ->map(function($employee) {
+                // Determine the most recent action
+                $dates = [
+                    'created' => strtotime($employee->DateCreated),
+                    'modified' => strtotime($employee->DateModified ?? '0'),
+                    'deleted' => strtotime($employee->DateDeleted ?? '0'),
+                    'restored' => strtotime($employee->DateRestored ?? '0')
+                ];
+                
+                $mostRecentAction = array_search(max($dates), $dates);
+                
+                // Only get changes if this is a modification
                 $changes = [];
-                if ($employee->DateModified && $employee->modifiedBy && !$employee->DateRestored) {
+                if ($mostRecentAction === 'modified' && $employee->modifiedBy) {
                     $changes = $this->getModelChanges($employee);
+                }
+
+                // Clear DateModified if this is a new record to ensure it shows as "Added"
+                $modifiedAt = $employee->DateModified;
+                if ($mostRecentAction === 'created') {
+                    $modifiedAt = null;
                 }
 
                 return [
                     'type' => 'employee',
                     'name' => "{$employee->FirstName} {$employee->LastName}",
                     'created_at' => $employee->DateCreated,
-                    'modified_at' => $employee->DateModified,
+                    'modified_at' => $modifiedAt,
                     'deleted_at' => $employee->DateDeleted,
                     'restored_at' => $employee->DateRestored,
-                    'created_by' => optional($employee->createdBy)->Username ?? 'System',
-                    'modified_by' => optional($employee->modifiedBy)->Username ?? 'System',
-                    'deleted_by' => optional($employee->deletedBy)->Username ?? 'System',
-                    'restored_by' => optional($employee->restoredBy)->Username ?? 'System',
+                    'created_by' => optional($employee->createdBy)->FirstName && optional($employee->createdBy)->LastName 
+                        ? optional($employee->createdBy)->FirstName . ' ' . optional($employee->createdBy)->LastName 
+                        : 'System',
+                    'modified_by' => optional($employee->modifiedBy)->FirstName && optional($employee->modifiedBy)->LastName
+                        ? optional($employee->modifiedBy)->FirstName . ' ' . optional($employee->modifiedBy)->LastName
+                        : 'System',
+                    'deleted_by' => optional($employee->deletedBy)->FirstName && optional($employee->deletedBy)->LastName
+                        ? optional($employee->deletedBy)->FirstName . ' ' . optional($employee->deletedBy)->LastName
+                        : 'System',
+                    'restored_by' => optional($employee->restoredBy)->FirstName && optional($employee->restoredBy)->LastName
+                        ? optional($employee->restoredBy)->FirstName . ' ' . optional($employee->restoredBy)->LastName
+                        : 'System',
                     'is_deleted' => $employee->IsDeleted,
                     'details' => $employee->Email ? "(Email: {$employee->Email})" : '',
                     'changes' => $changes

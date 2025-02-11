@@ -95,14 +95,46 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         try {
+            // First check if user is authenticated
+            if (!Auth::check()) {
+                \Log::error('User not authenticated');
+                return redirect()->route('login');
+            }
+
+            // Get authenticated user's UserAccount
+            $userAccount = Auth::user();
+            if (!$userAccount) {
+                \Log::error('UserAccount not found');
+                return redirect()->back()->with('error', 'User account not found.');
+            }
+
+            \Log::info('Authenticated user:', [
+                'user_account_id' => $userAccount->UserAccountID,
+                'username' => $userAccount->Username
+            ]);
+
             // Check if current user is admin
-            $currentEmployee = Employee::where('UserAccountID', auth()->user()->UserAccountID)
+            $currentEmployee = Employee::where('UserAccountID', $userAccount->UserAccountID)
                 ->where('IsDeleted', false)
                 ->first();
                 
-            if (!$currentEmployee || !str_contains($currentEmployee->Role, 'Admin')) {
+            if (!$currentEmployee) {
+                \Log::error('Current employee not found:', [
+                    'user_account_id' => $userAccount->UserAccountID
+                ]);
+                return redirect()->back()->with('error', 'Employee record not found for current user.');
+            }
+
+            if (!str_contains($currentEmployee->Role, 'Admin')) {
                 return redirect()->back()->with('error', 'Only administrators can add employees.');
             }
+
+            // Log current employee info
+            \Log::info('Current employee creating new employee:', [
+                'creator_id' => $currentEmployee->EmployeeID,
+                'creator_name' => $currentEmployee->FirstName . ' ' . $currentEmployee->LastName,
+                'creator_role' => $currentEmployee->Role
+            ]);
 
             $request->validate([
                 'FirstName' => 'required|string|max:255',
@@ -118,51 +150,88 @@ class EmployeeController extends Controller
 
             DB::beginTransaction();
 
-            // Create user account first
-            $userAccount = UserAccount::create([
-                'Username' => $request->Username,
-                'Password' => Hash::make($request->Password),
-                'CreatedByID' => $currentEmployee->EmployeeID,
-                'DateCreated' => now(),
-                'IsDeleted' => false
-            ]);
+            try {
+                // Create user account first
+                $newUserAccount = UserAccount::create([
+                    'Username' => $request->Username,
+                    'Password' => Hash::make($request->Password),
+                    'CreatedByID' => $currentEmployee->EmployeeID,
+                    'DateCreated' => now(),
+                    'IsDeleted' => false
+                ]);
 
-            // Get the next EmployeeID
-            $lastEmployee = Employee::orderBy('EmployeeID', 'desc')->first();
-            $nextEmployeeID = $lastEmployee ? $lastEmployee->EmployeeID + 1 : 1;
+                // Log user account creation
+                \Log::info('User account created:', [
+                    'user_account_id' => $newUserAccount->UserAccountID,
+                    'created_by_id' => $currentEmployee->EmployeeID
+                ]);
 
-            // Create employee with multiple roles
-            $employee = Employee::create([
-                'EmployeeID' => $nextEmployeeID,
-                'FirstName' => $request->FirstName,
-                'LastName' => $request->LastName,
-                'Email' => $request->Email,
-                'Gender' => $request->Gender,
-                'Address' => $request->Address,
-                'UserAccountID' => $userAccount->UserAccountID,
-                'Role' => implode(', ', $request->roles),
-                'CreatedByID' => $currentEmployee->EmployeeID,
-                'DateCreated' => now(),
-                'ModifiedByID' => $currentEmployee->EmployeeID,
-                'DateModified' => now(),
-                'IsDeleted' => false
-            ]);
+                // Get the next EmployeeID
+                $lastEmployee = Employee::orderBy('EmployeeID', 'desc')->first();
+                $nextEmployeeID = $lastEmployee ? $lastEmployee->EmployeeID + 1 : 1;
 
-            DB::commit();
+                // Create employee data array for better debugging
+                $employeeData = [
+                    'EmployeeID' => $nextEmployeeID,
+                    'FirstName' => $request->FirstName,
+                    'LastName' => $request->LastName,
+                    'Email' => $request->Email,
+                    'Gender' => $request->Gender,
+                    'Address' => $request->Address,
+                    'UserAccountID' => $newUserAccount->UserAccountID,
+                    'Role' => implode(', ', $request->roles),
+                    'CreatedByID' => $currentEmployee->EmployeeID,
+                    'DateCreated' => now(),
+                    'ModifiedByID' => $currentEmployee->EmployeeID,
+                    'DateModified' => now(),
+                    'IsDeleted' => false
+                ];
 
-            // Log the creation for debugging
-            \Log::info('Employee created:', [
-                'employee_id' => $employee->EmployeeID,
-                'created_by_id' => $currentEmployee->EmployeeID,
-                'creator_name' => $currentEmployee->FirstName . ' ' . $currentEmployee->LastName
-            ]);
+                // Log employee data before creation
+                \Log::info('Creating employee with data:', $employeeData);
 
-            return redirect()->route('employees.index')
-                ->with('success', 'Employee created successfully');
+                // Create employee
+                $employee = Employee::create($employeeData);
+
+                // Log created employee
+                \Log::info('Employee created:', [
+                    'employee_id' => $employee->EmployeeID,
+                    'created_by_id' => $employee->CreatedByID,
+                ]);
+
+                DB::commit();
+
+                try {
+                    // Verification step - if this fails, we still want to show success
+                    $verifyEmployee = Employee::with('createdBy')->find($employee->EmployeeID);
+                    if ($verifyEmployee) {
+                        \Log::info('Verifying created employee:', [
+                            'employee_id' => $verifyEmployee->EmployeeID,
+                            'created_by_id' => $verifyEmployee->CreatedByID,
+                            'created_by_info' => $verifyEmployee->createdBy ? [
+                                'id' => $verifyEmployee->createdBy->EmployeeID,
+                                'name' => $verifyEmployee->createdBy->FirstName . ' ' . $verifyEmployee->createdBy->LastName
+                            ] : null
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    // Log verification error but don't throw it
+                    \Log::warning('Verification step failed but employee was created:', [
+                        'message' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
+
+                return redirect()->route('employees.index')
+                    ->with('success', 'Employee created successfully');
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error creating employee:', [
+            \Log::error('Error creating employee:', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
