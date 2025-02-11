@@ -21,40 +21,58 @@ class Employee extends Model
         'Address',
         'Email',
         'Gender',
-        'Role',
-        'CreatedById',
         'DateCreated',
-        'ModifiedById',
+        'CreatedByID',
+        'ModifiedByID',
         'DateModified',
-        'DeletedById',
-        'DateDeleted',
+        'DeletedByID',
         'RestoredById',
+        'DateDeleted',
         'DateRestored',
         'IsDeleted'
     ];
 
     protected $casts = [
-        'IsDeleted' => 'boolean',
         'DateCreated' => 'datetime',
         'DateModified' => 'datetime',
         'DateDeleted' => 'datetime',
+        'DateRestored' => 'datetime',
+        'IsDeleted' => 'boolean'
     ];
 
     // Define relationships
     public function userAccount()
     {
-        return $this->belongsTo(UserAccount::class, 'UserAccountID', 'UserAccountID');
+        return $this->belongsTo(User::class, 'UserAccountID', 'UserAccountID');
+    }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'employee_roles', 'EmployeeId', 'RoleId')
+            ->where('employee_roles.IsDeleted', false)
+            ->withPivot([
+                'id',
+                'IsDeleted',
+                'DateCreated',
+                'CreatedById',
+                'DateModified',
+                'ModifiedById',
+                'DateDeleted',
+                'DeletedById',
+                'DateRestored',
+                'RestoredById'
+            ]);
     }
 
     public function createdBy()
     {
         \Log::info('CreatedBy Relationship Debug:', [
             'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->CreatedById,
+            'created_by_id' => $this->CreatedByID,
             'all_attributes' => $this->attributes
         ]);
 
-        return $this->belongsTo(Employee::class, 'CreatedById', 'EmployeeID')
+        return $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID')
             ->select(['EmployeeID', 'FirstName', 'LastName'])
             ->withDefault([
                 'EmployeeID' => null,
@@ -67,11 +85,11 @@ class Employee extends Model
     {
         \Log::info('ModifiedBy Relationship Debug:', [
             'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->ModifiedById,
+            'modified_by_id' => $this->ModifiedByID,
             'all_attributes' => $this->attributes
         ]);
 
-        return $this->belongsTo(Employee::class, 'ModifiedById', 'EmployeeID')
+        return $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID')
             ->select(['EmployeeID', 'FirstName', 'LastName'])
             ->withDefault([
                 'EmployeeID' => null,
@@ -82,7 +100,7 @@ class Employee extends Model
 
     public function deletedBy()
     {
-        return $this->belongsTo(Employee::class, 'DeletedById', 'EmployeeID')
+        return $this->belongsTo(Employee::class, 'DeletedByID', 'EmployeeID')
             ->withDefault([
                 'FirstName' => 'System',
                 'LastName' => ''
@@ -110,8 +128,8 @@ class Employee extends Model
         // Get raw values from database
         \Log::info('Raw CreatedBy Values:', [
             'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->attributes['CreatedById'] ?? null,
-            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedById', 'ModifiedById']))
+            'created_by_id' => $this->attributes['CreatedByID'] ?? null,
+            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedByID', 'ModifiedByID']))
         ]);
         
         $creator = $this->createdBy;
@@ -124,11 +142,17 @@ class Employee extends Model
         // Get raw values from database
         \Log::info('Raw ModifiedBy Values:', [
             'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->attributes['ModifiedById'] ?? null,
-            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedById', 'ModifiedById']))
+            'modified_by_id' => $this->attributes['ModifiedByID'] ?? null,
+            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedByID', 'ModifiedByID']))
         ]);
         
         $modifier = $this->modifiedBy;
         return $modifier ? "{$modifier->FirstName} {$modifier->LastName}" : 'Unknown User';
+    }
+
+    // Helper method to get role names as string
+    public function getRoleNamesAttribute()
+    {
+        return $this->roles->pluck('RoleName')->implode(', ');
     }
 } 

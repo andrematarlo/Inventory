@@ -97,7 +97,7 @@ class EmployeeController extends Controller
                 return redirect()->back()->with('error', 'Employee record not found for current user.');
             }
 
-            if (!str_contains($currentEmployee->Role, 'Admin')) {
+            if (!str_contains($userAccount->role, 'Admin')) {
                 return redirect()->back()->with('error', 'Only administrators can add employees.');
             }
 
@@ -208,90 +208,126 @@ class EmployeeController extends Controller
         }
     }
 
-    public function edit($employeeId)
+    public function edit($id)
     {
-        $employee = Employee::findOrFail($employeeId);
-        $roles = [
-            'Admin' => 'Admin',
-            'InventoryStaff' => 'Inventory Staff',
-            'InventoryManager' => 'Inventory Manager'
-        ];
+        try {
+            $employee = Employee::with('roles')
+                ->where('IsDeleted', false)
+                ->findOrFail($id);
 
-        return view('employees.edit', compact('employee', 'roles'));
+            $roles = Role::where('IsDeleted', false)
+                ->orderBy('RoleName')
+                ->get();
+
+            return view('employees.edit', compact('employee', 'roles'));
+        } catch (\Exception $e) {
+            Log::error('Error loading edit employee form: ' . $e->getMessage());
+            return back()->with('error', 'Error loading form: ' . $e->getMessage());
+        }
     }
 
     public function update(Request $request, $id)
     {
         try {
+            // Find the employee first
             $employee = Employee::findOrFail($id);
-            
-            $request->validate([
-                'FirstName' => 'required|string|max:255',
-                'LastName' => 'required|string|max:255',
-                'Email' => 'required|email|max:255',
+
+            // Validate basic fields
+            $validationRules = [
+                'FirstName' => 'required|string|max:100',
+                'LastName' => 'required|string|max:100',
+                'Email' => 'required|email|max:100|unique:employee,Email,' . $id . ',EmployeeID',
+                'Username' => 'required|string|max:100|unique:UserAccount,Username,' . $employee->userAccount->UserAccountID . ',UserAccountID',
                 'Gender' => 'required|in:Male,Female',
                 'Address' => 'required|string',
                 'roles' => 'required|array|min:1',
-                'roles.*' => 'required|exists:roles,RoleId'
-            ]);
+                'roles.*' => 'exists:roles,RoleId'
+            ];
+
+            // Add password validation only if password is being updated
+            if ($request->filled('Password')) {
+                $validationRules['Password'] = 'required|string|min:6|confirmed';
+            }
+
+            $request->validate($validationRules);
 
             DB::beginTransaction();
 
-            try {
-                // Get role names for the selected role IDs
-                $roleNames = Role::whereIn('RoleId', $request->roles)
-                    ->pluck('RoleName')
-                    ->implode(', ');
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
 
-                // Update employee
-                $employee->update([
-                    'FirstName' => $request->FirstName,
-                    'LastName' => $request->LastName,
-                    'Email' => $request->Email,
-                    'Gender' => $request->Gender,
-                    'Address' => $request->Address,
-                    'Role' => $roleNames,
-                    'DateModified' => now(),
-                    'ModifiedById' => auth()->user()->UserAccountID
+            // Get role names for UserAccount
+            $roleNames = Role::whereIn('RoleId', $request->roles)
+                ->pluck('RoleName')
+                ->implode(', ');
+
+            // Update employee details
+            $employee->update([
+                'FirstName' => $request->FirstName,
+                'LastName' => $request->LastName,
+                'Email' => $request->Email,
+                'Gender' => $request->Gender,
+                'Address' => $request->Address,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
+                'DateModified' => now()
+            ]);
+
+            // Handle roles update
+            DB::table('employee_roles')
+                ->where('EmployeeId', $id)
+                ->where('IsDeleted', false)
+                ->update([
+                    'IsDeleted' => true,
+                    'DeletedById' => $currentEmployee->EmployeeID,
+                    'DateDeleted' => now(),
+                    'ModifiedById' => $currentEmployee->EmployeeID,
+                    'DateModified' => now()
                 ]);
 
-                // Update UserAccount role
-                if ($employee->UserAccountID) {
-                    UserAccount::where('UserAccountID', $employee->UserAccountID)
-                        ->update([
-                            'role' => $roleNames,
-                            'DateModified' => now(),
-                            'ModifiedById' => auth()->user()->UserAccountID
-                        ]);
-                }
-
-                // Update roles in pivot table
-                DB::table('employee_roles')
-                    ->where('EmployeeId', $employee->EmployeeID)
-                    ->update(['IsDeleted' => true]); // Soft delete existing roles
-
-                foreach ($request->roles as $roleId) {
-                    DB::table('employee_roles')->insert([
-                        'EmployeeId' => $employee->EmployeeID,
-                        'RoleId' => $roleId,
-                        'IsDeleted' => false,
-                        'DateCreated' => now(),
-                        'CreatedById' => auth()->user()->UserAccountID
-                    ]);
-                }
-
-                DB::commit();
-                return redirect()->route('employees.index')->with('success', 'Employee updated successfully');
-
-            } catch (\Exception $e) {
-                DB::rollBack();
-                \Log::error('Error updating employee: ' . $e->getMessage());
-                return back()->with('error', 'Failed to update employee: ' . $e->getMessage())->withInput();
+            foreach ($request->roles as $roleId) {
+                DB::table('employee_roles')->insert([
+                    'EmployeeId' => $id,
+                    'RoleId' => $roleId,
+                    'IsDeleted' => false,
+                    'DateCreated' => now(),
+                    'CreatedById' => $currentEmployee->EmployeeID
+                ]);
             }
 
+            // Update user account if it exists
+            if ($employee->userAccount) {
+                $updateData = [
+                    'Username' => $request->Username,
+                    'role' => $roleNames,
+                    'ModifiedByID' => $currentEmployee->EmployeeID,
+                    'DateModified' => now()
+                ];
+
+                // Add password to update data if provided
+                if ($request->filled('Password')) {
+                    // Use Hash facade directly for password hashing
+                    $updateData['Password'] = Hash::make($request->Password);
+                }
+
+                // Debug log to check the password value
+                \Log::info('Password Update Data:', [
+                    'has_password' => $request->filled('Password'),
+                    'password_hash' => $updateData['Password'] ?? 'no password update'
+                ]);
+
+                $employee->userAccount->update($updateData);
+            }
+
+            DB::commit();
+            return redirect()->route('employees.index')
+                ->with('success', 'Employee updated successfully');
+
         } catch (\Exception $e) {
-            \Log::error('Error finding employee: ' . $e->getMessage());
-            return back()->with('error', 'Employee not found.')->withInput();
+            DB::rollBack();
+            Log::error('Error updating employee: ' . $e->getMessage());
+            return back()->with('error', 'Error updating employee: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
@@ -337,14 +373,18 @@ class EmployeeController extends Controller
                 ->where('IsDeleted', true)
                 ->firstOrFail();
 
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
             // Update employee record
             $employee->update([
                 'IsDeleted' => false,
-                'RestoredByID' => auth()->user()->UserAccountID,
+                'RestoredById' => $currentEmployee->EmployeeID,
                 'DateRestored' => now(),
                 'DeletedByID' => null,
                 'DateDeleted' => null,
-                'ModifiedByID' => auth()->user()->UserAccountID,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
                 'DateModified' => now()
             ]);
 
@@ -352,11 +392,11 @@ class EmployeeController extends Controller
             if ($employee->userAccount) {
                 $employee->userAccount->update([
                     'IsDeleted' => false,
-                    'RestoredByID' => auth()->user()->UserAccountID,
+                    'RestoredById' => $currentEmployee->EmployeeID,
                     'DateRestored' => now(),
                     'DeletedByID' => null,
                     'DateDeleted' => null,
-                    'ModifiedByID' => auth()->user()->UserAccountID,
+                    'ModifiedByID' => $currentEmployee->EmployeeID,
                     'DateModified' => now()
                 ]);
             }
@@ -367,8 +407,9 @@ class EmployeeController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Employee restore failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to restore employee: ' . $e->getMessage());
+            Log::error('Error restoring employee: ' . $e->getMessage());
+            return redirect()->route('employees.index')
+                ->with('error', 'Failed to restore employee: ' . $e->getMessage());
         }
     }
 } 

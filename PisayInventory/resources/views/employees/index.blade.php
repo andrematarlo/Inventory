@@ -223,7 +223,7 @@
             <button class="btn btn-outline-secondary" type="button" id="toggleButton">
                 <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
             </button>
-            @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
+            @if(str_contains(Auth::user()->role, 'Admin'))
                 <a href="{{ route('employees.create') }}" class="btn btn-primary">
                     <i class="bi bi-person-plus me-2"></i>Add Employee
                 </a>
@@ -250,58 +250,47 @@
                     <table class="table table-hover" id="employeesTable">
                         <thead>
                             <tr>
-                                <th>Actions</th>
+                                <th class="text-center">Actions</th>
                                 <th>Name</th>
-                                <th>Username</th>
                                 <th>Email</th>
-                                <th>Role</th>
                                 <th>Gender</th>
-                                <th>Status</th>
+                                <th>Roles</th>
                                 <th>Created By</th>
-                                <th>Modified By</th>
+                                <th>Created Date</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($activeEmployees as $employee)
                                 <tr>
-                                    <td>
-                                        <div class="action-buttons">
-                                            @if(Auth::user()->role === 'Admin' || Auth::user()->role === 'Inventory Manager')
-                                                <a href="{{ route('employees.edit', $employee->EmployeeID) }}" 
-                                                   class="btn btn-sm btn-primary me-2">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </a>
-                                                <form action="{{ route('employees.destroy', $employee->EmployeeID) }}" 
-                                                      method="POST" 
-                                                      class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-danger" 
-                                                            onclick="return confirm('Are you sure you want to delete this employee?')">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </form>
-                                            @endif
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ route('employees.edit', $employee->EmployeeID) }}" 
+                                               class="btn btn-sm btn-primary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+
+                                            <form action="{{ route('employees.destroy', $employee->EmployeeID) }}" 
+                                                  method="POST" 
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this employee?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
                                         </div>
                                     </td>
-                                    <td>{{ $employee->FirstName }} {{ $employee->LastName }}</td>
-                                    <td>{{ $employee->userAccount ? $employee->userAccount->Username : 'N/A' }}</td>
+                                    <td>{{ $employee->FullName }}</td>
                                     <td>{{ $employee->Email }}</td>
-                                    <td>{{ $employee->Role }}</td>
                                     <td>{{ $employee->Gender }}</td>
-                                    <td>
-                                        <span class="badge bg-success">Active</span>
-                                    </td>
-                                    <td>
-                                        {{ $employee->createdBy ? $employee->createdBy->FirstName . ' ' . $employee->createdBy->LastName : 'System User' }}
-                                    </td>
-                                    <td>
-                                        {{ $employee->modifiedBy ? $employee->modifiedBy->FirstName . ' ' . $employee->modifiedBy->LastName : 'System User' }}
-                                    </td>
+                                    <td>{{ $employee->RoleNames }}</td>
+                                    <td>{{ $employee->CreatedByName }}</td>
+                                    <td>{{ $employee->DateCreated->format('M d, Y') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center">No active employees found</td>
+                                    <td colspan="7" class="text-center">No employees found</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -322,6 +311,7 @@
                     <table class="table table-hover" id="deletedEmployeesTable">
                         <thead>
                             <tr>
+                                <th class="text-center">Actions</th>
                                 <th>Name</th>
                                 <th>Username</th>
                                 <th>Email</th>
@@ -330,38 +320,33 @@
                                 <th>Deleted Date</th>
                                 <th>Created By</th>
                                 <th>Modified By</th>
-                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($deletedEmployees as $employee)
                                 <tr>
+                                    <td class="text-center">
+                                        <form action="{{ route('employees.restore', ['employeeId' => $employee->EmployeeID]) }}" 
+                                              method="POST" 
+                                              class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+                                    </td>
                                     <td>{{ $employee->FirstName }} {{ $employee->LastName }}</td>
                                     <td>{{ $employee->userAccount ? $employee->userAccount->Username : 'N/A' }}</td>
                                     <td>{{ $employee->Email }}</td>
                                     <td>{{ $employee->Role }}</td>
                                     <td>{{ $employee->Gender }}</td>
                                     <td>{{ $employee->DateDeleted }}</td>
-                                    <td>
-                                        {{ $employee->createdBy ? $employee->createdBy->FirstName . ' ' . $employee->createdBy->LastName : 'System User' }}
-                                    </td>
-                                    <td>
-                                        {{ $employee->modifiedBy ? $employee->modifiedBy->FirstName . ' ' . $employee->modifiedBy->LastName : 'System User' }}
-                                    </td>
-                                    <td>
-                                        <form action="{{ route('employees.restore', ['employeeId' => $employee->EmployeeID]) }}" 
-                                              method="POST" 
-                                              class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-arrow-counterclockwise"></i> Restore
-                                            </button>
-                                        </form>
-                                    </td>
+                                    <td>{{ $employee->createdBy ? $employee->createdBy->FirstName . ' ' . $employee->createdBy->LastName : 'System User' }}</td>
+                                    <td>{{ $employee->modifiedBy ? $employee->modifiedBy->FirstName . ' ' . $employee->modifiedBy->LastName : 'System User' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center">No deleted employees found</td>
+                                    <td colspan="9" class="text-center">No deleted employees found</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -392,29 +377,22 @@ document.addEventListener('DOMContentLoaded', function() {
         language: {
             search: "Search:",
             searchPlaceholder: "Search records..."
-        }
+        },
+        columnDefs: [
+            { className: "actions-column", targets: 0, width: "100px", orderable: false },
+            { className: "name-column", targets: 1, width: "200px" },
+            { className: "email-column", targets: 2, width: "220px" },
+            { className: "gender-column", targets: 3, width: "100px" },
+            { className: "role-column", targets: 4, width: "250px" },
+            { className: "created-by-column", targets: 5, width: "150px" },
+            { className: "created-date-column", targets: 6, width: "150px" }
+        ],
+        order: [[1, 'asc']],
     };
 
     // Active employees table
     let activeTable = $('#employeesTable').DataTable({
         ...commonConfig,
-        columnDefs: [
-            { className: "actions-column", targets: 0, width: "120px" },
-            { className: "name-column", targets: 1, width: "200px" },
-            { className: "username-column", targets: 2, width: "180px" },
-            { className: "email-column", targets: 3, width: "220px" },
-            { className: "role-column", targets: 4, width: "250px", render: function(data, type, row) {
-                if (type === 'display') {
-                    return '<div class="role-content">' + data + '</div>';
-                }
-                return data;
-            }},
-            { className: "gender-column", targets: 5, width: "100px" },
-            { className: "status-column", targets: 6, width: "100px" },
-            { className: "created-by-column", targets: 7, width: "150px" },
-            { className: "modified-by-column", targets: 8, width: "150px" }
-        ],
-        order: [[1, 'asc']],
         createdRow: function(row, data, dataIndex) {
             // Add max-width to role column cells
             $(row).find('.role-column').css('max-width', '250px');
@@ -425,24 +403,23 @@ document.addEventListener('DOMContentLoaded', function() {
     let deletedTable = $('#deletedEmployeesTable').DataTable({
         ...commonConfig,
         columnDefs: [
-            { className: "name-column", targets: 0, width: "200px" },
-            { className: "username-column", targets: 1, width: "180px" },
-            { className: "email-column", targets: 2, width: "220px" },
-            { className: "role-column", targets: 3, width: "250px", render: function(data, type, row) {
+            { className: "actions-column", targets: 0, width: "100px", orderable: false },
+            { className: "name-column", targets: 1, width: "200px" },
+            { className: "username-column", targets: 2, width: "180px" },
+            { className: "email-column", targets: 3, width: "220px" },
+            { className: "role-column", targets: 4, width: "250px", render: function(data, type, row) {
                 if (type === 'display') {
                     return '<div class="role-content">' + data + '</div>';
                 }
                 return data;
             }},
-            { className: "gender-column", targets: 4, width: "100px" },
-            { className: "deleted-date-column", targets: 5, width: "150px" },
-            { className: "created-by-column", targets: 6, width: "150px" },
-            { className: "modified-by-column", targets: 7, width: "150px" },
-            { className: "actions-column", targets: 8, width: "120px", orderable: false }
+            { className: "gender-column", targets: 5, width: "100px" },
+            { className: "deleted-date-column", targets: 6, width: "150px" },
+            { className: "created-by-column", targets: 7, width: "150px" },
+            { className: "modified-by-column", targets: 8, width: "150px" }
         ],
-        order: [[0, 'asc']],
+        order: [[1, 'asc']],
         createdRow: function(row, data, dataIndex) {
-            // Add max-width to role column cells
             $(row).find('.role-column').css('max-width', '250px');
         }
     });
