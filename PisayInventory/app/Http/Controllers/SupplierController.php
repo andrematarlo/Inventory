@@ -15,17 +15,24 @@ class SupplierController extends Controller
      */
     public function index()
     {
-        $suppliers = Supplier::with(['created_by_user', 'modified_by_user'])
-            ->where('IsDeleted', 0)
-            ->orderBy('CompanyName')
-            ->get();
+        try {
+            $activeSuppliers = Supplier::where('IsDeleted', false)
+                ->orderBy('CompanyName')
+                ->get();
 
-        $trashedSuppliers = Supplier::with(['created_by_user', 'modified_by_user', 'deleted_by_user'])
-            ->where('IsDeleted', 1)
-            ->orderBy('CompanyName')
-            ->get();
+            $deletedSuppliers = Supplier::where('IsDeleted', true)
+                ->orderBy('CompanyName')
+                ->get();
 
-        return view('suppliers.index', compact('suppliers', 'trashedSuppliers'));
+            return view('suppliers.index', [
+                'activeSuppliers' => $activeSuppliers,
+                'deletedSuppliers' => $deletedSuppliers
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error loading suppliers: ' . $e->getMessage());
+            return back()->with('error', 'Error loading suppliers: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -150,21 +157,23 @@ class SupplierController extends Controller
     {
         try {
             DB::beginTransaction();
-            
-            $supplier = Supplier::findOrFail($id);
+
+            $supplier = Supplier::where('SupplierID', $id)
+                ->where('IsDeleted', true)
+                ->firstOrFail();
+
             $supplier->update([
                 'IsDeleted' => false,
-                'DeletedById' => null,
-                'DateDeleted' => null,
-                'RestoredById' => Auth::id(),
+                'RestoredByID' => auth()->id(),
                 'DateRestored' => now(),
-                'ModifiedById' => null,
-                'DateModified' => null
+                'DeletedByID' => null,
+                'DateDeleted' => null
             ]);
 
             DB::commit();
             return redirect()->route('suppliers.index')
                 ->with('success', 'Supplier restored successfully');
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Supplier restore failed: ' . $e->getMessage());

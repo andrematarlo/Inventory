@@ -17,65 +17,24 @@ class EmployeeController extends Controller
     public function index()
     {
         try {
-            // Enable query logging for debugging
-            \DB::enableQueryLog();
+            $activeEmployees = Employee::where('IsDeleted', false)
+                ->with(['userAccount'])
+                ->orderBy('LastName')
+                ->get();
 
-            // Optimize query with specific selects and joins
-            $employees = Employee::select(
-                'employee.*',
-                'ua.Username',
-                'cb.FirstName as CreatedByFirstName',
-                'cb.LastName as CreatedByLastName',
-                'mb.FirstName as ModifiedByFirstName',
-                'mb.LastName as ModifiedByLastName'
-            )
-            ->leftJoin('useraccount as ua', 'employee.UserAccountID', '=', 'ua.UserAccountID')
-            ->leftJoin('employee as cb', function($join) {
-                $join->on('employee.CreatedByID', '=', 'cb.EmployeeID');
-            })
-            ->leftJoin('employee as mb', function($join) {
-                $join->on('employee.ModifiedByID', '=', 'mb.EmployeeID');
-            })
-            ->where('employee.IsDeleted', 0)
-            ->orderBy('employee.LastName')
-            ->get();
+            $deletedEmployees = Employee::where('IsDeleted', true)
+                ->with(['userAccount', 'deletedBy'])
+                ->orderBy('LastName')
+                ->get();
 
-            // Debug log to check the data
-            \Log::info('Employee Data:', [
-                'employees' => $employees->map(function($emp) {
-                    return [
-                        'id' => $emp->EmployeeID,
-                        'name' => $emp->FirstName . ' ' . $emp->LastName,
-                        'created_by_id' => $emp->CreatedByID,
-                        'created_by_name' => $emp->CreatedByFirstName . ' ' . $emp->CreatedByLastName,
-                        'modified_by_id' => $emp->ModifiedByID,
-                        'modified_by_name' => $emp->ModifiedByFirstName . ' ' . $emp->ModifiedByLastName,
-                    ];
-                })
+            return view('employees.index', [
+                'activeEmployees' => $activeEmployees,
+                'deletedEmployees' => $deletedEmployees
             ]);
-
-            // Only load trashed employees if specifically requested
-            $trashedEmployees = null;
-            if (request()->has('showTrashed')) {
-                $trashedEmployees = Employee::with(['userAccount'])
-                    ->where('IsDeleted', 1)
-                    ->orderBy('LastName')
-                    ->paginate(25);
-            }
-
-            $roles = Role::where('IsDeleted', 0)
-                        ->orderBy('RoleName')
-                        ->pluck('RoleName', 'RoleId');
-
-            return view('employees.index', compact('employees', 'trashedEmployees', 'roles'));
 
         } catch (\Exception $e) {
-            \Log::error('Error in employee index:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return redirect()->back()->with('error', 'Error loading employees: ' . $e->getMessage());
+            Log::error('Error loading employees: ' . $e->getMessage());
+            return back()->with('error', 'Error loading employees: ' . $e->getMessage());
         }
     }
 
@@ -328,28 +287,46 @@ class EmployeeController extends Controller
     }
 
     public function restore($id)
-{
-    try {
-        DB::beginTransaction();
-        
-        $employee = Employee::findOrFail($id);
-        $employee->update([
-            'IsDeleted' => false,
-            'DeletedById' => null,
-            'DateDeleted' => null,
-            'RestoredById' => Auth::id(),
-            'DateRestored' => now(),
-            'ModifiedById' => null,
-            'DateModified' => null
-        ]);
+    {
+        try {
+            DB::beginTransaction();
 
-        DB::commit();
-        return redirect()->route('employees.index')
-            ->with('success', 'Employee restored successfully');
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Employee restore failed: ' . $e->getMessage());
-        return back()->with('error', 'Failed to restore employee: ' . $e->getMessage());
+            $employee = Employee::where('EmployeeID', $id)
+                ->where('IsDeleted', true)
+                ->firstOrFail();
+
+            // Update employee record
+            $employee->update([
+                'IsDeleted' => false,
+                'RestoredByID' => auth()->user()->UserAccountID,
+                'DateRestored' => now(),
+                'DeletedByID' => null,
+                'DateDeleted' => null,
+                'ModifiedByID' => auth()->user()->UserAccountID,
+                'DateModified' => now()
+            ]);
+
+            // Also restore associated user account if exists
+            if ($employee->userAccount) {
+                $employee->userAccount->update([
+                    'IsDeleted' => false,
+                    'RestoredByID' => auth()->user()->UserAccountID,
+                    'DateRestored' => now(),
+                    'DeletedByID' => null,
+                    'DateDeleted' => null,
+                    'ModifiedByID' => auth()->user()->UserAccountID,
+                    'DateModified' => now()
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('employees.index')
+                ->with('success', 'Employee restored successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Employee restore failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to restore employee: ' . $e->getMessage());
+        }
     }
-}
 } 
