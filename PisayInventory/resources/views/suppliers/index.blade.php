@@ -211,47 +211,52 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped" id="suppliersTable">
+                    <table class="table table-hover" id="suppliersTable">
                         <thead>
                             <tr>
+                                <th class="text-center">Actions</th>
                                 <th>Company Name</th>
                                 <th>Contact Person</th>
-                                <th>Telephone</th>
                                 <th>Mobile</th>
+                                <th>Telephone</th>
                                 <th>Address</th>
-                                <th>Actions</th>
+                                <th>Created By</th>
+                                <th>Created Date</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($activeSuppliers as $supplier)
                                 <tr>
-                                    <td>{{ $supplier->CompanyName }}</td>
-                                    <td>{{ $supplier->ContactPerson }}</td>
-                                    <td>{{ $supplier->TelephoneNumber }}</td>
-                                    <td>{{ $supplier->ContactNum }}</td>
-                                    <td>{{ $supplier->Address }}</td>
-                                    <td>
+                                    <td class="text-center">
                                         <div class="btn-group" role="group">
                                             <a href="{{ route('suppliers.edit', $supplier->SupplierID) }}" 
                                                class="btn btn-sm btn-primary">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
+
                                             <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" 
                                                   method="POST" 
-                                                  class="d-inline">
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this supplier?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger" 
-                                                        onclick="return confirm('Are you sure you want to delete this supplier?')">
+                                                <button type="submit" class="btn btn-sm btn-danger">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>
                                         </div>
                                     </td>
+                                    <td>{{ $supplier->CompanyName }}</td>
+                                    <td>{{ $supplier->ContactPerson }}</td>
+                                    <td>{{ $supplier->ContactNum }}</td>
+                                    <td>{{ $supplier->TelephoneNumber }}</td>
+                                    <td>{{ $supplier->Address }}</td>
+                                    <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
+                                    <td>{{ $supplier->DateCreated ? \Carbon\Carbon::parse($supplier->DateCreated)->format('M d, Y') : 'N/A' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center">No active suppliers found</td>
+                                    <td colspan="8" class="text-center">No suppliers found</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -269,41 +274,45 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped" id="deletedSuppliersTable">
+                    <table class="table table-hover" id="deletedSuppliersTable">
                         <thead>
                             <tr>
+                                <th class="text-center">Actions</th>
                                 <th>Company Name</th>
                                 <th>Contact Person</th>
-                                <th>Telephone</th>
                                 <th>Mobile</th>
+                                <th>Telephone</th>
                                 <th>Address</th>
                                 <th>Deleted Date</th>
-                                <th>Actions</th>
+                                <th>Created By</th>
+                                <th>Modified By</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($deletedSuppliers as $supplier)
                                 <tr>
-                                    <td>{{ $supplier->CompanyName }}</td>
-                                    <td>{{ $supplier->ContactPerson }}</td>
-                                    <td>{{ $supplier->TelephoneNumber }}</td>
-                                    <td>{{ $supplier->ContactNum }}</td>
-                                    <td>{{ $supplier->Address }}</td>
-                                    <td>{{ $supplier->DateDeleted }}</td>
-                                    <td>
+                                    <td class="text-center">
                                         <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
                                               method="POST" 
                                               class="d-inline">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-arrow-counterclockwise"></i> Restore
+                                                <i class="bi bi-arrow-counterclockwise"></i>
                                             </button>
                                         </form>
                                     </td>
+                                    <td>{{ $supplier->CompanyName }}</td>
+                                    <td>{{ $supplier->ContactPerson }}</td>
+                                    <td>{{ $supplier->ContactNum }}</td>
+                                    <td>{{ $supplier->TelephoneNumber }}</td>
+                                    <td>{{ $supplier->Address }}</td>
+                                    <td>{{ $supplier->DateDeleted ? \Carbon\Carbon::parse($supplier->DateDeleted)->format('M d, Y') : 'N/A' }}</td>
+                                    <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
+                                    <td>{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center">No deleted suppliers found</td>
+                                    <td colspan="9" class="text-center">No deleted suppliers found</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -337,7 +346,18 @@
             language: {
                 search: "Search:",
                 searchPlaceholder: "Search suppliers..."
-            }
+            },
+            columnDefs: [
+                { className: "actions-column", targets: 0, width: "100px", orderable: false },
+                { className: "name-column", targets: 1 },
+                { className: "contact-person-column", targets: 2 },
+                { className: "contact-number-column", targets: 3 },
+                { className: "email-column", targets: 4 },
+                { className: "address-column", targets: 5 },
+                { className: "created-by-column", targets: 6 },
+                { className: "created-date-column", targets: 7 }
+            ],
+            order: [[1, 'asc']], // Order by name column by default
         });
 
         const deletedTable = $('#deletedSuppliersTable').DataTable({

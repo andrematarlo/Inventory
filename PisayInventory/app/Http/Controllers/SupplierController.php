@@ -7,6 +7,7 @@ use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Employee;
 
 class SupplierController extends Controller
 {
@@ -104,7 +105,16 @@ class SupplierController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        try {
+            $supplier = Supplier::where('IsDeleted', false)
+                ->findOrFail($id);
+
+            return view('suppliers.edit', compact('supplier'));
+            
+        } catch (\Exception $e) {
+            Log::error('Error loading edit supplier form: ' . $e->getMessage());
+            return back()->with('error', 'Error loading form: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -112,28 +122,43 @@ class SupplierController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'CompanyName' => 'required|string|max:255',
-            'ContactPerson' => 'nullable|string|max:255',
-            'TelephoneNumber' => 'nullable|string|max:20',
-            'ContactNum' => 'nullable|string|max:20',
-            'Address' => 'nullable|string',
-        ]);
+        try {
+            $request->validate([
+                'CompanyName' => 'required|string|max:255',
+                'ContactPerson' => 'required|string|max:255',
+                'ContactNum' => 'required|string|max:20',
+                'TelephoneNumber' => 'nullable|string|max:20',
+                'Address' => 'required|string'
+            ]);
 
-        $supplier = Supplier::findOrFail($id);
-        
-        $supplier->update([
-            'CompanyName' => $request->CompanyName,
-            'ContactPerson' => $request->ContactPerson,
-            'TelephoneNumber' => $request->TelephoneNumber,
-            'ContactNum' => $request->ContactNum,
-            'Address' => $request->Address,
-            'ModifiedById' => auth()->user()->UserAccountID,
-            'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
-        ]);
+            DB::beginTransaction();
 
-        return redirect()->route('suppliers.index')
-            ->with('success', 'Supplier updated successfully');
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            $supplier = Supplier::findOrFail($id);
+            
+            $supplier->update([
+                'CompanyName' => $request->CompanyName,
+                'ContactPerson' => $request->ContactPerson,
+                'ContactNum' => $request->ContactNum,
+                'TelephoneNumber' => $request->TelephoneNumber,
+                'Address' => $request->Address,
+                'ModifiedById' => $currentEmployee->EmployeeID,
+                'DateModified' => now()
+            ]);
+
+            DB::commit();
+            return redirect()->route('suppliers.index')
+                ->with('success', 'Supplier updated successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating supplier: ' . $e->getMessage());
+            return back()->with('error', 'Error updating supplier: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**
