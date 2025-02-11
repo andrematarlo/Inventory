@@ -19,23 +19,18 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <th class="text-center">Actions</th>
                             <th>Name</th>
                             <th>Created By</th>
                             <th>Date Created</th>
                             <th>Modified By</th>
                             <th>Date Modified</th>
-                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($classifications as $classification)
                         <tr>
-                            <td>{{ $classification->ClassificationName }}</td>
-                            <td>{{ $classification->created_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $classification->DateCreated ? date('M d, Y h:i A', strtotime($classification->DateCreated)) : 'N/A' }}</td>
-                            <td>{{ $classification->modified_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $classification->DateModified ? date('M d, Y h:i A', strtotime($classification->DateModified)) : 'N/A' }}</td>
-                            <td class="text-end">
+                            <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#editClassificationModal{{ $classification->ClassificationId }}">
                                     <i class="bi bi-pencil"></i> Edit
                                 </button>
@@ -47,6 +42,11 @@
                                     </button>
                                 </form>
                             </td>
+                            <td>{{ $classification->ClassificationName }}</td>
+                            <td>{{ $classification->created_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ $classification->DateCreated ? date('M d, Y h:i A', strtotime($classification->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $classification->modified_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ $classification->DateModified ? date('M d, Y h:i A', strtotime($classification->DateModified)) : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
@@ -73,19 +73,16 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <th class="text-center">Actions</th>
                             <th>Name</th>
                             <th>Deleted By</th>
                             <th>Date Deleted</th>
-                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($trashedClassifications as $classification)
                         <tr>
-                            <td>{{ $classification->ClassificationName }}</td>
-                            <td>{{ $classification->deleted_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $classification->DateDeleted ? date('M d, Y h:i A', strtotime($classification->DateDeleted)) : 'N/A' }}</td>
-                            <td class="text-end">
+                            <td class="text-center">
                                 <form action="{{ route('classifications.restore', $classification->ClassificationId) }}" method="POST" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-success">
@@ -93,6 +90,9 @@
                                     </button>
                                 </form>
                             </td>
+                            <td>{{ $classification->ClassificationName }}</td>
+                            <td>{{ $classification->deleted_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ $classification->DateDeleted ? date('M d, Y h:i A', strtotime($classification->DateDeleted)) : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
