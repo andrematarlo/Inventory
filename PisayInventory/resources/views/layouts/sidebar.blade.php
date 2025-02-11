@@ -73,6 +73,13 @@
         </li>
 
         <li class="nav-item">
+            <a href="{{ route('receiving.index') }}" class="nav-link text-white {{ request()->routeIs('receiving.*') ? 'active bg-primary' : '' }}">
+                <i class="bi bi-box-seam"></i>
+                <span>Receiving</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
             <a href="{{ route('classifications.index') }}" class="nav-link text-white {{ request()->routeIs('classifications.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-tags"></i>
                 <span>Classifications</span>

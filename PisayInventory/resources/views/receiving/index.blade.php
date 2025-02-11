@@ -1,58 +1,56 @@
 @extends('layouts.app')
 
-@section('title', 'Purchase Orders')
+@section('title', 'Receiving')
 
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Purchase Orders</h1>
-        <a href="{{ route('purchases.create') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> New Purchase Order
+        <h1>Receiving</h1>
+        <a href="{{ route('receiving.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Receiving
         </a>
     </div>
 
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover" id="purchaseOrdersTable">
+                <table class="table table-hover" id="receivingTable">
                     <thead>
                         <tr>
                             <th>PO Number</th>
                             <th>Supplier</th>
-                            <th>Order Date</th>
+                            <th>Date Received</th>
                             <th>Status</th>
-                            <th>Total Amount</th>
-                            <th>Created By</th>
+                            <th>Received By</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($purchases as $po)
+                        @forelse($receivings as $receiving)
                         <tr>
-                            <td>{{ $po->PONumber }}</td>
-                            <td>{{ $po->supplier->CompanyName }}</td>
-                            <td>{{ $po->OrderDate->format('M d, Y') }}</td>
+                            <td>{{ $receiving->purchaseOrder->PONumber }}</td>
+                            <td>{{ $receiving->purchaseOrder->supplier->CompanyName }}</td>
+                            <td>{{ $receiving->DateReceived->format('M d, Y') }}</td>
                             <td>
-                                <span class="badge bg-{{ $po->Status === 'Pending' ? 'warning' : 'success' }}">
-                                    {{ $po->Status }}
+                                <span class="badge bg-{{ $receiving->Status === 'Pending' ? 'warning' : 'success' }}">
+                                    {{ $receiving->Status }}
                                 </span>
                             </td>
-                            <td>₱{{ number_format($po->TotalAmount, 2) }}</td>
-                            <td>{{ $po->createdBy->FirstName }} {{ $po->createdBy->LastName }}</td>
+                            <td>{{ $receiving->receivedBy->FirstName }} {{ $receiving->receivedBy->LastName }}</td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ route('purchases.show', $po->PurchaseOrderID) }}" 
+                                    <a href="{{ route('receiving.show', $receiving->ReceivingID) }}" 
                                        class="btn btn-sm btn-info" 
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    @if($po->Status === 'Pending')
-                                        <a href="{{ route('purchases.edit', $po->PurchaseOrderID) }}" 
+                                    @if($receiving->Status === 'Pending')
+                                        <a href="{{ route('receiving.edit', $receiving->ReceivingID) }}" 
                                            class="btn btn-sm btn-primary" 
                                            title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        <form action="{{ route('purchases.destroy', $po->PurchaseOrderID) }}" 
+                                        <form action="{{ route('receiving.destroy', $receiving->ReceivingID) }}" 
                                               method="POST" 
                                               class="d-inline">
                                             @csrf
@@ -60,7 +58,7 @@
                                             <button type="submit" 
                                                     class="btn btn-sm btn-danger" 
                                                     title="Delete"
-                                                    onclick="return confirm('Are you sure you want to delete this purchase order?')">
+                                                    onclick="return confirm('Are you sure you want to delete this receiving record?')">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
@@ -70,7 +68,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center">No purchase orders found</td>
+                            <td colspan="6" class="text-center">No receiving records found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -84,18 +82,18 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
-    $('#purchaseOrdersTable').DataTable({
+    $('#receivingTable').DataTable({
         pageLength: 10,
         responsive: true,
-        order: [[2, 'desc']], // Order by Order Date
+        order: [[2, 'desc']], // Order by Date Received
         dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
              "<'row'<'col-sm-12'tr>>" +
              "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
         language: {
             search: "Search:",
-            searchPlaceholder: "Search purchase orders..."
+            searchPlaceholder: "Search receiving..."
         }
     });
 });
 </script>
-@endsection
+@endsection 
