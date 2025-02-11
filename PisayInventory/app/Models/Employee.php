@@ -48,54 +48,36 @@ class Employee extends Model
 
     public function createdBy()
     {
-        // Debug log before creating relation
-        \Log::info('Creating CreatedBy Relation:', [
+        \Log::info('CreatedBy Relationship Debug:', [
             'employee_id' => $this->EmployeeID,
             'created_by_id' => $this->CreatedById,
             'all_attributes' => $this->attributes
         ]);
 
-        $relation = $this->belongsTo(Employee::class, 'CreatedById', 'EmployeeID')
+        return $this->belongsTo(Employee::class, 'CreatedById', 'EmployeeID')
+            ->select(['EmployeeID', 'FirstName', 'LastName'])
             ->withDefault([
+                'EmployeeID' => null,
                 'FirstName' => 'System',
-                'LastName' => ''
+                'LastName' => 'User'
             ]);
-            
-        // Debug log the SQL query
-        \Log::info('CreatedBy Query:', [
-            'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->CreatedById,
-            'sql' => $relation->toSql(),
-            'bindings' => $relation->getBindings()
-        ]);
-            
-        return $relation;
     }
 
     public function modifiedBy()
     {
-        // Debug log before creating relation
-        \Log::info('Creating ModifiedBy Relation:', [
+        \Log::info('ModifiedBy Relationship Debug:', [
             'employee_id' => $this->EmployeeID,
             'modified_by_id' => $this->ModifiedById,
             'all_attributes' => $this->attributes
         ]);
 
-        $relation = $this->belongsTo(Employee::class, 'ModifiedById', 'EmployeeID')
+        return $this->belongsTo(Employee::class, 'ModifiedById', 'EmployeeID')
+            ->select(['EmployeeID', 'FirstName', 'LastName'])
             ->withDefault([
+                'EmployeeID' => null,
                 'FirstName' => 'System',
-                'LastName' => ''
+                'LastName' => 'User'
             ]);
-            
-        // Debug log the SQL query
-        \Log::info('ModifiedBy Query:', [
-            'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->ModifiedById,
-            'sql' => $relation->toSql(),
-            'bindings' => $relation->getBindings()
-        ]);
-            
-        return $relation;
     }
 
     public function deletedBy()

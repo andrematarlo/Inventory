@@ -18,12 +18,29 @@ class EmployeeController extends Controller
     {
         try {
             $activeEmployees = Employee::where('IsDeleted', false)
-                ->with(['userAccount'])
-                ->orderBy('LastName')
+                ->with(['userAccount', 'createdBy', 'modifiedBy'])
                 ->get();
 
+            // Debug each employee's relationships
+            foreach ($activeEmployees as $employee) {
+                \Log::info('Employee Details:', [
+                    'employee_id' => $employee->EmployeeID,
+                    'employee_name' => $employee->FirstName . ' ' . $employee->LastName,
+                    'created_by_id' => $employee->CreatedById,
+                    'modified_by_id' => $employee->ModifiedById,
+                    'created_by_relation' => $employee->createdBy ? [
+                        'id' => $employee->createdBy->EmployeeID,
+                        'name' => $employee->createdBy->FirstName . ' ' . $employee->createdBy->LastName
+                    ] : null,
+                    'modified_by_relation' => $employee->modifiedBy ? [
+                        'id' => $employee->modifiedBy->EmployeeID,
+                        'name' => $employee->modifiedBy->FirstName . ' ' . $employee->modifiedBy->LastName
+                    ] : null
+                ]);
+            }
+
             $deletedEmployees = Employee::where('IsDeleted', true)
-                ->with(['userAccount', 'deletedBy'])
+                ->with(['userAccount', 'createdBy', 'modifiedBy', 'deletedBy'])
                 ->orderBy('LastName')
                 ->get();
 
@@ -106,6 +123,22 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             try {
+                // Get the current authenticated employee
+                $currentEmployee = Employee::where('UserAccountID', auth()->user()->UserAccountID)
+                    ->where('IsDeleted', false)
+                    ->first();
+
+                if (!$currentEmployee) {
+                    throw new \Exception('Current employee record not found');
+                }
+
+                // Log the creator's information
+                \Log::info('Creating Employee - Creator Info:', [
+                    'creator_employee_id' => $currentEmployee->EmployeeID,
+                    'creator_user_account_id' => auth()->user()->UserAccountID,
+                    'creator_name' => $currentEmployee->FirstName . ' ' . $currentEmployee->LastName
+                ]);
+
                 // Get role names for the selected role IDs
                 $roleNames = Role::whereIn('RoleId', $request->roles)
                     ->pluck('RoleName')
@@ -132,7 +165,16 @@ class EmployeeController extends Controller
                     'Role' => $roleNames,
                     'IsDeleted' => false,
                     'DateCreated' => now(),
-                    'CreatedById' => $currentEmployee->EmployeeID
+                    'CreatedById' => $currentEmployee->EmployeeID,
+                    'ModifiedById' => $currentEmployee->EmployeeID
+                ]);
+
+                // Add debug logging
+                \Log::info('New Employee Created:', [
+                    'employee_id' => $employee->EmployeeID,
+                    'created_by_id' => $employee->CreatedById,
+                    'modified_by_id' => $employee->ModifiedById,
+                    'creator_employee' => $currentEmployee->toArray()
                 ]);
 
                 // Attach roles to the employee in the pivot table
@@ -210,7 +252,7 @@ class EmployeeController extends Controller
                     'Address' => $request->Address,
                     'Role' => $roleNames,
                     'DateModified' => now(),
-                    'ModifiedById' => Auth::id()
+                    'ModifiedById' => auth()->user()->UserAccountID
                 ]);
 
                 // Update UserAccount role
@@ -219,7 +261,7 @@ class EmployeeController extends Controller
                         ->update([
                             'role' => $roleNames,
                             'DateModified' => now(),
-                            'ModifiedById' => Auth::id()
+                            'ModifiedById' => auth()->user()->UserAccountID
                         ]);
                 }
 
@@ -234,7 +276,7 @@ class EmployeeController extends Controller
                         'RoleId' => $roleId,
                         'IsDeleted' => false,
                         'DateCreated' => now(),
-                        'CreatedById' => Auth::id()
+                        'CreatedById' => auth()->user()->UserAccountID
                     ]);
                 }
 

@@ -285,15 +285,19 @@
                                         </div>
                                     </td>
                                     <td>{{ $employee->FirstName }} {{ $employee->LastName }}</td>
-                                    <td>{{ $employee->Username }}</td>
+                                    <td>{{ $employee->userAccount ? $employee->userAccount->Username : 'N/A' }}</td>
                                     <td>{{ $employee->Email }}</td>
                                     <td>{{ $employee->Role }}</td>
                                     <td>{{ $employee->Gender }}</td>
                                     <td>
                                         <span class="badge bg-success">Active</span>
                                     </td>
-                                    <td>{{ $employee->CreatedByFirstName }} {{ $employee->CreatedByLastName }}</td>
-                                    <td>{{ $employee->ModifiedByFirstName }} {{ $employee->ModifiedByLastName }}</td>
+                                    <td>
+                                        {{ $employee->createdBy ? $employee->createdBy->FirstName . ' ' . $employee->createdBy->LastName : 'System User' }}
+                                    </td>
+                                    <td>
+                                        {{ $employee->modifiedBy ? $employee->modifiedBy->FirstName . ' ' . $employee->modifiedBy->LastName : 'System User' }}
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
@@ -324,6 +328,8 @@
                                 <th>Role</th>
                                 <th>Gender</th>
                                 <th>Deleted Date</th>
+                                <th>Created By</th>
+                                <th>Modified By</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -331,11 +337,17 @@
                             @forelse($deletedEmployees as $employee)
                                 <tr>
                                     <td>{{ $employee->FirstName }} {{ $employee->LastName }}</td>
-                                    <td>{{ $employee->Username }}</td>
+                                    <td>{{ $employee->userAccount ? $employee->userAccount->Username : 'N/A' }}</td>
                                     <td>{{ $employee->Email }}</td>
                                     <td>{{ $employee->Role }}</td>
                                     <td>{{ $employee->Gender }}</td>
                                     <td>{{ $employee->DateDeleted }}</td>
+                                    <td>
+                                        {{ $employee->createdBy ? $employee->createdBy->FirstName . ' ' . $employee->createdBy->LastName : 'System User' }}
+                                    </td>
+                                    <td>
+                                        {{ $employee->modifiedBy ? $employee->modifiedBy->FirstName . ' ' . $employee->modifiedBy->LastName : 'System User' }}
+                                    </td>
                                     <td>
                                         <form action="{{ route('employees.restore', ['employeeId' => $employee->EmployeeID]) }}" 
                                               method="POST" 
@@ -424,7 +436,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }},
             { className: "gender-column", targets: 4, width: "100px" },
             { className: "deleted-date-column", targets: 5, width: "150px" },
-            { className: "actions-column", targets: 6, width: "120px", orderable: false }
+            { className: "created-by-column", targets: 6, width: "150px" },
+            { className: "modified-by-column", targets: 7, width: "150px" },
+            { className: "actions-column", targets: 8, width: "120px", orderable: false }
         ],
         order: [[0, 'asc']],
         createdRow: function(row, data, dataIndex) {
