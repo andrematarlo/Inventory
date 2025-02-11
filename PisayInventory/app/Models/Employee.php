@@ -9,93 +9,93 @@ class Employee extends Model
     protected $table = 'employee';
     protected $primaryKey = 'EmployeeID';
     public $timestamps = false;
+    public $incrementing = true;
 
     // Remove automatic eager loading as it conflicts with our optimized queries
     // protected $with = ['userAccount', 'createdBy', 'modifiedBy'];
 
     protected $fillable = [
-        'EmployeeID',
         'UserAccountID',
         'FirstName',
         'LastName',
         'Address',
         'Email',
         'Gender',
-        'Role',
-        'CreatedByID',
         'DateCreated',
+        'CreatedByID',
         'ModifiedByID',
         'DateModified',
         'DeletedByID',
-        'DateDeleted',
         'RestoredById',
+        'DateDeleted',
         'DateRestored',
         'IsDeleted'
     ];
 
     protected $casts = [
-        'IsDeleted' => 'boolean',
         'DateCreated' => 'datetime',
         'DateModified' => 'datetime',
         'DateDeleted' => 'datetime',
+        'DateRestored' => 'datetime',
+        'IsDeleted' => 'boolean'
     ];
 
     // Define relationships
     public function userAccount()
     {
-        return $this->belongsTo(UserAccount::class, 'UserAccountID', 'UserAccountID');
+        return $this->belongsTo(User::class, 'UserAccountID', 'UserAccountID');
+    }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'employee_roles', 'EmployeeId', 'RoleId')
+            ->where('employee_roles.IsDeleted', false)
+            ->withPivot([
+                'id',
+                'IsDeleted',
+                'DateCreated',
+                'CreatedById',
+                'DateModified',
+                'ModifiedById',
+                'DateDeleted',
+                'DeletedById',
+                'DateRestored',
+                'RestoredById'
+            ]);
     }
 
     public function createdBy()
     {
-        // Debug log before creating relation
-        \Log::info('Creating CreatedBy Relation:', [
+        \Log::info('CreatedBy Relationship Debug:', [
             'employee_id' => $this->EmployeeID,
             'created_by_id' => $this->CreatedByID,
             'all_attributes' => $this->attributes
         ]);
 
-        $relation = $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID')
+        return $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID')
+            ->select(['EmployeeID', 'FirstName', 'LastName'])
             ->withDefault([
+                'EmployeeID' => null,
                 'FirstName' => 'System',
-                'LastName' => ''
+                'LastName' => 'User'
             ]);
-            
-        // Debug log the SQL query
-        \Log::info('CreatedBy Query:', [
-            'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->CreatedByID,
-            'sql' => $relation->toSql(),
-            'bindings' => $relation->getBindings()
-        ]);
-            
-        return $relation;
     }
 
     public function modifiedBy()
     {
-        // Debug log before creating relation
-        \Log::info('Creating ModifiedBy Relation:', [
+        \Log::info('ModifiedBy Relationship Debug:', [
             'employee_id' => $this->EmployeeID,
             'modified_by_id' => $this->ModifiedByID,
             'all_attributes' => $this->attributes
         ]);
 
-        $relation = $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID')
+        return $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID')
+            ->select(['EmployeeID', 'FirstName', 'LastName'])
             ->withDefault([
+                'EmployeeID' => null,
                 'FirstName' => 'System',
-                'LastName' => ''
+                'LastName' => 'User'
             ]);
-            
-        // Debug log the SQL query
-        \Log::info('ModifiedBy Query:', [
-            'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->ModifiedByID,
-            'sql' => $relation->toSql(),
-            'bindings' => $relation->getBindings()
-        ]);
-            
-        return $relation;
     }
 
     public function deletedBy()
@@ -148,5 +148,11 @@ class Employee extends Model
         
         $modifier = $this->modifiedBy;
         return $modifier ? "{$modifier->FirstName} {$modifier->LastName}" : 'Unknown User';
+    }
+
+    // Helper method to get role names as string
+    public function getRoleNamesAttribute()
+    {
+        return $this->roles->pluck('RoleName')->implode(', ');
     }
 } 

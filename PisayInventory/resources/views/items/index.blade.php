@@ -38,18 +38,20 @@
                         @forelse($items as $item)
                         <tr>
                             <td>
-                                <button type="button" class="btn btn-sm btn-primary d-flex align-items-center" 
-                                        data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
-                                    <i class="bi bi-pencil me-1"></i> Edit
-                                </button>
-                                <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center" 
-                                            onclick="return confirm('Are you sure you want to delete this item?')">
-                                        <i class="bi bi-trash me-1"></i> Delete
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-primary" 
+                                            data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
+                                        <i class="bi bi-pencil"></i>
                                     </button>
-                                </form>
+                                    <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger" 
+                                                onclick="return confirm('Are you sure you want to delete this item?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                             <td>
                                 @if($item->ImagePath)
@@ -82,20 +84,6 @@
                                     {{ $item->DateModified ? date('M d, Y h:i A', strtotime($item->DateModified)) : 'N/A' }}<br>
                                     <span class="text-muted">By: {{ $item->modified_by_user->Username ?? 'N/A' }}</span>
                                 </small>
-                            </td>
-                            <td class="text-end d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-primary d-flex align-items-center" 
-                                        data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
-                                    <i class="bi bi-pencil me-1"></i> Edit
-                                </button>
-                                <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center" 
-                                            onclick="return confirm('Are you sure you want to delete this item?')">
-                                        <i class="bi bi-trash me-1"></i> Delete
-                                    </button>
-                                </form>
                             </td>
                         </tr>
                         @empty

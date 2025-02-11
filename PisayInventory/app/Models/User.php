@@ -33,16 +33,16 @@ class User extends Authenticatable
     protected $fillable = [
         'Username',
         'Password',
-        'RoleId',
-        'CreatedById',
+        'role',
+        'IsDeleted',
         'DateCreated',
-        'ModifiedById',
+        'CreatedByID',
+        'ModifiedByID',
         'DateModified',
-        'DeletedById',
+        'DeletedByID',
         'DateDeleted',
         'RestoredById',
-        'DateRestored',
-        'IsDeleted'
+        'DateRestored'
     ];
 
     /**
@@ -82,6 +82,12 @@ class User extends Authenticatable
         return $this->Password;
     }
 
+    // Add this method to handle username attribute
+    public function getUsernameAttribute($value)
+    {
+        return $value;
+    }
+
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'CreatedById', 'UserAccountId');
@@ -98,8 +104,8 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'RoleId', 'RoleId');
     }
 
-    public function setPasswordAttribute($value)
+    public function employee()
     {
-        $this->attributes['Password'] = bcrypt($value);
+        return $this->hasOne(Employee::class, 'UserAccountID', 'UserAccountID');
     }
 }

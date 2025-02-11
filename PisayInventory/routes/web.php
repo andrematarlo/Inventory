@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\PurchaseController; // Added PurchaseController
+use App\Http\Controllers\ReceivingController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -98,4 +99,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+// Receiving Management
+Route::middleware(['auth'])->group(function () {
+    Route::get('receiving', [ReceivingController::class, 'index'])->name('receiving.index');
+    Route::get('receiving/create', [ReceivingController::class, 'create'])->name('receiving.create');
+    Route::post('receiving', [ReceivingController::class, 'store'])->name('receiving.store');
+    Route::get('receiving/{id}', [ReceivingController::class, 'show'])->name('receiving.show');
+    Route::delete('receiving/{id}', [ReceivingController::class, 'destroy'])->name('receiving.destroy');
+    Route::post('receiving/{id}/restore', [ReceivingController::class, 'restore'])->name('receiving.restore');
 });

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Purchase;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\Item;
-use App\Models\UnitOfMeasure;
-use App\Models\Classification;
-use App\Models\User;
+use App\Models\Supplier;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,160 +14,281 @@ use Illuminate\Support\Facades\Log;
 
 class PurchaseController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $showDeleted = $request->input('show_deleted', false);
+        try {
+            $purchases = PurchaseOrder::with(['supplier', 'items.item'])
+                ->where('IsDeleted', false)
+                ->orderBy('OrderDate', 'desc')
+                ->get();
 
-        $query = Purchase::with([
-            'item', 
-            'item.classification', 
-            'unit_of_measure', 
-            'created_by_user'
-        ]);
-
-        if (!$showDeleted) {
-            $query->where('IsDeleted', 0);
+            return view('purchases.index', compact('purchases'));
+        } catch (\Exception $e) {
+            Log::error('Error loading purchases: ' . $e->getMessage());
+            return back()->with('error', 'Error loading purchases: ' . $e->getMessage());
         }
+    }
 
-        $purchases = $query->orderBy('DateCreated', 'desc')
-            ->paginate(10);
+    public function create()
+    {
+        try {
+            $suppliers = Supplier::where('IsDeleted', false)->get();
+            $items = Item::where('IsDeleted', false)->get();
 
-        // Get dropdown data
-        $items = Item::where('IsDeleted', 0)->orderBy('ItemName')->get();
-        $units = UnitOfMeasure::active()->orderBy('UnitName')->get();
-        $classifications = Classification::safeGetClassifications();
-
-        return view('purchases.index', compact('purchases', 'items', 'units', 'classifications'));
+            return view('purchases.create', compact('suppliers', 'items'));
+        } catch (\Exception $e) {
+            Log::error('Error loading create purchase form: ' . $e->getMessage());
+            return back()->with('error', 'Error loading form: ' . $e->getMessage());
+        }
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'ItemId' => 'required|exists:items,ItemId',
-            'UnitOfMeasureId' => 'nullable|exists:unitofmeasure,UnitOfMeasureId',
-            'ClassificationId' => 'nullable|exists:classification,ClassificationId',
-            'Quantity' => 'required|integer|min:1',
-            'StocksAdded' => 'required|integer|min:1'
-        ]);
-
         try {
+            $request->validate([
+                'SupplierID' => 'required|exists:suppliers,SupplierID',
+                'items' => 'required|array|min:1',
+                'items.*.ItemId' => 'required|exists:items,ItemId',
+                'items.*.Quantity' => 'required|integer|min:1',
+                'items.*.UnitPrice' => 'required|numeric|min:0'
+            ]);
+
             DB::beginTransaction();
 
-            // Create purchase record
-            $purchase = new Purchase();
-            $purchase->fill($validated);
-            $purchase->DateCreated = now();
-            $purchase->CreatedById = Auth::id();
-            $purchase->IsDeleted = 0;
-            $purchase->save();
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
 
-            // Update item stocks
-            $item = Item::findOrFail($validated['ItemId']);
-            $item->StocksAvailable += $validated['StocksAdded'];
-            $item->save();
+            // Create PO
+            $po = PurchaseOrder::create([
+                'PONumber' => 'PO-' . date('YmdHis'),
+                'SupplierID' => $request->SupplierID,
+                'OrderDate' => now(),
+                'Status' => 'Pending',
+                'TotalAmount' => 0,
+                'DateCreated' => now(),
+                'CreatedByID' => $currentEmployee->EmployeeID,
+                'IsDeleted' => false
+            ]);
+
+            $totalAmount = 0;
+
+            // Create PO Items
+            foreach ($request->items as $item) {
+                $totalPrice = $item['Quantity'] * $item['UnitPrice'];
+                $totalAmount += $totalPrice;
+
+                PurchaseOrderItem::create([
+                    'PurchaseOrderID' => $po->PurchaseOrderID,
+                    'ItemId' => $item['ItemId'],
+                    'Quantity' => $item['Quantity'],
+                    'UnitPrice' => $item['UnitPrice'],
+                    'TotalPrice' => $totalPrice,
+                    'DateCreated' => now(),
+                    'CreatedByID' => $currentEmployee->EmployeeID,
+                    'IsDeleted' => false
+                ]);
+            }
+
+            // Update PO total
+            $po->update([
+                'TotalAmount' => $totalAmount,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
+                'DateModified' => now()
+            ]);
 
             DB::commit();
-
             return redirect()->route('purchases.index')
-                ->with('success', 'Purchase record created successfully');
+                ->with('success', 'Purchase order created successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Purchase creation failed: ' . $e->getMessage());
-
-            return back()->withInput()
-                ->with('error', 'Failed to create purchase record: ' . $e->getMessage());
+            Log::error('Error creating purchase order: ' . $e->getMessage());
+            return back()->with('error', 'Error creating purchase order: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
-    public function update(Request $request, $id)
+    public function show($id)
     {
-        $purchase = Purchase::findOrFail($id);
-
-        $validated = $request->validate([
-            'ItemId' => 'required|exists:items,ItemId',
-            'UnitOfMeasureId' => 'nullable|exists:unitofmeasure,UnitOfMeasureId',
-            'ClassificationId' => 'nullable|exists:classification,ClassificationId',
-            'Quantity' => 'required|integer|min:1',
-            'StocksAdded' => 'required|integer|min:1'
-        ]);
-
         try {
-            DB::beginTransaction();
+            $purchase = PurchaseOrder::with(['supplier', 'items.item', 'createdBy', 'modifiedBy'])
+                ->findOrFail($id);
 
-            // Calculate stock difference
-            $stockDifference = $validated['StocksAdded'] - $purchase->StocksAdded;
-
-            // Update purchase record
-            $purchase->fill($validated);
-            $purchase->DateModified = now();
-            $purchase->ModifiedById = Auth::id();
-            $purchase->save();
-
-            // Update item stocks
-            $item = Item::findOrFail($validated['ItemId']);
-            $item->StocksAvailable += $stockDifference;
-            $item->save();
-
-            DB::commit();
-
-            return redirect()->route('purchases.index')
-                ->with('success', 'Purchase record updated successfully');
-
+            return view('purchases.show', compact('purchase'));
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Purchase update failed: ' . $e->getMessage());
-
-            return back()->withInput()
-                ->with('error', 'Failed to update purchase record: ' . $e->getMessage());
+            Log::error('Error showing purchase order: ' . $e->getMessage());
+            return back()->with('error', 'Error showing purchase order: ' . $e->getMessage());
         }
     }
 
     public function destroy($id)
     {
-        $purchase = Purchase::findOrFail($id);
-
         try {
             DB::beginTransaction();
 
-            // Soft delete the purchase
-            $purchase->softDelete();
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            $purchaseOrder = PurchaseOrder::findOrFail($id);
+
+            if ($purchaseOrder->Status !== 'Pending') {
+                return back()->with('error', 'Only pending purchase orders can be deleted.');
+            }
+
+            // Soft delete the purchase order
+            $purchaseOrder->update([
+                'IsDeleted' => true,
+                'DeletedByID' => $currentEmployee->EmployeeID,
+                'DateDeleted' => now()
+            ]);
+
+            // Soft delete all related items
+            PurchaseOrderItem::where('PurchaseOrderID', $id)
+                ->update([
+                    'IsDeleted' => true,
+                    'DeletedByID' => $currentEmployee->EmployeeID,
+                    'DateDeleted' => now()
+                ]);
 
             DB::commit();
-
             return redirect()->route('purchases.index')
-                ->with('success', 'Purchase record deleted successfully');
+                ->with('success', 'Purchase order deleted successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Purchase deletion failed: ' . $e->getMessage());
-
-            return back()
-                ->with('error', 'Failed to delete purchase record: ' . $e->getMessage());
+            Log::error('Error deleting purchase order: ' . $e->getMessage());
+            return back()->with('error', 'Error deleting purchase order: ' . $e->getMessage());
         }
     }
 
     public function restore($id)
     {
-        $purchase = Purchase::withTrashed()->findOrFail($id);
-
         try {
             DB::beginTransaction();
 
-            // Restore the purchase
-            $purchase->restore();
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            $purchaseOrder = PurchaseOrder::findOrFail($id);
+
+            // Restore the purchase order
+            $purchaseOrder->update([
+                'IsDeleted' => false,
+                'RestoredById' => $currentEmployee->EmployeeID,
+                'DateRestored' => now()
+            ]);
+
+            // Restore all related items
+            PurchaseOrderItem::where('PurchaseOrderID', $id)
+                ->update([
+                    'IsDeleted' => false,
+                    'RestoredById' => $currentEmployee->EmployeeID,
+                    'DateRestored' => now()
+                ]);
 
             DB::commit();
-
             return redirect()->route('purchases.index')
-                ->with('success', 'Purchase record restored successfully');
+                ->with('success', 'Purchase order restored successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Purchase restoration failed: ' . $e->getMessage());
+            Log::error('Error restoring purchase order: ' . $e->getMessage());
+            return back()->with('error', 'Error restoring purchase order: ' . $e->getMessage());
+        }
+    }
 
-            return back()
-                ->with('error', 'Failed to restore purchase record: ' . $e->getMessage());
+    public function edit($id)
+    {
+        try {
+            $purchase = PurchaseOrder::with(['supplier', 'items.item'])
+                ->where('IsDeleted', false)
+                ->findOrFail($id);
+
+            if ($purchase->Status !== 'Pending') {
+                return back()->with('error', 'Only pending purchase orders can be edited.');
+            }
+
+            $suppliers = Supplier::where('IsDeleted', false)->get();
+            $items = Item::where('IsDeleted', false)->get();
+
+            return view('purchases.edit', compact('purchase', 'suppliers', 'items'));
+        } catch (\Exception $e) {
+            Log::error('Error loading edit purchase form: ' . $e->getMessage());
+            return back()->with('error', 'Error loading form: ' . $e->getMessage());
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'SupplierID' => 'required|exists:suppliers,SupplierID',
+                'items' => 'required|array|min:1',
+                'items.*.ItemId' => 'required|exists:items,ItemId',
+                'items.*.Quantity' => 'required|integer|min:1',
+                'items.*.UnitPrice' => 'required|numeric|min:0'
+            ]);
+
+            DB::beginTransaction();
+
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            $purchaseOrder = PurchaseOrder::findOrFail($id);
+
+            if ($purchaseOrder->Status !== 'Pending') {
+                return back()->with('error', 'Only pending purchase orders can be edited.');
+            }
+
+            // Update PO
+            $purchaseOrder->update([
+                'SupplierID' => $request->SupplierID,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
+                'DateModified' => now()
+            ]);
+
+            // Delete existing items
+            PurchaseOrderItem::where('PurchaseOrderID', $id)->delete();
+
+            $totalAmount = 0;
+
+            // Create new PO Items
+            foreach ($request->items as $item) {
+                $totalPrice = $item['Quantity'] * $item['UnitPrice'];
+                $totalAmount += $totalPrice;
+
+                PurchaseOrderItem::create([
+                    'PurchaseOrderID' => $purchaseOrder->PurchaseOrderID,
+                    'ItemId' => $item['ItemId'],
+                    'Quantity' => $item['Quantity'],
+                    'UnitPrice' => $item['UnitPrice'],
+                    'TotalPrice' => $totalPrice,
+                    'DateCreated' => now(),
+                    'CreatedByID' => $currentEmployee->EmployeeID,
+                    'IsDeleted' => false
+                ]);
+            }
+
+            // Update PO total
+            $purchaseOrder->update([
+                'TotalAmount' => $totalAmount,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
+                'DateModified' => now()
+            ]);
+
+            DB::commit();
+            return redirect()->route('purchases.show', $id)
+                ->with('success', 'Purchase order updated successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating purchase order: ' . $e->getMessage());
+            return back()->with('error', 'Error updating purchase order: ' . $e->getMessage())
+                ->withInput();
         }
     }
 }

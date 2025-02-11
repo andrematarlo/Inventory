@@ -15,29 +15,45 @@ class Purchase extends Model
 
     protected $fillable = [
         'ItemId',
-        'UnitOfMeasureId',
-        'ClassificationId',
+        'SupplierId',
         'Quantity',
-        'StocksAdded',
-        'DateCreated',
+        'UnitPrice',
+        'TotalAmount',
+        'PurchaseOrderNumber',
+        'PurchaseDate',
+        'DeliveryDate',
+        'Status',
+        'Notes',
         'CreatedById',
-        'DateModified',
+        'DateCreated',
         'ModifiedById',
-        'DateDeleted',
+        'DateModified',
         'DeletedById',
+        'DateDeleted',
         'IsDeleted'
     ];
 
     protected $dates = [
+        'PurchaseDate',
+        'DeliveryDate',
         'DateCreated',
         'DateModified',
         'DateDeleted'
     ];
 
+    protected $casts = [
+        'Quantity' => 'integer',
+        'UnitPrice' => 'decimal:2',
+        'TotalAmount' => 'decimal:2',
+        'IsDeleted' => 'boolean',
+        'PurchaseDate' => 'date',
+        'DeliveryDate' => 'date'
+    ];
+
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('IsDeleted', 0);
+        return $query->where('IsDeleted', false);
     }
 
     public function scopeWithCustomTrashed($query)
@@ -47,13 +63,13 @@ class Purchase extends Model
 
     public function scopeOnlyTrashed($query)
     {
-        return $query->where('IsDeleted', 1);
+        return $query->where('IsDeleted', true);
     }
 
     // Custom soft delete methods
     public function softDelete()
     {
-        $this->IsDeleted = 1;
+        $this->IsDeleted = true;
         $this->DateDeleted = now();
         $this->DeletedById = Auth::id();
         return $this->save();
@@ -61,7 +77,7 @@ class Purchase extends Model
 
     public function restore()
     {
-        $this->IsDeleted = 0;
+        $this->IsDeleted = false;
         $this->DateDeleted = null;
         $this->DeletedById = null;
         return $this->save();
@@ -73,29 +89,24 @@ class Purchase extends Model
         return $this->belongsTo(Item::class, 'ItemId', 'ItemId');
     }
 
-    public function unit_of_measure()
+    public function supplier()
     {
-        return $this->belongsTo(UnitOfMeasure::class, 'UnitOfMeasureId', 'UnitOfMeasureId');
+        return $this->belongsTo(Supplier::class, 'SupplierId', 'SupplierID');
     }
 
-    public function classification()
+    public function created_by()
     {
-        return $this->belongsTo(Classification::class, 'ClassificationId', 'ClassificationId');
+        return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID');
     }
 
-    public function created_by_user()
+    public function modified_by()
     {
-        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID');
+        return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID');
     }
 
-    public function modified_by_user()
+    public function deleted_by()
     {
-        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID');
-    }
-
-    public function deleted_by_user()
-    {
-        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID');
+        return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID');
     }
 
     // Mutators

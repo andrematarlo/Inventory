@@ -29,19 +29,16 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <th class="text-center">Actions</th>
                             <th>Role Name</th>
                             <th>Description</th>
                             <th>Created Date</th>
-                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($roles as $role)
                             <tr>
-                                <td>{{ $role->RoleName }}</td>
-                                <td>{{ $role->Description }}</td>
-                                <td>{{ $role->DateCreated ? date('M d, Y', strtotime($role->DateCreated)) : 'N/A' }}</td>
-                                <td class="text-end">
+                                <td class="text-center">
                                     <a href="{{ route('roles.edit', $role->RoleId) }}" 
                                        class="btn btn-sm btn-primary">
                                         <i class="bi bi-pencil"></i> Edit
@@ -57,6 +54,9 @@
                                         </button>
                                     </form>
                                 </td>
+                                <td>{{ $role->RoleName }}</td>
+                                <td>{{ $role->Description }}</td>
+                                <td>{{ $role->DateCreated ? date('M d, Y', strtotime($role->DateCreated)) : 'N/A' }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -76,21 +76,17 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <th class="text-center">Actions</th>
                             <th>Role Name</th>
                             <th>Description</th>
                             <th>Deleted By</th>
                             <th>Date Deleted</th>
-                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($trashedRoles as $role)
                             <tr>
-                                <td>{{ $role->RoleName }}</td>
-                                <td>{{ $role->Description }}</td>
-                                <td>{{ $role->deleted_by_user->Username ?? 'N/A' }}</td>
-                                <td>{{ $role->DateDeleted ? date('M d, Y h:i A', strtotime($role->DateDeleted)) : 'N/A' }}</td>
-                                <td class="text-end">
+                                <td class="text-center">
                                     <form action="{{ route('roles.restore', $role->RoleId) }}" method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-success">
@@ -98,6 +94,10 @@
                                         </button>
                                     </form>
                                 </td>
+                                <td>{{ $role->RoleName }}</td>
+                                <td>{{ $role->Description }}</td>
+                                <td>{{ $role->deleted_by_user->Username ?? 'N/A' }}</td>
+                                <td>{{ $role->DateDeleted ? date('M d, Y h:i A', strtotime($role->DateDeleted)) : 'N/A' }}</td>
                             </tr>
                         @empty
                             <tr>

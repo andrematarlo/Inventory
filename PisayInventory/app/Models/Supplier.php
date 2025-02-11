@@ -28,6 +28,14 @@ class Supplier extends Model
         'IsDeleted'
     ];
 
+    protected $casts = [
+        'DateCreated' => 'datetime',
+        'DateModified' => 'datetime',
+        'DateDeleted' => 'datetime',
+        'DateRestored' => 'datetime',
+        'IsDeleted' => 'boolean'
+    ];
+
     // Relationships
     public function created_by_user()
     {

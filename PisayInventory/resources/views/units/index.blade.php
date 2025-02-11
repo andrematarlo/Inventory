@@ -17,15 +17,23 @@
                 <table class="table table-hover" id="unitsTable">
                     <thead>
                         <tr>
+                            <th class="text-center">Actions</th>
                             <th>Unit Name</th>
                             <th>Created By</th>
                             <th>Date Created</th>
-                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($units as $unit)
                         <tr>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUnitModal{{ $unit->UnitOfMeasureId }}">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteUnitModal{{ $unit->UnitOfMeasureId }}">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </td>
                             <td>{{ $unit->UnitName }}</td>
                             <td>
                                 @if($unit->createdBy)
@@ -35,18 +43,10 @@
                                 @endif
                             </td>
                             <td>{{ $unit->DateCreated ? date('M d, Y h:i A', strtotime($unit->DateCreated)) : 'N/A' }}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUnitModal{{ $unit->UnitOfMeasureId }}">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteUnitModal{{ $unit->UnitOfMeasureId }}">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                            </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="text-center py-4">No units found</td>
+                            <td colspan="4" class="text-center py-4">No units found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -151,7 +151,7 @@
         const table = $('#unitsTable').DataTable({
             pageLength: 10,
             ordering: true,
-            order: [[2, 'desc']], // Sort by date created by default
+            order: [[3, 'desc']], // Sort by date created by default
             responsive: true,
             destroy: true, // Allow table to be destroyed and recreated
             language: {
@@ -159,7 +159,7 @@
                 searchPlaceholder: "Search units..."
             },
             columnDefs: [
-                { orderable: false, targets: 3 } // Disable sorting on actions column
+                { orderable: false, targets: 0 } // Disable sorting on actions column
             ]
         });
 

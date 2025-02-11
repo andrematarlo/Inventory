@@ -270,18 +270,36 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ url('/login') }}">
+            <form method="POST" action="{{ route('login') }}">
                 @csrf
-                <div class="form-group">
-                    <input type="text" class="form-control" id="username" name="Username" 
-                           placeholder="Username" required value="{{ old('Username') }}">
+                <div class="mb-3">
+                    <label for="Username" class="form-label">Username</label>
+                    <input type="text" 
+                           class="form-control @error('Username') is-invalid @enderror" 
+                           name="Username" 
+                           value="{{ old('Username') }}" 
+                           required 
+                           autofocus>
+                    @error('Username')
+                        <span class="invalid-feedback" role="alert">
+                            <strong>{{ $message }}</strong>
+                        </span>
+                    @enderror
                 </div>
 
-                <div class="form-group">
-                    <input type="password" class="form-control" id="password" 
-                           name="Password" placeholder="Password" required>
+                <div class="mb-3">
+                    <label for="Password" class="form-label">Password</label>
+                    <input type="password" 
+                           class="form-control @error('Password') is-invalid @enderror" 
+                           name="Password" 
+                           required>
+                    @error('Password')
+                        <span class="invalid-feedback" role="alert">
+                            <strong>{{ $message }}</strong>
+                        </span>
+                    @enderror
                 </div>
-  
+
                 <div class="button-container">
                     <button type="submit" class="btn btn-login">
                         <i class="bi bi-box-arrow-in-right me-2"></i>Sign In

@@ -2,7 +2,11 @@
 
 @section('title', 'Suppliers')
 
-@section('additional_styles')
+@section('styles')
+<!-- Add DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
+
 <style>
     /* Custom styles for suppliers table */
     .suppliers-table {
@@ -180,323 +184,219 @@
 @section('content')
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Suppliers Management</h2>
-        <button type="button" class="btn btn-add" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-            <i class="bi bi-plus-lg me-2"></i>Add New Supplier
-        </button>
+        <h2>Suppliers</h2>
+        <div>
+            <button class="btn btn-outline-secondary" type="button" id="toggleButton">
+                <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
+            </button>
+            <a href="{{ route('suppliers.create') }}" class="btn btn-primary">
+                <i class="bi bi-plus"></i> Add Supplier
+            </a>
+        </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="suppliersTable">
-                    <thead>
-                        <tr>
-                            <th style="width: 100px">Actions</th>
-                            <th>Company Name <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Contact Person <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Telephone <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Mobile <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Address <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Date Created <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Date Modified <i class="bi bi-arrow-down-up small-icon"></i></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($suppliers as $supplier)
-                        <tr>
-                            <td class="text-center">
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                            <td>{{ $supplier->CompanyName }}</td>
-                            <td>{{ $supplier->ContactPerson }}</td>
-                            <td>{{ $supplier->TelephoneNumber }}</td>
-                            <td>{{ $supplier->ContactNum }}</td>
-                            <td>{{ $supplier->Address }}</td>
-                            <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $supplier->DateCreated ? date('M d, Y h:i A', strtotime($supplier->DateCreated)) : 'N/A' }}</td>
-                            <td>{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $supplier->DateModified ? date('M d, Y h:i A', strtotime($supplier->DateModified)) : 'N/A' }}</td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="10" class="text-center">No suppliers found</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
+    <!-- Active Suppliers Table -->
+    <div id="activeSuppliers">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Active Suppliers</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="suppliersTable">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Actions</th>
+                                <th>Company Name</th>
+                                <th>Contact Person</th>
+                                <th>Mobile</th>
+                                <th>Telephone</th>
+                                <th>Address</th>
+                                <th>Created By</th>
+                                <th>Created Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($activeSuppliers as $supplier)
+                                <tr>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ route('suppliers.edit', $supplier->SupplierID) }}" 
+                                               class="btn btn-sm btn-primary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+
+                                            <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" 
+                                                  method="POST" 
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this supplier?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                    <td>{{ $supplier->CompanyName }}</td>
+                                    <td>{{ $supplier->ContactPerson }}</td>
+                                    <td>{{ $supplier->ContactNum }}</td>
+                                    <td>{{ $supplier->TelephoneNumber }}</td>
+                                    <td>{{ $supplier->Address }}</td>
+                                    <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
+                                    <td>{{ $supplier->DateCreated ? \Carbon\Carbon::parse($supplier->DateCreated)->format('M d, Y') : 'N/A' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center">No suppliers found</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Add this after your main suppliers table -->
-    <div class="card mt-4">
-        <div class="card-header">
-            <h3>Deleted Suppliers</h3>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="trashedSuppliersTable">
-                    <thead>
-                        <tr>
-                            <th>Supplier Name</th>
-                            <th>Contact Number</th>
-                            <th>Address</th>
-                            <th>Deleted By</th>
-                            <th>Date Deleted</th>
-                            <th style="width: 10%; text-align: center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($trashedSuppliers as $supplier)
-                        <tr>
-                            <td>{{ $supplier->SupplierName }}</td>
-                            <td>{{ $supplier->ContactNum }}</td>
-                            <td>{{ $supplier->Address }}</td>
-                            <td>{{ $supplier->deleted_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
-                            <td class="text-center">
-                                <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center" title="Restore">
-                                        <i class="bi bi-arrow-counterclockwise"></i> Restore
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="6" class="text-center">No deleted suppliers found</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+    <!-- Deleted Suppliers Table -->
+    <div id="deletedSuppliers" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Deleted Suppliers</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="deletedSuppliersTable">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Actions</th>
+                                <th>Company Name</th>
+                                <th>Contact Person</th>
+                                <th>Mobile</th>
+                                <th>Telephone</th>
+                                <th>Address</th>
+                                <th>Deleted Date</th>
+                                <th>Created By</th>
+                                <th>Modified By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($deletedSuppliers as $supplier)
+                                <tr>
+                                    <td class="text-center">
+                                        <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
+                                              method="POST" 
+                                              class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                    <td>{{ $supplier->CompanyName }}</td>
+                                    <td>{{ $supplier->ContactPerson }}</td>
+                                    <td>{{ $supplier->ContactNum }}</td>
+                                    <td>{{ $supplier->TelephoneNumber }}</td>
+                                    <td>{{ $supplier->Address }}</td>
+                                    <td>{{ $supplier->DateDeleted ? \Carbon\Carbon::parse($supplier->DateDeleted)->format('M d, Y') : 'N/A' }}</td>
+                                    <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
+                                    <td>{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="9" class="text-center">No deleted suppliers found</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Add Supplier Modal -->
-<div class="modal fade" id="addSupplierModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Supplier</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('suppliers.store') }}" method="POST">
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Company Name</label>
-                        <input type="text" class="form-control" name="CompanyName" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Contact Person</label>
-                        <input type="text" class="form-control" name="ContactPerson">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Telephone Number</label>
-                        <input type="text" class="form-control" name="TelephoneNumber">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Mobile Number</label>
-                        <input type="text" class="form-control" name="ContactNum">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Address</label>
-                        <textarea class="form-control" name="Address" rows="3"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Supplier</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Supplier Modals -->
-@foreach($suppliers as $supplier)
-<div class="modal fade" id="editSupplierModal{{ $supplier->SupplierID }}" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Supplier</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('suppliers.update', $supplier->SupplierID) }}" method="POST">
-                @csrf
-                @method('PUT')
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Company Name</label>
-                        <input type="text" class="form-control" name="CompanyName" value="{{ $supplier->CompanyName }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Contact Person</label>
-                        <input type="text" class="form-control" name="ContactPerson" value="{{ $supplier->ContactPerson }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Telephone Number</label>
-                        <input type="text" class="form-control" name="TelephoneNumber" value="{{ $supplier->TelephoneNumber }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Mobile Number</label>
-                        <input type="text" class="form-control" name="ContactNum" value="{{ $supplier->ContactNum }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Address</label>
-                        <textarea class="form-control" name="Address" rows="3">{{ $supplier->Address }}</textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Supplier</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endforeach
-
-<!-- Delete Supplier Modals -->
-@foreach($suppliers as $supplier)
-<div class="modal fade" id="deleteSupplierModal{{ $supplier->SupplierID }}" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Delete Supplier</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST">
-                @csrf
-                @method('DELETE')
-                <div class="modal-body">
-                    <p>Are you sure you want to delete this supplier?</p>
-                    <p class="text-danger"><strong>{{ $supplier->CompanyName }}</strong></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete Supplier</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endforeach
 @endsection
 
 @section('scripts')
+<!-- Add jQuery if not already included -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Add DataTables JS -->
+<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+
 <script>
-    function updateDates() {
-        document.querySelectorAll('.datetime-cell').forEach(cell => {
-            const timestamp = parseInt(cell.getAttribute('data-timestamp'));
-            if (timestamp) {
-                const date = new Date(timestamp + (8 * 60 * 60 * 1000)); // Add 8 hours for PHT
-                const hours = date.getHours().toString().padStart(2, '0');
-                const minutes = date.getMinutes().toString().padStart(2, '0');
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                const formattedHours = (hours % 12) || 12;
-                
-                const formatted = `${date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                })} ${formattedHours}:${minutes} ${ampm}`;
-                
-                cell.textContent = formatted;
-            }
-        });
-    }
-
-    // Update dates every second
-    setInterval(updateDates, 1000);
-
-    // Initial update
-    updateDates();
-
-    // Initialize DataTables with existing configuration
     $(document).ready(function() {
-        // Initialize suppliers table
-        if ($.fn.DataTable.isDataTable('#suppliersTable')) {
-            $('#suppliersTable').DataTable().destroy();
-        }
-        
-        $('#suppliersTable').DataTable({
+        console.log('Document ready'); // Debug log
+
+        // Initialize DataTables
+        const activeTable = $('#suppliersTable').DataTable({
             pageLength: 10,
-            order: [[1, 'asc']], // Sort by Company Name by default
-            columnDefs: [
-                { orderable: false, targets: 0 } // Disable sorting on Actions column
-            ],
+            responsive: true,
+            dom: '<"datatable-header"<"dataTables_length"l><"dataTables_filter"f>>' +
+                 't' +
+                 '<"datatable-footer"<"dataTables_info"i><"dataTables_paginate"p>>',
             language: {
-                search: "_INPUT_",
-                searchPlaceholder: "Search suppliers...",
-                lengthMenu: "Show _MENU_ suppliers per page",
-                info: "Showing _START_ to _END_ of _TOTAL_ suppliers",
-                infoEmpty: "Showing 0 to 0 of 0 suppliers",
-                infoFiltered: "(filtered from _MAX_ total suppliers)"
+                search: "Search:",
+                searchPlaceholder: "Search suppliers..."
             },
-            dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                 "<'row'<'col-sm-12'tr>>" +
-                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-            drawCallback: function() {
-                $('.table th').each(function() {
-                    const th = $(this);
-                    if (th.hasClass('sorting_asc')) {
-                        th.find('i').removeClass('bi-arrow-down-up').addClass('bi-arrow-up');
-                    } else if (th.hasClass('sorting_desc')) {
-                        th.find('i').removeClass('bi-arrow-down-up').addClass('bi-arrow-down');
-                    } else {
-                        th.find('i').removeClass('bi-arrow-up bi-arrow-down').addClass('bi-arrow-down-up');
-                    }
-                });
+            columnDefs: [
+                { className: "actions-column", targets: 0, width: "100px", orderable: false },
+                { className: "name-column", targets: 1 },
+                { className: "contact-person-column", targets: 2 },
+                { className: "contact-number-column", targets: 3 },
+                { className: "email-column", targets: 4 },
+                { className: "address-column", targets: 5 },
+                { className: "created-by-column", targets: 6 },
+                { className: "created-date-column", targets: 7 }
+            ],
+            order: [[1, 'asc']], // Order by name column by default
+        });
+
+        const deletedTable = $('#deletedSuppliersTable').DataTable({
+            pageLength: 10,
+            responsive: true,
+            dom: '<"datatable-header"<"dataTables_length"l><"dataTables_filter"f>>' +
+                 't' +
+                 '<"datatable-footer"<"dataTables_info"i><"dataTables_paginate"p>>',
+            language: {
+                search: "Search:",
+                searchPlaceholder: "Search suppliers..."
             }
         });
 
-        // Initialize trashed suppliers table
-        if ($.fn.DataTable.isDataTable('#trashedSuppliersTable')) {
-            $('#trashedSuppliersTable').DataTable().destroy();
-        }
+        // Toggle functionality
+        $('#toggleButton').on('click', function() {
+            console.log('Toggle button clicked'); // Debug log
+            
+            const activeDiv = $('#activeSuppliers');
+            const deletedDiv = $('#deletedSuppliers');
+            const buttonText = $('#buttonText');
+            const button = $(this);
 
-        $('#trashedSuppliersTable').DataTable({
-            pageLength: 10,
-            ordering: true,
-            responsive: true,
-            columnDefs: [
-                { orderable: false, targets: -1 }
-            ],
-            language: {
-                search: "_INPUT_",
-                searchPlaceholder: "Search deleted suppliers...",
-                lengthMenu: "Show _MENU_ deleted suppliers per page",
-                info: "Showing _START_ to _END_ of _TOTAL_ deleted suppliers",
-                infoEmpty: "Showing 0 to 0 of 0 deleted suppliers",
-                infoFiltered: "(filtered from _MAX_ total deleted suppliers)"
-            },
-            dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                 "<'row'<'col-sm-12'tr>>" +
-                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-            drawCallback: function(settings) {
-                $('.dataTables_wrapper .row').addClass('g-3');
-                $('.dataTables_length select').addClass('form-select form-select-sm');
-                $('.dataTables_filter input').addClass('form-control form-control-sm');
-                $('.dataTables_info').addClass('text-muted');
-                $('.pagination').addClass('pagination-sm');
+            console.log('Active visible:', activeDiv.is(':visible')); // Debug log
+
+            if (activeDiv.is(':visible')) {
+                console.log('Switching to deleted'); // Debug log
+                activeDiv.hide();
+                deletedDiv.show();
+                buttonText.text('Show Active');
+                button.removeClass('btn-outline-secondary').addClass('btn-outline-primary');
+                deletedTable.columns.adjust().draw();
+            } else {
+                console.log('Switching to active'); // Debug log
+                deletedDiv.hide();
+                activeDiv.show();
+                buttonText.text('Show Deleted');
+                button.removeClass('btn-outline-primary').addClass('btn-outline-secondary');
+                activeTable.columns.adjust().draw();
             }
         });
     });

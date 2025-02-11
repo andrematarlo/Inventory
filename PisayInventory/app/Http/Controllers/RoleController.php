@@ -143,15 +143,22 @@ class RoleController extends Controller
 
     public function policies()
     {
-        $policies = RolePolicy::with('role')
-            ->whereHas('role', function($query) {
-                $query->where('IsDeleted', false);
-            })
-            ->orderBy('RoleId')
-            ->orderBy('Module')
-            ->get() ?? collect(); // Ensure we always have a collection
+        try {
+            $policies = RolePolicy::orderBy('RoleId')
+                ->orderBy('Module')
+                ->get();
 
-        return view('roles.policies', compact('policies'));
+            \Log::info('Policies query result:', ['count' => $policies->count()]);
+            
+            return view('roles.policies', compact('policies'));
+        } catch (\Exception $e) {
+            \Log::error('Error in policies method:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return back()->with('error', 'Error loading policies: ' . $e->getMessage());
+        }
     }
 
     public function updatePolicy(Request $request, $id)

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class RolePolicy extends Model
 {
+    protected $table = 'role_policies';
     public $timestamps = false;
     protected $primaryKey = 'RolePolicyId';
     
@@ -25,6 +26,14 @@ class RolePolicy extends Model
         'DateRestored',
         'RestoredById',
         'IsDeleted'
+    ];
+
+    protected $casts = [
+        'CanView' => 'boolean',
+        'CanAdd' => 'boolean',
+        'CanEdit' => 'boolean',
+        'CanDelete' => 'boolean',
+        'IsDeleted' => 'boolean'
     ];
 
     public function role()

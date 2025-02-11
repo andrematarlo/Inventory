@@ -7,6 +7,7 @@ use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Employee;
 
 class SupplierController extends Controller
 {
@@ -15,17 +16,24 @@ class SupplierController extends Controller
      */
     public function index()
     {
-        $suppliers = Supplier::with(['created_by_user', 'modified_by_user'])
-            ->where('IsDeleted', 0)
-            ->orderBy('CompanyName')
-            ->get();
+        try {
+            $activeSuppliers = Supplier::where('IsDeleted', false)
+                ->orderBy('CompanyName')
+                ->get();
 
-        $trashedSuppliers = Supplier::with(['created_by_user', 'modified_by_user', 'deleted_by_user'])
-            ->where('IsDeleted', 1)
-            ->orderBy('CompanyName')
-            ->get();
+            $deletedSuppliers = Supplier::where('IsDeleted', true)
+                ->orderBy('CompanyName')
+                ->get();
 
-        return view('suppliers.index', compact('suppliers', 'trashedSuppliers'));
+            return view('suppliers.index', [
+                'activeSuppliers' => $activeSuppliers,
+                'deletedSuppliers' => $deletedSuppliers
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error loading suppliers: ' . $e->getMessage());
+            return back()->with('error', 'Error loading suppliers: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -97,7 +105,16 @@ class SupplierController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        try {
+            $supplier = Supplier::where('IsDeleted', false)
+                ->findOrFail($id);
+
+            return view('suppliers.edit', compact('supplier'));
+            
+        } catch (\Exception $e) {
+            Log::error('Error loading edit supplier form: ' . $e->getMessage());
+            return back()->with('error', 'Error loading form: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -105,28 +122,43 @@ class SupplierController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'CompanyName' => 'required|string|max:255',
-            'ContactPerson' => 'nullable|string|max:255',
-            'TelephoneNumber' => 'nullable|string|max:20',
-            'ContactNum' => 'nullable|string|max:20',
-            'Address' => 'nullable|string',
-        ]);
+        try {
+            $request->validate([
+                'CompanyName' => 'required|string|max:255',
+                'ContactPerson' => 'required|string|max:255',
+                'ContactNum' => 'required|string|max:20',
+                'TelephoneNumber' => 'nullable|string|max:20',
+                'Address' => 'required|string'
+            ]);
 
-        $supplier = Supplier::findOrFail($id);
-        
-        $supplier->update([
-            'CompanyName' => $request->CompanyName,
-            'ContactPerson' => $request->ContactPerson,
-            'TelephoneNumber' => $request->TelephoneNumber,
-            'ContactNum' => $request->ContactNum,
-            'Address' => $request->Address,
-            'ModifiedById' => auth()->user()->UserAccountID,
-            'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
-        ]);
+            DB::beginTransaction();
 
-        return redirect()->route('suppliers.index')
-            ->with('success', 'Supplier updated successfully');
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            $supplier = Supplier::findOrFail($id);
+            
+            $supplier->update([
+                'CompanyName' => $request->CompanyName,
+                'ContactPerson' => $request->ContactPerson,
+                'ContactNum' => $request->ContactNum,
+                'TelephoneNumber' => $request->TelephoneNumber,
+                'Address' => $request->Address,
+                'ModifiedById' => $currentEmployee->EmployeeID,
+                'DateModified' => now()
+            ]);
+
+            DB::commit();
+            return redirect()->route('suppliers.index')
+                ->with('success', 'Supplier updated successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating supplier: ' . $e->getMessage());
+            return back()->with('error', 'Error updating supplier: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**
@@ -150,21 +182,23 @@ class SupplierController extends Controller
     {
         try {
             DB::beginTransaction();
-            
-            $supplier = Supplier::findOrFail($id);
+
+            $supplier = Supplier::where('SupplierID', $id)
+                ->where('IsDeleted', true)
+                ->firstOrFail();
+
             $supplier->update([
                 'IsDeleted' => false,
-                'DeletedById' => null,
-                'DateDeleted' => null,
-                'RestoredById' => Auth::id(),
+                'RestoredByID' => auth()->id(),
                 'DateRestored' => now(),
-                'ModifiedById' => null,
-                'DateModified' => null
+                'DeletedByID' => null,
+                'DateDeleted' => null
             ]);
 
             DB::commit();
             return redirect()->route('suppliers.index')
                 ->with('success', 'Supplier restored successfully');
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Supplier restore failed: ' . $e->getMessage());

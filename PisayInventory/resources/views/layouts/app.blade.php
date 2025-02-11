@@ -203,6 +203,7 @@
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
         <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+        @yield('styles')
     </head>
     <body>
         @include('layouts.sidebar')
