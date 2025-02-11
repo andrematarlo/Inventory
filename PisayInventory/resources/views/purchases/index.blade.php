@@ -34,14 +34,16 @@
                     <thead>
                         <tr>
                             <th>Actions</th>
+                            <th>PO Number</th>
                             <th>Item</th>
-                            <th>Classification</th>
-                            <th>Unit of Measure</th>
+                            <th>Supplier</th>
                             <th>Quantity</th>
-                            <th>Stocks Added</th>
-                            <th>Created By</th>
-                            <th>Date Created</th>
+                            <th>Unit Price</th>
+                            <th>Total Amount</th>
+                            <th>Purchase Date</th>
+                            <th>Delivery Date</th>
                             <th>Status</th>
+                            <th>Created By</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -50,61 +52,55 @@
                             <td>
                                 <div class="d-flex gap-2">
                                     @if(!$purchase->IsDeleted)
-                                        <button type="button" 
-                                                class="btn btn-sm btn-primary flex-grow-1 d-flex align-items-center justify-content-center" 
-                                                style="width: 100px; height: 31px;"
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#editPurchaseModal{{ $purchase->PurchaseId }}">
-                                            <i class="bi bi-pencil me-1"></i>
-                                            Edit
+                                    <button type="button" 
+                                            class="btn btn-sm btn-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editPurchaseModal{{ $purchase->PurchaseId }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form action="{{ route('purchases.destroy', $purchase->PurchaseId) }}" 
+                                          method="POST" 
+                                          class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" 
+                                                class="btn btn-sm btn-danger"
+                                                onclick="return confirm('Are you sure you want to delete this purchase?')">
+                                            <i class="bi bi-trash"></i>
                                         </button>
-                                        <form action="{{ route('purchases.destroy', $purchase->PurchaseId) }}" 
-                                              method="POST" 
-                                              style="margin: 0;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" 
-                                                    class="btn btn-sm btn-danger d-flex align-items-center justify-content-center" 
-                                                    style="width: 100px; height: 31px;"
-                                                    onclick="return confirm('Are you sure you want to delete this purchase record?');">
-                                                <i class="bi bi-trash me-1"></i>
-                                                Delete
-                                            </button>
-                                        </form>
+                                    </form>
                                     @else
-                                        <form action="{{ route('purchases.restore', $purchase->PurchaseId) }}" 
-                                              method="POST" 
-                                              style="margin: 0;">
-                                            @csrf
-                                            <button type="submit" 
-                                                    class="btn btn-sm btn-success d-flex align-items-center justify-content-center" 
-                                                    style="width: 100px; height: 31px;"
-                                                    onclick="return confirm('Are you sure you want to restore this purchase record?');">
-                                                <i class="bi bi-arrow-counterclockwise me-1"></i>
-                                                Restore
-                                            </button>
-                                        </form>
+                                    <form action="{{ route('purchases.restore', $purchase->PurchaseId) }}" 
+                                          method="POST" 
+                                          class="d-inline">
+                                        @csrf
+                                        <button type="submit" 
+                                                class="btn btn-sm btn-success"
+                                                onclick="return confirm('Are you sure you want to restore this purchase?')">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    </form>
                                     @endif
                                 </div>
                             </td>
-                            <td>{{ $purchase->item->ItemName ?? 'N/A' }}</td>
-                            <td>{{ $purchase->item->classification->ClassificationName ?? 'N/A' }}</td>
-                            <td>{{ $purchase->unit_of_measure->UnitName ?? 'N/A' }}</td>
+                            <td>{{ $purchase->PurchaseOrderNumber ?? 'N/A' }}</td>
+                            <td>{{ $purchase->item->ItemName }}</td>
+                            <td>{{ $purchase->supplier->CompanyName }}</td>
                             <td>{{ $purchase->Quantity }}</td>
-                            <td>{{ $purchase->StocksAdded }}</td>
-                            <td>{{ $purchase->created_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ date('Y-m-d h:i:s A', strtotime($purchase->DateCreated)) }}</td>
+                            <td>₱{{ number_format($purchase->UnitPrice, 2) }}</td>
+                            <td>₱{{ number_format($purchase->TotalAmount, 2) }}</td>
+                            <td>{{ date('M d, Y', strtotime($purchase->PurchaseDate)) }}</td>
+                            <td>{{ $purchase->DeliveryDate ? date('M d, Y', strtotime($purchase->DeliveryDate)) : 'N/A' }}</td>
                             <td>
-                                @if($purchase->IsDeleted)
-                                    <span class="badge bg-danger">Deleted</span>
-                                @else
-                                    <span class="badge bg-success">Active</span>
-                                @endif
+                                <span class="badge bg-{{ $purchase->Status == 'Delivered' ? 'success' : ($purchase->Status == 'Pending' ? 'warning' : 'danger') }}">
+                                    {{ $purchase->Status }}
+                                </span>
                             </td>
+                            <td>{{ $purchase->created_by->name ?? 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center">No purchase records found</td>
+                            <td colspan="11" class="text-center">No purchases found</td>
                         </tr>
                         @endforelse
                     </tbody>

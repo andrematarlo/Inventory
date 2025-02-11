@@ -9,12 +9,12 @@ class Employee extends Model
     protected $table = 'employee';
     protected $primaryKey = 'EmployeeID';
     public $timestamps = false;
+    public $incrementing = true;
 
     // Remove automatic eager loading as it conflicts with our optimized queries
     // protected $with = ['userAccount', 'createdBy', 'modifiedBy'];
 
     protected $fillable = [
-        'EmployeeID',
         'UserAccountID',
         'FirstName',
         'LastName',
@@ -22,11 +22,11 @@ class Employee extends Model
         'Email',
         'Gender',
         'Role',
-        'CreatedByID',
+        'CreatedById',
         'DateCreated',
-        'ModifiedByID',
+        'ModifiedById',
         'DateModified',
-        'DeletedByID',
+        'DeletedById',
         'DateDeleted',
         'RestoredById',
         'DateRestored',
@@ -51,11 +51,11 @@ class Employee extends Model
         // Debug log before creating relation
         \Log::info('Creating CreatedBy Relation:', [
             'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->CreatedByID,
+            'created_by_id' => $this->CreatedById,
             'all_attributes' => $this->attributes
         ]);
 
-        $relation = $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID')
+        $relation = $this->belongsTo(Employee::class, 'CreatedById', 'EmployeeID')
             ->withDefault([
                 'FirstName' => 'System',
                 'LastName' => ''
@@ -64,7 +64,7 @@ class Employee extends Model
         // Debug log the SQL query
         \Log::info('CreatedBy Query:', [
             'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->CreatedByID,
+            'created_by_id' => $this->CreatedById,
             'sql' => $relation->toSql(),
             'bindings' => $relation->getBindings()
         ]);
@@ -77,11 +77,11 @@ class Employee extends Model
         // Debug log before creating relation
         \Log::info('Creating ModifiedBy Relation:', [
             'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->ModifiedByID,
+            'modified_by_id' => $this->ModifiedById,
             'all_attributes' => $this->attributes
         ]);
 
-        $relation = $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID')
+        $relation = $this->belongsTo(Employee::class, 'ModifiedById', 'EmployeeID')
             ->withDefault([
                 'FirstName' => 'System',
                 'LastName' => ''
@@ -90,7 +90,7 @@ class Employee extends Model
         // Debug log the SQL query
         \Log::info('ModifiedBy Query:', [
             'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->ModifiedByID,
+            'modified_by_id' => $this->ModifiedById,
             'sql' => $relation->toSql(),
             'bindings' => $relation->getBindings()
         ]);
@@ -100,7 +100,7 @@ class Employee extends Model
 
     public function deletedBy()
     {
-        return $this->belongsTo(Employee::class, 'DeletedByID', 'EmployeeID')
+        return $this->belongsTo(Employee::class, 'DeletedById', 'EmployeeID')
             ->withDefault([
                 'FirstName' => 'System',
                 'LastName' => ''
@@ -128,8 +128,8 @@ class Employee extends Model
         // Get raw values from database
         \Log::info('Raw CreatedBy Values:', [
             'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->attributes['CreatedByID'] ?? null,
-            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedByID', 'ModifiedByID']))
+            'created_by_id' => $this->attributes['CreatedById'] ?? null,
+            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedById', 'ModifiedById']))
         ]);
         
         $creator = $this->createdBy;
@@ -142,8 +142,8 @@ class Employee extends Model
         // Get raw values from database
         \Log::info('Raw ModifiedBy Values:', [
             'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->attributes['ModifiedByID'] ?? null,
-            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedByID', 'ModifiedByID']))
+            'modified_by_id' => $this->attributes['ModifiedById'] ?? null,
+            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedById', 'ModifiedById']))
         ]);
         
         $modifier = $this->modifiedBy;

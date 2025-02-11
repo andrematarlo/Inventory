@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Purchase;
 use App\Models\Item;
-use App\Models\UnitOfMeasure;
-use App\Models\Classification;
+use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,64 +18,62 @@ class PurchaseController extends Controller
         $showDeleted = $request->input('show_deleted', false);
 
         $query = Purchase::with([
-            'item', 
-            'item.classification', 
-            'unit_of_measure', 
-            'created_by_user'
+            'item',
+            'supplier',
+            'created_by',
+            'modified_by',
+            'deleted_by'
         ]);
 
         if (!$showDeleted) {
-            $query->where('IsDeleted', 0);
+            $query->active();
         }
 
         $purchases = $query->orderBy('DateCreated', 'desc')
             ->paginate(10);
 
         // Get dropdown data
-        $items = Item::where('IsDeleted', 0)->orderBy('ItemName')->get();
-        $units = UnitOfMeasure::active()->orderBy('UnitName')->get();
-        $classifications = Classification::safeGetClassifications();
+        $items = Item::active()->orderBy('ItemName')->get();
+        $suppliers = Supplier::active()->orderBy('CompanyName')->get();
 
-        return view('purchases.index', compact('purchases', 'items', 'units', 'classifications'));
+        return view('purchases.index', compact('purchases', 'items', 'suppliers'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'ItemId' => 'required|exists:items,ItemId',
-            'UnitOfMeasureId' => 'nullable|exists:unitofmeasure,UnitOfMeasureId',
-            'ClassificationId' => 'nullable|exists:classification,ClassificationId',
+            'SupplierId' => 'required|exists:suppliers,SupplierID',
             'Quantity' => 'required|integer|min:1',
-            'StocksAdded' => 'required|integer|min:1'
+            'UnitPrice' => 'required|numeric|min:0',
+            'PurchaseOrderNumber' => 'nullable|string|max:255',
+            'PurchaseDate' => 'required|date',
+            'DeliveryDate' => 'nullable|date|after_or_equal:PurchaseDate',
+            'Status' => 'nullable|string|max:255',
+            'Notes' => 'nullable|string'
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Create purchase record
             $purchase = new Purchase();
             $purchase->fill($validated);
-            $purchase->DateCreated = now();
+            $purchase->TotalAmount = $validated['Quantity'] * $validated['UnitPrice'];
             $purchase->CreatedById = Auth::id();
-            $purchase->IsDeleted = 0;
+            $purchase->DateCreated = now();
             $purchase->save();
 
-            // Update item stocks
+            // Update item stock
             $item = Item::findOrFail($validated['ItemId']);
-            $item->StocksAvailable += $validated['StocksAdded'];
+            $item->StocksAvailable += $validated['Quantity'];
             $item->save();
 
             DB::commit();
-
-            return redirect()->route('purchases.index')
-                ->with('success', 'Purchase record created successfully');
-
+            return redirect()->route('purchases.index')->with('success', 'Purchase created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Purchase creation failed: ' . $e->getMessage());
-
-            return back()->withInput()
-                ->with('error', 'Failed to create purchase record: ' . $e->getMessage());
+            return back()->with('error', 'Failed to create purchase: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -86,20 +83,25 @@ class PurchaseController extends Controller
 
         $validated = $request->validate([
             'ItemId' => 'required|exists:items,ItemId',
-            'UnitOfMeasureId' => 'nullable|exists:unitofmeasure,UnitOfMeasureId',
-            'ClassificationId' => 'nullable|exists:classification,ClassificationId',
+            'SupplierId' => 'required|exists:suppliers,SupplierID',
             'Quantity' => 'required|integer|min:1',
-            'StocksAdded' => 'required|integer|min:1'
+            'UnitPrice' => 'required|numeric|min:0',
+            'PurchaseOrderNumber' => 'nullable|string|max:255',
+            'PurchaseDate' => 'required|date',
+            'DeliveryDate' => 'nullable|date|after_or_equal:PurchaseDate',
+            'Status' => 'nullable|string|max:255',
+            'Notes' => 'nullable|string'
         ]);
 
         try {
             DB::beginTransaction();
 
             // Calculate stock difference
-            $stockDifference = $validated['StocksAdded'] - $purchase->StocksAdded;
+            $stockDifference = $validated['Quantity'] - $purchase->Quantity;
 
             // Update purchase record
             $purchase->fill($validated);
+            $purchase->TotalAmount = $validated['Quantity'] * $validated['UnitPrice'];
             $purchase->DateModified = now();
             $purchase->ModifiedById = Auth::id();
             $purchase->save();

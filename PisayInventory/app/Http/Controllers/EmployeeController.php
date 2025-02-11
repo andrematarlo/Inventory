@@ -63,11 +63,9 @@ class EmployeeController extends Controller
                     ->paginate(25);
             }
 
-            $roles = [
-                'Admin' => 'Admin',
-                'InventoryStaff' => 'Inventory Staff',
-                'InventoryManager' => 'Inventory Manager'
-            ];
+            $roles = Role::where('IsDeleted', 0)
+                        ->orderBy('RoleName')
+                        ->pluck('RoleName', 'RoleId');
 
             return view('employees.index', compact('employees', 'trashedEmployees', 'roles'));
 
@@ -83,11 +81,9 @@ class EmployeeController extends Controller
 
     public function create()
     {
-        $roles = [
-            'Admin' => 'Admin',
-            'InventoryStaff' => 'Inventory Staff',
-            'InventoryManager' => 'Inventory Manager'
-        ];
+        $roles = Role::where('IsDeleted', 0)
+                    ->orderBy('RoleName')
+                    ->pluck('RoleName', 'RoleId');
 
         return view('employees.create', compact('roles'));
     }
@@ -145,85 +141,54 @@ class EmployeeController extends Controller
                 'Username' => 'required|string|unique:useraccount,Username',
                 'Password' => 'required|string|min:6',
                 'roles' => 'required|array|min:1',
-                'roles.*' => 'required|string|in:Admin,InventoryStaff,InventoryManager'
+                'roles.*' => 'required|exists:roles,RoleId'
             ]);
 
             DB::beginTransaction();
 
             try {
+                // Get role names for the selected role IDs
+                $roleNames = Role::whereIn('RoleId', $request->roles)
+                    ->pluck('RoleName')
+                    ->implode(', ');
+
                 // Create user account first
                 $newUserAccount = UserAccount::create([
                     'Username' => $request->Username,
                     'Password' => Hash::make($request->Password),
-                    'CreatedByID' => $currentEmployee->EmployeeID,
+                    'role' => $roleNames,
+                    'IsDeleted' => false,
                     'DateCreated' => now(),
-                    'IsDeleted' => false
+                    'CreatedById' => $currentEmployee->EmployeeID
                 ]);
 
-                // Log user account creation
-                \Log::info('User account created:', [
-                    'user_account_id' => $newUserAccount->UserAccountID,
-                    'created_by_id' => $currentEmployee->EmployeeID
-                ]);
-
-                // Get the next EmployeeID
-                $lastEmployee = Employee::orderBy('EmployeeID', 'desc')->first();
-                $nextEmployeeID = $lastEmployee ? $lastEmployee->EmployeeID + 1 : 1;
-
-                // Create employee data array for better debugging
-                $employeeData = [
-                    'EmployeeID' => $nextEmployeeID,
+                // Create employee record
+                $employee = Employee::create([
                     'FirstName' => $request->FirstName,
                     'LastName' => $request->LastName,
                     'Email' => $request->Email,
                     'Gender' => $request->Gender,
                     'Address' => $request->Address,
                     'UserAccountID' => $newUserAccount->UserAccountID,
-                    'Role' => implode(', ', $request->roles),
-                    'CreatedByID' => $currentEmployee->EmployeeID,
+                    'Role' => $roleNames,
+                    'IsDeleted' => false,
                     'DateCreated' => now(),
-                    'ModifiedByID' => $currentEmployee->EmployeeID,
-                    'DateModified' => now(),
-                    'IsDeleted' => false
-                ];
-
-                // Log employee data before creation
-                \Log::info('Creating employee with data:', $employeeData);
-
-                // Create employee
-                $employee = Employee::create($employeeData);
-
-                // Log created employee
-                \Log::info('Employee created:', [
-                    'employee_id' => $employee->EmployeeID,
-                    'created_by_id' => $employee->CreatedByID,
+                    'CreatedById' => $currentEmployee->EmployeeID
                 ]);
 
-                DB::commit();
-
-                try {
-                    // Verification step - if this fails, we still want to show success
-                    $verifyEmployee = Employee::with('createdBy')->find($employee->EmployeeID);
-                    if ($verifyEmployee) {
-                        \Log::info('Verifying created employee:', [
-                            'employee_id' => $verifyEmployee->EmployeeID,
-                            'created_by_id' => $verifyEmployee->CreatedByID,
-                            'created_by_info' => $verifyEmployee->createdBy ? [
-                                'id' => $verifyEmployee->createdBy->EmployeeID,
-                                'name' => $verifyEmployee->createdBy->FirstName . ' ' . $verifyEmployee->createdBy->LastName
-                            ] : null
-                        ]);
-                    }
-                } catch (\Exception $e) {
-                    // Log verification error but don't throw it
-                    \Log::warning('Verification step failed but employee was created:', [
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
+                // Attach roles to the employee in the pivot table
+                foreach ($request->roles as $roleId) {
+                    DB::table('employee_roles')->insert([
+                        'EmployeeId' => $employee->EmployeeID,
+                        'RoleId' => $roleId,
+                        'IsDeleted' => false,
+                        'DateCreated' => now(),
+                        'CreatedById' => $currentEmployee->EmployeeID
                     ]);
                 }
 
-                return redirect()->route('employees.index')
-                    ->with('success', 'Employee created successfully');
+                DB::commit();
+                return redirect()->route('employees.index')->with('success', 'Employee created successfully');
 
             } catch (\Exception $e) {
                 DB::rollBack();
@@ -259,64 +224,73 @@ class EmployeeController extends Controller
         try {
             $employee = Employee::findOrFail($id);
             
-            // Check if current user is admin
-            $currentEmployee = Employee::where('UserAccountID', auth()->user()->UserAccountID)
-                ->where('IsDeleted', false)
-                ->first();
-                
-            if (!$currentEmployee || $currentEmployee->Role !== 'Admin') {
-                return redirect()->back()->with('error', 'Only administrators can edit employees.');
-            }
-
             $request->validate([
                 'FirstName' => 'required|string|max:255',
                 'LastName' => 'required|string|max:255',
                 'Email' => 'required|email|max:255',
                 'Gender' => 'required|in:Male,Female',
                 'Address' => 'required|string',
-                'Username' => 'required|string|unique:useraccount,Username,' . $employee->UserAccountID . ',UserAccountID',
                 'roles' => 'required|array|min:1',
-                'roles.*' => 'required|string|in:Admin,InventoryStaff,InventoryManager'
+                'roles.*' => 'required|exists:roles,RoleId'
             ]);
 
             DB::beginTransaction();
 
-            // Update employee
-            $employee->update([
-                'FirstName' => $request->FirstName,
-                'LastName' => $request->LastName,
-                'Email' => $request->Email,
-                'Gender' => $request->Gender,
-                'Address' => $request->Address,
-                'Role' => implode(', ', $request->roles),
-                'ModifiedByID' => $currentEmployee->EmployeeID,
-                'DateModified' => now()
-            ]);
+            try {
+                // Get role names for the selected role IDs
+                $roleNames = Role::whereIn('RoleId', $request->roles)
+                    ->pluck('RoleName')
+                    ->implode(', ');
 
-            // Update user account if username changed
-            if ($employee->userAccount->Username !== $request->Username) {
-                $employee->userAccount->update([
-                    'Username' => $request->Username,
-                    'ModifiedByID' => $currentEmployee->EmployeeID,
-                    'DateModified' => now()
+                // Update employee
+                $employee->update([
+                    'FirstName' => $request->FirstName,
+                    'LastName' => $request->LastName,
+                    'Email' => $request->Email,
+                    'Gender' => $request->Gender,
+                    'Address' => $request->Address,
+                    'Role' => $roleNames,
+                    'DateModified' => now(),
+                    'ModifiedById' => Auth::id()
                 ]);
+
+                // Update UserAccount role
+                if ($employee->UserAccountID) {
+                    UserAccount::where('UserAccountID', $employee->UserAccountID)
+                        ->update([
+                            'role' => $roleNames,
+                            'DateModified' => now(),
+                            'ModifiedById' => Auth::id()
+                        ]);
+                }
+
+                // Update roles in pivot table
+                DB::table('employee_roles')
+                    ->where('EmployeeId', $employee->EmployeeID)
+                    ->update(['IsDeleted' => true]); // Soft delete existing roles
+
+                foreach ($request->roles as $roleId) {
+                    DB::table('employee_roles')->insert([
+                        'EmployeeId' => $employee->EmployeeID,
+                        'RoleId' => $roleId,
+                        'IsDeleted' => false,
+                        'DateCreated' => now(),
+                        'CreatedById' => Auth::id()
+                    ]);
+                }
+
+                DB::commit();
+                return redirect()->route('employees.index')->with('success', 'Employee updated successfully');
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Error updating employee: ' . $e->getMessage());
+                return back()->with('error', 'Failed to update employee: ' . $e->getMessage())->withInput();
             }
 
-            DB::commit();
-
-            return redirect()->route('employees.index')
-                ->with('success', 'Employee updated successfully');
-
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error updating employee:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Failed to update employee: ' . $e->getMessage());
+            \Log::error('Error finding employee: ' . $e->getMessage());
+            return back()->with('error', 'Employee not found.')->withInput();
         }
     }
 
