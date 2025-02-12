@@ -5,6 +5,7 @@
 @section('content')
 <div class="container">
     <!-- Header Section -->
+     
     <div class="mb-4">
         <h2 class="mb-3">Inventory Management</h2>
         <div class="d-flex justify-content-between align-items-center">
@@ -18,6 +19,8 @@
                     <i class="bi bi-trash"></i> Show Deleted Records
                 </a>
             </div>
+            {{-- Only show Add Inventory button if not Inventory Staff --}}
+            @if(auth()->user()->role !== 'Inventory Staff')
             <button type="button" 
                     class="btn btn-primary d-flex align-items-center gap-1" 
                     data-bs-toggle="modal" 
@@ -25,6 +28,7 @@
                 <i class="bi bi-plus-lg"></i>
                 Add Inventory
             </button>
+            @endif
         </div>
     </div>
 
@@ -79,6 +83,7 @@
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     @if(!$inventory->IsDeleted)
+                                        {{-- Show Stock Out button for everyone --}}
                                         <button type="button" 
                                                 class="btn btn-warning" 
                                                 data-bs-toggle="modal" 
@@ -87,6 +92,8 @@
                                             <i class="bi bi-box-arrow-right me-1"></i>
                                             Stock Out
                                         </button>
+                                        {{-- Show Delete button only if not Inventory Manager or Staff --}}
+                                        @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
                                         <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
                                               method="POST" 
                                               style="margin: 0;">
@@ -99,7 +106,10 @@
                                                 Delete
                                             </button>
                                         </form>
+                                        @endif
                                     @else
+                                        {{-- Show Restore button only if not Inventory Manager or Staff --}}
+                                        @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
                                         <form action="{{ route('inventory.restore', $inventory->InventoryId) }}" 
                                               method="POST" 
                                               style="margin: 0;">
@@ -112,6 +122,7 @@
                                                 Restore
                                             </button>
                                         </form>
+                                        @endif
                                     @endif
                                 </div>
                             </td>
@@ -261,51 +272,10 @@
 </div>
 @endforeach
 
-<!-- Add Inventory Modal -->
-<div class="modal fade" id="addInventoryModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Inventory</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="addInventoryForm">
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Item</label>
-                        <select class="form-select" name="ItemId" id="ItemId" required>
-                            <option value="">Select Item</option>
-                            @foreach($items as $item)
-                                <option value="{{ $item->ItemId }}">
-                                    {{ $item->ItemName }} 
-                                    (ID: {{ $item->ItemId }})
-                                    - {{ $item->classification->ClassificationName ?? 'No Category' }}
-                                    - Available: {{ $item->StocksAvailable }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Type</label>
-                        <select class="form-select" name="type" required>
-                            <option value="in">Stock In</option>
-                            <option value="out">Stock Out</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Quantity</label>
-                        <input type="number" class="form-control" name="StocksAdded" id="StocksAdded" min="1" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<!-- Add Inventory Modal - Only include if not Inventory Staff -->
+@if(auth()->user()->role !== 'Inventory Staff')
+    <!-- ... Add Inventory Modal code ... -->
+@endif
 @endsection
 
 @section('scripts')
