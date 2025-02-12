@@ -123,10 +123,10 @@ class AuthController extends Controller
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-            return redirect('/inventory/login')->with('success', 'You have been logged out successfully.');
+            return redirect('/pisay-inventory/login')->with('success', 'You have been logged out successfully.');
         } catch (\Exception $e) {
             \Log::error('Logout error: ' . $e->getMessage());
-            return redirect('/inventory/login');
+            return redirect('/pisay-inventory/login');
         }
     }
 }
