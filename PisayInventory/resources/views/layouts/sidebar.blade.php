@@ -1,13 +1,13 @@
 <div class="sidebar bg-dark text-white">
     <div class="sidebar-header border-bottom border-secondary py-3 d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-            <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" class="sidebar-logo ms-3 me-2">
-            <h3 class="text-white m-0 sidebar-title">PSHS Inventory</h3>
-        </div>
-        <button class="btn btn-link text-white me-3 p-0 border-0 sidebar-toggle" id="sidebarToggle">
+        <button class="btn btn-link text-white ms-2 p-0 border-0 sidebar-toggle" id="sidebarToggle">
             <i class="bi bi-list fs-4 expand-icon"></i>
             <i class="bi bi-three-dots-vertical fs-4 collapse-icon" style="display: none;"></i>
         </button>
+        <div class="d-flex align-items-center">
+            <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" class="sidebar-logo ms-3 me-2">
+            <h3 class="text-white m-0 sidebar-title">PSHS-CVisC Inventory</h3>
+        </div>
     </div>
 
     <ul class="nav flex-column py-2">
@@ -28,6 +28,11 @@
             </a>
             <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
                 <li>
+                    <a class="dropdown-item" href="{{ route('employees.index') }}">
+                        <i class="bi bi-person"></i> Employees
+                    </a>
+                </li>
+                <li>
                     <a class="dropdown-item" href="{{ route('roles.index') }}">
                         <i class="bi bi-person-badge"></i> Roles
                     </a>
@@ -38,6 +43,18 @@
                     </a>
                 </li>
             </ul>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('purchases.index') }}" class="nav-link text-white {{ request()->routeIs('purchases.*') ? 'active bg-primary' : '' }}">
+                <i class="bi bi-cart4"></i>
+                <span>Purchase Management</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('receiving.index') }}" class="nav-link text-white {{ request()->routeIs('receiving.*') ? 'active bg-primary' : '' }}">
+                <i class="bi bi-box-seam"></i>
+                <span>Receiving Management</span>
+            </a>
         </li>
         <li class="nav-item">
             <a href="{{ route('items.index') }}" class="nav-link text-white {{ request()->routeIs('items.*') ? 'active bg-primary' : '' }}">
@@ -60,12 +77,7 @@
             </a>
         </li>
 
-        <li class="nav-item">
-            <a href="{{ route('receiving.index') }}" class="nav-link text-white {{ request()->routeIs('receiving.*') ? 'active bg-primary' : '' }}">
-                <i class="bi bi-box-seam"></i>
-                <span>Receiving</span>
-            </a>
-        </li>
+        
 
         <li class="nav-item">
             <a href="{{ route('classifications.index') }}" class="nav-link text-white {{ request()->routeIs('classifications.*') ? 'active bg-primary' : '' }}">
@@ -81,13 +93,7 @@
             </a>
         </li>
 
-        <li class="nav-item">
-            <a href="{{ route('purchases.index') }}" class="nav-link text-white {{ request()->routeIs('purchases.*') ? 'active bg-primary' : '' }}">
-                <i class="bi bi-cart4"></i>
-                <span>Purchase Management</span>
-            </a>
-        </li>
-
+        
         <li class="nav-item">
             <a href="{{ route('reports.index') }}" class="nav-link text-white {{ request()->routeIs('reports.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-file-earmark-text"></i>
@@ -137,14 +143,12 @@
 
 .sidebar.collapsed .d-flex.align-items-center {
     margin: 0;
-    padding: 0;
+    padding: 0 5px;
     justify-content: center;
 }
 
 .sidebar.collapsed .sidebar-toggle {
-    position: absolute;
-    right: 5px;
-    top: 15px;
+    margin-right: 0;
 }
 
 .sidebar.collapsed .sidebar-title,
@@ -170,6 +174,10 @@
 }
 
 .sidebar-toggle {
+    margin-right: 2px;
+    padding: 0;
+    display: flex;
+    align-items: center;
     cursor: pointer;
     transition: transform 0.3s;
 }
@@ -280,11 +288,17 @@
     width: 30px;
     height: 30px;
     object-fit: contain;
+    margin-right: 2px !important;
 }
 
 .sidebar-header {
     display: flex;
     align-items: center;
+    padding: 0.5rem 0.25rem;
+}
+
+.sidebar-header .d-flex.align-items-center {
+    gap: 2px;
 }
 
 /* Add these new styles */
@@ -342,6 +356,22 @@
 /* .sidebar.collapsed .nav-item.dropdown:hover .dropdown-menu {
     display: block;
 } */
+
+/* Add these styles */
+.sidebar-title {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    letter-spacing: -0.5px;
+    margin-right: 8px;
+    padding-right: 10px;
+}
+
+/* Adjust the header layout */
+.sidebar-header > .d-flex.align-items-center {
+    flex: 1;
+    justify-content: center;
+    margin-right: 24px;
+}
 </style>
 
 <script>
