@@ -24,7 +24,6 @@
             <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-people"></i>
                 <span>Employee Management</span>
-                <i class="bi bi-chevron-down float-end"></i>
             </a>
             <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
                 <li>
@@ -188,6 +187,8 @@
 
 .sidebar .nav-link {
     color: white !important;
+    padding: 0.75rem 0.5rem !important;
+    margin-left: 0.5rem;
 }
 
 .sidebar .nav-link:hover {
@@ -209,9 +210,9 @@
     border: none !important;
     border-radius: 0;
     margin: 0;
-    width: 320px; /* Match sidebar width */
+    width: 100%;
     position: static !important;
-    padding: 0.75rem; /* Match nav-link margin */
+    padding: 0;
     transform: none !important;
     box-shadow: none;
 }
@@ -222,17 +223,15 @@
 
 .sidebar .dropdown-item {
     color: white !important;
-    padding: 0.75rem; /* Match nav-link padding */
+    padding: 0.75rem 1rem;
     white-space: nowrap;
-    border-radius: 0.375rem; /* Match nav-link border-radius */
+    transition: all 0.2s ease;
 }
 
-.sidebar .dropdown-item:focus,
-.sidebar .dropdown-item:active {
-    background-color: #198754 !important;
+.sidebar .dropdown-item:hover,
+.sidebar .dropdown-item:focus {
+    background-color: rgba(255,255,255,0.1) !important;
     color: white !important;
-    outline: none !important;
-    box-shadow: none !important;
 }
 
 .sidebar .nav-link:focus,
@@ -371,6 +370,115 @@
     flex: 1;
     justify-content: center;
     margin-right: 24px;
+}
+
+/* Remove the chevron from dropdown toggle */
+.nav-link.dropdown-toggle::after {
+    display: none !important;
+}
+
+/* Update dropdown styles */
+.sidebar .dropdown-menu {
+    background-color: rgb(48, 50, 53) !important;
+    border: none !important;
+    border-radius: 0;
+    margin: 0;
+    width: 100%;
+    position: static !important;
+    padding: 0;
+    transform: none !important;
+    box-shadow: none;
+}
+
+.sidebar .dropdown-item {
+    color: white !important;
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.sidebar .dropdown-item:hover,
+.sidebar .dropdown-item:focus {
+    background-color: rgba(255,255,255,0.1) !important;
+    color: white !important;
+}
+
+/* Match hover effect with other nav items */
+.sidebar .nav-link:hover,
+.sidebar .dropdown-toggle:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+/* Active state for dropdown items */
+.sidebar .dropdown-item.active,
+.sidebar .dropdown-item:active {
+    background-color: #198754 !important;
+    color: white !important;
+}
+
+/* Collapsed state dropdown */
+.sidebar.collapsed .nav-item.dropdown .dropdown-menu {
+    position: absolute !important;
+    left: 70px !important;
+    top: 0;
+    width: 200px;
+    background-color: #343a40 !important;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 4px 2px 5px rgba(0,0,0,0.2);
+    padding: 0.5rem;
+}
+
+.sidebar.collapsed .dropdown-item {
+    padding: 0.75rem 1rem;
+}
+
+/* Remove old chevron styles */
+.nav-link .bi-chevron-down,
+.nav-link.dropdown-toggle .bi-chevron-down,
+.show .nav-link.dropdown-toggle .bi-chevron-down {
+    display: none !important;
+}
+
+/* Move regular nav links more to the left */
+.sidebar .nav-link {
+    color: white !important;
+    padding: 0.75rem 0.5rem !important;
+    margin-left: 0.5rem;
+}
+
+/* Keep Employee Management dropdown at original position */
+.sidebar .nav-item.dropdown .nav-link {
+    padding: 0.75rem 1rem !important;
+    margin-left: 0;
+}
+
+/* Adjust icon spacing for regular nav items */
+.sidebar .nav-link i {
+    margin-right: 0.75rem;
+    width: 20px;
+    text-align: center;
+}
+
+/* Keep the collapsed state styling */
+.sidebar.collapsed .nav-link {
+    padding: 0.75rem !important;
+    margin-left: 0;
+    justify-content: center;
+}
+
+.sidebar.collapsed .nav-link i {
+    margin-right: 0;
+}
+
+/* Adjust the logout button to match */
+.sidebar .nav-item form button.nav-link {
+    padding: 0.75rem 0.5rem !important;
+    margin-left: 0.5rem;
+}
+
+.sidebar.collapsed .nav-item form button.nav-link {
+    padding: 0.75rem !important;
+    margin-left: 0;
 }
 </style>
 
