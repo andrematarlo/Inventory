@@ -189,9 +189,9 @@
             <button class="btn btn-outline-secondary" type="button" id="toggleButton">
                 <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
             </button>
-            <a href="{{ route('suppliers.create') }}" class="btn btn-primary">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
                 <i class="bi bi-plus"></i> Add Supplier
-            </a>
+            </button>
         </div>
     </div>
 

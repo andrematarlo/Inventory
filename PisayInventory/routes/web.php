@@ -46,7 +46,7 @@ Route::middleware('auth')->group(function () {
     Route::put('inventory/{id}/restore', [InventoryController::class, 'restore'])->name('inventory.restore');
 
     // Suppliers Management
-    Route::resource('suppliers', SupplierController::class);
+    Route::resource('suppliers', SupplierController::class)->except(['create']);
     Route::post('suppliers/{id}/restore', [SupplierController::class, 'restore'])->name('suppliers.restore');
 
     // Classifications Management

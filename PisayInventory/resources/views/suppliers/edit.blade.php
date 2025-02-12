@@ -6,24 +6,22 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Edit Supplier</h5>
-                    <a href="{{ route('suppliers.index') }}" class="btn btn-secondary btn-sm">
-                        <i class="bi bi-arrow-left"></i> Back
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Edit Supplier</h3>
+                    <a href="{{ route('suppliers.index') }}" class="btn btn-outline-light">
+                        <i class="bi bi-arrow-left"></i> Back to List
                     </a>
                 </div>
-
                 <div class="card-body">
                     <form action="{{ route('suppliers.update', $supplier->SupplierID) }}" method="POST">
                         @csrf
                         @method('PUT')
-
+                        
                         <div class="mb-3">
                             <label for="CompanyName" class="form-label">Company Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('CompanyName') is-invalid @enderror" 
-                                   id="CompanyName" name="CompanyName" 
-                                   value="{{ old('CompanyName', $supplier->CompanyName) }}" required>
+                                   id="CompanyName" name="CompanyName" value="{{ old('CompanyName', $supplier->CompanyName) }}" required>
                             @error('CompanyName')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -32,8 +30,7 @@
                         <div class="mb-3">
                             <label for="ContactPerson" class="form-label">Contact Person</label>
                             <input type="text" class="form-control @error('ContactPerson') is-invalid @enderror" 
-                                   id="ContactPerson" name="ContactPerson" 
-                                   value="{{ old('ContactPerson', $supplier->ContactPerson) }}">
+                                   id="ContactPerson" name="ContactPerson" value="{{ old('ContactPerson', $supplier->ContactPerson) }}">
                             @error('ContactPerson')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -53,25 +50,13 @@
 
                         <div class="mb-3">
                             <label for="ContactNum" class="form-label">Contact Number <span class="text-danger">*</span></label>
-                            <input type="text" 
-                                   class="form-control @error('ContactNum') is-invalid @enderror" 
-                                   id="ContactNum" 
-                                   name="ContactNum" 
+                            <input type="text" class="form-control @error('ContactNum') is-invalid @enderror" 
+                                   id="ContactNum" name="ContactNum" 
                                    value="{{ old('ContactNum', $supplier->ContactNum) }}"
                                    required
                                    pattern="[0-9+\-\s]+"
                                    title="Please enter a valid contact number">
                             @error('ContactNum')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="Email" class="form-label">Email</label>
-                            <input type="email" class="form-control @error('Email') is-invalid @enderror" 
-                                   id="Email" name="Email" 
-                                   value="{{ old('Email', $supplier->Email) }}">
-                            @error('Email')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -85,9 +70,13 @@
                             @enderror
                         </div>
 
-                        <div class="d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-secondary" onclick="history.back()">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Update Supplier</button>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="reset" class="btn btn-secondary me-md-2">
+                                <i class="bi bi-x-circle"></i> Reset
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Update Supplier
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -100,21 +89,19 @@
 @section('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function(event) {
-            const companyName = document.getElementById('CompanyName').value.trim();
-            const contactNum = document.getElementById('ContactNum').value.trim();
-            
-            if (!companyName) {
-                event.preventDefault();
-                alert('Company Name is required');
-            }
-            
-            if (!contactNum) {
-                event.preventDefault();
-                alert('Contact Number is required');
-            }
-        });
+        // Phone number formatting
+        const contactInput = document.getElementById('ContactNum');
+        const telephoneInput = document.getElementById('TelephoneNumber');
+
+        function formatPhoneNumber(input) {
+            input.addEventListener('input', function(e) {
+                let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,4})/);
+                e.target.value = !x[2] ? x[1] : `${x[1]}-${x[2]}` + (x[3] ? `-${x[3]}` : ``);
+            });
+        }
+
+        if (contactInput) formatPhoneNumber(contactInput);
+        if (telephoneInput) formatPhoneNumber(telephoneInput);
     });
 </script>
 @endsection 
