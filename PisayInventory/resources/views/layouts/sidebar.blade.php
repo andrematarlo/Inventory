@@ -96,7 +96,7 @@
         <li class="nav-item">
             <a href="{{ route('purchases.index') }}" class="nav-link text-white {{ request()->routeIs('purchases.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-cart4"></i>
-                <span>Point of Sale</span>
+                <span>Purchase Management</span>
             </a>
         </li>
 

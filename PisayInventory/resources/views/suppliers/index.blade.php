@@ -214,49 +214,62 @@
                     <table class="table table-hover" id="suppliersTable">
                         <thead>
                             <tr>
-                                <th class="text-center">Actions</th>
+                                <th>Actions</th>
                                 <th>Company Name</th>
                                 <th>Contact Person</th>
-                                <th>Mobile</th>
                                 <th>Telephone</th>
+                                <th>Contact Number</th>
                                 <th>Address</th>
                                 <th>Created By</th>
-                                <th>Created Date</th>
+                                <th>Date Created</th>
+                                <th>Modified By</th>
+                                <th>Date Modified</th>
+                                <th>Deleted By</th>
+                                <th>Date Deleted</th>
+                                <th>Restored By</th>
+                                <th>Date Restored</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($activeSuppliers as $supplier)
                                 <tr>
-                                    <td class="text-center">
+                                    <td>
                                         <div class="btn-group" role="group">
                                             <a href="{{ route('suppliers.edit', $supplier->SupplierID) }}" 
-                                               class="btn btn-sm btn-primary">
+                                               class="btn btn-sm btn-warning">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-
-                                            <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" 
-                                                  method="POST" 
-                                                  class="d-inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this supplier?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteModal{{ $supplier->SupplierID }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </div>
                                     </td>
                                     <td>{{ $supplier->CompanyName }}</td>
                                     <td>{{ $supplier->ContactPerson }}</td>
-                                    <td>{{ $supplier->ContactNum }}</td>
                                     <td>{{ $supplier->TelephoneNumber }}</td>
+                                    <td>{{ $supplier->ContactNum }}</td>
                                     <td>{{ $supplier->Address }}</td>
-                                    <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
-                                    <td>{{ $supplier->DateCreated ? \Carbon\Carbon::parse($supplier->DateCreated)->format('M d, Y') : 'N/A' }}</td>
+                                    <td>{{ $supplier->createdBy->Username ?? 'N/A' }}</td>
+                                    <td>{{ $supplier->DateCreated ? date('Y-m-d H:i:s', strtotime($supplier->DateCreated)) : 'N/A' }}</td>
+                                    <td>{{ $supplier->modifiedBy->Username ?? 'N/A' }}</td>
+                                    <td>{{ $supplier->DateModified ? date('Y-m-d H:i:s', strtotime($supplier->DateModified)) : 'N/A' }}</td>
+                                    <td>{{ $supplier->deletedBy->Username ?? 'N/A' }}</td>
+                                    <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i:s', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
+                                    <td>{{ $supplier->restoredBy->Username ?? 'N/A' }}</td>
+                                    <td>{{ $supplier->DateRestored ? date('Y-m-d H:i:s', strtotime($supplier->DateRestored)) : 'N/A' }}</td>
+                                    <td>
+                                        <span class="badge {{ $supplier->IsDeleted ? 'bg-danger' : 'bg-success' }}">
+                                            {{ $supplier->IsDeleted ? 'Deleted' : 'Active' }}
+                                        </span>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center">No suppliers found</td>
+                                    <td colspan="15" class="text-center">No suppliers found</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -277,11 +290,11 @@
                     <table class="table table-hover" id="deletedSuppliersTable">
                         <thead>
                             <tr>
-                                <th class="text-center">Actions</th>
+                                <th>Actions</th>
                                 <th>Company Name</th>
                                 <th>Contact Person</th>
-                                <th>Mobile</th>
                                 <th>Telephone</th>
+                                <th>Contact Number</th>
                                 <th>Address</th>
                                 <th>Deleted Date</th>
                                 <th>Created By</th>
@@ -291,7 +304,7 @@
                         <tbody>
                             @forelse($deletedSuppliers as $supplier)
                                 <tr>
-                                    <td class="text-center">
+                                    <td>
                                         <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
                                               method="POST" 
                                               class="d-inline">
@@ -303,10 +316,10 @@
                                     </td>
                                     <td>{{ $supplier->CompanyName }}</td>
                                     <td>{{ $supplier->ContactPerson }}</td>
-                                    <td>{{ $supplier->ContactNum }}</td>
                                     <td>{{ $supplier->TelephoneNumber }}</td>
+                                    <td>{{ $supplier->ContactNum }}</td>
                                     <td>{{ $supplier->Address }}</td>
-                                    <td>{{ $supplier->DateDeleted ? \Carbon\Carbon::parse($supplier->DateDeleted)->format('M d, Y') : 'N/A' }}</td>
+                                    <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i:s', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
                                     <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
                                     <td>{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
                                 </tr>
@@ -322,6 +335,9 @@
         </div>
     </div>
 </div>
+
+@include('suppliers.partials.add-modal')
+@include('suppliers.partials.delete-modal')
 @endsection
 
 @section('scripts')

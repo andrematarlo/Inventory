@@ -12,43 +12,40 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Employee;
 
 class ItemController extends Controller
 {
     public function index()
     {
         try {
-            // Get active items with all relationships
-            $items = Item::with([
-                'classification',
-                'unitOfMeasure',
-                'supplier',
-                'created_by_user',
-                'modified_by_user'
+            $activeItems = Item::with([
+                'classification', 
+                'unitOfMeasure', 
+                'supplier', 
+                'createdBy',
+                'modifiedBy'
             ])
-            ->where('IsDeleted', 0)
-            ->orderBy('ItemName')
-            ->paginate(10);
+            ->where('IsDeleted', false)
+            ->get();
 
-            // Get trashed items with relationships
-            $trashedItems = Item::with([
-                'classification',
-                'unitOfMeasure',
-                'supplier',
-                'deleted_by_user'
+            $deletedItems = Item::with([
+                'classification', 
+                'unitOfMeasure', 
+                'supplier', 
+                'deletedBy'
             ])
-            ->where('IsDeleted', 1)
-            ->orderBy('ItemName')
-            ->paginate(10);
+            ->where('IsDeleted', true)
+            ->get();
 
             $classifications = Classification::where('IsDeleted', 0)->get();
             $units = UnitOfMeasure::all();
             $suppliers = Supplier::where('IsDeleted', 0)->get();
 
-            return view('items.index', compact('items', 'trashedItems', 'classifications', 'units', 'suppliers'));
+            return view('items.index', compact('activeItems', 'deletedItems', 'classifications', 'units', 'suppliers'));
         } catch (\Exception $e) {
-            \Log::error('Error in ItemController@index: ' . $e->getMessage());
-            return back()->with('error', 'Unable to load items. Error: ' . $e->getMessage());
+            Log::error('Error loading items: ' . $e->getMessage());
+            return back()->with('error', 'Error loading items: ' . $e->getMessage());
         }
     }
 
@@ -277,30 +274,32 @@ class ItemController extends Controller
     }
 
     public function restore($id)
-{
-    try {
-        DB::beginTransaction();
-        
-        $item = Item::findOrFail($id);
-        $item->update([
-            'IsDeleted' => false,
-            'DeletedById' => null,
-            'DateDeleted' => null,
-            'RestoredById' => Auth::id(),
-            'DateRestored' => now(),
-            'ModifiedById' => null,
-            'DateModified' => null
-        ]);
+    {
+        try {
+            DB::beginTransaction();
 
-        DB::commit();
-        return redirect()->route('items.index')
-            ->with('success', 'Item restored successfully');
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Item restoration failed: ' . $e->getMessage());
-        return back()->with('error', 'Error restoring item: ' . $e->getMessage());
+            $item = Item::findOrFail($id);
+            
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            $item->update([
+                'IsDeleted' => false,
+                'RestoredById' => $currentEmployee->EmployeeID,
+                'DateRestored' => now(),
+                'DeletedById' => null,
+                'DateDeleted' => null
+            ]);
+
+            DB::commit();
+            return redirect()->route('items.index')->with('success', 'Item restored successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error restoring item: ' . $e->getMessage());
+            return back()->with('error', 'Error restoring item: ' . $e->getMessage());
+        }
     }
-}
 
     public function manage()
     {

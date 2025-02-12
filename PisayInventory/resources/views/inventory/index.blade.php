@@ -56,15 +56,6 @@
                                 <div class="d-flex gap-2">
                                     @if(!$inventory->IsDeleted)
                                         <button type="button" 
-                                                class="btn btn-sm btn-success flex-grow-1 d-flex align-items-center justify-content-center" 
-                                                style="width: 100px; height: 31px;"
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#stockInModal{{ $inventory->InventoryId }}"
-                                                title="Stock In">
-                                            <i class="bi bi-box-arrow-in-right me-1"></i>
-                                            Stock In
-                                        </button>
-                                        <button type="button" 
                                                 class="btn btn-sm btn-warning flex-grow-1 d-flex align-items-center justify-content-center" 
                                                 style="width: 100px; height: 31px;"
                                                 data-bs-toggle="modal" 
@@ -325,14 +316,6 @@ $(document).ready(function() {
                         <tr data-inventory-id="${response.data.InventoryID}">
                             <td>
                                 <div class="d-flex gap-2">
-                                    <button type="button" 
-                                            class="btn btn-sm btn-success flex-grow-1 d-flex align-items-center justify-content-center" 
-                                            style="width: 100px; height: 31px;"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#stockInModal${response.data.InventoryID}">
-                                        <i class="bi bi-box-arrow-in-right me-1"></i>
-                                        Stock In
-                                    </button>
                                     <button type="button" 
                                             class="btn btn-sm btn-warning flex-grow-1 d-flex align-items-center justify-content-center" 
                                             style="width: 100px; height: 31px;"

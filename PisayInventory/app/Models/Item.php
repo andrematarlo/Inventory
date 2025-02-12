@@ -59,31 +59,24 @@ class Item extends Model
                     ->withDefault(['SupplierName' => 'N/A']);
     }
 
-    public function created_by_user()
+    public function createdBy()
     {
-        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
-                    ->from('UserAccount')
-                    ->withDefault(['Username' => 'N/A']);
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID');
     }
 
-    public function modified_by_user()
+    public function modifiedBy()
     {
-        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
-                    ->from('UserAccount')
-                    ->withDefault(['Username' => 'N/A']);
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID');
     }
 
-    public function deleted_by_user()
+    public function deletedBy()
     {
-        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
-                    ->from('UserAccount')
-                    ->withDefault(['Username' => 'N/A']);
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID');
     }
-    public function restored_by_user()
+
+    public function restoredBy()
     {
-        return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID')
-                    ->from('UserAccount')
-                    ->withDefault(['Username' => 'System']);
+        return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID');
     }
 
     public function inventories()
