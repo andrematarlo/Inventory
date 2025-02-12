@@ -83,4 +83,27 @@ class Item extends Model
     {
         return $this->hasMany(Inventory::class, 'ItemId', 'ItemId');
     }
+
+    // Add this relationship
+    public function created_by_user()
+    {
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID');
+    }
+
+    // Add this relationship
+    public function modified_by_user()
+    {
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID');
+    }
+
+    // Add these relationships
+    public function deleted_by_user()
+    {
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID');
+    }
+
+    public function restored_by_user()
+    {
+        return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID');
+    }
 } 
