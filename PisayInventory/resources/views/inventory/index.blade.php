@@ -30,6 +30,30 @@
 
     <div class="card">
         <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>Showing {{ $inventories->firstItem() ?? 0 }} to {{ $inventories->lastItem() ?? 0 }} of {{ $inventories->total() }} results</div>
+                <div class="pagination-sm">
+                    @if($inventories->currentPage() > 1)
+                        <a href="{{ $inventories->previousPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </a>
+                    @endif
+                    
+                    @for($i = 1; $i <= $inventories->lastPage(); $i++)
+                        <a href="{{ $inventories->url($i) }}" 
+                           class="btn btn-sm {{ $i == $inventories->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
+                            {{ $i }}
+                        </a>
+                    @endfor
+
+                    @if($inventories->hasMorePages())
+                        <a href="{{ $inventories->nextPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </a>
+                    @endif
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
@@ -53,11 +77,10 @@
                         @forelse($inventories as $inventory)
                         <tr>
                             <td>
-                                <div class="d-flex gap-2">
+                                <div class="btn-group btn-group-sm">
                                     @if(!$inventory->IsDeleted)
                                         <button type="button" 
-                                                class="btn btn-sm btn-warning flex-grow-1 d-flex align-items-center justify-content-center" 
-                                                style="width: 100px; height: 31px;"
+                                                class="btn btn-warning" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#stockOutModal{{ $inventory->InventoryId }}"
                                                 title="Stock Out">
@@ -70,8 +93,7 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" 
-                                                    class="btn btn-sm btn-danger d-flex align-items-center justify-content-center" 
-                                                    style="width: 100px; height: 31px;"
+                                                    class="btn btn-danger"
                                                     onclick="return confirm('Are you sure you want to delete this record?');">
                                                 <i class="bi bi-trash me-1"></i>
                                                 Delete
@@ -84,8 +106,7 @@
                                             @csrf
                                             @method('PUT')
                                             <button type="submit" 
-                                                    class="btn btn-sm btn-success d-flex align-items-center justify-content-center" 
-                                                    style="width: 100px; height: 31px;"
+                                                    class="btn btn-success"
                                                     onclick="return confirm('Are you sure you want to restore this record?');">
                                                 <i class="bi bi-arrow-counterclockwise me-1"></i>
                                                 Restore
@@ -121,8 +142,6 @@
                     </tbody>
                 </table>
             </div>
-
-            {{ $inventories->links() }}
         </div>
     </div>
 </div>
@@ -378,6 +397,30 @@ $(document).ready(function() {
 
 @section('additional_styles')
 <style>
+    /* Hide default scrolling buttons */
+    .table-responsive::-webkit-scrollbar-button {
+        display: none;
+    }
+
+    /* Custom scrollbar styling */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
     .table th {
         padding: 12px 16px;
         white-space: nowrap;
@@ -394,15 +437,24 @@ $(document).ready(function() {
         vertical-align: middle;
     }
 
-    /* Action buttons container */
-    .d-flex.gap-2 {
-        min-width: 320px;
+    /* Action buttons styling */
+    .btn-group {
+        white-space: nowrap;
+    }
+    
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .btn-group form {
+        display: inline-block;
     }
 
     /* Consistent button styles */
     .btn {
         transition: all 0.3s ease;
-        font-size: 0.875rem; /* Consistent font size */
+        font-size: 0.875rem;
     }
     
     .btn:hover {
@@ -414,15 +466,6 @@ $(document).ready(function() {
     form {
         margin: 0;
         padding: 0;
-    }
-    
-    /* Make all buttons in the action column the same height */
-    .d-flex.gap-2 .btn,
-    .d-flex.gap-2 form .btn {
-        height: 31px !important;
-        line-height: 1;
-        padding-top: 0;
-        padding-bottom: 0;
     }
 
     /* Header styles */
@@ -477,6 +520,68 @@ $(document).ready(function() {
 
     .btn-group .btn i {
         margin-right: 0.25rem;
+    }
+
+    /* Pagination styling */
+    .pagination {
+        margin-bottom: 0;
+        gap: 5px;
+    }
+
+    .pagination .page-link {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        border-radius: 4px;
+        color: #3498db;
+        min-width: 35px;
+        text-align: center;
+        margin: 0;
+    }
+
+    .pagination .page-item {
+        margin: 0;
+    }
+
+    .pagination .page-item:first-child .page-link,
+    .pagination .page-item:last-child .page-link {
+        border-radius: 4px;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #3498db;
+        border-color: #3498db;
+        color: white;
+    }
+
+    .pagination .page-link:hover {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+        color: #2980b9;
+    }
+
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        pointer-events: none;
+        background-color: #fff;
+        border-color: #dee2e6;
+    }
+
+    /* Custom pagination styling */
+    .pagination-sm {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+    }
+
+    .pagination-sm .btn {
+        min-width: 32px;
+        padding: 4px 8px;
+        font-size: 0.875rem;
+    }
+
+    .pagination-sm .btn i {
+        font-size: 12px;
     }
 </style>
 @endsection 
