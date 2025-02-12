@@ -1,6 +1,7 @@
 <div class="sidebar bg-dark text-white">
-    <div class="sidebar-header border-bottom border-secondary py-3">
-        <h3 class="text-white m-0 ps-3">PSHS Inventory</h3>
+    <div class="sidebar-header border-bottom border-secondary py-3 d-flex align-items-center">
+        <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" class="sidebar-logo ms-3 me-2">
+        <h3 class="text-white m-0">PSHS Inventory</h3>
     </div>
 
     <ul class="nav flex-column py-2">
@@ -228,6 +229,17 @@
 
 .sidebar .nav-item button.nav-link:hover {
     background-color: rgba(255,255,255,0.1);
+}
+
+.sidebar-logo {
+    width: 25px;  /* Reduced from 40px to 25px */
+    height: 25px;
+    object-fit: contain;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
 }
 </style>
 
