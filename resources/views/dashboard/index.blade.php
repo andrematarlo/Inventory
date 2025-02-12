@@ -154,16 +154,51 @@
                 color:rgba(25, 135, 84, 0.74);
                 font-style: italic;
             }
+
+    /* Add these new styles */
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .date-time {
+        font-size: 1.1rem;
+        color: #6c757d;
+        background-color: #f8f9fa;
+        padding: 8px 15px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .time {
+        font-family: monospace;
+        color: #198754;
+        font-weight: 500;
+    }
 </style>
 
 @section('content')
 <div class="container-fluid px-4">
-<div class="row">
+    <div class="row">
         <div class="col-12 text-end mt-3">
             <span class="welcome-message">Welcome back, {{ Auth::user()->Username }}</span>
         </div>
     </div>
-    <h2 class="mt-4">Dashboard</h2>
+    
+    <div class="dashboard-header">
+        <h2 class="mt-4">Dashboard</h2>
+        <div class="date-time" id="dateTime">
+            <i class="bi bi-calendar3"></i>
+            <span id="date"></span>
+            <i class="bi bi-clock"></i>
+            <span id="time" class="time"></span>
+        </div>
+    </div>
 
     <!-- Statistics Cards -->
     <div class="row mt-4">
@@ -341,4 +376,31 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        // Function to update date and time
+        function updateDateTime() {
+            const now = new Date();
+            
+            // Format date
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const date = now.toLocaleDateString('en-US', options);
+            
+            // Format time
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            const time = now.toLocaleTimeString('en-US', timeOptions);
+            
+            // Update the elements
+            $('#date').text(date);
+            $('#time').text(time);
+        }
+
+        // Update immediately and then every second
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    });
+</script>
 @endsection

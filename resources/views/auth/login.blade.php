@@ -210,9 +210,42 @@
             font-size: 0.85rem;
             border-radius: 8px;
         }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+            color: white;
+        }
+
+        .back-button i {
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body>
+    <a href="{{ url('/') }}" class="back-button">
+        <i class="bi bi-arrow-left"></i>
+        <span>Back</span>
+    </a>
+
     <div class="page-layout">
         <div class="background-content">
             <h1>PSHS Inventory Management System</h1>
