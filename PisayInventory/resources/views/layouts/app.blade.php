@@ -167,7 +167,8 @@
             /* Main content adjustment */
     body .main-content {
         margin-left: 320px;
-        padding: 0 0 0 10px; /* Left padding for space after sidebar */
+        padding: 0 0 0 10px;
+        transition: margin-left 0.3s ease;
     }
 
     body .main-content .content-wrapper {

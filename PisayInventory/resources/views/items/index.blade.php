@@ -56,10 +56,12 @@
                                 <tr>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="{{ route('items.edit', $item->ItemId) }}" 
-                                               class="btn btn-sm btn-warning">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-warning"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editItemModal{{ $item->ItemId }}">
                                                 <i class="bi bi-pencil"></i>
-                                            </a>
+                                            </button>
                                             <button type="button" 
                                                     class="btn btn-sm btn-danger" 
                                                     data-bs-toggle="modal" 
@@ -173,6 +175,9 @@
 
 @include('items.partials.add-modal')
 @include('items.partials.delete-modal')
+@foreach($activeItems as $item)
+    @include('items.partials.edit-modal', ['item' => $item])
+@endforeach
 @endsection
 
 @section('scripts')

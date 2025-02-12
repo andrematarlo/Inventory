@@ -336,4 +336,14 @@ class ItemController extends Controller
             return back()->with('error', 'Error loading items management page');
         }
     }
+
+    public function edit(Item $item)
+    {
+        // Get related data for dropdowns
+        $suppliers = Supplier::where('IsDeleted', false)->get();
+        $classifications = Classification::where('IsDeleted', false)->get();
+        $units = UnitOfMeasure::all();
+
+        return view('items.edit', compact('item', 'suppliers', 'classifications', 'units'));
+    }
 } 

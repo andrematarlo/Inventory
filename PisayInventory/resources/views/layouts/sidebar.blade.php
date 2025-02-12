@@ -1,7 +1,13 @@
 <div class="sidebar bg-dark text-white">
-    <div class="sidebar-header border-bottom border-secondary py-3 d-flex align-items-center">
-        <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" class="sidebar-logo ms-3 me-2">
-        <h3 class="text-white m-0">PSHS Inventory</h3>
+    <div class="sidebar-header border-bottom border-secondary py-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" class="sidebar-logo ms-3 me-2">
+            <h3 class="text-white m-0 sidebar-title">PSHS Inventory</h3>
+        </div>
+        <button class="btn btn-link text-white me-3 p-0 border-0 sidebar-toggle" id="sidebarToggle">
+            <i class="bi bi-list fs-4 expand-icon"></i>
+            <i class="bi bi-three-dots-vertical fs-4 collapse-icon" style="display: none;"></i>
+        </button>
     </div>
 
     <ul class="nav flex-column py-2">
@@ -14,44 +20,25 @@
 
 
         <!-- Employee Management Dropdown -->
-        <li class="nav-item dropdown {{ request()->routeIs('employees.*', 'roles.*') ? 'show' : '' }}">
-            <a class="nav-link dropdown-toggle text-white" 
-            href="#" 
-            id="employeeDropdown" 
-            role="button" 
-            data-bs-toggle="dropdown" 
-                aria-expanded="{{ request()->routeIs('employees.*', 'roles.*') ? 'true' : 'false' }}">
-        <div class="d-flex w-100 align-items-center">
-            <i class="bi bi-people me-2"></i>
-            <span class="flex-grow-1">Employee Management</span>
-            <i class="bi bi-chevron-down ms-1"></i>
-        </div>
-    </a>
-    <ul class="dropdown-menu dropdown-menu-dark {{ request()->routeIs('employees.*', 'roles.*') ? 'show' : '' }}" 
-        aria-labelledby="employeeDropdown">
-        <li>
-            <a class="dropdown-item text-white {{ request()->routeIs('employees.*') ? 'active' : '' }}" 
-               href="{{ route('employees.index') }}">
-                <i class="bi bi-person-badge"></i>
-                <span>Employees</span>
+        <li class="nav-item dropdown">
+            <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-people"></i>
+                <span>Employee Management</span>
+                <i class="bi bi-chevron-down float-end"></i>
             </a>
+            <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
+                <li>
+                    <a class="dropdown-item" href="{{ route('roles.index') }}">
+                        <i class="bi bi-person-badge"></i> Roles
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ route('roles.policies') }}">
+                        <i class="bi bi-shield-check"></i> Role Policies
+                    </a>
+                </li>
+            </ul>
         </li>
-        <li>
-            <a class="dropdown-item text-white {{ request()->routeIs('roles.index') ? 'active' : '' }}" 
-               href="{{ route('roles.index') }}">
-                <i class="bi bi-shield"></i>
-                <span>Roles</span>
-            </a>
-        </li>
-        <li>
-            <a class="dropdown-item text-white {{ request()->routeIs('roles.policies') ? 'active' : '' }}" 
-               href="{{ route('roles.policies') }}">
-                <i class="bi bi-key"></i>
-                <span>Role Policies</span>
-            </a>
-        </li>
-    </ul>
-</li>
         <li class="nav-item">
             <a href="{{ route('items.index') }}" class="nav-link text-white {{ request()->routeIs('items.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-box"></i>
@@ -131,6 +118,64 @@
     bottom: 0;
     overflow-x: hidden; /* Prevent horizontal scroll */
     overflow-y: auto;
+    transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar.collapsed .sidebar-header {
+    justify-content: center;
+    padding: 0.75rem 0;
+}
+
+.sidebar.collapsed .sidebar-logo {
+    margin: 0 !important;
+    display: block;
+}
+
+.sidebar.collapsed .d-flex.align-items-center {
+    margin: 0;
+    padding: 0;
+    justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    position: absolute;
+    right: 5px;
+    top: 15px;
+}
+
+.sidebar.collapsed .sidebar-title,
+.sidebar.collapsed .nav-link span,
+.sidebar.collapsed .dropdown-menu,
+.sidebar.collapsed .nav-item form span,
+.sidebar.collapsed .bi-chevron-down {
+    display: none;
+}
+
+.sidebar.collapsed .nav-link {
+    padding: 0.75rem;
+    justify-content: center;
+}
+
+.sidebar.collapsed .nav-link i {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.sidebar.collapsed ~ .main-content {
+    margin-left: 70px;
+}
+
+.sidebar-toggle {
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    transform: rotate(180deg);
 }
 
 .sidebar .nav-link {
@@ -232,8 +277,8 @@
 }
 
 .sidebar-logo {
-    width: 25px;  /* Reduced from 40px to 25px */
-    height: 25px;
+    width: 30px;
+    height: 30px;
     object-fit: contain;
 }
 
@@ -241,6 +286,62 @@
     display: flex;
     align-items: center;
 }
+
+/* Add these new styles */
+.sidebar .collapse-icon {
+    display: none;
+}
+
+.sidebar.collapsed .expand-icon {
+    display: none !important;
+}
+
+.sidebar.collapsed .collapse-icon {
+    display: inline-block !important;
+}
+
+/* Dropdown menu positioning when sidebar is collapsed */
+.sidebar.collapsed .nav-item.dropdown .dropdown-menu {
+    position: absolute !important;
+    left: 70px !important;  /* Width of collapsed sidebar */
+    top: 0 !important;
+    width: 200px;  /* Adjust width of dropdown */
+    background-color: #343a40 !important;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 4px 2px 5px rgba(0,0,0,0.2);
+    padding: 0.5rem;
+    display: none;  /* Hide by default */
+    z-index: 1000;  /* Ensure it appears above other content */
+}
+
+/* Make parent position relative for absolute positioning */
+.sidebar.collapsed .nav-item.dropdown {
+    position: relative;
+}
+
+/* Ensure dropdown items are visible */
+.sidebar.collapsed .dropdown-menu .dropdown-item {
+    display: block !important;
+    color: white !important;
+    padding: 8px 16px;
+    margin: 2px 0;
+}
+
+/* Show dropdown menu on hover in collapsed state */
+.sidebar.collapsed .nav-item.dropdown:hover > .dropdown-menu {
+    display: block !important;
+}
+
+/* Style dropdown items on hover */
+.sidebar.collapsed .dropdown-menu .dropdown-item:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+    border-radius: 4px;
+}
+
+/* Remove the old hover rule that might conflict */
+/* .sidebar.collapsed .nav-item.dropdown:hover .dropdown-menu {
+    display: block;
+} */
 </style>
 
 <script>
@@ -251,25 +352,89 @@ document.addEventListener('DOMContentLoaded', function() {
     const dropdownToggle = document.querySelector('#employeeDropdown');
     const parentLi = dropdownToggle.closest('.nav-item');
     
-    // Toggle dropdown
-    dropdownToggle.addEventListener('click', function(e) {
+    // Function to handle dropdown behavior
+    function handleDropdown(e) {
+        const sidebar = document.querySelector('.sidebar');
         e.preventDefault();
-        e.stopPropagation(); // Prevent event bubbling
-        
-        // Toggle the show class regardless of active state
-        parentLi.classList.toggle('show');
-        this.setAttribute('aria-expanded', 
-            parentLi.classList.contains('show') ? 'true' : 'false'
-        );
+        e.stopPropagation();
+       
+        if (sidebar.classList.contains('collapsed')) {
+            const dropdownMenu = parentLi.querySelector('.dropdown-menu');
+            dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+        } else {
+            parentLi.classList.toggle('show');
+            dropdownToggle.setAttribute('aria-expanded', 
+                parentLi.classList.contains('show') ? 'true' : 'false'
+            );
+        }
+    }
+    
+    // Add click handler
+    dropdownToggle.addEventListener('click', handleDropdown);
+
+    // Handle hover for collapsed state
+    parentLi.addEventListener('mouseenter', function() {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar.classList.contains('collapsed')) {
+            const dropdownMenu = parentLi.querySelector('.dropdown-menu');
+            dropdownMenu.style.display = 'block';
+            dropdownToggle.setAttribute('aria-expanded', 'true');
+        }
+    });
+
+    parentLi.addEventListener('mouseleave', function() {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar.classList.contains('collapsed')) {
+            const dropdownMenu = parentLi.querySelector('.dropdown-menu');
+            dropdownMenu.style.display = 'none';
+            dropdownToggle.setAttribute('aria-expanded', 'false');
+        }
     });
 
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
-        // Only close if click is outside the dropdown
-        if (!parentLi.contains(e.target)) {
+        if (!parentLi.contains(e.target) && !sidebar.classList.contains('collapsed')) {
             parentLi.classList.remove('show');
             dropdownToggle.setAttribute('aria-expanded', 'false');
         }
+    });
+});
+
+// Add this new code for sidebar toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const mainContent = document.querySelector('.main-content');
+    
+    // Set initial state to expanded (not collapsed)
+    localStorage.setItem('sidebarCollapsed', 'false');
+    sidebar.classList.remove('collapsed');
+    mainContent.style.marginLeft = '320px';
+    const expandIcon = sidebarToggle.querySelector('.expand-icon');
+    const collapseIcon = sidebarToggle.querySelector('.collapse-icon');
+    expandIcon.style.display = 'inline-block';
+    collapseIcon.style.display = 'none';
+
+    sidebarToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        sidebar.classList.toggle('collapsed');
+        
+        const expandIcon = this.querySelector('.expand-icon');
+        const collapseIcon = this.querySelector('.collapse-icon');
+        
+        // Adjust main content margin and icons
+        if (sidebar.classList.contains('collapsed')) {
+            mainContent.style.marginLeft = '70px';
+            expandIcon.style.display = 'none';
+            collapseIcon.style.display = 'inline-block';
+        } else {
+            mainContent.style.marginLeft = '320px';
+            expandIcon.style.display = 'inline-block';
+            collapseIcon.style.display = 'none';
+        }
+        
+        // Save the state
+        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
     });
 });
 </script>

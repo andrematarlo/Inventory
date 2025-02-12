@@ -1,3 +1,4 @@
+<!-- Edit Item Modal -->
 <div class="modal fade" id="editItemModal{{ $item->ItemId }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -5,35 +6,36 @@
                 <h5 class="modal-title">Edit Item</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('items.update', $item->ItemId) }}" method="POST">
+            <form action="{{ route('items.update', $item->ItemId) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Item Name</label>
+                        <label for="ItemName{{ $item->ItemId }}" class="form-label">Item Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control @error('ItemName') is-invalid @enderror" 
-                               name="ItemName" value="{{ old('ItemName', $item->ItemName) }}" required>
+                               id="ItemName{{ $item->ItemId }}" name="ItemName" value="{{ old('ItemName', $item->ItemName) }}" required>
                         @error('ItemName')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
+                        <label for="Description{{ $item->ItemId }}" class="form-label">Description</label>
                         <textarea class="form-control @error('Description') is-invalid @enderror" 
-                                name="Description" rows="3">{{ old('Description', $item->Description) }}</textarea>
+                                  id="Description{{ $item->ItemId }}" name="Description" rows="3">{{ old('Description', $item->Description) }}</textarea>
                         @error('Description')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Classification</label>
+                        <label for="ClassificationId{{ $item->ItemId }}" class="form-label">Classification <span class="text-danger">*</span></label>
                         <select class="form-select @error('ClassificationId') is-invalid @enderror" 
-                                name="ClassificationId" required>
+                                id="ClassificationId{{ $item->ItemId }}" name="ClassificationId" required>
+                            <option value="">Select Classification</option>
                             @foreach($classifications as $classification)
-                                <option value="{{ $classification->ClassificationId }}"
-                                    {{ $item->ClassificationId == $classification->ClassificationId ? 'selected' : '' }}>
+                                <option value="{{ $classification->ClassificationId }}" 
+                                    {{ old('ClassificationId', $item->ClassificationId) == $classification->ClassificationId ? 'selected' : '' }}>
                                     {{ $classification->ClassificationName }}
                                 </option>
                             @endforeach
@@ -44,12 +46,13 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Unit of Measure</label>
+                        <label for="UnitOfMeasureId{{ $item->ItemId }}" class="form-label">Unit of Measure <span class="text-danger">*</span></label>
                         <select class="form-select @error('UnitOfMeasureId') is-invalid @enderror" 
-                                name="UnitOfMeasureId" required>
+                                id="UnitOfMeasureId{{ $item->ItemId }}" name="UnitOfMeasureId" required>
+                            <option value="">Select Unit</option>
                             @foreach($units as $unit)
-                                <option value="{{ $unit->UnitOfMeasureId }}"
-                                    {{ $item->UnitOfMeasureId == $unit->UnitOfMeasureId ? 'selected' : '' }}>
+                                <option value="{{ $unit->UnitOfMeasureId }}" 
+                                    {{ old('UnitOfMeasureId', $item->UnitOfMeasureId) == $unit->UnitOfMeasureId ? 'selected' : '' }}>
                                     {{ $unit->UnitName }}
                                 </option>
                             @endforeach
@@ -60,13 +63,14 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Supplier</label>
+                        <label for="SupplierID{{ $item->ItemId }}" class="form-label">Supplier <span class="text-danger">*</span></label>
                         <select class="form-select @error('SupplierID') is-invalid @enderror" 
-                                name="SupplierID" required>
+                                id="SupplierID{{ $item->ItemId }}" name="SupplierID" required>
+                            <option value="">Select Supplier</option>
                             @foreach($suppliers as $supplier)
-                                <option value="{{ $supplier->SupplierID }}"
-                                    {{ $item->SupplierID == $supplier->SupplierID ? 'selected' : '' }}>
-                                    {{ $supplier->SupplierName }}
+                                <option value="{{ $supplier->SupplierID }}" 
+                                    {{ old('SupplierID', $item->SupplierID) == $supplier->SupplierID ? 'selected' : '' }}>
+                                    {{ $supplier->CompanyName }}
                                 </option>
                             @endforeach
                         </select>
@@ -76,25 +80,16 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Stocks Available</label>
-                        <input type="number" class="form-control @error('StocksAvailable') is-invalid @enderror" 
-                               name="StocksAvailable" min="0" 
-                               value="{{ old('StocksAvailable', $item->StocksAvailable) }}" required>
-                        @error('StocksAvailable')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Reorder Point</label>
+                        <label for="ReorderPoint{{ $item->ItemId }}" class="form-label">Reorder Point <span class="text-danger">*</span></label>
                         <input type="number" class="form-control @error('ReorderPoint') is-invalid @enderror" 
-                               name="ReorderPoint" min="0" 
-                               value="{{ old('ReorderPoint', $item->ReorderPoint) }}" required>
+                               id="ReorderPoint{{ $item->ItemId }}" name="ReorderPoint" 
+                               value="{{ old('ReorderPoint', $item->ReorderPoint) }}" min="0" required>
                         @error('ReorderPoint')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                 </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Item</button>
