@@ -4,11 +4,14 @@
 
 @section('content')
 <div class="container">
+    {{-- Only show Add button if not Inventory Staff --}}
+    @if(auth()->user()->role !== 'Inventory Staff')
     <div class="d-flex justify-content-end mb-3">
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClassificationModal">
             <i class="bi bi-plus-lg"></i> Add Classification
         </button>
     </div>
+    @endif
 
     <div class="card mb-4">
         <div class="card-header">
@@ -34,6 +37,8 @@
                                 <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#editClassificationModal{{ $classification->ClassificationId }}">
                                     <i class="bi bi-pencil"></i> Edit
                                 </button>
+                                {{-- Show delete button only if not Inventory Manager or Inventory Staff --}}
+                                @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
                                 <form action="{{ route('classifications.destroy', $classification->ClassificationId) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
@@ -41,6 +46,7 @@
                                         <i class="bi bi-trash"></i> Delete
                                     </button>
                                 </form>
+                                @endif
                             </td>
                             <td>{{ $classification->ClassificationName }}</td>
                             <td>{{ $classification->created_by_user->Username ?? 'N/A' }}</td>
@@ -83,12 +89,15 @@
                         @forelse($trashedClassifications as $classification)
                         <tr>
                             <td class="text-center">
+                                {{-- Show restore button only if not Inventory Manager or Inventory Staff --}}
+                                @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
                                 <form action="{{ route('classifications.restore', $classification->ClassificationId) }}" method="POST" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-success">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </button>
                                 </form>
+                                @endif
                             </td>
                             <td>{{ $classification->ClassificationName }}</td>
                             <td>{{ $classification->deleted_by_user->Username ?? 'N/A' }}</td>
@@ -111,7 +120,9 @@
 </div>
 
 <!-- Add Classification Modal -->
-@include('classifications.partials.add-modal')
+@if(auth()->user()->role !== 'Inventory Staff')
+    @include('classifications.partials.add-modal')
+@endif
 
 <!-- Edit Classification Modals -->
 @foreach($classifications as $classification)
