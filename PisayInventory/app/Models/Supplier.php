@@ -37,6 +37,34 @@ class Supplier extends Model
     ];
 
     // Relationships
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    public function modifiedBy()
+    {
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    public function deletedBy()
+    {
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
+    public function restoredBy()
+    {
+        return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->withDefault(['Username' => 'N/A']);
+    }
+
     public function created_by_user()
     {
         return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
@@ -57,6 +85,7 @@ class Supplier extends Model
                     ->from('UserAccount')
                     ->withDefault(['Username' => 'N/A']);
     }
+
     public function restored_by_user()
     {
         return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID')

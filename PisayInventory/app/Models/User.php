@@ -90,12 +90,12 @@ class User extends Authenticatable
 
     public function createdBy()
     {
-        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountId');
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID');
     }
 
     public function modifiedBy()
     {
-        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountId');
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID');
     }
     
 

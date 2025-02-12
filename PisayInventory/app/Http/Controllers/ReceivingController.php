@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Receiving;
 use App\Models\PurchaseOrder;
 use App\Models\Employee;
+use App\Models\Inventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -56,12 +57,15 @@ class ReceivingController extends Controller
                 ->where('IsDeleted', false)
                 ->firstOrFail();
 
-            $purchaseOrder = PurchaseOrder::findOrFail($request->PurchaseOrderID);
+            $purchaseOrder = PurchaseOrder::with(['items.item'])->findOrFail($request->PurchaseOrderID);
 
             if ($purchaseOrder->Status !== 'Pending') {
                 return back()->with('error', 'This purchase order has already been received.');
             }
 
+            $this->validateStockQuantities($purchaseOrder);
+
+            // Create receiving record
             $receiving = Receiving::create([
                 'PurchaseOrderID' => $request->PurchaseOrderID,
                 'ReceivedByID' => $currentEmployee->EmployeeID,
@@ -80,14 +84,50 @@ class ReceivingController extends Controller
                 'DateModified' => now()
             ]);
 
-            // Update item stocks
-            foreach ($purchaseOrder->items as $item) {
-                $item->item->increment('StocksAvailable', $item->Quantity);
+            // Update inventory for each item
+            foreach ($purchaseOrder->items as $poItem) {
+                // Get the current item
+                $item = $poItem->item;
+                $newStockQuantity = $item->StocksAvailable + $poItem->Quantity;
+
+                // Update item stocks
+                $item->update([
+                    'StocksAvailable' => $newStockQuantity,
+                    'ModifiedByID' => $currentEmployee->EmployeeID,
+                    'DateModified' => now()
+                ]);
+
+                // Create inventory record for stock movement
+                $inventory = new Inventory();
+                $inventory->ItemId = $item->ItemId;
+                $inventory->ClassificationId = $item->ClassificationId;
+                $inventory->StocksAdded = $poItem->Quantity;
+                $inventory->StocksAvailable = $newStockQuantity;
+                $inventory->DateCreated = now();
+                $inventory->CreatedById = $currentEmployee->EmployeeID;
+                $inventory->ModifiedById = $currentEmployee->EmployeeID;
+                $inventory->DateModified = now();
+                $inventory->IsDeleted = false;
+                $inventory->save();
+
+                // Create inventory movement record
+                DB::table('inventory_movement')->insert([
+                    'ItemID' => $item->ItemId,
+                    'MovementType' => 'IN',
+                    'Quantity' => $poItem->Quantity,
+                    'ReferenceNumber' => $purchaseOrder->PONumber,
+                    'ReferenceType' => 'Receiving',
+                    'ReferenceID' => $receiving->ReceivingID,
+                    'Notes' => "Received from PO: {$purchaseOrder->PONumber}",
+                    'DateCreated' => now(),
+                    'CreatedByID' => $currentEmployee->EmployeeID,
+                    'IsDeleted' => false
+                ]);
             }
 
             DB::commit();
             return redirect()->route('receiving.index')
-                ->with('success', 'Items received successfully');
+                ->with('success', 'Items received and inventory updated successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -197,6 +237,15 @@ class ReceivingController extends Controller
             DB::rollBack();
             Log::error('Error deleting receiving: ' . $e->getMessage());
             return back()->with('error', 'Error deleting receiving: ' . $e->getMessage());
+        }
+    }
+
+    private function validateStockQuantities($purchaseOrder)
+    {
+        foreach ($purchaseOrder->items as $poItem) {
+            if ($poItem->Quantity <= 0) {
+                throw new \Exception("Invalid quantity for item: {$poItem->item->ItemName}");
+            }
         }
     }
 } 

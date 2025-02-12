@@ -167,28 +167,46 @@ $(document).ready(function() {
 
     // Add new item row
     $('#addItem').click(function() {
-        let newRow = $('.item-row:first').clone();
+        // Create a fresh row instead of cloning
         let rowCount = $('.item-row').length;
+        let newRowHtml = `
+            <tr class="item-row">
+                <td>
+                    <select name="items[${rowCount}][ItemId]" class="form-control item-select" required>
+                        <option value="">Select Item</option>
+                        ${$('.item-row:first .item-select option:not(:selected)').map(function() {
+                            return `<option value="${$(this).val()}" data-price="${$(this).data('price')}">${$(this).text()}</option>`;
+                        }).get().join('')}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" name="items[${rowCount}][Quantity]" class="form-control quantity" min="1" required>
+                </td>
+                <td>
+                    <input type="number" name="items[${rowCount}][UnitPrice]" class="form-control unit-price" step="0.01" required>
+                </td>
+                <td>
+                    <input type="number" class="form-control total-price" readonly>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
         
-        // Update name attributes
-        newRow.find('[name]').each(function() {
-            let name = $(this).attr('name');
-            $(this).attr('name', name.replace('[0]', '[' + rowCount + ']'));
-        });
-
-        // Clear values
-        newRow.find('input').val('');
-        newRow.find('select').val('').trigger('change');
-
-        // Add to table
-        $('#itemsTable tbody').append(newRow);
-        initializeItemRow(newRow);
+        // Add the new row
+        $('#itemsTable tbody').append(newRowHtml);
+        
+        // Initialize the new row
+        initializeItemRow($('.item-row:last'));
     });
 
     // Remove item row
     $(document).on('click', '.remove-item', function() {
         if ($('.item-row').length > 1) {
-            $(this).closest('tr').remove();
+            $(this).closest('.item-row').remove();
             calculateGrandTotal();
         }
     });
@@ -214,14 +232,14 @@ function initializeItemRow(row) {
     row.find('.item-select').on('change', function() {
         let selectedOption = $(this).find('option:selected');
         let unitPrice = selectedOption.data('price');
-        let row = $(this).closest('tr');
+        let row = $(this).closest('.item-row');
         row.find('.unit-price').val(unitPrice);
         calculateRowTotal(row);
     });
 
     // Quantity change
     row.find('.quantity').on('input', function() {
-        calculateRowTotal($(this).closest('tr'));
+        calculateRowTotal($(this).closest('.item-row'));
     });
 }
 
