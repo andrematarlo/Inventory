@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Item;
 use App\Models\Inventory;
+use App\Models\Role;
 
 class UserAccount extends Authenticatable
 {
@@ -87,6 +88,11 @@ class UserAccount extends Authenticatable
     public function restored_inventories()
     {
     return $this->hasMany(Inventory::class, 'RestoredById', 'UserAccountID');
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'RoleId', 'RoleId');
     }
 
     // Authentication methods

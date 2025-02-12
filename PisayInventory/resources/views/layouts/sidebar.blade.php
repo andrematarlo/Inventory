@@ -18,8 +18,8 @@
             </a>
         </li>
 
-
-        <!-- Employee Management Dropdown -->
+        {{-- Show Employee Management for everyone EXCEPT Inventory roles --}}
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin']))
         <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-people"></i>
@@ -43,6 +43,7 @@
                 </li>
             </ul>
         </li>
+        @endif
         <li class="nav-item">
             <a href="{{ route('purchases.index') }}" class="nav-link text-white {{ request()->routeIs('purchases.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-cart4"></i>
