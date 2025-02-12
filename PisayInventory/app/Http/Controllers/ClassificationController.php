@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Classification;
+use App\Models\RolePolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -11,11 +12,26 @@ use Illuminate\Support\Facades\Log;
 
 class ClassificationController extends Controller
 {
+    private function getUserPermissions()
+    {
+        $userRole = auth()->user()->role;
+        return RolePolicy::whereHas('role', function($query) use ($userRole) {
+            $query->where('RoleName', $userRole);
+        })->where('Module', 'Classifications')->first();
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
+        $userPermissions = $this->getUserPermissions();
+
+        // Check if user has View permission
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->back()->with('error', 'You do not have permission to view classifications.');
+        }
+
         $classifications = Classification::with(['created_by_user', 'modified_by_user'])
             ->where('IsDeleted', 0)
             ->orderBy('ClassificationName')
@@ -26,7 +42,7 @@ class ClassificationController extends Controller
             ->orderBy('ClassificationName')
             ->paginate(10);
 
-        return view('classifications.index', compact('classifications', 'trashedClassifications'));
+        return view('classifications.index', compact('classifications', 'trashedClassifications', 'userPermissions'));
     }
 
     /**
@@ -42,6 +58,11 @@ class ClassificationController extends Controller
      */
     public function store(Request $request)
     {
+        $userPermissions = $this->getUserPermissions();
+        if (!$userPermissions || !$userPermissions->CanAdd) {
+            return redirect()->back()->with('error', 'You do not have permission to add classifications.');
+        }
+
         try {
             DB::beginTransaction();
 
@@ -78,6 +99,11 @@ class ClassificationController extends Controller
      */
     public function edit(string $id)
     {
+        $userPermissions = $this->getUserPermissions();
+        if (!$userPermissions || !$userPermissions->CanEdit) {
+            return redirect()->back()->with('error', 'You do not have permission to edit classifications.');
+        }
+
         $classification = Classification::findOrFail($id);
         $classifications = Classification::where('IsDeleted', 0)
             ->where('ClassificationId', '!=', $id)
@@ -90,6 +116,11 @@ class ClassificationController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $userPermissions = $this->getUserPermissions();
+        if (!$userPermissions || !$userPermissions->CanEdit) {
+            return redirect()->back()->with('error', 'You do not have permission to edit classifications.');
+        }
+
         $request->validate([
             'ClassificationName' => 'required|string|max:255',
             'ParentClassificationId' => 'nullable|exists:classification,ClassificationId'
@@ -112,6 +143,11 @@ class ClassificationController extends Controller
      */
     public function destroy($id)
     {
+        $userPermissions = $this->getUserPermissions();
+        if (!$userPermissions || !$userPermissions->CanDelete) {
+            return redirect()->back()->with('error', 'You do not have permission to delete classifications.');
+        }
+
         $classification = Classification::findOrFail($id);
         
         $classification->update([
@@ -125,28 +161,33 @@ class ClassificationController extends Controller
     }
 
     public function restore($id)
-{
-    try {
-        DB::beginTransaction();
-        
-        $classification = Classification::findOrFail($id);
-        $classification->update([
-            'IsDeleted' => false,
-            'DeletedById' => null,
-            'DateDeleted' => null,
-            'RestoredById' => Auth::id(),
-            'DateRestored' => now(),
-            'ModifiedById' => null,
-            'DateModified' => null
-        ]);
+    {
+        try {
+            DB::beginTransaction();
+            
+            $userPermissions = $this->getUserPermissions();
+            if (!$userPermissions || !$userPermissions->CanEdit) {
+                return redirect()->back()->with('error', 'You do not have permission to restore classifications.');
+            }
 
-        DB::commit();
-        return redirect()->route('classifications.index')
-            ->with('success', 'Classification restored successfully');
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Classification restore failed: ' . $e->getMessage());
-        return back()->with('error', 'Failed to restore classification: ' . $e->getMessage());
+            $classification = Classification::findOrFail($id);
+            $classification->update([
+                'IsDeleted' => false,
+                'DeletedById' => null,
+                'DateDeleted' => null,
+                'RestoredById' => Auth::id(),
+                'DateRestored' => now(),
+                'ModifiedById' => null,
+                'DateModified' => null
+            ]);
+
+            DB::commit();
+            return redirect()->route('classifications.index')
+                ->with('success', 'Classification restored successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Classification restore failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to restore classification: ' . $e->getMessage());
+        }
     }
-}
 }

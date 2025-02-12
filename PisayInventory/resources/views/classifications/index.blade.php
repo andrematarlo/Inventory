@@ -4,14 +4,15 @@
 
 @section('content')
 <div class="container">
-    {{-- Only show Add button if not Inventory Staff --}}
-    @if(auth()->user()->role !== 'Inventory Staff')
-    <div class="d-flex justify-content-end mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Classification Management</h2>
+        {{-- Show Add button only if user has Add permission --}}
+        @if($userPermissions && $userPermissions->CanAdd)
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClassificationModal">
             <i class="bi bi-plus-lg"></i> Add Classification
         </button>
+        @endif
     </div>
-    @endif
 
     <div class="card mb-4">
         <div class="card-header">
@@ -22,7 +23,9 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
-                            <th class="text-center">Actions</th>
+                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
+                            <th>Actions</th>
+                            @endif
                             <th>Name</th>
                             <th>Created By</th>
                             <th>Date Created</th>
@@ -33,21 +36,26 @@
                     <tbody>
                         @forelse($classifications as $classification)
                         <tr>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#editClassificationModal{{ $classification->ClassificationId }}">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                                {{-- Show delete button only if not Inventory Manager or Inventory Staff --}}
-                                @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
-                                <form action="{{ route('classifications.destroy', $classification->ClassificationId) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1" onclick="return confirm('Are you sure you want to delete this classification?')">
-                                        <i class="bi bi-trash"></i> Delete
+                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
+                            <td>
+                                <div class="btn-group">
+                                    @if($userPermissions->CanEdit)
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editClassificationModal{{ $classification->ClassificationId }}">
+                                        <i class="bi bi-pencil-square"></i>
                                     </button>
-                                </form>
-                                @endif
+                                    @endif
+                                    @if($userPermissions->CanDelete)
+                                    <form action="{{ route('classifications.destroy', $classification->ClassificationId) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this classification?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                    @endif
+                                </div>
                             </td>
+                            @endif
                             <td>{{ $classification->ClassificationName }}</td>
                             <td>{{ $classification->created_by_user->Username ?? 'N/A' }}</td>
                             <td>{{ $classification->DateCreated ? date('M d, Y h:i A', strtotime($classification->DateCreated)) : 'N/A' }}</td>
@@ -56,7 +64,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="text-center py-4">No classifications found</td>
+                            <td colspan="{{ ($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete)) ? '6' : '5' }}" class="text-center">No classifications found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -120,14 +128,16 @@
 </div>
 
 <!-- Add Classification Modal -->
-@if(auth()->user()->role !== 'Inventory Staff')
+@if($userPermissions && $userPermissions->CanAdd)
     @include('classifications.partials.add-modal')
 @endif
 
 <!-- Edit Classification Modals -->
-@foreach($classifications as $classification)
-    @include('classifications.partials.edit-modal', ['classification' => $classification])
-@endforeach
+@if($userPermissions && $userPermissions->CanEdit)
+    @foreach($classifications as $classification)
+        @include('classifications.partials.edit-modal', ['classification' => $classification])
+    @endforeach
+@endif
 
 @endsection
 
