@@ -8,7 +8,7 @@
         overflow-x: auto;
     }
     
-    #receivingTable, #deletedReceivingTable {
+    #receivingTable, #pendingReceivingTable, #deletedReceivingTable {
         min-width: 100%;
         width: auto;
     }
@@ -27,15 +27,11 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>Receiving Management</h1>
-        <div>
-            <a href="{{ route('receiving.create') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> New Receiving Record
-            </a>
-        </div>
     </div>
 
     <div class="mb-4">
         <button type="button" class="btn btn-primary" id="activeRecordsBtn">Active Records</button>
+        <button type="button" class="btn btn-warning" id="pendingRecordsBtn">Pending Records</button>
         <button type="button" class="btn btn-danger" id="showDeletedBtn">
             <i class="bi bi-archive"></i> Show Deleted Records
         </button>
@@ -49,11 +45,11 @@
                     <thead>
                         <tr>
                             <th>Actions</th>
-                            <th>RR Number</th>
                             <th>PO Number</th>
                             <th>Supplier</th>
-                            <th>Date Received</th>
+                            <th>Delivery Date</th>
                             <th>Status</th>
+                            <th>Total Amount</th>
                             <th>Created By</th>
                             <th>Date Created</th>
                             <th>Modified By</th>
@@ -66,7 +62,8 @@
                             <td>
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('receiving.show', $record->ReceivingID) }}" 
-                                       class="btn btn-sm btn-info" title="View">
+                                       class="btn btn-sm btn-info" 
+                                       title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     @if($record->Status === 'Pending')
@@ -75,34 +72,90 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     @endif
-                                    <button type="button" class="btn btn-sm btn-danger" 
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger" 
                                             onclick="deleteRecord({{ $record->ReceivingID }})"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
                             </td>
-                            <td>{{ $record->RRNumber }}</td>
-                            <td>{{ $record->purchaseOrder->PONumber }}</td>
-                            <td>{{ $record->purchaseOrder->supplier->CompanyName }}</td>
-                            <td>{{ $record->DateReceived->format('M d, Y') }}</td>
+                            <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
+                            <td>{{ $record->purchaseOrder->supplier->CompanyName ?? 'N/A' }}</td>
+                            <td>{{ $record->DeliveryDate ? $record->DeliveryDate->format('M d, Y') : 'N/A' }}</td>
                             <td>
                                 <span class="badge bg-{{ $record->Status === 'Pending' ? 'warning' : 'success' }}">
-                                    Receiving: {{ $record->Status }}
-                                </span>
-                                <br>
-                                <span class="badge bg-{{ $record->purchaseOrder->Status === 'Pending' ? 'warning' : 'success' }}">
-                                    PO: {{ $record->purchaseOrder->Status }}
+                                    {{ $record->Status }}
                                 </span>
                             </td>
-                            <td>{{ optional($record->createdBy)->FirstName }} {{ optional($record->createdBy)->LastName }}</td>
-                            <td>{{ $record->DateCreated->format('M d, Y') }}</td>
-                            <td>{{ optional($record->modifiedBy)->FirstName }} {{ optional($record->modifiedBy)->LastName }}</td>
-                            <td>{{ optional($record->DateModified)->format('M d, Y') ?? 'N/A' }}</td>
+                            <td>₱{{ number_format($record->getTotalAmountAttribute(), 2) }}</td>
+                            <td>{{ $record->createdBy->FirstName ?? 'N/A' }} {{ $record->createdBy->LastName ?? '' }}</td>
+                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $record->modifiedBy->FirstName ?? 'N/A' }} {{ $record->modifiedBy->LastName ?? '' }}</td>
+                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
                             <td colspan="10" class="text-center">No receiving records found</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pending Receiving Records Section -->
+        <div id="pendingReceiving" class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-hover" id="pendingReceivingTable">
+                    <thead>
+                        <tr>
+                            <th>Actions</th>
+                            <th>PO Number</th>
+                            <th>Supplier</th>
+                            <th>Order Date</th>
+                            <th>Status</th>
+                            <th>Total Amount</th>
+                            <th>Created By</th>
+                            <th>Date Created</th>
+                            <th>Modified By</th>
+                            <th>Date Modified</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($pendingRecords as $record)
+                        <tr>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ route('receiving.create', ['po_id' => $record->PurchaseOrderID]) }}" 
+                                       class="btn btn-sm btn-success" 
+                                       title="Create Receiving">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </a>
+                                    <a href="{{ route('purchases.show', $record->PurchaseOrderID) }}" 
+                                       class="btn btn-sm btn-info" 
+                                       title="View PO">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                            <td>{{ $record->PONumber }}</td>
+                            <td>{{ $record->supplier->CompanyName }}</td>
+                            <td>{{ $record->OrderDate->format('M d, Y') }}</td>
+                            <td>
+                                <span class="badge bg-warning">
+                                    {{ $record->Status }}
+                                </span>
+                            </td>
+                            <td>₱{{ number_format($record->getTotalAmount(), 2) }}</td>
+                            <td>{{ $record->createdBy->FirstName ?? 'N/A' }} {{ $record->createdBy->LastName ?? '' }}</td>
+                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $record->modifiedBy->FirstName ?? 'N/A' }} {{ $record->modifiedBy->LastName ?? '' }}</td>
+                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'N/A' }}</td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="10" class="text-center">No pending purchase orders found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -117,11 +170,11 @@
                     <thead>
                         <tr>
                             <th>Actions</th>
-                            <th>RR Number</th>
                             <th>PO Number</th>
                             <th>Supplier</th>
                             <th>Date Received</th>
                             <th>Status</th>
+                            <th>Total Amount</th>
                             <th>Created By</th>
                             <th>Date Created</th>
                             <th>Modified By</th>
@@ -140,25 +193,21 @@
                                     <i class="bi bi-arrow-counterclockwise"></i>
                                 </button>
                             </td>
-                            <td>{{ $record->RRNumber }}</td>
-                            <td>{{ $record->purchaseOrder->PONumber }}</td>
-                            <td>{{ $record->purchaseOrder->supplier->CompanyName }}</td>
-                            <td>{{ $record->DateReceived->format('M d, Y') }}</td>
+                            <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
+                            <td>{{ $record->purchaseOrder->supplier->CompanyName ?? 'N/A' }}</td>
+                            <td>{{ $record->DateReceived ? $record->DateReceived->format('M d, Y') : 'N/A' }}</td>
                             <td>
                                 <span class="badge bg-{{ $record->Status === 'Pending' ? 'warning' : 'success' }}">
-                                    Receiving: {{ $record->Status }}
-                                </span>
-                                <br>
-                                <span class="badge bg-{{ $record->purchaseOrder->Status === 'Pending' ? 'warning' : 'success' }}">
-                                    PO: {{ $record->purchaseOrder->Status }}
+                                    {{ $record->Status }}
                                 </span>
                             </td>
-                            <td>{{ optional($record->createdBy)->FirstName }} {{ optional($record->createdBy)->LastName }}</td>
-                            <td>{{ $record->DateCreated->format('M d, Y') }}</td>
-                            <td>{{ optional($record->modifiedBy)->FirstName }} {{ optional($record->modifiedBy)->LastName }}</td>
-                            <td>{{ optional($record->DateModified)->format('M d, Y') ?? 'N/A' }}</td>
-                            <td>{{ optional($record->deletedBy)->FirstName }} {{ optional($record->deletedBy)->LastName }}</td>
-                            <td>{{ optional($record->DateDeleted)->format('M d, Y') ?? 'N/A' }}</td>
+                            <td>₱{{ number_format($record->getTotalAmountAttribute(), 2) }}</td>
+                            <td>{{ $record->createdBy->FirstName ?? 'N/A' }} {{ $record->createdBy->LastName ?? '' }}</td>
+                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $record->modifiedBy->FirstName ?? 'N/A' }} {{ $record->modifiedBy->LastName ?? '' }}</td>
+                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'N/A' }}</td>
+                            <td>{{ $record->deletedBy->FirstName ?? 'N/A' }} {{ $record->deletedBy->LastName ?? '' }}</td>
+                            <td>{{ $record->DateDeleted ? date('Y-m-d H:i:s', strtotime($record->DateDeleted)) : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
@@ -176,66 +225,70 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
-    const activeTable = $('#receivingTable').DataTable({
+    // Basic DataTable configuration
+    var config = {
         pageLength: 10,
-        order: [[1, 'desc']], // Sort by RR Number
-        columnDefs: [{
-            orderable: false,
-            searchable: false,
-            targets: 0
-        }],
-        language: {
-            search: "Search:",
-            searchPlaceholder: "Search receiving records..."
-        },
-        scrollX: true
-    });
+        order: [[1, 'desc']],
+        columnDefs: [
+            { orderable: false, targets: 0 }
+        ],
+        searching: true,
+        info: true,
+        paging: true
+    };
 
-    const deletedTable = $('#deletedReceivingTable').DataTable({
-        pageLength: 10,
-        order: [[1, 'desc']], // Sort by RR Number
-        columnDefs: [{
-            orderable: false,
-            searchable: false,
-            targets: 0
-        }],
-        language: {
-            search: "Search:",
-            searchPlaceholder: "Search deleted receiving records..."
-        },
-        scrollX: true
-    });
+    // Only initialize tables that have data
+    var activeRows = $('#receivingTable tbody tr').length;
+    var pendingRows = $('#pendingReceivingTable tbody tr').length;
+    var deletedRows = $('#deletedReceivingTable tbody tr').length;
 
-    // Show active records by default
-    $('#deletedReceiving').hide();
+    // Initialize only if there are rows and not showing "No data" message
+    if (activeRows > 0 && !$('#receivingTable tbody tr td').hasClass('text-center')) {
+        $('#receivingTable').DataTable(config);
+    }
 
-    // Toggle between active and deleted records
+    if (pendingRows > 0 && !$('#pendingReceivingTable tbody tr td').hasClass('text-center')) {
+        $('#pendingReceivingTable').DataTable(config);
+    }
+
+    if (deletedRows > 0 && !$('#deletedReceivingTable tbody tr td').hasClass('text-center')) {
+        $('#deletedReceivingTable').DataTable(config);
+    }
+
+    // Hide other sections initially
+    $('#pendingReceiving, #deletedReceiving').hide();
+
+    // Button click handlers
     $('#activeRecordsBtn').click(function() {
         $('#activeReceiving').show();
-        $('#deletedReceiving').hide();
-        activeTable.columns.adjust().draw();
+        $('#pendingReceiving, #deletedReceiving').hide();
+    });
+
+    $('#pendingRecordsBtn').click(function() {
+        $('#pendingReceiving').show();
+        $('#activeReceiving, #deletedReceiving').hide();
     });
 
     $('#showDeletedBtn').click(function() {
-        $('#activeReceiving').hide();
         $('#deletedReceiving').show();
-        deletedTable.columns.adjust().draw();
+        $('#activeReceiving, #pendingReceiving').hide();
     });
 });
 
 function restoreReceivingRecord(id) {
     if (confirm('Are you sure you want to restore this receiving record?')) {
-        fetch(`/receiving/${id}/restore`, {
+        fetch(`/inventory/receiving/${id}/restore`, {
             method: 'POST',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
-            }
+            },
+            credentials: 'same-origin'
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                return response.json().then(json => Promise.reject(json));
             }
             return response.json();
         })
@@ -256,13 +309,14 @@ function restoreReceivingRecord(id) {
 
 function deleteRecord(id) {
     if (confirm('Are you sure you want to delete this receiving record?')) {
-        fetch(`/receiving/${id}`, {
+        fetch(`/inventory/receiving/${id}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
-            }
+            },
+            credentials: 'same-origin'
         })
         .then(response => {
             return response.json().then(data => {

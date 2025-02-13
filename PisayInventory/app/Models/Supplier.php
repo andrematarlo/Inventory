@@ -108,8 +108,9 @@ class Supplier extends Model
 
     public function items()
     {
-        return $this->hasMany(Item::class, 'SupplierID', 'SupplierID')
-                    ->where('IsDeleted', 0);
+        return $this->belongsToMany(Item::class, 'item_supplier', 'SupplierID', 'ItemId')
+                    ->withPivot('UnitPrice')
+                    ->where('item_supplier.IsDeleted', false);
     }
 
     // Query scopes

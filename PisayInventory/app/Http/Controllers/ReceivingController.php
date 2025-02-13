@@ -16,36 +16,72 @@ class ReceivingController extends Controller
     public function index()
     {
         try {
+            // Active receiving records
             $receivingRecords = Receiving::with([
-                'purchaseOrder.supplier', 
-                'createdBy', 
-                'modifiedBy',
-                'purchaseOrder'
+                'purchaseOrder.supplier',
+                'createdBy',
+                'modifiedBy'
             ])
-                ->where('IsDeleted', false)
-                ->orderBy('DateReceived', 'desc')
-                ->get();
+            ->where('IsDeleted', false)
+            ->where('Status', 'Received')
+            ->orderBy('DateCreated', 'desc')
+            ->get();
 
+            // Pending records from purchase orders
+            $pendingRecords = PurchaseOrder::with([
+                'supplier',
+                'createdBy',
+                'modifiedBy'
+            ])
+            ->where('IsDeleted', false)
+            ->where('Status', 'Pending')
+            ->whereNotExists(function($query) {
+                $query->select(DB::raw(1))
+                      ->from('receiving')
+                      ->whereRaw('receiving.PurchaseOrderID = purchase_order.PurchaseOrderID')
+                      ->where('receiving.IsDeleted', false);
+            })
+            ->orderBy('DateCreated', 'desc')
+            ->get();
+
+            // Deleted receiving records
             $deletedRecords = Receiving::with([
-                'purchaseOrder.supplier', 
-                'createdBy', 
+                'purchaseOrder.supplier',
+                'createdBy',
                 'modifiedBy',
-                'deletedBy',
-                'purchaseOrder'
+                'deletedBy'
             ])
-                ->where('IsDeleted', true)
-                ->get();
+            ->where('IsDeleted', true)
+            ->orderBy('DateDeleted', 'desc')
+            ->get();
 
-            return view('receiving.index', compact('receivingRecords', 'deletedRecords'));
+            // Debug logging
+            Log::info('Active records count: ' . $receivingRecords->count());
+            Log::info('Pending records count: ' . $pendingRecords->count());
+            Log::info('Deleted records count: ' . $deletedRecords->count());
+
+            return view('receiving.index', compact('receivingRecords', 'pendingRecords', 'deletedRecords'));
         } catch (\Exception $e) {
             Log::error('Error loading receiving records: ' . $e->getMessage());
-            return back()->with('error', 'Error loading receiving records');
+            return back()->with('error', 'Error loading receiving records: ' . $e->getMessage());
         }
     }
 
-    public function create()
+    public function create(Request $request)
     {
         try {
+            // If po_id is provided, get that specific PO
+            if ($request->has('po_id')) {
+                $purchaseOrder = PurchaseOrder::with(['supplier', 'items.item'])
+                    ->where('PurchaseOrderID', $request->po_id)
+                    ->where('Status', 'Pending')
+                    ->where('IsDeleted', false)
+                    ->firstOrFail();
+
+                return view('receiving.create', compact('purchaseOrder'));
+            }
+
+            // Otherwise, get all pending POs
             $pendingPOs = PurchaseOrder::where('Status', 'Pending')
                 ->where('IsDeleted', false)
                 ->with(['supplier', 'items.item'])
@@ -239,13 +275,6 @@ class ReceivingController extends Controller
 
             if ($receiving->IsDeleted) {
                 throw new \Exception('Record is already deleted.');
-            }
-
-            if ($receiving->Status !== 'Pending' || $receiving->purchaseOrder->Status !== 'Pending') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only pending receiving records with pending purchase orders can be deleted.'
-                ], 400);
             }
 
             $receiving->softDelete($currentEmployee->EmployeeID);

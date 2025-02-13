@@ -61,6 +61,19 @@ class Receiving extends Model
         return $this->belongsTo(Employee::class, 'RestoredById');
     }
 
+    public function receivingItems()
+    {
+        return $this->hasMany(ReceivingItem::class, 'ReceivingID', 'ReceivingID');
+    }
+
+    public function getTotalAmountAttribute()
+    {
+        // Get total from purchase order items instead
+        return $this->purchaseOrder->items->sum(function($item) {
+            return $item->Quantity * $item->UnitPrice;
+        });
+    }
+
     // Custom delete method to handle soft deletes with additional fields
     public function softDelete($deletedById)
     {

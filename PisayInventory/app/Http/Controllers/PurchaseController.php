@@ -17,20 +17,51 @@ class PurchaseController extends Controller
     public function index()
     {
         try {
-            $purchases = PurchaseOrder::with(['supplier', 'createdBy', 'modifiedBy', 'deletedBy', 'restoredBy'])
+            // Active purchase orders (Received status)
+            $purchases = PurchaseOrder::with([
+                'supplier', 
+                'items.item',
+                'createdBy', 
+                'modifiedBy'
+            ])
+            ->where('IsDeleted', false)
+            ->where('Status', 'Received')
+            ->orderBy('DateCreated', 'desc')
+            ->get();
+
+            // Pending purchase orders
+            $pendingPurchases = PurchaseOrder::with([
+                'supplier', 
+                'items.item',
+                'createdBy', 
+                'modifiedBy'
+            ])
+            ->where('IsDeleted', false)
+            ->where('Status', 'Pending')
+            ->orderBy('DateCreated', 'desc')
+            ->get();
+
+            // Deleted purchase orders
+            $deletedPurchases = PurchaseOrder::with([
+                'supplier', 
+                'items.item',
+                'createdBy', 
+                'modifiedBy', 
+                'deletedBy'
+            ])
+            ->where('IsDeleted', true)
+            ->orderBy('DateDeleted', 'desc')
+            ->get();
+
+            $suppliers = Supplier::where('IsDeleted', false)->get();
+            $items = Item::with('supplier')
                 ->where('IsDeleted', false)
-                ->orderBy('DateCreated', 'desc')
                 ->get();
 
-            $deletedPurchases = PurchaseOrder::with(['supplier', 'createdBy', 'modifiedBy', 'deletedBy', 'restoredBy'])
-                ->where('IsDeleted', true)
-                ->orderBy('DateCreated', 'desc')
-                ->get();
-
-            return view('purchases.index', compact('purchases', 'deletedPurchases'));
+            return view('purchases.index', compact('purchases', 'pendingPurchases', 'deletedPurchases', 'suppliers', 'items'));
         } catch (\Exception $e) {
-            Log::error('Error loading purchases: ' . $e->getMessage());
-            return back()->with('error', 'Error loading purchases: ' . $e->getMessage());
+            Log::error('Error loading purchase orders: ' . $e->getMessage());
+            return back()->with('error', 'Error loading purchase orders: ' . $e->getMessage());
         }
     }
 
@@ -38,7 +69,9 @@ class PurchaseController extends Controller
     {
         try {
             $suppliers = Supplier::where('IsDeleted', false)->get();
-            $items = Item::where('IsDeleted', false)->get();
+            $items = Item::with('supplier')
+                ->where('IsDeleted', false)
+                ->get();
 
             return view('purchases.create', compact('suppliers', 'items'));
         } catch (\Exception $e) {
@@ -51,9 +84,9 @@ class PurchaseController extends Controller
     {
         try {
             $request->validate([
-                'SupplierID' => 'required|exists:suppliers,SupplierID',
                 'items' => 'required|array|min:1',
                 'items.*.ItemId' => 'required|exists:items,ItemId',
+                'items.*.SupplierID' => 'required|exists:suppliers,SupplierID',
                 'items.*.Quantity' => 'required|integer|min:1',
                 'items.*.UnitPrice' => 'required|numeric|min:0'
             ]);
@@ -64,10 +97,13 @@ class PurchaseController extends Controller
                 ->where('IsDeleted', false)
                 ->firstOrFail();
 
+            // Get the supplier ID from the first item (or you could group by supplier)
+            $supplierID = $request->items[0]['SupplierID'];
+
             // Create PO
             $po = PurchaseOrder::create([
                 'PONumber' => 'PO-' . date('YmdHis'),
-                'SupplierID' => $request->SupplierID,
+                'SupplierID' => $supplierID, // Use the supplier ID from the first item
                 'OrderDate' => now(),
                 'Status' => 'Pending',
                 'TotalAmount' => 0,
@@ -130,7 +166,6 @@ class PurchaseController extends Controller
     public function destroy($id)
     {
         try {
-            Log::info('Starting soft delete process for purchase order: ' . $id);
             DB::beginTransaction();
 
             $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
@@ -138,10 +173,10 @@ class PurchaseController extends Controller
                 ->firstOrFail();
 
             $purchaseOrder = PurchaseOrder::findOrFail($id);
-
+            
             // Soft delete the purchase order
             $purchaseOrder->update([
-                'IsDeleted' => 1,
+                'IsDeleted' => true,
                 'DeletedByID' => $currentEmployee->EmployeeID,
                 'DateDeleted' => now()
             ]);
@@ -149,23 +184,21 @@ class PurchaseController extends Controller
             // Also soft delete related purchase order items
             PurchaseOrderItem::where('PurchaseOrderID', $id)
                 ->update([
-                    'IsDeleted' => 1,
+                    'IsDeleted' => true,
                     'DeletedByID' => $currentEmployee->EmployeeID,
-                    'DateDeleted' => now(),
-                    'ModifiedByID' => $currentEmployee->EmployeeID,
-                    'DateModified' => now()
+                    'DateDeleted' => now()
                 ]);
 
             DB::commit();
-            Log::info('Soft delete completed successfully');
-            return redirect()->route('purchases.index')
-                ->with('success', 'Purchase order moved to trash successfully');
+            return response()->json(['success' => true, 'message' => 'Purchase order deleted successfully']);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error in soft delete: ' . $e->getMessage());
-            Log::error($e->getTraceAsString());
-            return back()->with('error', 'Error moving purchase order to trash: ' . $e->getMessage());
+            Log::error('Error deleting purchase order: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting purchase order: ' . $e->getMessage()
+            ], 500);
         }
     }
 

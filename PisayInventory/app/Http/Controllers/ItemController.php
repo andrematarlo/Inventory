@@ -24,11 +24,19 @@ class ItemController extends Controller
                 'classification', 
                 'unitOfMeasure', 
                 'supplier', 
-                'createdBy',
-                'modifiedBy'
+                'createdBy'
             ])
             ->where('IsDeleted', false)
             ->paginate(10);
+
+            // Add this debugging
+            foreach ($activeItems as $item) {
+                Log::info('Item creator details:', [
+                    'item_id' => $item->ItemId,
+                    'created_by_id' => $item->CreatedById,
+                    'creator_info' => $item->createdBy
+                ]);
+            }
 
             $deletedItems = Item::with([
                 'classification', 
@@ -63,86 +71,88 @@ class ItemController extends Controller
         try {
             DB::beginTransaction();
 
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            // Add this logging to check the values
+            Log::info('Creating item with employee details:', [
+                'employee_id' => $currentEmployee->EmployeeID,
+                'user_account_id' => $currentEmployee->UserAccountID,
+                'auth_user_id' => Auth::id(),
+                'auth_user' => Auth::user()
+            ]);
+
             // Validate the request
             $validated = $request->validate([
                 'ItemName' => 'required|string|max:255',
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
-                'UnitOfMeasureId' => 'required|exists:UnitOfMeasure,UnitOfMeasureId',
+                'UnitOfMeasureId' => 'required|exists:unitofmeasure,UnitOfMeasureId',
                 'SupplierID' => 'required|exists:suppliers,SupplierID',
                 'ReorderPoint' => 'required|integer|min:0',
                 'Description' => 'nullable|string',
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
-
-            // Handle image upload
-            if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('items', 'public');
-            }
 
             // Create the item
             $item = new Item();
             $item->ItemName = $validated['ItemName'];
-            $item->ClassificationId = $validated['ClassificationId'];
-            $item->UnitOfMeasureId = $validated['UnitOfMeasureId'];
-            $item->SupplierID = $validated['SupplierID'];
-            $item->StocksAvailable = 0; // Always set initial stock to 0
-            $item->ReorderPoint = $validated['ReorderPoint'];
             $item->Description = $validated['Description'];
-            $item->ImagePath = $imagePath ?? null;
-            $item->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
-            
-            // Debug user info
-            \Log::info('User info:', [
-                'Auth::id()' => Auth::id(),
-                'Auth::user()' => Auth::user(),
-                'UserAccountID' => Auth::user()->UserAccountID ?? 'null'
-            ]);
-            
-            $item->CreatedById = Auth::user()->UserAccountID;
-            $item->ModifiedById = Auth::user()->UserAccountID;
-            $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
+            $item->UnitOfMeasureId = $validated['UnitOfMeasureId'];
+            $item->ClassificationId = $validated['ClassificationId'];
+            $item->SupplierID = $validated['SupplierID'];
+            $item->StocksAvailable = 0;
+            $item->ReorderPoint = $validated['ReorderPoint'];
+            $item->CreatedById = Auth::id();
+            $item->DateCreated = now();
             $item->IsDeleted = false;
+
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('items', 'public');
+                $item->ImagePath = $imagePath;
+            }
+
             $item->save();
 
+            // Add this logging to verify saved data
+            Log::info('Item created with details:', [
+                'item_id' => $item->ItemId,
+                'created_by_id' => $item->CreatedById,
+                'auth_id' => Auth::id()
+            ]);
+
             DB::commit();
-            return redirect()->route('items.index')
-                ->with('success', 'Item created successfully');
+            return redirect()->route('items.index')->with('success', 'Item created successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Item creation failed: ' . $e->getMessage());
+            Log::error('Item creation failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to create item: ' . $e->getMessage())
-                        ->withInput();
+                ->withInput();
         }
     }
 
     public function update(Request $request, $id)
     {
         try {
-            DB::beginTransaction();
-
             $request->validate([
                 'ItemName' => 'required|string|max:255',
-                'Description' => 'nullable|string',
+                'UnitOfMeasureId' => 'required|exists:unitofmeasure,UnitOfMeasureId',
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
-                'UnitOfMeasureId' => 'required|exists:UnitOfMeasure,UnitOfMeasureId',
                 'SupplierID' => 'required|exists:suppliers,SupplierID',
                 'ReorderPoint' => 'required|integer|min:0',
+                'Description' => 'nullable|string',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
 
+            DB::beginTransaction();
+
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
             $item = Item::findOrFail($id);
-            
-            // Handle image upload
-            if ($request->hasFile('image')) {
-                // Delete old image if exists
-                if ($item->ImagePath && Storage::disk('public')->exists($item->ImagePath)) {
-                    Storage::disk('public')->delete($item->ImagePath);
-                }
-                
-                // Store new image
-                $imagePath = $request->file('image')->store('items', 'public');
-            }
             
             // Update item details
             $item->ItemName = $request->ItemName;
@@ -151,17 +161,30 @@ class ItemController extends Controller
             $item->ClassificationId = $request->ClassificationId;
             $item->SupplierID = $request->SupplierID;
             $item->ReorderPoint = $request->ReorderPoint;
-            $item->ImagePath = $request->hasFile('image') ? $imagePath : $item->ImagePath;
-            $item->ModifiedById = Auth::user()->UserAccountID;
-            $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
+            $item->ModifiedById = $currentEmployee->EmployeeID;
+            $item->DateModified = now();
+
+            // Handle image upload if new image is provided
+            if ($request->hasFile('image')) {
+                // Delete old image if exists
+                if ($item->ImagePath) {
+                    Storage::disk('public')->delete($item->ImagePath);
+                }
+                $imagePath = $request->file('image')->store('items', 'public');
+                $item->ImagePath = $imagePath;
+            }
+
             $item->save();
 
             DB::commit();
-            return redirect()->route('items.index')->with('success', 'Item updated successfully');
+            return redirect()->route('items.index')
+                ->with('success', 'Item updated successfully');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Update failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to update item')->withInput();
+            Log::error('Error updating item: ' . $e->getMessage());
+            return back()->with('error', 'Error updating item: ' . $e->getMessage())
+                ->withInput();
         }
     }
 

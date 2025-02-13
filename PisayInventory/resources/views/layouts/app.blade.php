@@ -234,6 +234,10 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
         <link href="{{ asset('css/app.css') }}" rel="stylesheet">
         @yield('styles')
+        <!-- Move jQuery and DataTables to the head -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     </head>
     <body>
         @include('layouts.sidebar')
@@ -259,11 +263,41 @@
     </div>
 </div>
 
-        <!-- Scripts -->
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <!-- Scripts at the bottom -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Initialize sidebar functionality
+                const sidebarElement = document.querySelector('.sidebar');
+                const mainContent = document.querySelector('.main-content');
+                
+                if (sidebarElement && mainContent) {
+                    window.sidebar = {
+                        element: sidebarElement,
+                        mainContent: mainContent,
+                        toggle: function() {
+                            if (this.element) {
+                                this.element.classList.toggle('collapsed');
+                                if (this.element.classList.contains('collapsed')) {
+                                    this.mainContent.style.marginLeft = '70px';
+                                } else {
+                                    this.mainContent.style.marginLeft = '320px';
+                                }
+                            }
+                        }
+                    };
+                }
+
+                // Initialize tooltips and other Bootstrap components
+                if (typeof bootstrap !== 'undefined') {
+                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                    tooltipTriggerList.map(function (tooltipTriggerEl) {
+                        return new bootstrap.Tooltip(tooltipTriggerEl);
+                    });
+                }
+            });
+        </script>
+
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-        <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
         
         <script>
             function confirmLogout() {

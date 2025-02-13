@@ -71,4 +71,11 @@ class PurchaseOrder extends Model
     {
         return $this->belongsTo(Employee::class, 'RestoredById', 'EmployeeID');
     }
+
+    public function getTotalAmount()
+    {
+        return $this->TotalAmount ?? $this->items->sum(function($item) {
+            return $item->Quantity * $item->UnitPrice;
+        });
+    }
 } 

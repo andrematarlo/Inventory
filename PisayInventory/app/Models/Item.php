@@ -55,28 +55,39 @@ class Item extends Model
 
     public function supplier()
     {
-        return $this->belongsTo(Supplier::class, 'SupplierID', 'SupplierID')
-                    ->withDefault(['SupplierName' => 'N/A']);
+        return $this->belongsTo(Supplier::class, 'SupplierID', 'SupplierID');
     }
 
     public function createdBy()
     {
-        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID');
+        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->select(['UserAccountID', 'Username'])
+                    ->withDefault(['Username' => 'N/A']);
     }
 
     public function modifiedBy()
     {
-        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID');
+        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->select(['UserAccountID', 'Username'])
+                    ->withDefault(['Username' => 'N/A']);
     }
 
     public function deletedBy()
     {
-        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID');
+        return $this->belongsTo(User::class, 'DeletedById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->select(['UserAccountID', 'Username'])
+                    ->withDefault(['Username' => 'N/A']);
     }
 
     public function restoredBy()
     {
-        return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID');
+        return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID')
+                    ->from('UserAccount')
+                    ->select(['UserAccountID', 'Username'])
+                    ->withDefault(['Username' => 'N/A']);
     }
 
     public function inventories()

@@ -41,6 +41,7 @@
                                 <thead>
                                     <tr>
                                         <th>Item</th>
+                                        <th>Supplier</th>
                                         <th>Quantity</th>
                                         <th>Unit Price</th>
                                         <th>Total</th>
@@ -54,8 +55,19 @@
                                                 <option value="">Select Item</option>
                                                 @foreach($items as $item)
                                                 <option value="{{ $item->ItemId }}" 
-                                                        data-price="{{ $item->UnitPrice }}">
+                                                        data-price="{{ $item->UnitPrice }}"
+                                                        data-supplier="{{ $item->SupplierID }}">
                                                     {{ $item->ItemName }}
+                                                </option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="items[0][SupplierID]" class="form-control supplier-select" required>
+                                                <option value="">Select Supplier</option>
+                                                @foreach($suppliers as $supplier)
+                                                <option value="{{ $supplier->SupplierID }}">
+                                                    {{ $supplier->CompanyName }}
                                                 </option>
                                                 @endforeach
                                             </select>
@@ -125,17 +137,6 @@
                                    readonly>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Supplier</label>
-                            <select name="SupplierID" class="form-control supplier-select" required>
-                                <option value="">Select Supplier</option>
-                                @foreach($suppliers as $supplier)
-                                <option value="{{ $supplier->SupplierID }}">
-                                    {{ $supplier->CompanyName }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="mb-3">
                             <label class="form-label">Order Date</label>
                             <input type="text" 
                                    class="form-control" 
@@ -160,22 +161,55 @@ $(document).ready(function() {
     // Initialize Select2
     $('.supplier-select').select2({
         placeholder: 'Select Supplier',
-        width: '100%'
+        width: '100%',
+        disabled: true  // Make supplier select disabled by default
     });
 
     initializeItemRow($('.item-row:first'));
 
     // Add new item row
     $('#addItem').click(function() {
-        // Create a fresh row instead of cloning
         let rowCount = $('.item-row').length;
+        
+        // Get all currently selected item IDs
+        let selectedItems = [];
+        $('.item-select').each(function() {
+            let selectedValue = $(this).val();
+            if (selectedValue) {
+                selectedItems.push(selectedValue);
+            }
+        });
+
+        // Filter out already selected items
+        let availableOptions = $('.item-row:first .item-select option').filter(function() {
+            return !selectedItems.includes($(this).val()) && $(this).val() !== '';
+        });
+
+        // Check if there are any items left to add
+        if (availableOptions.length === 0) {
+            alert('All items have been added to the purchase order.');
+            return;
+        }
+
         let newRowHtml = `
             <tr class="item-row">
                 <td>
                     <select name="items[${rowCount}][ItemId]" class="form-control item-select" required>
                         <option value="">Select Item</option>
-                        ${$('.item-row:first .item-select option:not(:selected)').map(function() {
-                            return `<option value="${$(this).val()}" data-price="${$(this).data('price')}">${$(this).text()}</option>`;
+                        ${availableOptions.map(function() {
+                            return `<option value="${$(this).val()}" 
+                                    data-price="${$(this).data('price')}"
+                                    data-supplier="${$(this).data('supplier')}">
+                                    ${$(this).text()}
+                                    </option>`;
+                        }).get().join('')}
+                    </select>
+                </td>
+                <td>
+                    <select name="items[${rowCount}][SupplierID]" class="form-control supplier-select" required>
+                        <option value="">Select Supplier</option>
+                        ${$('.item-row:first .supplier-select option').map(function() {
+                            return `<option value="${$(this).val()}">${$(this).text()}</option>`;
                         }).get().join('')}
                     </select>
                 </td>
@@ -196,10 +230,7 @@ $(document).ready(function() {
             </tr>
         `;
         
-        // Add the new row
         $('#itemsTable tbody').append(newRowHtml);
-        
-        // Initialize the new row
         initializeItemRow($('.item-row:last'));
     });
 
@@ -218,6 +249,9 @@ $(document).ready(function() {
             alert('Please add at least one item to the purchase order.');
             return false;
         }
+
+        // Enable all supplier selects before submitting
+        $('.supplier-select').prop('disabled', false);
     });
 });
 
@@ -232,13 +266,38 @@ function initializeItemRow(row) {
     row.find('.item-select').on('change', function() {
         let selectedOption = $(this).find('option:selected');
         let unitPrice = selectedOption.data('price');
+        let supplierId = selectedOption.data('supplier');
         let row = $(this).closest('.item-row');
+        
+        // Set the unit price
         row.find('.unit-price').val(unitPrice);
         calculateRowTotal(row);
+
+        // Set the supplier for THIS ROW ONLY
+        if (supplierId) {
+            row.find('.supplier-select')
+                .val(supplierId)
+                .trigger('change')
+                .prop('disabled', true)
+                .trigger('select2:disable');
+        }
+    });
+
+    // When item is deselected or changed
+    row.find('.item-select').on('select2:unselecting', function() {
+        let row = $(this).closest('.item-row');
+        row.find('.supplier-select')
+            .prop('disabled', false)
+            .trigger('select2:enable');
     });
 
     // Quantity change
     row.find('.quantity').on('input', function() {
+        calculateRowTotal($(this).closest('.item-row'));
+    });
+
+    // Add Unit Price change listener
+    row.find('.unit-price').on('input', function() {
         calculateRowTotal($(this).closest('.item-row'));
     });
 }

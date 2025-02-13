@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Create Receiving')
+@section('title', 'Create Receiving Record')
 
 @section('styles')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -20,88 +20,135 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Create Receiving</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Create Receiving Record</h1>
         <a href="{{ route('receiving.index') }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Back to List
         </a>
     </div>
 
-    <form action="{{ route('receiving.store') }}" method="POST" id="receivingForm">
-        @csrf
-        <div class="row">
-            <div class="col-md-8">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Purchase Order Details</h5>
+    <div class="card">
+        <div class="card-body">
+            @if(isset($purchaseOrder))
+                <!-- Display specific PO details -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h4>Purchase Order Details</h4>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>PO Number:</th>
+                                <td>{{ $purchaseOrder->PONumber }}</td>
+                            </tr>
+                            <tr>
+                                <th>Supplier:</th>
+                                <td>{{ $purchaseOrder->supplier->CompanyName }}</td>
+                            </tr>
+                            <tr>
+                                <th>Order Date:</th>
+                                <td>{{ $purchaseOrder->OrderDate->format('M d, Y') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Total Amount:</th>
+                                <td>₱{{ number_format($purchaseOrder->getTotalAmount(), 2) }}</td>
+                            </tr>
+                        </table>
                     </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Purchase Order</label>
-                            <select name="PurchaseOrderID" class="form-control po-select" required>
-                                <option value="">Select Purchase Order</option>
-                                @foreach($pendingPOs as $po)
-                                <option value="{{ $po->PurchaseOrderID }}">
-                                    {{ $po->PONumber }} - {{ $po->supplier->CompanyName }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
+                </div>
 
-                        <div id="poDetails" style="display: none;">
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Item</th>
-                                            <th>Ordered Qty</th>
-                                            <th>Unit Price</th>
-                                            <th>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="poItems">
-                                    </tbody>
-                                    <tfoot>
-                                        <tr>
-                                            <td colspan="3" class="text-end"><strong>Total Amount:</strong></td>
-                                            <td id="poTotal"></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
+                <!-- Display PO Items -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h4>Items to Receive</h4>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Item Code</th>
+                                        <th>Description</th>
+                                        <th>Ordered Quantity</th>
+                                        <th>Unit</th>
+                                        <th>Unit Price</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($purchaseOrder->items as $item)
+                                    <tr>
+                                        <td>{{ $item->item->ItemCode }}</td>
+                                        <td>{{ $item->item->Description }}</td>
+                                        <td>{{ $item->Quantity }}</td>
+                                        <td>{{ $item->item->Unit }}</td>
+                                        <td>₱{{ number_format($item->UnitPrice, 2) }}</td>
+                                        <td>₱{{ number_format($item->Quantity * $item->UnitPrice, 2) }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <th colspan="5" class="text-end">Total Amount:</th>
+                                        <th>₱{{ number_format($purchaseOrder->getTotalAmount(), 2) }}</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-md-4">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Receiving Details</h5>
+                <!-- Receiving Form -->
+                <form action="{{ route('receiving.store') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="PurchaseOrderID" value="{{ $purchaseOrder->PurchaseOrderID }}">
+                    
+                    <div class="mb-3">
+                        <label for="DeliveryDate" class="form-label">Delivery Date</label>
+                        <input type="date" 
+                               class="form-control @error('DeliveryDate') is-invalid @enderror" 
+                               id="DeliveryDate" 
+                               name="DeliveryDate" 
+                               value="{{ old('DeliveryDate', date('Y-m-d')) }}" 
+                               required>
+                        @error('DeliveryDate')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Date Received</label>
-                            <input type="text" 
-                                   class="form-control" 
-                                   value="{{ date('M d, Y') }}" 
-                                   readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Notes</label>
-                            <textarea name="Notes" 
-                                      class="form-control" 
-                                      rows="3"
-                                      placeholder="Enter any notes here..."></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            Receive Items
-                        </button>
+
+                    <div class="mb-3">
+                        <label for="Notes" class="form-label">Notes</label>
+                        <textarea class="form-control @error('Notes') is-invalid @enderror" 
+                                  id="Notes" 
+                                  name="Notes" 
+                                  rows="3">{{ old('Notes') }}</textarea>
+                        @error('Notes')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
-                </div>
-            </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">Create Receiving Record</button>
+                    </div>
+                </form>
+            @else
+                <!-- Display PO selection form -->
+                <form action="{{ route('receiving.create') }}" method="GET">
+                    <div class="mb-3">
+                        <label for="po_id" class="form-label">Select Purchase Order</label>
+                        <select class="form-select" id="po_id" name="po_id" required>
+                            <option value="">Select a Purchase Order</option>
+                            @foreach($pendingPOs as $po)
+                            <option value="{{ $po->PurchaseOrderID }}">
+                                {{ $po->PONumber }} - {{ $po->supplier->CompanyName }} 
+                                (₱{{ number_format($po->getTotalAmount(), 2) }})
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">Next</button>
+                    </div>
+                </form>
+            @endif
         </div>
-    </form>
+    </div>
 </div>
 @endsection
 

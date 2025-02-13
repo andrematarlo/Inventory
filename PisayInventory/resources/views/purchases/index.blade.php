@@ -8,7 +8,7 @@
         overflow-x: auto;
     }
     
-    #purchaseOrdersTable, #deletedPurchaseOrdersTable {
+    #purchaseOrdersTable, #pendingPurchaseTable, #deletedPurchaseTable {
         min-width: 100%;
         width: auto;
     }
@@ -35,7 +35,8 @@
     </div>
 
     <div class="mb-4">
-        <button type="button" class="btn btn-primary" id="activeRecordsBtn">Active Purchase Orders</button>
+        <button type="button" class="btn btn-primary" id="activeRecordsBtn">Active Records</button>
+        <button type="button" class="btn btn-warning" id="pendingRecordsBtn">Pending Records</button>
         <button type="button" class="btn btn-danger" id="showDeletedBtn">
             <i class="bi bi-archive"></i> Show Deleted Records
         </button>
@@ -58,14 +59,77 @@
                             <th>Date Created</th>
                             <th>Modified By</th>
                             <th>Date Modified</th>
-                            <th>Deleted By</th>
-                            <th>Date Deleted</th>
-                            <th>Restored By</th>
-                            <th>Date Restored</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($purchases as $po)
+                        <tr>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ route('purchases.show', $po->PurchaseOrderID) }}" 
+                                       class="btn btn-sm btn-info" 
+                                       title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    @if($po->Status === 'Pending')
+                                    <a href="{{ route('purchases.edit', $po->PurchaseOrderID) }}" 
+                                       class="btn btn-sm btn-primary" 
+                                       title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    @endif
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger" 
+                                            onclick="deletePurchaseOrder({{ $po->PurchaseOrderID }})"
+                                            title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>{{ $po->PONumber }}</td>
+                            <td>{{ $po->supplier->CompanyName }}</td>
+                            <td>{{ $po->OrderDate->format('M d, Y') }}</td>
+                            <td>
+                                <span class="badge bg-{{ $po->Status === 'Pending' ? 'warning' : 'success' }}">
+                                    {{ $po->Status }}
+                                </span>
+                            </td>
+                            <td>₱{{ number_format($po->getTotalAmount(), 2) }}</td>
+                            <td>{{ $po->createdBy->FirstName ?? 'N/A' }} {{ $po->createdBy->LastName ?? '' }}</td>
+                            <td>{{ $po->DateCreated ? date('Y-m-d H:i:s', strtotime($po->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $po->modifiedBy->FirstName ?? 'N/A' }} {{ $po->modifiedBy->LastName ?? '' }}</td>
+                            <td>{{ $po->DateModified ? date('Y-m-d H:i:s', strtotime($po->DateModified)) : 'N/A' }}</td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="10" class="text-center">No purchase orders found</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pending Purchase Orders Section -->
+        <div id="pendingPurchases" class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-hover" id="pendingPurchaseTable">
+                    <thead>
+                        <tr>
+                            <th>Actions</th>
+                            <th>PO Number</th>
+                            <th>Supplier</th>
+                            <th>Order Date</th>
+                            <th>Status</th>
+                            <th>Total Amount</th>
+                            <th>Created By</th>
+                            <th>Date Created</th>
+                            <th>Modified By</th>
+                            <th>Date Modified</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($pendingPurchases as $po)
                         <tr>
                             <td>
                                 <div class="btn-group" role="group">
@@ -91,23 +155,19 @@
                             <td>{{ $po->supplier->CompanyName }}</td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
                             <td>
-                                <span class="badge bg-{{ $po->Status === 'Pending' ? 'warning' : 'success' }}">
+                                <span class="badge bg-warning">
                                     {{ $po->Status }}
                                 </span>
                             </td>
-                            <td>₱{{ number_format($po->TotalAmount, 2) }}</td>
+                            <td>₱{{ number_format($po->getTotalAmount(), 2) }}</td>
                             <td>{{ $po->createdBy->FirstName ?? 'N/A' }} {{ $po->createdBy->LastName ?? '' }}</td>
                             <td>{{ $po->DateCreated ? date('Y-m-d H:i:s', strtotime($po->DateCreated)) : 'N/A' }}</td>
                             <td>{{ $po->modifiedBy->FirstName ?? 'N/A' }} {{ $po->modifiedBy->LastName ?? '' }}</td>
                             <td>{{ $po->DateModified ? date('Y-m-d H:i:s', strtotime($po->DateModified)) : 'N/A' }}</td>
-                            <td>{{ $po->deletedBy->FirstName ?? 'N/A' }} {{ $po->deletedBy->LastName ?? '' }}</td>
-                            <td>{{ $po->DateDeleted ? date('Y-m-d H:i:s', strtotime($po->DateDeleted)) : 'N/A' }}</td>
-                            <td>{{ $po->restoredBy->FirstName ?? 'N/A' }} {{ $po->restoredBy->LastName ?? '' }}</td>
-                            <td>{{ $po->DateRestored ? date('Y-m-d H:i:s', strtotime($po->DateRestored)) : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="14" class="text-center">No purchase orders found</td>
+                            <td colspan="10" class="text-center">No pending purchase orders found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -118,7 +178,7 @@
         <!-- Deleted Purchase Orders Section -->
         <div id="deletedPurchases" class="card-body" style="display: none;">
             <div class="table-responsive">
-                <table class="table table-hover" id="deletedPurchaseOrdersTable">
+                <table class="table table-hover" id="deletedPurchaseTable">
                     <thead>
                         <tr>
                             <th>Actions</th>
@@ -154,7 +214,7 @@
                                     {{ $po->Status }}
                                 </span>
                             </td>
-                            <td>₱{{ number_format($po->TotalAmount, 2) }}</td>
+                            <td>₱{{ number_format($po->getTotalAmount(), 2) }}</td>
                             <td>{{ $po->createdBy->FirstName ?? 'N/A' }} {{ $po->createdBy->LastName ?? '' }}</td>
                             <td>{{ $po->DateCreated ? date('Y-m-d H:i:s', strtotime($po->DateCreated)) : 'N/A' }}</td>
                             <td>{{ $po->modifiedBy->FirstName ?? 'N/A' }} {{ $po->modifiedBy->LastName ?? '' }}</td>
@@ -178,58 +238,70 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
-    const activeTable = $('#purchaseOrdersTable').DataTable({
+    // Basic DataTable configuration
+    var config = {
         pageLength: 10,
-        responsive: true,
         order: [[1, 'desc']],
-        language: {
-            search: "Search:",
-            searchPlaceholder: "Search purchase orders..."
-        },
-        scrollX: true
-    });
+        columnDefs: [
+            { orderable: false, targets: 0 }
+        ],
+        searching: true,
+        info: true,
+        paging: true
+    };
 
-    const deletedTable = $('#deletedPurchaseOrdersTable').DataTable({
-        pageLength: 10,
-        responsive: true,
-        order: [[1, 'desc']],
-        language: {
-            search: "Search:",
-            searchPlaceholder: "Search deleted purchase orders..."
-        },
-        scrollX: true
-    });
+    // Only initialize tables that have data
+    var activeRows = $('#purchaseOrdersTable tbody tr').length;
+    var pendingRows = $('#pendingPurchaseTable tbody tr').length;
+    var deletedRows = $('#deletedPurchaseTable tbody tr').length;
 
-    // Show active records by default
-    $('#deletedPurchases').hide();
+    // Initialize only if there are rows and not showing "No data" message
+    if (activeRows > 0 && !$('#purchaseOrdersTable tbody tr td').hasClass('text-center')) {
+        $('#purchaseOrdersTable').DataTable(config);
+    }
 
-    // Toggle between active and deleted records
+    if (pendingRows > 0 && !$('#pendingPurchaseTable tbody tr td').hasClass('text-center')) {
+        $('#pendingPurchaseTable').DataTable(config);
+    }
+
+    if (deletedRows > 0 && !$('#deletedPurchaseTable tbody tr td').hasClass('text-center')) {
+        $('#deletedPurchaseTable').DataTable(config);
+    }
+
+    // Hide other sections initially
+    $('#pendingPurchases, #deletedPurchases').hide();
+
+    // Button click handlers
     $('#activeRecordsBtn').click(function() {
         $('#activePurchases').show();
-        $('#deletedPurchases').hide();
-        activeTable.columns.adjust().draw();
+        $('#pendingPurchases, #deletedPurchases').hide();
+    });
+
+    $('#pendingRecordsBtn').click(function() {
+        $('#pendingPurchases').show();
+        $('#activePurchases, #deletedPurchases').hide();
     });
 
     $('#showDeletedBtn').click(function() {
-        $('#activePurchases').hide();
         $('#deletedPurchases').show();
-        deletedTable.columns.adjust().draw();
+        $('#activePurchases, #pendingPurchases').hide();
     });
 });
 
 function restorePurchaseOrder(id) {
     if (confirm('Are you sure you want to restore this purchase order?')) {
-        fetch(`/purchases/${id}/restore`, {
-            method: 'POST',
+        fetch(`/inventory/purchases/${id}/restore`, {
+            method: 'PUT',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
-            }
+            },
+            credentials: 'same-origin'
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                return response.json().then(json => Promise.reject(json));
             }
             return response.json();
         })
@@ -243,35 +315,40 @@ function restorePurchaseOrder(id) {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error restoring purchase order: ' + error.message);
+            alert('Error restoring purchase order: ' + (error.message || 'Unknown error'));
         });
     }
 }
 
 function deletePurchaseOrder(id) {
     if (confirm('Are you sure you want to delete this purchase order?')) {
-        // Create a form dynamically
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{{ url("/purchases") }}/' + id;
-        
-        // Add CSRF token
-        const csrfToken = document.createElement('input');
-        csrfToken.type = 'hidden';
-        csrfToken.name = '_token';
-        csrfToken.value = '{{ csrf_token() }}';
-        form.appendChild(csrfToken);
-        
-        // Add method field
-        const methodField = document.createElement('input');
-        methodField.type = 'hidden';
-        methodField.name = '_method';
-        methodField.value = 'DELETE';
-        form.appendChild(methodField);
-        
-        // Append form to body and submit
-        document.body.appendChild(form);
-        form.submit();
+        fetch(`/inventory/purchases/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(json => Promise.reject(json));
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Purchase order deleted successfully');
+                window.location.reload();
+            } else {
+                alert(data.message || 'Error deleting purchase order');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting purchase order: ' + (error.message || 'Unknown error'));
+        });
     }
 }
 </script>
