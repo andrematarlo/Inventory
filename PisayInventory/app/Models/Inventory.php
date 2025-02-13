@@ -21,6 +21,8 @@ class Inventory extends Model
     protected $fillable = [
         'InventoryId',
         'ItemId',
+        'Quantity',
+        'Unit',
         'ClassificationId',
         'Type',
         'StocksAdded',
@@ -49,27 +51,24 @@ class Inventory extends Model
     }
 
     // Relationships
+    public function classification()
+    {
+        return $this->belongsTo(Classification::class, 'ClassificationId', 'ClassificationId');
+    }
+
     public function item()
     {
         return $this->belongsTo(Item::class, 'ItemId', 'ItemId');
     }
 
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
-                    ->withDefault(['Username' => 'N/A']);
-    }
-
     public function created_by_user()
     {
-        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID')
-                    ->withDefault(['Username' => 'N/A']);
+        return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID');
     }
 
     public function modified_by_user()
     {
-        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID')
-                    ->withDefault(['Username' => 'N/A']);
+        return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID');
     }
 
     public function deleted_by_user()
