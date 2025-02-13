@@ -48,6 +48,7 @@
                 <table class="table table-hover" id="purchaseOrdersTable">
                     <thead>
                         <tr>
+                            <th>Actions</th>
                             <th>PO Number</th>
                             <th>Supplier</th>
                             <th>Order Date</th>
@@ -61,29 +62,11 @@
                             <th>Date Deleted</th>
                             <th>Restored By</th>
                             <th>Date Restored</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($purchases as $po)
                         <tr>
-                            <td>{{ $po->PONumber }}</td>
-                            <td>{{ $po->supplier->CompanyName }}</td>
-                            <td>{{ $po->OrderDate->format('M d, Y') }}</td>
-                            <td>
-                                <span class="badge bg-{{ $po->Status === 'Pending' ? 'warning' : 'success' }}">
-                                    {{ $po->Status }}
-                                </span>
-                            </td>
-                            <td>₱{{ number_format($po->TotalAmount, 2) }}</td>
-                            <td>{{ $po->createdBy->FirstName ?? 'N/A' }} {{ $po->createdBy->LastName ?? '' }}</td>
-                            <td>{{ $po->DateCreated ? date('Y-m-d H:i:s', strtotime($po->DateCreated)) : 'N/A' }}</td>
-                            <td>{{ $po->modifiedBy->FirstName ?? 'N/A' }} {{ $po->modifiedBy->LastName ?? '' }}</td>
-                            <td>{{ $po->DateModified ? date('Y-m-d H:i:s', strtotime($po->DateModified)) : 'N/A' }}</td>
-                            <td>{{ $po->deletedBy->FirstName ?? 'N/A' }} {{ $po->deletedBy->LastName ?? '' }}</td>
-                            <td>{{ $po->DateDeleted ? date('Y-m-d H:i:s', strtotime($po->DateDeleted)) : 'N/A' }}</td>
-                            <td>{{ $po->restoredBy->FirstName ?? 'N/A' }} {{ $po->restoredBy->LastName ?? '' }}</td>
-                            <td>{{ $po->DateRestored ? date('Y-m-d H:i:s', strtotime($po->DateRestored)) : 'N/A' }}</td>
                             <td>
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('purchases.show', $po->PurchaseOrderID) }}" 
@@ -104,6 +87,23 @@
                                     </button>
                                 </div>
                             </td>
+                            <td>{{ $po->PONumber }}</td>
+                            <td>{{ $po->supplier->CompanyName }}</td>
+                            <td>{{ $po->OrderDate->format('M d, Y') }}</td>
+                            <td>
+                                <span class="badge bg-{{ $po->Status === 'Pending' ? 'warning' : 'success' }}">
+                                    {{ $po->Status }}
+                                </span>
+                            </td>
+                            <td>₱{{ number_format($po->TotalAmount, 2) }}</td>
+                            <td>{{ $po->createdBy->FirstName ?? 'N/A' }} {{ $po->createdBy->LastName ?? '' }}</td>
+                            <td>{{ $po->DateCreated ? date('Y-m-d H:i:s', strtotime($po->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $po->modifiedBy->FirstName ?? 'N/A' }} {{ $po->modifiedBy->LastName ?? '' }}</td>
+                            <td>{{ $po->DateModified ? date('Y-m-d H:i:s', strtotime($po->DateModified)) : 'N/A' }}</td>
+                            <td>{{ $po->deletedBy->FirstName ?? 'N/A' }} {{ $po->deletedBy->LastName ?? '' }}</td>
+                            <td>{{ $po->DateDeleted ? date('Y-m-d H:i:s', strtotime($po->DateDeleted)) : 'N/A' }}</td>
+                            <td>{{ $po->restoredBy->FirstName ?? 'N/A' }} {{ $po->restoredBy->LastName ?? '' }}</td>
+                            <td>{{ $po->DateRestored ? date('Y-m-d H:i:s', strtotime($po->DateRestored)) : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
@@ -121,6 +121,7 @@
                 <table class="table table-hover" id="deletedPurchaseOrdersTable">
                     <thead>
                         <tr>
+                            <th>Actions</th>
                             <th>PO Number</th>
                             <th>Supplier</th>
                             <th>Order Date</th>
@@ -132,12 +133,19 @@
                             <th>Date Modified</th>
                             <th>Deleted By</th>
                             <th>Date Deleted</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($deletedPurchases as $po)
                         <tr>
+                            <td>
+                                <button type="button" 
+                                        class="btn btn-sm btn-success" 
+                                        onclick="restorePurchaseOrder({{ $po->PurchaseOrderID }})"
+                                        title="Restore">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </td>
                             <td>{{ $po->PONumber }}</td>
                             <td>{{ $po->supplier->CompanyName }}</td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
@@ -153,14 +161,6 @@
                             <td>{{ $po->DateModified ? date('Y-m-d H:i:s', strtotime($po->DateModified)) : 'N/A' }}</td>
                             <td>{{ $po->deletedBy->FirstName ?? 'N/A' }} {{ $po->deletedBy->LastName ?? '' }}</td>
                             <td>{{ $po->DateDeleted ? date('Y-m-d H:i:s', strtotime($po->DateDeleted)) : 'N/A' }}</td>
-                            <td>
-                                <button type="button" 
-                                        class="btn btn-sm btn-success" 
-                                        onclick="restorePurchaseOrder({{ $po->PurchaseOrderID }})"
-                                        title="Restore">
-                                    <i class="bi bi-arrow-counterclockwise"></i>
-                                </button>
-                            </td>
                         </tr>
                         @empty
                         <tr>
@@ -181,7 +181,7 @@ $(document).ready(function() {
     const activeTable = $('#purchaseOrdersTable').DataTable({
         pageLength: 10,
         responsive: true,
-        order: [[6, 'desc']],
+        order: [[1, 'desc']],
         language: {
             search: "Search:",
             searchPlaceholder: "Search purchase orders..."
@@ -192,7 +192,7 @@ $(document).ready(function() {
     const deletedTable = $('#deletedPurchaseOrdersTable').DataTable({
         pageLength: 10,
         responsive: true,
-        order: [[6, 'desc']],
+        order: [[1, 'desc']],
         language: {
             search: "Search:",
             searchPlaceholder: "Search deleted purchase orders..."
