@@ -11,15 +11,35 @@ use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
+    private function getUserPermissions()
+    {
+        $userRole = auth()->user()->role;
+        return RolePolicy::whereHas('role', function($query) use ($userRole) {
+            $query->where('RoleName', $userRole);
+        })->where('Module', 'Roles')->first();
+    }
+
     public function index()
     {
+        // Get user permissions
+        $userPermissions = $this->getUserPermissions();
+        
+        // Check if user has View permission
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->back()->with('error', 'You do not have permission to view roles.');
+        }
+
         $roles = Role::where('IsDeleted', false)
+            ->with(['created_by_user', 'modified_by_user'])
             ->orderBy('DateCreated', 'desc')
             ->get();
+
         $trashedRoles = Role::where('IsDeleted', true)
+            ->with(['deleted_by_user'])
             ->orderBy('DateDeleted', 'desc')
             ->get();
-        return view('roles.index', compact('roles', 'trashedRoles'));
+
+        return view('roles.index', compact('roles', 'trashedRoles', 'userPermissions'));
     }
 
     public function create()
@@ -116,30 +136,30 @@ class RoleController extends Controller
     }
 
     public function restore($id)
-{
-    try {
-        DB::beginTransaction();
-        
-        $role = Role::findOrFail($id);
-        $role->update([
-            'IsDeleted' => false,
-            'DeletedById' => null,
-            'DateDeleted' => null,
-            'RestoredById' => Auth::id(),
-            'DateRestored' => now(),
-            'ModifiedById' => null,
-            'DateModified' => null
-        ]);
+    {
+        try {
+            DB::beginTransaction();
+            
+            $role = Role::findOrFail($id);
+            $role->update([
+                'IsDeleted' => false,
+                'DeletedById' => null,
+                'DateDeleted' => null,
+                'RestoredById' => Auth::id(),
+                'DateRestored' => now(),
+                'ModifiedById' => null,
+                'DateModified' => null
+            ]);
 
-        DB::commit();
-        return redirect()->route('roles.index')
-            ->with('success', 'Role restored successfully');
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Role restore failed: ' . $e->getMessage());
-        return back()->with('error', 'Failed to restore role: ' . $e->getMessage());
+            DB::commit();
+            return redirect()->route('roles.index')
+                ->with('success', 'Role restored successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Role restore failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to restore role: ' . $e->getMessage());
+        }
     }
-}
 
     public function policies()
     {
