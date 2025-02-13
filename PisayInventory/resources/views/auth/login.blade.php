@@ -215,8 +215,13 @@
 <body>
     <div class="page-layout">
         <div class="background-content">
-            <h1>PSHS Inventory Management System</h1>
-            <p>Efficiently manage and track your school's resources with our modern inventory system.</p>
+            <h1 style="font-size: 48px; color: white; font-weight: 700; margin-bottom: 20px;">
+                <span style="display: block;">PSHS-CVisC Inventory</span>
+                <span style="display: block;">Management System</span>
+            </h1>
+            <p style="color: rgba(255, 255, 255, 0.8); font-size: 18px; line-height: 1.6;">
+                Efficiently manage and track your school's resources with our modern inventory system.
+            </p>
             
             <div class="features-grid">
                 <div class="feature-item">
@@ -259,6 +264,9 @@
 
         <div class="login-container">
             <div class="login-header">
+                <div style="margin-bottom: 20px;">
+                    <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" style="height: 50px; width: auto;">
+                </div>
                 <h1>Welcome Back!</h1>
                 <p>Please sign in to continue</p>
             </div>
