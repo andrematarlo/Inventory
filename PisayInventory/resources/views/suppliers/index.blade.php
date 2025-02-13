@@ -222,13 +222,17 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Suppliers Management</h2>
         <div>
-            <button class="btn btn-outline-secondary" type="button" id="toggleButton">
-                <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
-            </button>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                <i class="bi bi-plus-lg"></i> Add Supplier
+                <i class="bi bi-plus-circle"></i> New Supplier
             </button>
         </div>
+    </div>
+
+    <div class="mb-4">
+        <button type="button" class="btn btn-primary" id="activeRecordsBtn">Active Records</button>
+        <button type="button" class="btn btn-danger" id="showDeletedBtn">
+            <i class="bi bi-archive"></i> Show Deleted Records
+        </button>
     </div>
 
     @if(session('success'))
@@ -240,149 +244,137 @@
     @endif
 
     <!-- Active Suppliers Section -->
-    <div id="activeSuppliers">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Active Suppliers</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>Showing {{ $activeSuppliers->firstItem() ?? 0 }} to {{ $activeSuppliers->lastItem() ?? 0 }} of {{ $activeSuppliers->total() }} results</div>
-                    <div class="pagination-sm">
-                        @if($activeSuppliers->currentPage() > 1)
-                            <a href="{{ $activeSuppliers->previousPageUrl() }}" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-chevron-left"></i> Previous
-                            </a>
-                        @endif
-                        
-                        @for($i = 1; $i <= $activeSuppliers->lastPage(); $i++)
-                            <a href="{{ $activeSuppliers->url($i) }}" 
-                               class="btn btn-sm {{ $i == $activeSuppliers->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
-                                {{ $i }}
-                            </a>
-                        @endfor
+    <div class="card">
+        <div id="activeSuppliers" class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>Showing {{ $activeSuppliers->firstItem() ?? 0 }} to {{ $activeSuppliers->lastItem() ?? 0 }} of {{ $activeSuppliers->total() }} results</div>
+                <div class="pagination-sm">
+                    @if($activeSuppliers->currentPage() > 1)
+                        <a href="{{ $activeSuppliers->previousPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </a>
+                    @endif
+                    
+                    @for($i = 1; $i <= $activeSuppliers->lastPage(); $i++)
+                        <a href="{{ $activeSuppliers->url($i) }}" 
+                           class="btn btn-sm {{ $i == $activeSuppliers->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
+                            {{ $i }}
+                        </a>
+                    @endfor
 
-                        @if($activeSuppliers->hasMorePages())
-                            <a href="{{ $activeSuppliers->nextPageUrl() }}" class="btn btn-outline-secondary btn-sm">
-                                Next <i class="bi bi-chevron-right"></i>
-                            </a>
-                        @endif
-                    </div>
+                    @if($activeSuppliers->hasMorePages())
+                        <a href="{{ $activeSuppliers->nextPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </a>
+                    @endif
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Actions</th>
+                            <th>Company Name <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Contact Person <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Telephone <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Contact Number <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Address <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Created <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Modified <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Status <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($activeSuppliers as $supplier)
                             <tr>
-                                <th>Actions</th>
-                                <th>Company Name <i class="bi bi-arrow-down-up small-icon"></i></th>
-                                <th>Contact Person <i class="bi bi-arrow-down-up small-icon"></i></th>
-                                <th>Telephone <i class="bi bi-arrow-down-up small-icon"></i></th>
-                                <th>Contact Number <i class="bi bi-arrow-down-up small-icon"></i></th>
-                                <th>Address <i class="bi bi-arrow-down-up small-icon"></i></th>
-                                <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
-                                <th>Date Created <i class="bi bi-arrow-down-up small-icon"></i></th>
-                                <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
-                                <th>Date Modified <i class="bi bi-arrow-down-up small-icon"></i></th>
-                                <th>Status <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($activeSuppliers as $supplier)
-                                <tr>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button"
-                                                class="btn btn-sm btn-warning"
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button type="button"
+                                            class="btn btn-sm btn-warning"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-danger" 
                                                 data-bs-toggle="modal" 
-                                                data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-danger" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#deleteModal{{ $supplier->SupplierID }}">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td>{{ $supplier->CompanyName }}</td>
-                                    <td>{{ $supplier->ContactPerson }}</td>
-                                    <td>{{ $supplier->TelephoneNumber }}</td>
-                                    <td>{{ $supplier->ContactNum }}</td>
-                                    <td>{{ $supplier->Address }}</td>
-                                    <td>{{ $supplier->createdBy->Username ?? 'N/A' }}</td>
-                                    <td>{{ $supplier->DateCreated ? date('Y-m-d H:i:s', strtotime($supplier->DateCreated)) : 'N/A' }}</td>
-                                    <td>{{ $supplier->modifiedBy->Username ?? 'N/A' }}</td>
-                                    <td>{{ $supplier->DateModified ? date('Y-m-d H:i:s', strtotime($supplier->DateModified)) : 'N/A' }}</td>
-                                    <td>
-                                        <span class="badge bg-success">Active</span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="11" class="text-center">No suppliers found</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                                                data-bs-target="#deleteModal{{ $supplier->SupplierID }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>{{ $supplier->CompanyName }}</td>
+                                <td>{{ $supplier->ContactPerson }}</td>
+                                <td>{{ $supplier->TelephoneNumber }}</td>
+                                <td>{{ $supplier->ContactNum }}</td>
+                                <td>{{ $supplier->Address }}</td>
+                                <td>{{ $supplier->createdBy->Username ?? 'N/A' }}</td>
+                                <td>{{ $supplier->DateCreated ? date('Y-m-d H:i:s', strtotime($supplier->DateCreated)) : 'N/A' }}</td>
+                                <td>{{ $supplier->modifiedBy->Username ?? 'N/A' }}</td>
+                                <td>{{ $supplier->DateModified ? date('Y-m-d H:i:s', strtotime($supplier->DateModified)) : 'N/A' }}</td>
+                                <td>
+                                    <span class="badge bg-success">Active</span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="11" class="text-center">No suppliers found</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <!-- Deleted Suppliers Section -->
-    <div id="deletedSuppliers" style="display: none;">
-        <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0">Deleted Suppliers</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover" id="deletedSuppliersTable">
-                        <thead>
-                            <tr>
-                                <th>Actions</th>
-                                <th>Company Name</th>
-                                <th>Contact Person</th>
-                                <th>Telephone</th>
-                                <th>Contact Number</th>
-                                <th>Address</th>
-                                <th>Deleted Date</th>
-                                <th>Created By</th>
-                                <th>Modified By</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($deletedSuppliers as $supplier)
-                                <tr>
-                                    <td>
-                                        <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
-                                              method="POST" 
-                                              class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-arrow-counterclockwise"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                    <td>{{ $supplier->CompanyName }}</td>
-                                    <td>{{ $supplier->ContactPerson }}</td>
-                                    <td>{{ $supplier->TelephoneNumber }}</td>
-                                    <td>{{ $supplier->ContactNum }}</td>
-                                    <td>{{ $supplier->Address }}</td>
-                                    <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i:s', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
-                                    <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
-                                    <td>{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="9" class="text-center">No deleted suppliers found</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <div id="deletedSuppliers" class="card-body" style="display: none;">
+        <div class="table-responsive">
+            <table class="table table-hover" id="deletedSuppliersTable">
+                <thead>
+                    <tr>
+                        <th>Actions</th>
+                        <th>Company Name</th>
+                        <th>Contact Person</th>
+                        <th>Telephone</th>
+                        <th>Contact Number</th>
+                        <th>Address</th>
+                        <th>Deleted Date</th>
+                        <th>Created By</th>
+                        <th>Modified By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($deletedSuppliers as $supplier)
+                        <tr>
+                            <td>
+                                <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
+                                      method="POST" 
+                                      class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </form>
+                            </td>
+                            <td>{{ $supplier->CompanyName }}</td>
+                            <td>{{ $supplier->ContactPerson }}</td>
+                            <td>{{ $supplier->TelephoneNumber }}</td>
+                            <td>{{ $supplier->ContactNum }}</td>
+                            <td>{{ $supplier->Address }}</td>
+                            <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i:s', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
+                            <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="9" class="text-center">No deleted suppliers found</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -442,32 +434,20 @@
             }
         });
 
-        // Toggle functionality
-        $('#toggleButton').on('click', function() {
-            console.log('Toggle button clicked'); // Debug log
-            
-            const activeDiv = $('#activeSuppliers');
-            const deletedDiv = $('#deletedSuppliers');
-            const buttonText = $('#buttonText');
-            const button = $(this);
+        // Show active records by default
+        $('#deletedSuppliers').hide();
 
-            console.log('Active visible:', activeDiv.is(':visible')); // Debug log
+        // Toggle between active and deleted records
+        $('#activeRecordsBtn').click(function() {
+            $('#activeSuppliers').show();
+            $('#deletedSuppliers').hide();
+            activeTable.columns.adjust().draw();
+        });
 
-            if (activeDiv.is(':visible')) {
-                console.log('Switching to deleted'); // Debug log
-                activeDiv.hide();
-                deletedDiv.show();
-                buttonText.text('Show Active');
-                button.removeClass('btn-outline-secondary').addClass('btn-outline-primary');
-                deletedTable.columns.adjust().draw();
-            } else {
-                console.log('Switching to active'); // Debug log
-                deletedDiv.hide();
-                activeDiv.show();
-                buttonText.text('Show Deleted');
-                button.removeClass('btn-outline-primary').addClass('btn-outline-secondary');
-                activeTable.columns.adjust().draw();
-            }
+        $('#showDeletedBtn').click(function() {
+            $('#activeSuppliers').hide();
+            $('#deletedSuppliers').show();
+            deletedTable.columns.adjust().draw();
         });
     });
 </script>
