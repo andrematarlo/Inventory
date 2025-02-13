@@ -22,7 +22,7 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            return redirect('dashboard');
+            return redirect()->route('dashboard');
         }
         return view('auth.login');
     }
@@ -54,15 +54,8 @@ class AuthController extends Controller
             // Start session and login
             $request->session()->regenerate();
             Auth::login($user);
-            
-            // Debug information
-            \Log::info('User authenticated', [
-                'id' => $user->getAuthIdentifier(),
-                'username' => $user->Username,
-                'is_authenticated' => Auth::check()
-            ]);
-            
-            return redirect()->intended(route('dashboard'));
+
+            return redirect()->route('dashboard');
         }
 
         return back()->withErrors(['Password' => 'Invalid password'])->onlyInput('Username');
@@ -113,14 +106,14 @@ class AuthController extends Controller
 
             DB::commit();
             Auth::login($user);
-            
-            return redirect('dashboard')->with('success', 'Registration successful!');
+
+            return redirect()->route('dashboard')->with('success', 'Registration successful!');
         } catch (\Exception $e) {
             DB::rollback();
             \Log::error('Registration failed: ' . $e->getMessage());
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'Registration failed. Please try again: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Registration failed. Please try again.']);
         }
     }
 
@@ -130,10 +123,10 @@ class AuthController extends Controller
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-            return redirect('/login')->with('success', 'You have been logged out successfully.');
+            return redirect('/inventory/login')->with('success', 'You have been logged out successfully.');
         } catch (\Exception $e) {
             \Log::error('Logout error: ' . $e->getMessage());
-            return redirect('/login');
+            return redirect('/inventory/login');
         }
     }
-} 
+}
