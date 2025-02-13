@@ -6,14 +6,18 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Items Management</h2>
-        <div>
-            <button class="btn btn-outline-secondary" type="button" id="toggleButton">
-                <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
-            </button>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                <i class="bi bi-plus-lg"></i> Add Item
-            </button>
-        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+            <i class="bi bi-plus-lg"></i> Add Item
+        </button>
+    </div>
+
+    <div class="btn-group mb-4" role="group">
+        <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
+            Active Records
+        </button>
+        <button class="btn btn-danger" type="button" id="showDeletedBtn">
+            <i class="bi bi-archive"></i> Show Deleted Records
+        </button>
     </div>
 
     @if(session('success'))
@@ -212,22 +216,22 @@
 <script>
     $(document).ready(function() {
         // Toggle between active and deleted items
-        $('#toggleButton').on('click', function() {
+        $('#activeRecordsBtn, #showDeletedBtn').on('click', function() {
             const activeDiv = $('#activeItems');
             const deletedDiv = $('#deletedItems');
-            const buttonText = $('#buttonText');
-            const button = $(this);
+            const activeBtn = $('#activeRecordsBtn');
+            const deletedBtn = $('#showDeletedBtn');
 
-            if (activeDiv.is(':visible')) {
+            if ($(this).attr('id') === 'showDeletedBtn') {
                 activeDiv.hide();
                 deletedDiv.show();
-                buttonText.text('Show Active');
-                button.removeClass('btn-outline-secondary').addClass('btn-outline-primary');
+                activeBtn.removeClass('active');
+                deletedBtn.addClass('active');
             } else {
                 deletedDiv.hide();
                 activeDiv.show();
-                buttonText.text('Show Deleted');
-                button.removeClass('btn-outline-primary').addClass('btn-outline-secondary');
+                deletedBtn.removeClass('active');
+                activeBtn.addClass('active');
             }
         });
     });
@@ -272,6 +276,32 @@
     .btn-primary:hover {
         background-color: #2980b9;
         border-color: #2980b9;
+    }
+
+    .btn-group .btn {
+        border-radius: 0;
+    }
+    
+    .btn-group .btn:first-child {
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+    }
+    
+    .btn-group .btn:last-child {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+    }
+
+    .btn-group .btn.active {
+        opacity: 1;
+    }
+
+    .btn-group .btn:not(.active) {
+        opacity: 0.8;
+    }
+
+    .btn-group .btn:hover:not(.active) {
+        opacity: 0.9;
     }
 </style>
 @endsection
