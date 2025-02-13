@@ -102,7 +102,7 @@
         </li>
 
         <li class="nav-item mt-auto">
-            <form method="POST" action="{{ route('logout') }}">
+            <form method="POST" action="{{ route('logout') }}" onsubmit="return confirmLogout()">
                 @csrf
                 <button type="submit" class="nav-link btn btn-link text-white w-100 text-start px-3">
                     <i class="bi bi-box-arrow-right"></i>
@@ -484,9 +484,12 @@
 </style>
 
 <script>
+// Add confirmLogout function at the top of the script section
+function confirmLogout() {
+    return confirm('Are you sure you want to logout?');
+}
 
 /* Script rani para sa dropdown */
-
 document.addEventListener('DOMContentLoaded', function() {
     const dropdownToggle = document.querySelector('#employeeDropdown');
     const parentLi = dropdownToggle.closest('.nav-item');

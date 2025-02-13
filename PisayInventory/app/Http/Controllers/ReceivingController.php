@@ -16,15 +16,30 @@ class ReceivingController extends Controller
     public function index()
     {
         try {
-            $receivings = Receiving::with(['purchaseOrder.supplier', 'receivedBy'])
+            $receivingRecords = Receiving::with([
+                'purchaseOrder.supplier', 
+                'createdBy', 
+                'modifiedBy',
+                'purchaseOrder'
+            ])
                 ->where('IsDeleted', false)
                 ->orderBy('DateReceived', 'desc')
                 ->get();
 
-            return view('receiving.index', compact('receivings'));
+            $deletedRecords = Receiving::with([
+                'purchaseOrder.supplier', 
+                'createdBy', 
+                'modifiedBy',
+                'deletedBy',
+                'purchaseOrder'
+            ])
+                ->where('IsDeleted', true)
+                ->get();
+
+            return view('receiving.index', compact('receivingRecords', 'deletedRecords'));
         } catch (\Exception $e) {
-            Log::error('Error loading receivings: ' . $e->getMessage());
-            return back()->with('error', 'Error loading receivings: ' . $e->getMessage());
+            Log::error('Error loading receiving records: ' . $e->getMessage());
+            return back()->with('error', 'Error loading receiving records');
         }
     }
 
@@ -211,32 +226,71 @@ class ReceivingController extends Controller
     public function destroy($id)
     {
         try {
+            Log::info('Starting delete process for receiving record: ' . $id);
             DB::beginTransaction();
 
             $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
                 ->where('IsDeleted', false)
                 ->firstOrFail();
 
-            $receiving = Receiving::findOrFail($id);
+            $receiving = Receiving::with('purchaseOrder')
+                ->where('IsDeleted', false)
+                ->findOrFail($id);
 
-            if ($receiving->Status !== 'Pending') {
-                return back()->with('error', 'Only pending receivings can be deleted.');
+            if ($receiving->IsDeleted) {
+                throw new \Exception('Record is already deleted.');
             }
 
-            $receiving->update([
-                'IsDeleted' => true,
-                'DeletedByID' => $currentEmployee->EmployeeID,
-                'DateDeleted' => now()
-            ]);
+            if ($receiving->Status !== 'Pending' || $receiving->purchaseOrder->Status !== 'Pending') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only pending receiving records with pending purchase orders can be deleted.'
+                ], 400);
+            }
+
+            $receiving->softDelete($currentEmployee->EmployeeID);
 
             DB::commit();
-            return redirect()->route('receiving.index')
-                ->with('success', 'Receiving deleted successfully');
+            Log::info('Receiving record deleted successfully');
+            return response()->json([
+                'success' => true,
+                'message' => 'Receiving deleted successfully'
+            ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error deleting receiving: ' . $e->getMessage());
-            return back()->with('error', 'Error deleting receiving: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting receiving: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function restore($id)
+    {
+        try {
+            Log::info('Starting restore process for receiving record: ' . $id);
+            DB::beginTransaction();
+
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            $receivingRecord = Receiving::where('IsDeleted', true)->findOrFail($id);
+
+            $receivingRecord->softRestore($currentEmployee->EmployeeID);
+
+            DB::commit();
+            Log::info('Receiving record restored successfully');
+            return response()->json(['success' => true, 'message' => 'Receiving record restored successfully']);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error restoring receiving record: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            return response()->json(['success' => false, 'message' => 'Error restoring receiving record: ' . $e->getMessage()], 500);
         }
     }
 

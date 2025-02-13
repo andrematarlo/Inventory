@@ -248,6 +248,12 @@
         <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
         <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
         
+        <script>
+            function confirmLogout() {
+                return confirm('Are you sure you want to logout?');
+            }
+        </script>
+
         @yield('scripts')
     </body>
 </html>

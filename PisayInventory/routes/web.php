@@ -93,6 +93,10 @@ Route::middleware('auth')->group(function () {
     // Route::post('/items/{item}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Receiving Management
+    Route::resource('receiving', ReceivingController::class);
+    Route::post('receiving/{id}/restore', [ReceivingController::class, 'restore'])->name('receiving.restore');
 });
 
 Route::middleware('auth')->group(function () {

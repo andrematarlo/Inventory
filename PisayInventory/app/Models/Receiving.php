@@ -38,31 +38,46 @@ class Receiving extends Model
 
     public function purchaseOrder()
     {
-        return $this->belongsTo(PurchaseOrder::class, 'PurchaseOrderID', 'PurchaseOrderID');
-    }
-
-    public function receivedBy()
-    {
-        return $this->belongsTo(Employee::class, 'ReceivedByID', 'EmployeeID');
+        return $this->belongsTo(PurchaseOrder::class, 'PurchaseOrderID');
     }
 
     public function createdBy()
     {
-        return $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID');
+        return $this->belongsTo(Employee::class, 'CreatedByID');
     }
 
     public function modifiedBy()
     {
-        return $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID');
+        return $this->belongsTo(Employee::class, 'ModifiedByID');
     }
 
     public function deletedBy()
     {
-        return $this->belongsTo(Employee::class, 'DeletedByID', 'EmployeeID');
+        return $this->belongsTo(Employee::class, 'DeletedByID');
     }
 
     public function restoredBy()
     {
-        return $this->belongsTo(Employee::class, 'RestoredById', 'EmployeeID');
+        return $this->belongsTo(Employee::class, 'RestoredById');
+    }
+
+    // Custom delete method to handle soft deletes with additional fields
+    public function softDelete($deletedById)
+    {
+        $this->IsDeleted = true;
+        $this->DeletedByID = $deletedById;
+        $this->DateDeleted = now();
+        return $this->save();
+    }
+
+    // Custom restore method
+    public function softRestore($restoredById)
+    {
+        $this->IsDeleted = false;
+        $this->RestoredById = $restoredById;
+        $this->DateRestored = now();
+        $this->DeletedByID = null;
+        $this->DateDeleted = null;
+        return $this->save();
     }
 } 
