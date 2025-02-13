@@ -17,6 +17,7 @@ class Supplier extends Model
         'TelephoneNumber',
         'ContactNum',
         'Address',
+        'ImagePath',
         'CreatedById',
         'DateCreated',
         'ModifiedById',

@@ -291,10 +291,12 @@
                                 <tr>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="{{ route('suppliers.edit', $supplier->SupplierID) }}" 
-                                               class="btn btn-sm btn-warning">
+                                            <button type="button"
+                                                class="btn btn-sm btn-warning"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
                                                 <i class="bi bi-pencil"></i>
-                                            </a>
+                                            </button>
                                             <button type="button" 
                                                     class="btn btn-sm btn-danger" 
                                                     data-bs-toggle="modal" 
@@ -387,6 +389,9 @@
 
 @include('suppliers.partials.add-modal')
 @include('suppliers.partials.delete-modal')
+@foreach($activeSuppliers as $supplier)
+    @include('suppliers.partials.edit-modal', ['supplier' => $supplier])
+@endforeach
 @endsection
 
 @section('scripts')

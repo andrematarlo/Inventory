@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Employee;
+use Illuminate\Support\Facades\Storage;
 
 class SupplierController extends Controller
 {
@@ -128,7 +129,8 @@ class SupplierController extends Controller
                 'ContactPerson' => 'required|string|max:255',
                 'ContactNum' => 'required|string|max:20',
                 'TelephoneNumber' => 'nullable|string|max:20',
-                'Address' => 'required|string'
+                'Address' => 'required|string',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
 
             DB::beginTransaction();
@@ -139,12 +141,24 @@ class SupplierController extends Controller
 
             $supplier = Supplier::findOrFail($id);
             
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                // Delete old image if exists
+                if ($supplier->ImagePath && Storage::disk('public')->exists($supplier->ImagePath)) {
+                    Storage::disk('public')->delete($supplier->ImagePath);
+                }
+                
+                // Store new image
+                $imagePath = $request->file('image')->store('suppliers', 'public');
+            }
+
             $supplier->update([
                 'CompanyName' => $request->CompanyName,
                 'ContactPerson' => $request->ContactPerson,
                 'ContactNum' => $request->ContactNum,
                 'TelephoneNumber' => $request->TelephoneNumber,
                 'Address' => $request->Address,
+                'ImagePath' => $request->hasFile('image') ? $imagePath : $supplier->ImagePath,
                 'ModifiedById' => $currentEmployee->EmployeeID,
                 'DateModified' => now()
             ]);
@@ -156,8 +170,8 @@ class SupplierController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error updating supplier: ' . $e->getMessage());
-            return back()->with('error', 'Error updating supplier: ' . $e->getMessage())
-                ->withInput();
+            return redirect()->route('suppliers.index')
+                ->with('error', 'Error updating supplier: ' . $e->getMessage());
         }
     }
 
