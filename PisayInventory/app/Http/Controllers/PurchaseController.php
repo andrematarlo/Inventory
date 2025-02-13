@@ -17,12 +17,17 @@ class PurchaseController extends Controller
     public function index()
     {
         try {
-            $purchases = PurchaseOrder::with(['supplier', 'items.item'])
+            $purchases = PurchaseOrder::with(['supplier', 'createdBy', 'modifiedBy', 'deletedBy', 'restoredBy'])
                 ->where('IsDeleted', false)
-                ->orderBy('OrderDate', 'desc')
+                ->orderBy('DateCreated', 'desc')
                 ->get();
 
-            return view('purchases.index', compact('purchases'));
+            $deletedPurchases = PurchaseOrder::with(['supplier', 'createdBy', 'modifiedBy', 'deletedBy', 'restoredBy'])
+                ->where('IsDeleted', true)
+                ->orderBy('DateCreated', 'desc')
+                ->get();
+
+            return view('purchases.index', compact('purchases', 'deletedPurchases'));
         } catch (\Exception $e) {
             Log::error('Error loading purchases: ' . $e->getMessage());
             return back()->with('error', 'Error loading purchases: ' . $e->getMessage());
@@ -125,6 +130,7 @@ class PurchaseController extends Controller
     public function destroy($id)
     {
         try {
+            Log::info('Starting soft delete process for purchase order: ' . $id);
             DB::beginTransaction();
 
             $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
@@ -133,39 +139,40 @@ class PurchaseController extends Controller
 
             $purchaseOrder = PurchaseOrder::findOrFail($id);
 
-            if ($purchaseOrder->Status !== 'Pending') {
-                return back()->with('error', 'Only pending purchase orders can be deleted.');
-            }
-
             // Soft delete the purchase order
             $purchaseOrder->update([
-                'IsDeleted' => true,
+                'IsDeleted' => 1,
                 'DeletedByID' => $currentEmployee->EmployeeID,
                 'DateDeleted' => now()
             ]);
 
-            // Soft delete all related items
+            // Also soft delete related purchase order items
             PurchaseOrderItem::where('PurchaseOrderID', $id)
                 ->update([
-                    'IsDeleted' => true,
+                    'IsDeleted' => 1,
                     'DeletedByID' => $currentEmployee->EmployeeID,
-                    'DateDeleted' => now()
+                    'DateDeleted' => now(),
+                    'ModifiedByID' => $currentEmployee->EmployeeID,
+                    'DateModified' => now()
                 ]);
 
             DB::commit();
+            Log::info('Soft delete completed successfully');
             return redirect()->route('purchases.index')
-                ->with('success', 'Purchase order deleted successfully');
+                ->with('success', 'Purchase order moved to trash successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error deleting purchase order: ' . $e->getMessage());
-            return back()->with('error', 'Error deleting purchase order: ' . $e->getMessage());
+            Log::error('Error in soft delete: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            return back()->with('error', 'Error moving purchase order to trash: ' . $e->getMessage());
         }
     }
 
     public function restore($id)
     {
         try {
+            Log::info('Starting restore process for purchase order: ' . $id);
             DB::beginTransaction();
 
             $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
@@ -178,7 +185,9 @@ class PurchaseController extends Controller
             $purchaseOrder->update([
                 'IsDeleted' => false,
                 'RestoredById' => $currentEmployee->EmployeeID,
-                'DateRestored' => now()
+                'DateRestored' => now(),
+                'DeletedByID' => null,
+                'DateDeleted' => null
             ]);
 
             // Restore all related items
@@ -186,17 +195,20 @@ class PurchaseController extends Controller
                 ->update([
                     'IsDeleted' => false,
                     'RestoredById' => $currentEmployee->EmployeeID,
-                    'DateRestored' => now()
+                    'DateRestored' => now(),
+                    'DeletedByID' => null,
+                    'DateDeleted' => null
                 ]);
 
             DB::commit();
-            return redirect()->route('purchases.index')
-                ->with('success', 'Purchase order restored successfully');
+            Log::info('Purchase order restored successfully');
+            return response()->json(['success' => true, 'message' => 'Purchase order restored successfully']);
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error restoring purchase order: ' . $e->getMessage());
-            return back()->with('error', 'Error restoring purchase order: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            return response()->json(['success' => false, 'message' => 'Error restoring purchase order: ' . $e->getMessage()], 500);
         }
     }
 

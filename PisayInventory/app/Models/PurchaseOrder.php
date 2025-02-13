@@ -28,12 +28,12 @@ class PurchaseOrder extends Model
     ];
 
     protected $casts = [
+        'IsDeleted' => 'boolean',
         'OrderDate' => 'datetime',
         'DateCreated' => 'datetime',
         'DateModified' => 'datetime',
         'DateDeleted' => 'datetime',
         'DateRestored' => 'datetime',
-        'IsDeleted' => 'boolean',
         'TotalAmount' => 'decimal:2'
     ];
 

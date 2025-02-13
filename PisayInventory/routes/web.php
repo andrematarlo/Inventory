@@ -87,7 +87,7 @@ Route::middleware('auth')->group(function () {
 
     // Purchases Management
     Route::resource('purchases', PurchaseController::class);
-    Route::put('purchases/{id}/restore', [PurchaseController::class, 'restore'])->name('purchases.restore');
+    Route::post('purchases/{id}/restore', [PurchaseController::class, 'restore'])->name('purchases.restore');
 
     // Stock Management Routes
     // Route::post('/items/{item}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
