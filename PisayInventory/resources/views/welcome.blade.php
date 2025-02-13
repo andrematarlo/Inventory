@@ -15,8 +15,23 @@
                 font-family: 'Poppins', sans-serif;
             }
             body {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background-image: url('{{ asset('images/pshsbackground.jpg') }}');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
                 min-height: 100vh;
+            }
+            /* Add overlay */
+            body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5); /* dark overlay for better readability */
+                z-index: -1;
             }
             .glass-nav {
                 background: rgba(255, 255, 255, 0.1);

@@ -25,6 +25,12 @@
 
             body {
                 background-color:rgba(214, 255, 236, 0.09);
+                background-image: url('{{ asset('images/pshsbackground.jpg') }}');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+                min-height: 100vh;
             }
             
 
@@ -211,6 +217,17 @@
         }
     }
     
+            /* Add some overlay to make content more readable */
+            body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.7); /* white overlay with 70% opacity */
+                z-index: -1;
+            }
         </style>
         @yield('additional_styles')
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
