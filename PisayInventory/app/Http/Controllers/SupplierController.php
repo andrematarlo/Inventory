@@ -19,11 +19,11 @@ class SupplierController extends Controller
         try {
             $activeSuppliers = Supplier::where('IsDeleted', false)
                 ->orderBy('CompanyName')
-                ->get();
+                ->paginate(10);
 
             $deletedSuppliers = Supplier::where('IsDeleted', true)
                 ->orderBy('CompanyName')
-                ->get();
+                ->paginate(10);
 
             return view('suppliers.index', [
                 'activeSuppliers' => $activeSuppliers,

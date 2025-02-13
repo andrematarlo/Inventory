@@ -31,6 +31,29 @@
                 <h5 class="mb-0">Active Items</h5>
             </div>
             <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>Showing {{ $activeItems->firstItem() ?? 0 }} to {{ $activeItems->lastItem() ?? 0 }} of {{ $activeItems->total() }} results</div>
+                    <div class="pagination-sm">
+                        @if($activeItems->currentPage() > 1)
+                            <a href="{{ $activeItems->previousPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </a>
+                        @endif
+                        
+                        @for($i = 1; $i <= $activeItems->lastPage(); $i++)
+                            <a href="{{ $activeItems->url($i) }}" 
+                               class="btn btn-sm {{ $i == $activeItems->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
+                                {{ $i }}
+                            </a>
+                        @endfor
+
+                        @if($activeItems->hasMorePages())
+                            <a href="{{ $activeItems->nextPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </a>
+                        @endif
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover" id="itemsTable">
                         <thead>
@@ -167,6 +190,9 @@
                             @endforelse
                         </tbody>
                     </table>
+                    <div class="d-flex justify-content-end mt-3">
+                        {{ $deletedItems->links() }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -182,24 +208,9 @@
 
 @section('scripts')
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
 
 <script>
     $(document).ready(function() {
-        // Initialize DataTables
-        const activeTable = $('#itemsTable').DataTable({
-            responsive: true,
-            pageLength: 10,
-            order: [[2, 'asc']], // Order by name column
-        });
-
-        const deletedTable = $('#deletedItemsTable').DataTable({
-            responsive: true,
-            pageLength: 10,
-            order: [[2, 'asc']], // Order by name column
-        });
-
         // Toggle between active and deleted items
         $('#toggleButton').on('click', function() {
             const activeDiv = $('#activeItems');
@@ -212,15 +223,55 @@
                 deletedDiv.show();
                 buttonText.text('Show Active');
                 button.removeClass('btn-outline-secondary').addClass('btn-outline-primary');
-                deletedTable.columns.adjust().draw();
             } else {
                 deletedDiv.hide();
                 activeDiv.show();
                 buttonText.text('Show Deleted');
                 button.removeClass('btn-outline-primary').addClass('btn-outline-secondary');
-                activeTable.columns.adjust().draw();
             }
         });
     });
 </script>
+@endsection
+
+@section('additional_styles')
+<style>
+    /* Pagination styling */
+    .pagination-sm {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+    }
+
+    .pagination-sm .btn {
+        min-width: 32px;
+        padding: 4px 8px;
+        font-size: 0.875rem;
+    }
+
+    .pagination-sm .btn i {
+        font-size: 12px;
+    }
+
+    .btn-outline-secondary {
+        color: #6c757d;
+        border-color: #6c757d;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+    }
+
+    .btn-primary {
+        background-color: #3498db;
+        border-color: #3498db;
+    }
+
+    .btn-primary:hover {
+        background-color: #2980b9;
+        border-color: #2980b9;
+    }
+</style>
 @endsection

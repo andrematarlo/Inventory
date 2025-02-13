@@ -27,7 +27,7 @@ class ItemController extends Controller
                 'modifiedBy'
             ])
             ->where('IsDeleted', false)
-            ->get();
+            ->paginate(10);
 
             $deletedItems = Item::with([
                 'classification', 
@@ -36,7 +36,7 @@ class ItemController extends Controller
                 'deletedBy'
             ])
             ->where('IsDeleted', true)
-            ->get();
+            ->paginate(10);
 
             $classifications = Classification::where('IsDeleted', 0)->get();
             $units = UnitOfMeasure::all();

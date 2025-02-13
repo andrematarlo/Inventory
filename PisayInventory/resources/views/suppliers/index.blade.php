@@ -178,19 +178,55 @@
     .dataTables_wrapper .dataTables_length select {
         min-width: 60px;
     }
+
+    /* Pagination styling */
+    .pagination-sm {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+    }
+
+    .pagination-sm .btn {
+        min-width: 32px;
+        padding: 4px 8px;
+        font-size: 0.875rem;
+    }
+
+    .pagination-sm .btn i {
+        font-size: 12px;
+    }
+
+    /* Custom scrollbar */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
 </style>
 @endsection
 
 @section('content')
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Suppliers</h2>
+        <h2>Suppliers Management</h2>
         <div>
             <button class="btn btn-outline-secondary" type="button" id="toggleButton">
                 <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
             </button>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                <i class="bi bi-plus"></i> Add Supplier
+                <i class="bi bi-plus-lg"></i> Add Supplier
             </button>
         </div>
     </div>
@@ -203,32 +239,51 @@
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
-    <!-- Active Suppliers Table -->
+    <!-- Active Suppliers Section -->
     <div id="activeSuppliers">
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">Active Suppliers</h5>
             </div>
             <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>Showing {{ $activeSuppliers->firstItem() ?? 0 }} to {{ $activeSuppliers->lastItem() ?? 0 }} of {{ $activeSuppliers->total() }} results</div>
+                    <div class="pagination-sm">
+                        @if($activeSuppliers->currentPage() > 1)
+                            <a href="{{ $activeSuppliers->previousPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </a>
+                        @endif
+                        
+                        @for($i = 1; $i <= $activeSuppliers->lastPage(); $i++)
+                            <a href="{{ $activeSuppliers->url($i) }}" 
+                               class="btn btn-sm {{ $i == $activeSuppliers->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
+                                {{ $i }}
+                            </a>
+                        @endfor
+
+                        @if($activeSuppliers->hasMorePages())
+                            <a href="{{ $activeSuppliers->nextPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </a>
+                        @endif
+                    </div>
+                </div>
                 <div class="table-responsive">
-                    <table class="table table-hover" id="suppliersTable">
+                    <table class="table table-hover">
                         <thead>
                             <tr>
                                 <th>Actions</th>
-                                <th>Company Name</th>
-                                <th>Contact Person</th>
-                                <th>Telephone</th>
-                                <th>Contact Number</th>
-                                <th>Address</th>
-                                <th>Created By</th>
-                                <th>Date Created</th>
-                                <th>Modified By</th>
-                                <th>Date Modified</th>
-                                <th>Deleted By</th>
-                                <th>Date Deleted</th>
-                                <th>Restored By</th>
-                                <th>Date Restored</th>
-                                <th>Status</th>
+                                <th>Company Name <i class="bi bi-arrow-down-up small-icon"></i></th>
+                                <th>Contact Person <i class="bi bi-arrow-down-up small-icon"></i></th>
+                                <th>Telephone <i class="bi bi-arrow-down-up small-icon"></i></th>
+                                <th>Contact Number <i class="bi bi-arrow-down-up small-icon"></i></th>
+                                <th>Address <i class="bi bi-arrow-down-up small-icon"></i></th>
+                                <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                                <th>Date Created <i class="bi bi-arrow-down-up small-icon"></i></th>
+                                <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                                <th>Date Modified <i class="bi bi-arrow-down-up small-icon"></i></th>
+                                <th>Status <i class="bi bi-arrow-down-up small-icon"></i></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -257,19 +312,13 @@
                                     <td>{{ $supplier->DateCreated ? date('Y-m-d H:i:s', strtotime($supplier->DateCreated)) : 'N/A' }}</td>
                                     <td>{{ $supplier->modifiedBy->Username ?? 'N/A' }}</td>
                                     <td>{{ $supplier->DateModified ? date('Y-m-d H:i:s', strtotime($supplier->DateModified)) : 'N/A' }}</td>
-                                    <td>{{ $supplier->deletedBy->Username ?? 'N/A' }}</td>
-                                    <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i:s', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
-                                    <td>{{ $supplier->restoredBy->Username ?? 'N/A' }}</td>
-                                    <td>{{ $supplier->DateRestored ? date('Y-m-d H:i:s', strtotime($supplier->DateRestored)) : 'N/A' }}</td>
                                     <td>
-                                        <span class="badge {{ $supplier->IsDeleted ? 'bg-danger' : 'bg-success' }}">
-                                            {{ $supplier->IsDeleted ? 'Deleted' : 'Active' }}
-                                        </span>
+                                        <span class="badge bg-success">Active</span>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="15" class="text-center">No suppliers found</td>
+                                    <td colspan="11" class="text-center">No suppliers found</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -279,7 +328,7 @@
         </div>
     </div>
 
-    <!-- Deleted Suppliers Table -->
+    <!-- Deleted Suppliers Section -->
     <div id="deletedSuppliers" style="display: none;">
         <div class="card mb-4">
             <div class="card-header bg-secondary text-white">
