@@ -68,7 +68,7 @@
                             @foreach($suppliers ?? [] as $supplier)
                                 <option value="{{ $supplier->SupplierID }}"
                                     {{ old('SupplierID') == $supplier->SupplierID ? 'selected' : '' }}>
-                                    {{ $supplier->SupplierName }}
+                                    {{ $supplier->CompanyName }}
                                 </option>
                             @endforeach
                         </select>
@@ -92,13 +92,11 @@
                         @enderror
                     </div>
 
+                    <!-- Initial Stock is fixed to 0 -->
                     <div class="mb-3">
                         <label class="form-label">Initial Stock</label>
-                        <input type="number" class="form-control @error('StocksAvailable') is-invalid @enderror" 
-                               name="StocksAvailable" min="0" value="{{ old('StocksAvailable', 0) }}" required>
-                        @error('StocksAvailable')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                        <input type="text" class="form-control" value="0" disabled>
+                        <small class="text-muted">Initial stock is set to 0. Use Stock In to add inventory.</small>
                     </div>
 
                     <div class="mb-3">

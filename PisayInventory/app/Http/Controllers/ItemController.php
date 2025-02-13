@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Employee;
+use Illuminate\Support\Facades\Storage;
 
 class ItemController extends Controller
 {
@@ -27,7 +28,7 @@ class ItemController extends Controller
                 'modifiedBy'
             ])
             ->where('IsDeleted', false)
-            ->get();
+            ->paginate(10);
 
             $deletedItems = Item::with([
                 'classification', 
@@ -36,11 +37,11 @@ class ItemController extends Controller
                 'deletedBy'
             ])
             ->where('IsDeleted', true)
-            ->get();
+            ->paginate(10);
 
             $classifications = Classification::where('IsDeleted', 0)->get();
             $units = UnitOfMeasure::all();
-            $suppliers = Supplier::where('IsDeleted', 0)->get();
+            $suppliers = Supplier::where('IsDeleted', false)->get();
 
             return view('items.index', compact('activeItems', 'deletedItems', 'classifications', 'units', 'suppliers'));
         } catch (\Exception $e) {
@@ -68,7 +69,6 @@ class ItemController extends Controller
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
                 'UnitOfMeasureId' => 'required|exists:UnitOfMeasure,UnitOfMeasureId',
                 'SupplierID' => 'required|exists:suppliers,SupplierID',
-                'StocksAvailable' => 'required|integer|min:0',
                 'ReorderPoint' => 'required|integer|min:0',
                 'Description' => 'nullable|string',
                 'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
@@ -85,7 +85,7 @@ class ItemController extends Controller
             $item->ClassificationId = $validated['ClassificationId'];
             $item->UnitOfMeasureId = $validated['UnitOfMeasureId'];
             $item->SupplierID = $validated['SupplierID'];
-            $item->StocksAvailable = $validated['StocksAvailable'];
+            $item->StocksAvailable = 0; // Always set initial stock to 0
             $item->ReorderPoint = $validated['ReorderPoint'];
             $item->Description = $validated['Description'];
             $item->ImagePath = $imagePath ?? null;
@@ -104,22 +104,6 @@ class ItemController extends Controller
             $item->IsDeleted = false;
             $item->save();
 
-            // Create initial inventory record if there's initial stock
-            if ($validated['StocksAvailable'] > 0) {
-                $inventory = new Inventory();
-                $inventory->ItemId = $item->ItemId;
-                $inventory->ClassificationId = $validated['ClassificationId'];
-                $inventory->StocksAdded = $validated['StocksAvailable'];
-                $inventory->StockOut = 0;
-                $inventory->StocksAvailable = $validated['StocksAvailable'];
-                $inventory->DateCreated = Carbon::now()->format('Y-m-d H:i:s');
-                $inventory->CreatedById = Auth::user()->UserAccountID;
-                $inventory->ModifiedById = Auth::user()->UserAccountID;
-                $inventory->DateModified = Carbon::now()->format('Y-m-d H:i:s');
-                $inventory->IsDeleted = false;
-                $inventory->save();
-            }
-
             DB::commit();
             return redirect()->route('items.index')
                 ->with('success', 'Item created successfully');
@@ -137,7 +121,28 @@ class ItemController extends Controller
         try {
             DB::beginTransaction();
 
+            $request->validate([
+                'ItemName' => 'required|string|max:255',
+                'Description' => 'nullable|string',
+                'ClassificationId' => 'required|exists:classification,ClassificationId',
+                'UnitOfMeasureId' => 'required|exists:UnitOfMeasure,UnitOfMeasureId',
+                'SupplierID' => 'required|exists:suppliers,SupplierID',
+                'ReorderPoint' => 'required|integer|min:0',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            ]);
+
             $item = Item::findOrFail($id);
+            
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                // Delete old image if exists
+                if ($item->ImagePath && Storage::disk('public')->exists($item->ImagePath)) {
+                    Storage::disk('public')->delete($item->ImagePath);
+                }
+                
+                // Store new image
+                $imagePath = $request->file('image')->store('items', 'public');
+            }
             
             // Update item details
             $item->ItemName = $request->ItemName;
@@ -146,6 +151,7 @@ class ItemController extends Controller
             $item->ClassificationId = $request->ClassificationId;
             $item->SupplierID = $request->SupplierID;
             $item->ReorderPoint = $request->ReorderPoint;
+            $item->ImagePath = $request->hasFile('image') ? $imagePath : $item->ImagePath;
             $item->ModifiedById = Auth::user()->UserAccountID;
             $item->DateModified = Carbon::now()->format('Y-m-d H:i:s');
             $item->save();
