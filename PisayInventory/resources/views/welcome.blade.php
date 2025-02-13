@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>PSHS Inventory System</title>
+        <link rel="icon" href="{{ asset('images/pisaylogo.png') }}" type="image/x-icon">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -78,7 +79,7 @@
         <nav style="position: fixed; width: 100%; padding: 20px 0; z-index: 1000;" class="glass-nav">
             <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="color: white; font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                    <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" style="height: 24px; width: auto;">
+                    <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" style="height: 35px; width: auto;">
                     <span>PSHS-CVisC</span>
                 </div>
                 

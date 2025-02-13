@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - PSHS Inventory</title>
+    <title>Login - PSHS Inventory System</title>
+    <link rel="icon" href="{{ asset('images/pisaylogo.png') }}" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -284,7 +285,7 @@
         <div class="login-container">
             <div class="login-header">
                 <div style="margin-bottom: 20px;">
-                    <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" style="height: 50px; width: auto;">
+                    <img src="{{ asset('images/pisaylogo.png') }}" alt="PSHS Logo" style="height: 70px; width: auto;">
                 </div>
                 <h1>Welcome Back!</h1>
                 <p>Please sign in to continue</p>
