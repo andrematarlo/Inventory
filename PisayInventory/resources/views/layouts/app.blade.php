@@ -42,15 +42,24 @@
             }
 
             .sidebar-header {
-                padding: 1.5rem;
+                padding: 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
                 border-bottom: 1px solid #f1f5f9;
             }
 
             .sidebar-header h3 {
                 color: #0f172a;
                 margin: 0;
-                font-size: 1.25rem;
+                font-size: 1rem;
                 font-weight: 600;
+            }
+
+            .sidebar-logo {
+                width: 30px;
+                height: auto;
+                margin-right: 8px;
             }
 
             .nav-item {
