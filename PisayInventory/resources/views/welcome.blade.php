@@ -15,7 +15,7 @@
                 font-family: 'Poppins', sans-serif;
             }
             body {
-                background-image: url('{{ asset('images/pshsbackground.jpg') }}');
+                background-image: url("{{ asset('images/pshsbackground.jpg') }}");
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -98,8 +98,8 @@
         <div style="padding: 140px 20px 20px; text-align: center;">
             <div style="max-width: 800px; margin: 0 auto;">
                 <h1 style="font-size: 48px; color: white; font-weight: 700; margin-bottom: 20px;">
-                    <span style="display: block;">PSHS Inventory</span>
-                    <span style="display: block; color: rgba(255, 255, 255, 0.8);">Management System</span>
+                    <span style="display: block;">Inventory<br>Management System</span>
+                   
                 </h1>
                 <p style="color: rgba(255, 255, 255, 0.8); font-size: 18px; line-height: 1.6;">
                     Efficiently manage and track your school's resources with our modern inventory system.

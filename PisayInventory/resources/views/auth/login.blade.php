@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body {
-            background-image: url('{{ asset('images/pshsbackground.jpg') }}');
+            background-image: url("{{ asset('images/pshsbackground.jpg') }}");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -94,6 +94,10 @@
 
         .form-control::placeholder {
             color: rgba(255, 255, 255, 0.8);
+        }
+
+        .form-label {
+            color: white;
         }
 
         .btn-login {
