@@ -85,7 +85,7 @@
                                     @if(!$inventory->IsDeleted)
                                         {{-- Show Stock Out button for everyone --}}
                                         <button type="button" 
-                                                class="btn btn-warning" 
+                                                class="btn btn-sm btn-blue" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#stockOutModal{{ $inventory->InventoryId }}"
                                                 title="Stock Out">
@@ -306,7 +306,7 @@ $(document).ready(function() {
                             <td>
                                 <div class="d-flex gap-2">
                                     <button type="button" 
-                                            class="btn btn-sm btn-warning flex-grow-1 d-flex align-items-center justify-content-center" 
+                                            class="btn btn-sm btn-blue flex-grow-1 d-flex align-items-center justify-content-center" 
                                             style="width: 100px; height: 31px;"
                                             data-bs-toggle="modal" 
                                             data-bs-target="#stockOutModal${response.data.InventoryID}">
@@ -552,6 +552,16 @@ $(document).ready(function() {
 
     .pagination-sm .btn i {
         font-size: 12px;
+    }
+
+    .btn-blue {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    .btn-blue:hover {
+        background-color: #0b5ed7;
+        color: white;
     }
 </style>
 @endsection 

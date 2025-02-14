@@ -214,6 +214,16 @@
     .table-responsive::-webkit-scrollbar-thumb:hover {
         background: #555;
     }
+
+    .btn-blue {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    .btn-blue:hover {
+        background-color: #0b5ed7;
+        color: white;
+    }
 </style>
 @endsection
 
@@ -292,7 +302,7 @@
                                 <td>
                                     <div class="btn-group" role="group">
                                         <button type="button"
-                                            class="btn btn-sm btn-warning"
+                                            class="btn btn-sm btn-blue"
                                             data-bs-toggle="modal" 
                                             data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
                                             <i class="bi bi-pencil"></i>

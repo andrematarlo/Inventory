@@ -93,4 +93,9 @@ class Receiving extends Model
         $this->DateDeleted = null;
         return $this->save();
     }
+
+    public function receivedBy()
+    {
+        return $this->belongsTo(Employee::class, 'ReceivedByID', 'EmployeeID');
+    }
 } 

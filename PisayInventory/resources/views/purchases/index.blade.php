@@ -20,6 +20,16 @@
     #activeRecordsBtn {
         margin-right: 5px;
     }
+
+    .btn-blue {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    .btn-blue:hover {
+        background-color: #0b5ed7;
+        color: white;
+    }
 </style>
 @endsection
 
@@ -67,7 +77,7 @@
                             <td>
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('purchases.show', $po->PurchaseOrderID) }}" 
-                                       class="btn btn-sm btn-info" 
+                                       class="btn btn-sm btn-blue" 
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
@@ -134,7 +144,7 @@
                             <td>
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('purchases.show', $po->PurchaseOrderID) }}" 
-                                       class="btn btn-sm btn-info" 
+                                       class="btn btn-sm btn-blue" 
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>

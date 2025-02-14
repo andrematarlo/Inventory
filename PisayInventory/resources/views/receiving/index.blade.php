@@ -20,6 +20,16 @@
     #activeRecordsBtn {
         margin-right: 5px;
     }
+
+    .btn-blue {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    .btn-blue:hover {
+        background-color: #0b5ed7;
+        color: white;
+    }
 </style>
 @endsection
 
@@ -62,13 +72,14 @@
                             <td>
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('receiving.show', $record->ReceivingID) }}" 
-                                       class="btn btn-sm btn-info" 
+                                       class="btn btn-sm btn-blue" 
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     @if($record->Status === 'Pending')
                                     <a href="{{ route('receiving.edit', $record->ReceivingID) }}" 
-                                       class="btn btn-sm btn-primary" title="Edit">
+                                       class="btn btn-sm btn-blue" 
+                                       title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     @endif
@@ -133,7 +144,7 @@
                                         <i class="bi bi-plus-circle"></i>
                                     </a>
                                     <a href="{{ route('purchases.show', $record->PurchaseOrderID) }}" 
-                                       class="btn btn-sm btn-info" 
+                                       class="btn btn-sm btn-blue" 
                                        title="View PO">
                                         <i class="bi bi-eye"></i>
                                     </a>
