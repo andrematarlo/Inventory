@@ -109,15 +109,25 @@ class EmployeeController extends Controller
             ]);
 
             $request->validate([
-                'FirstName' => 'required|string|max:255',
-                'LastName' => 'required|string|max:255',
-                'Email' => 'required|email|max:255',
+                'FirstName' => 'required|string|max:100',
+                'LastName' => 'required|string|max:100',
+                'Email' => [
+                    'required',
+                    'email',
+                    'max:100',
+                    'unique:employee,Email',
+                    'regex:/^[a-zA-Z0-9._%+-]+@gmail\.com$/',
+                    'ends_with:gmail.com'
+                ],
                 'Gender' => 'required|in:Male,Female',
                 'Address' => 'required|string',
                 'Username' => 'required|string|unique:useraccount,Username',
                 'Password' => 'required|string|min:6',
                 'roles' => 'required|array|min:1',
                 'roles.*' => 'required|exists:roles,RoleId'
+            ], [
+                'Email.regex' => 'The email must be a valid Gmail address (@gmail.com)',
+                'Email.ends_with' => 'The email must end with @gmail.com'
             ]);
 
             DB::beginTransaction();
@@ -236,12 +246,24 @@ class EmployeeController extends Controller
             $validationRules = [
                 'FirstName' => 'required|string|max:100',
                 'LastName' => 'required|string|max:100',
-                'Email' => 'required|email|max:100|unique:employee,Email,' . $id . ',EmployeeID',
+                'Email' => [
+                    'required',
+                    'email',
+                    'max:100',
+                    'unique:employee,Email,' . $id . ',EmployeeID',
+                    'regex:/^[a-zA-Z0-9._%+-]+@gmail\.com$/',
+                    'ends_with:gmail.com'
+                ],
                 'Username' => 'required|string|max:100|unique:UserAccount,Username,' . $employee->userAccount->UserAccountID . ',UserAccountID',
                 'Gender' => 'required|in:Male,Female',
-                'Address' => 'required|string',
+                'Address' => 'required|string|max:65535', // for TEXT field
                 'roles' => 'required|array|min:1',
                 'roles.*' => 'exists:roles,RoleId'
+            ];
+
+            $messages = [
+                'Email.regex' => 'The email must be a valid Gmail address (@gmail.com)',
+                'Email.ends_with' => 'The email must end with @gmail.com'
             ];
 
             // Add password validation only if password is being updated
@@ -249,7 +271,7 @@ class EmployeeController extends Controller
                 $validationRules['Password'] = 'required|string|min:6|confirmed';
             }
 
-            $request->validate($validationRules);
+            $request->validate($validationRules, $messages);
 
             DB::beginTransaction();
 
