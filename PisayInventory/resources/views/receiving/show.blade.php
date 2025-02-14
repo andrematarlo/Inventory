@@ -86,20 +86,33 @@
                             <th>Quantity</th>
                             <th>Unit Price</th>
                             <th>Total Price</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($receiving->purchaseOrder->items as $item)
+                        @if($item->item)
                         <tr>
-                            <td>{{ $item->item->ItemName }}</td>
+                            <td>{{ $item->item->ItemName ?? 'N/A' }}</td>
                             <td>{{ $item->Quantity }}</td>
                             <td>₱{{ number_format($item->UnitPrice, 2) }}</td>
                             <td>₱{{ number_format($item->TotalPrice, 2) }}</td>
+                            <td>
+                                @php
+                                    $itemStatuses = json_decode($receiving->ItemStatuses, true) ?? [];
+                                    $status = $itemStatuses[$item->ItemId] ?? 'Pending';
+                                @endphp
+                                <span class="badge bg-{{ $status === 'Complete' ? 'success' : ($status === 'Partial' ? 'warning' : 'secondary') }}">
+                                    {{ $status }}
+                                </span>
+                            </td>
                         </tr>
+                        @endif
                         @endforeach
                         <tr>
                             <td colspan="3" class="text-end fw-bold">Total Amount:</td>
                             <td class="fw-bold">₱{{ number_format($receiving->purchaseOrder->TotalAmount, 2) }}</td>
+                            <td></td>
                         </tr>
                     </tbody>
                 </table>

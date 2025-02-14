@@ -8,7 +8,7 @@
         overflow-x: auto;
     }
     
-    #receivingTable, #pendingReceivingTable, #deletedReceivingTable {
+    #receivingTable, #pendingReceivingTable, #deletedReceivingTable, #partialReceivingTable {
         min-width: 100%;
         width: auto;
     }
@@ -30,8 +30,18 @@
         background-color: #0b5ed7;
         color: white;
     }
+
+    .badge.bg-partial {
+        background-color: #ffc107;
+        color: #000;
+    }
 </style>
 @endsection
+
+@php
+   // Set timezone to Philippines
+   date_default_timezone_set('Asia/Manila');
+@endphp
 
 @section('content')
 <div class="container-fluid">
@@ -42,6 +52,12 @@
     <div class="mb-4">
         <button type="button" class="btn btn-primary" id="activeRecordsBtn">Active Records</button>
         <button type="button" class="btn btn-warning" id="pendingRecordsBtn">Pending Records</button>
+        <button type="button" class="btn btn-info" id="partialRecordsBtn">
+            Partial Records 
+            @if($partialRecords->count() > 0)
+            <span class="badge bg-light text-dark">{{ $partialRecords->count() }}</span>
+            @endif
+        </button>
         <button type="button" class="btn btn-danger" id="showDeletedBtn">
             <i class="bi bi-archive"></i> Show Deleted Records
         </button>
@@ -57,7 +73,7 @@
                             <th>Actions</th>
                             <th>PO Number</th>
                             <th>Supplier</th>
-                            <th>Delivery Date</th>
+                            <th>Date Received</th>
                             <th>Status</th>
                             <th>Total Amount</th>
                             <th>Created By</th>
@@ -93,7 +109,7 @@
                             </td>
                             <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
                             <td>{{ $record->purchaseOrder->supplier->CompanyName ?? 'N/A' }}</td>
-                            <td>{{ $record->DeliveryDate ? $record->DeliveryDate->format('M d, Y') : 'N/A' }}</td>
+                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'N/A' }}</td>
                             <td>
                                 <span class="badge bg-{{ $record->Status === 'Pending' ? 'warning' : 'success' }}">
                                     {{ $record->Status }}
@@ -124,7 +140,7 @@
                             <th>Actions</th>
                             <th>PO Number</th>
                             <th>Supplier</th>
-                            <th>Order Date</th>
+                            <th>Date Received</th>
                             <th>Status</th>
                             <th>Total Amount</th>
                             <th>Created By</th>
@@ -152,7 +168,7 @@
                             </td>
                             <td>{{ $record->PONumber }}</td>
                             <td>{{ $record->supplier->CompanyName }}</td>
-                            <td>{{ $record->OrderDate->format('M d, Y') }}</td>
+                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'N/A' }}</td>
                             <td>
                                 <span class="badge bg-warning">
                                     {{ $record->Status }}
@@ -165,8 +181,70 @@
                             <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'N/A' }}</td>
                         </tr>
                         @empty
+                        @endforelse
+                        
+                        @if($pendingRecords->isEmpty())
                         <tr>
-                            <td colspan="10" class="text-center">No pending purchase orders found</td>
+                            <td colspan="10" class="text-center">No pending records found</td>
+                        </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Partial Receiving Records Section -->
+        <div id="partialReceiving" class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-hover" id="partialReceivingTable">
+                    <thead>
+                        <tr>
+                            <th>Actions</th>
+                            <th>PO Number</th>
+                            <th>Supplier</th>
+                            <th>Date Received</th>
+                            <th>Status</th>
+                            <th>Total Amount</th>
+                            <th>Created By</th>
+                            <th>Date Created</th>
+                            <th>Modified By</th>
+                            <th>Date Modified</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($partialRecords as $record)
+                        <tr>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ route('receiving.create', ['po_id' => $record->purchaseOrder->PurchaseOrderID]) }}" 
+                                       class="btn btn-sm btn-success" 
+                                       title="Continue Receiving">
+                                        <i class="bi bi-plus-circle"></i> Continue
+                                    </a>
+                                    <a href="{{ route('receiving.show', $record->ReceivingID) }}" 
+                                       class="btn btn-sm btn-blue" 
+                                       title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                            <td>{{ $record->purchaseOrder->PONumber }}</td>
+                            <td>{{ $record->purchaseOrder->supplier->CompanyName }}</td>
+                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'N/A' }}</td>
+                            <td>
+                                <span class="badge bg-partial">
+                                    {{ $record->Status }}
+                                </span>
+                            </td>
+                            <td>₱{{ number_format($record->getTotalAmountAttribute(), 2) }}</td>
+                            <td>{{ $record->createdBy->FirstName ?? 'N/A' }} {{ $record->createdBy->LastName ?? '' }}</td>
+                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $record->modifiedBy->FirstName ?? 'N/A' }} {{ $record->modifiedBy->LastName ?? '' }}</td>
+                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'N/A' }}</td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="10" class="text-center">No partial records found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -206,7 +284,7 @@
                             </td>
                             <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
                             <td>{{ $record->purchaseOrder->supplier->CompanyName ?? 'N/A' }}</td>
-                            <td>{{ $record->DateReceived ? $record->DateReceived->format('M d, Y') : 'N/A' }}</td>
+                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'N/A' }}</td>
                             <td>
                                 <span class="badge bg-{{ $record->Status === 'Pending' ? 'warning' : 'success' }}">
                                     {{ $record->Status }}
@@ -251,6 +329,7 @@ $(document).ready(function() {
     // Only initialize tables that have data
     var activeRows = $('#receivingTable tbody tr').length;
     var pendingRows = $('#pendingReceivingTable tbody tr').length;
+    var partialRows = $('#partialReceivingTable tbody tr').length;
     var deletedRows = $('#deletedReceivingTable tbody tr').length;
 
     // Initialize only if there are rows and not showing "No data" message
@@ -262,27 +341,36 @@ $(document).ready(function() {
         $('#pendingReceivingTable').DataTable(config);
     }
 
+    if (partialRows > 0 && !$('#partialReceivingTable tbody tr td').hasClass('text-center')) {
+        $('#partialReceivingTable').DataTable(config);
+    }
+
     if (deletedRows > 0 && !$('#deletedReceivingTable tbody tr td').hasClass('text-center')) {
         $('#deletedReceivingTable').DataTable(config);
     }
 
     // Hide other sections initially
-    $('#pendingReceiving, #deletedReceiving').hide();
+    $('#pendingReceiving, #partialReceiving, #deletedReceiving').hide();
 
     // Button click handlers
     $('#activeRecordsBtn').click(function() {
         $('#activeReceiving').show();
-        $('#pendingReceiving, #deletedReceiving').hide();
+        $('#pendingReceiving, #partialReceiving, #deletedReceiving').hide();
     });
 
     $('#pendingRecordsBtn').click(function() {
         $('#pendingReceiving').show();
-        $('#activeReceiving, #deletedReceiving').hide();
+        $('#activeReceiving, #partialReceiving, #deletedReceiving').hide();
+    });
+
+    $('#partialRecordsBtn').click(function() {
+        $('#partialReceiving').show();
+        $('#activeReceiving, #pendingReceiving, #deletedReceiving').hide();
     });
 
     $('#showDeletedBtn').click(function() {
         $('#deletedReceiving').show();
-        $('#activeReceiving, #pendingReceiving').hide();
+        $('#activeReceiving, #pendingReceiving, #partialReceiving').hide();
     });
 });
 

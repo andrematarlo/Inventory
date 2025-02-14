@@ -24,7 +24,8 @@ class Receiving extends Model
         'DateDeleted',
         'RestoredById',
         'DateRestored',
-        'IsDeleted'
+        'IsDeleted',
+        'ItemStatuses'
     ];
 
     protected $casts = [
@@ -35,6 +36,11 @@ class Receiving extends Model
         'DateRestored' => 'datetime',
         'IsDeleted' => 'boolean'
     ];
+
+    // Add constants for status values
+    const STATUS_RECEIVED = 'Received';
+    const STATUS_PARTIAL = 'Partial';
+    const STATUS_PENDING = 'Pending';
 
     public function purchaseOrder()
     {
