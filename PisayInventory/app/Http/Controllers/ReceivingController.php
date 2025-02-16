@@ -146,20 +146,25 @@ class ReceivingController extends Controller
                 foreach ($purchaseOrder->items as $item) {
                     if ($existingReceiving) {
                         $itemStatuses = json_decode($existingReceiving->ItemStatuses, true) ?? [];
-                        $item->status = $itemStatuses[$item->ItemId] ?? 'Pending';
-                        $item->remaining_qty = $item->status === 'Complete' ? 0 : $item->Quantity;
-                        $item->received_qty = $item->status === 'Complete' ? $item->Quantity : 0;
+                        $itemStatus = $itemStatuses[$item->ItemId] ?? ['status' => 'Pending', 'received_qty' => 0];
+                        
+                        // Set status and received quantity
+                        $item->status = $itemStatus['status'] ?? 'Pending';
+                        $item->received_qty = $itemStatus['received_qty'] ?? 0;
                     } else {
                         $item->received_qty = 0;
-                        $item->remaining_qty = $item->Quantity;
                         $item->status = 'Pending';
                     }
+                    
+                    $item->remaining_qty = max(0, $item->Quantity - $item->received_qty);
 
-                    // Debug log to check values
+                    // Debug log
                     Log::info("Item {$item->ItemId} status:", [
                         'received_qty' => $item->received_qty,
-                        'quantity' => $item->Quantity,
-                        'status' => $item->status
+                        'remaining_qty' => $item->remaining_qty,
+                        'total_quantity' => $item->Quantity,
+                        'status' => $item->status,
+                        'status_type' => gettype($item->status)
                     ]);
                 }
 
@@ -212,35 +217,56 @@ class ReceivingController extends Controller
             $completeItems = 0;
 
             foreach ($purchaseOrder->items as $poItem) {
-                $newQty = $request->input("items.{$poItem->ItemId}.quantity", 0);
+                $newQty = (int)$request->input("items.{$poItem->ItemId}.quantity", 0);
                 $totalItems++;
                 
-                // Keep existing Complete status
-                if (isset($existingStatuses[$poItem->ItemId]) && $existingStatuses[$poItem->ItemId] === 'Complete') {
-                    $itemStatuses[$poItem->ItemId] = 'Complete';
-                    $completeItems++;
-                    continue;
+                // Get existing received quantity from ItemStatuses
+                $existingQty = 0;
+                if (isset($existingStatuses[$poItem->ItemId])) {
+                    $existingStatus = $existingStatuses[$poItem->ItemId];
+                    $existingQty = is_array($existingStatus) ? ($existingStatus['received_qty'] ?? 0) : 0;
                 }
-
-                // Track individual item status and store it
-                if ($newQty >= $poItem->Quantity) {
-                    $itemStatuses[$poItem->ItemId] = 'Complete';
+                
+                $totalReceivedQty = $existingQty + $newQty;
+                
+                // Store the status with structure
+                if ($totalReceivedQty >= $poItem->Quantity) {
+                    $itemStatuses[$poItem->ItemId] = [
+                        'status' => 'Complete',
+                        'received_qty' => $totalReceivedQty
+                    ];
                     $completeItems++;
-                } else if ($newQty > 0) {
-                    $itemStatuses[$poItem->ItemId] = 'Partial';
+                } elseif ($totalReceivedQty > 0) {
+                    $itemStatuses[$poItem->ItemId] = [
+                        'status' => 'Partial',
+                        'received_qty' => $totalReceivedQty
+                    ];
                     $hasPartialItems = true;
                     $isFullyReceived = false;
                 } else {
-                    $itemStatuses[$poItem->ItemId] = 'Pending';
+                    // If no new quantity and no existing quantity, mark as Pending
+                    $itemStatuses[$poItem->ItemId] = [
+                        'status' => 'Pending',
+                        'received_qty' => 0
+                    ];
                     $isFullyReceived = false;
                 }
+
+                // Debug log
+                Log::info("Processing item {$poItem->ItemId}:", [
+                    'new_qty' => $newQty,
+                    'existing_qty' => $existingQty,
+                    'total_received' => $totalReceivedQty,
+                    'ordered_qty' => $poItem->Quantity,
+                    'status' => $itemStatuses[$poItem->ItemId]['status']
+                ]);
             }
 
-            // Determine status based on item counts
+            // Determine overall status based on all items
             $status = 'Pending';
             if ($completeItems === $totalItems) {
                 $status = 'Received';
-            } else if ($completeItems > 0 || $hasPartialItems) {
+            } elseif ($completeItems > 0 || $hasPartialItems) {
                 $status = 'Partial';
             }
 
@@ -279,7 +305,7 @@ class ReceivingController extends Controller
 
             // Update inventory only for newly received items
             foreach ($purchaseOrder->items as $poItem) {
-                $newQty = $request->input("items.{$poItem->ItemId}.quantity", 0);
+                $newQty = (int)$request->input("items.{$poItem->ItemId}.quantity", 0);
                 if ($newQty > 0) {
                     $item = $poItem->item;
                     $item->StocksAvailable += $newQty;
@@ -287,6 +313,7 @@ class ReceivingController extends Controller
 
                     Inventory::create([
                         'ItemId' => $poItem->ItemId,
+                        'PurchaseOrderID' => $purchaseOrder->PurchaseOrderID,
                         'StocksAdded' => $newQty,
                         'StocksAvailable' => $item->StocksAvailable,
                         'DateCreated' => now(),
@@ -318,6 +345,14 @@ class ReceivingController extends Controller
                 'createdBy',
                 'modifiedBy'
             ])->findOrFail($id);
+
+            // Process item statuses
+            $itemStatuses = json_decode($receiving->ItemStatuses, true) ?? [];
+            foreach ($receiving->purchaseOrder->items as $item) {
+                $status = $itemStatuses[$item->ItemId] ?? ['status' => 'Pending', 'received_qty' => 0];
+                $item->status = $status['status'] ?? 'Pending';
+                $item->received_qty = $status['received_qty'] ?? 0;
+            }
 
             return view('receiving.show', compact('receiving'));
         } catch (\Exception $e) {

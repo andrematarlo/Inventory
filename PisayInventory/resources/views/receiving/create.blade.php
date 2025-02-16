@@ -100,10 +100,20 @@
                                         <td>₱{{ number_format($item->UnitPrice, 2) }}</td>
                                         <td class="item-total">₱0.00</td>
                                         <td>
-                                            <span class="badge 
-                                                {{ in_array($item->status, ['Complete', 'Partial']) ? ($item->status === 'Complete' ? 'bg-success' : 'bg-warning') : 'bg-warning' }} 
-                                                item-status">
-                                                {{ $item->status }}
+                                            @php
+                                                // Force status to be a string and handle any array cases
+                                                $statusString = is_array($item->status) ? 
+                                                    (string)($item->status['status'] ?? 'Pending') : 
+                                                    (string)($item->status ?? 'Pending');
+                                                    
+                                                $statusClass = match($statusString) {
+                                                    'Complete' => 'bg-success',
+                                                    'Partial' => 'bg-warning',
+                                                    default => 'bg-warning'
+                                                };
+                                            @endphp
+                                            <span class="badge {{ $statusClass }} item-status">
+                                                {{ $statusString }}
                                             </span>
                                         </td>
                                         <td>

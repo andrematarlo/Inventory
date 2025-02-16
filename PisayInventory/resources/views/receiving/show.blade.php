@@ -99,11 +99,21 @@
                             <td>₱{{ number_format($item->TotalPrice, 2) }}</td>
                             <td>
                                 @php
-                                    $itemStatuses = json_decode($receiving->ItemStatuses, true) ?? [];
-                                    $status = $itemStatuses[$item->ItemId] ?? 'Pending';
+                                    $itemStatus = $item->status;
+                                    if (is_array($itemStatus)) {
+                                        $statusString = $itemStatus['status'] ?? 'Pending';
+                                    } else {
+                                        $statusString = $itemStatus ?? 'Pending';
+                                    }
+                                    
+                                    $statusClass = match($statusString) {
+                                        'Complete' => 'bg-success',
+                                        'Partial' => 'bg-warning',
+                                        default => 'bg-warning'
+                                    };
                                 @endphp
-                                <span class="badge bg-{{ $status === 'Complete' ? 'success' : ($status === 'Partial' ? 'warning' : 'secondary') }}">
-                                    {{ $status }}
+                                <span class="badge {{ $statusClass }}">
+                                    {{ $statusString }}
                                 </span>
                             </td>
                         </tr>
