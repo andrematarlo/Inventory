@@ -123,12 +123,15 @@ class ItemController extends Controller
             ]);
 
             DB::commit();
-            return redirect()->route('items.index')->with('success', 'Item created successfully');
-
+            
+            // Return only one success message
+            return redirect()->route('items.index')
+                ->with('success', 'Item created successfully');
+            
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Item creation failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to create item: ' . $e->getMessage())
+            Log::error('Error creating item: ' . $e->getMessage());
+            return back()->with('error', 'Error creating item: ' . $e->getMessage())
                 ->withInput();
         }
     }

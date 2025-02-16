@@ -231,23 +231,19 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Suppliers Management</h2>
-        <div>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                <i class="bi bi-plus-circle"></i> New Supplier
-            </button>
-        </div>
-    </div>
-
-    <div class="mb-4">
-        <button type="button" class="btn btn-primary" id="activeRecordsBtn">Active Records</button>
-        <button type="button" class="btn btn-danger" id="showDeletedBtn">
-            <i class="bi bi-archive"></i> Show Deleted Records
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+            <i class="bi bi-plus-lg"></i> New Supplier
         </button>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
+    <div class="btn-group mb-4" role="group">
+        <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
+            Active Records
+        </button>
+        <button class="btn btn-danger" type="button" id="showDeletedBtn">
+            <i class="bi bi-archive"></i> Show Deleted Records
+        </button>
+    </div>
 
     @if(session('error'))
         <div class="alert alert-danger">{{ session('error') }}</div>

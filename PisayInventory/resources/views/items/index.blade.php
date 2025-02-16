@@ -20,10 +20,6 @@
         </button>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
     @if(session('error'))
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
@@ -234,6 +230,14 @@
                 activeBtn.addClass('active');
             }
         });
+
+        // Remove any existing success alerts at the top of the page
+        $('.alert-success:not(.fade)').remove();
+        
+        // Auto dismiss alerts after 3 seconds
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 3000);
     });
 </script>
 @endsection
