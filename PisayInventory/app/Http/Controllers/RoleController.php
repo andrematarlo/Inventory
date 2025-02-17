@@ -49,36 +49,44 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'RoleName' => 'required|string|max:255|unique:roles,RoleName',
-            'Description' => 'nullable|string'
-        ]);
-
-        $role = new Role();
-        $role->RoleName = $validated['RoleName'];
-        $role->Description = $validated['Description'];
-        $role->DateCreated = now();
-        $role->CreatedById = auth()->id();
-        $role->IsDeleted = false;
-        $role->save();
-
-        // Create default policies for the role
-        $modules = ['Users', 'Roles', 'Inventory', 'Classifications']; // Add your modules
-        foreach ($modules as $module) {
-            RolePolicy::create([
-                'RoleId' => $role->RoleId,
-                'Module' => $module,
-                'CanView' => false,
-                'CanAdd' => false,
-                'CanEdit' => false,
-                'CanDelete' => false,
+        try {
+            // 1. Create new role
+            $roleId = DB::table('roles')->insertGetId([
+                'RoleName' => $request->RoleName,
                 'DateCreated' => now(),
-                'CreatedById' => Auth::id()
+                'CreatedById' => auth()->id(),
+                'IsDeleted' => false
             ]);
-        }
 
-        return redirect()->route('roles.index')
-            ->with('success', 'Role created successfully');
+            // 2. Get all modules from modules table
+            $modules = DB::table('modules')
+                ->select('ModuleId', 'ModuleName')
+                ->get();
+
+            // 3. Automatically assign ALL modules to the new role
+            foreach ($modules as $module) {
+                DB::table('role_policies')->insert([
+                    'RoleId' => $roleId,
+                    'ModuleId' => $module->ModuleId,
+                    'Module' => $module->ModuleName,  // Use ModuleName from modules table
+                    'CanView' => true,
+                    'CanAdd' => true,
+                    'CanEdit' => true,
+                    'CanDelete' => true,
+                    'DateCreated' => now(),
+                    'CreatedById' => auth()->id(),
+                    'IsDeleted' => false
+                ]);
+            }
+
+            return redirect()->route('roles.index')
+                ->with('success', 'Role created successfully with all modules assigned');
+        } catch (\Exception $e) {
+            \Log::error('Role creation failed: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Failed to create role: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     public function edit($id)
@@ -164,20 +172,72 @@ class RoleController extends Controller
     public function policies()
     {
         try {
-            $policies = RolePolicy::orderBy('RoleId')
-                ->orderBy('Module')
+            // Get all active roles
+            $roles = DB::table('roles')
+                ->where('IsDeleted', false)
                 ->get();
 
-            \Log::info('Policies query result:', ['count' => $policies->count()]);
-            
-            return view('roles.policies', compact('policies'));
+            // Get all modules
+            $modules = DB::table('modules')->get();
+
+            // Initialize array to store all policies
+            $allPolicies = [];
+
+            // For each role and module combination, get or create policy
+            foreach ($roles as $role) {
+                foreach ($modules as $module) {
+                    // Check if policy exists
+                    $policy = DB::table('role_policies as rp')
+                        ->where('RoleId', $role->RoleId)
+                        ->where('ModuleId', $module->ModuleId)
+                        ->where('IsDeleted', false)
+                        ->first();
+
+                    // If no policy exists, create a default one
+                    if (!$policy) {
+                        $policyId = DB::table('role_policies')->insertGetId([
+                            'RoleId' => $role->RoleId,
+                            'ModuleId' => $module->ModuleId,
+                            'Module' => $module->ModuleName,
+                            'CanView' => true,
+                            'CanAdd' => true,
+                            'CanEdit' => true,
+                            'CanDelete' => true,
+                            'DateCreated' => now(),
+                            'CreatedById' => auth()->id(),
+                            'IsDeleted' => false
+                        ]);
+
+                        $policy = DB::table('role_policies')
+                            ->where('RolePolicyId', $policyId)
+                            ->first();
+                    }
+
+                    // Create policy object with nested role
+                    $policyObj = (object)[
+                        'RolePolicyId' => $policy->RolePolicyId,
+                        'RoleId' => $role->RoleId,
+                        'ModuleId' => $module->ModuleId,
+                        'Module' => $module->ModuleName,
+                        'CanView' => $policy->CanView ?? true,
+                        'CanAdd' => $policy->CanAdd ?? true,
+                        'CanEdit' => $policy->CanEdit ?? true,
+                        'CanDelete' => $policy->CanDelete ?? true,
+                        'role' => (object)[
+                            'RoleId' => $role->RoleId,
+                            'RoleName' => $role->RoleName
+                        ]
+                    ];
+
+                    $allPolicies[] = $policyObj;
+                }
+            }
+
+            return view('roles.policies', ['policies' => collect($allPolicies)]);
         } catch (\Exception $e) {
-            \Log::error('Error in policies method:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return back()->with('error', 'Error loading policies: ' . $e->getMessage());
+            \Log::error('Policy loading failed: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Failed to load role policies: ' . $e->getMessage());
         }
     }
 
