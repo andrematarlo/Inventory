@@ -5,48 +5,62 @@
 @section('content')
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Units Management</h2>
+        <h2 class="mb-0">Units Management</h2>
+        @if($userPermissions && $userPermissions->CanAdd)
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUnitModal">
-            <i class="bi bi-plus-lg"></i> Add New Unit
+            <i class="bi bi-plus-lg"></i> Add Unit
         </button>
+        @endif
     </div>
 
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover" id="unitsTable">
+                <table class="table table-hover align-middle">
                     <thead>
                         <tr>
-                            <th class="text-center">Actions</th>
-                            <th>Unit Name</th>
+                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
+                            <th>Actions</th>
+                            @endif
+                            <th>Name</th>
                             <th>Created By</th>
                             <th>Date Created</th>
+                            <th>Modified By</th>
+                            <th>Date Modified</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($units as $unit)
                         <tr>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUnitModal{{ $unit->UnitOfMeasureId }}">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteUnitModal{{ $unit->UnitOfMeasureId }}">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                            </td>
-                            <td>{{ $unit->UnitName }}</td>
+                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                             <td>
-                                @if($unit->createdBy)
-                                    {{ $unit->createdBy->Username }}
-                                @else
-                                    System
-                                @endif
+                                <div class="btn-group">
+                                    @if($userPermissions->CanEdit)
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUnitModal{{ $unit->UnitOfMeasureId }}">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    @endif
+                                    @if($userPermissions->CanDelete)
+                                    <form action="{{ route('units.destroy', $unit->UnitOfMeasureId) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this unit?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                    @endif
+                                </div>
                             </td>
+                            @endif
+                            <td>{{ $unit->UnitName }}</td>
+                            <td>{{ $unit->created_by_user->Username ?? 'N/A' }}</td>
                             <td>{{ $unit->DateCreated ? date('M d, Y h:i A', strtotime($unit->DateCreated)) : 'N/A' }}</td>
+                            <td>{{ $unit->modified_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ $unit->DateModified ? date('M d, Y h:i A', strtotime($unit->DateModified)) : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="4" class="text-center py-4">No units found</td>
+                            <td colspan="{{ ($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete)) ? '6' : '5' }}" class="text-center">No units found</td>
                         </tr>
                         @endforelse
                     </tbody>

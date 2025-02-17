@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
+use App\Models\RolePolicy;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Unit;
 
@@ -14,10 +15,24 @@ class UnitController extends Controller
      */
     public function index()
     {
-        $units = Unit::where('IsDeleted', false)
-            ->with('createdBy')
-            ->get();
-        return view('units.index', compact('units'));
+        $userPermissions = $this->getUserPermissions();
+
+        // Check if user has View permission
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->back()->with('error', 'You do not have permission to view units.');
+        }
+
+        $units = Unit::with(['createdBy', 'modifiedBy'])
+            ->where('IsDeleted', 0)
+            ->orderBy('UnitName')
+            ->paginate(10);
+
+        $trashedUnits = Unit::with(['createdBy', 'modifiedBy', 'deletedBy'])
+            ->where('IsDeleted', 1)
+            ->orderBy('UnitName')
+            ->paginate(10);
+
+        return view('units.index', compact('units', 'trashedUnits', 'userPermissions'));
     }
 
     /**
@@ -128,5 +143,13 @@ class UnitController extends Controller
         Log::error('Unit restore failed: ' . $e->getMessage());
         return back()->with('error', 'Failed to restore unit: ' . $e->getMessage());
     }
+}
+
+private function getUserPermissions()
+{
+    $userRole = auth()->user()->role;
+    return RolePolicy::whereHas('role', function($query) use ($userRole) {
+        $query->where('RoleName', $userRole);
+    })->where('Module', 'Units')->first();
 }
 }
