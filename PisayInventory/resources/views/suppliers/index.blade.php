@@ -224,6 +224,24 @@
         background-color: #0b5ed7;
         color: white;
     }
+
+    /* Remove ALL DataTables sorting indicators completely */
+    table.dataTable thead > tr > th.sorting:before,
+    table.dataTable thead > tr > th.sorting:after,
+    table.dataTable thead > tr > th.sorting_asc:before,
+    table.dataTable thead > tr > th.sorting_asc:after,
+    table.dataTable thead > tr > th.sorting_desc:before,
+    table.dataTable thead > tr > th.sorting_desc:after,
+    table.dataTable thead > tr > td.sorting:before,
+    table.dataTable thead > tr > td.sorting:after,
+    table.dataTable thead > tr > td.sorting_asc:before,
+    table.dataTable thead > tr > td.sorting_asc:after,
+    table.dataTable thead > tr > td.sorting_desc:before,
+    table.dataTable thead > tr > td.sorting_desc:after {
+        opacity: 0 !important;
+        content: '' !important;
+        display: none !important;
+    }
 </style>
 @endsection
 
@@ -341,15 +359,15 @@
             <table class="table table-hover" id="deletedSuppliersTable">
                 <thead>
                     <tr>
-                        <th>Actions</th>
-                        <th>Company Name</th>
-                        <th>Contact Person</th>
-                        <th>Telephone</th>
-                        <th>Contact Number</th>
-                        <th>Address</th>
-                        <th>Deleted Date</th>
-                        <th>Created By</th>
-                        <th>Modified By</th>
+                        <th>Action</th>
+                        <th>Company Name <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        <th>Contact Person <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        <th>Telephone <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        <th>Contact Number <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        <th>Address <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        <th>Deleted Date <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -357,8 +375,7 @@
                         <tr>
                             <td>
                                 <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
-                                      method="POST" 
-                                      class="d-inline">
+                                      method="POST">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-success">
                                         <i class="bi bi-arrow-counterclockwise"></i>
@@ -430,14 +447,19 @@
 
         const deletedTable = $('#deletedSuppliersTable').DataTable({
             pageLength: 10,
-            responsive: true,
-            dom: '<"datatable-header"<"dataTables_length"l><"dataTables_filter"f>>' +
-                 't' +
-                 '<"datatable-footer"<"dataTables_info"i><"dataTables_paginate"p>>',
+            responsive: {
+                details: false
+            },
             language: {
                 search: "Search:",
                 searchPlaceholder: "Search suppliers..."
-            }
+            },
+            "ordering": false,
+            "order": [],
+            "columnDefs": [{
+                "orderable": false,
+                "targets": "_all"
+            }]
         });
 
         // Show active records by default

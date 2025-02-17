@@ -9,35 +9,6 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
-                    <!-- Current Image Preview -->
-                    <div class="mb-3">
-                        <label class="form-label">Current Image</label>
-                        <div>
-                            @if($supplier->ImagePath)
-                                <img src="{{ asset('storage/' . $supplier->ImagePath) }}" 
-                                     alt="Current supplier image" 
-                                     class="img-thumbnail"
-                                     style="max-height: 100px;">
-                            @else
-                                <p class="text-muted">No image uploaded</p>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Image Upload Field -->
-                    <div class="mb-3">
-                        <label for="image{{ $supplier->SupplierID }}" class="form-label">Update Image</label>
-                        <input type="file" 
-                               class="form-control @error('image') is-invalid @enderror" 
-                               id="image{{ $supplier->SupplierID }}" 
-                               name="image"
-                               accept="image/*">
-                        <small class="form-text text-muted">Leave empty to keep current image. Accepted formats: JPEG, PNG, JPG, GIF. Max size: 2MB</small>
-                        @error('image')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
                     <div class="mb-3">
                         <label for="CompanyName{{ $supplier->SupplierID }}" class="form-label">Company Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control @error('CompanyName') is-invalid @enderror" 
