@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Modules')
+
 @section('content')
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -18,11 +20,11 @@
                     <thead>
                         <tr>
                             @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
-                            <th>Actions</th>
+                            <th style="width: 120px">Actions</th>
                             @endif
-                            <th>Module Name</th>
-                            <th>Created At</th>
-                            <th>Updated At</th>
+                            <th>Module Name <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Created At <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Updated At <i class="bi bi-arrow-down-up small-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -32,7 +34,7 @@
                             <td>
                                 <div class="btn-group" role="group">
                                     @if($userPermissions->CanEdit)
-                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModuleModal{{ $module->ModuleId }}">
+                                    <button type="button" class="btn btn-sm btn-blue" data-bs-toggle="modal" data-bs-target="#editModuleModal{{ $module->ModuleId }}">
                                         <i class="bi bi-pencil"></i>
                                     </button>
                                     @endif
@@ -144,4 +146,85 @@
 @endforeach
 @endif
 
+@endsection
+
+@section('additional_styles')
+<style>
+    /* Hide default scrolling buttons */
+    .table-responsive::-webkit-scrollbar-button {
+        display: none;
+    }
+
+    /* Custom scrollbar styling */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    .table th {
+        padding: 12px 16px;
+        white-space: nowrap;
+    }
+
+    .table th .small-icon {
+        font-size: 10px;
+        color: #6c757d;
+        margin-left: 3px;
+    }
+
+    .table td {
+        padding: 12px 16px;
+        vertical-align: middle;
+    }
+
+    /* Action buttons styling */
+    .btn-group {
+        white-space: nowrap;
+    }
+    
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    /* Consistent button styles */
+    .btn {
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Header styles */
+    h2 {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .btn-blue {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    .btn-blue:hover {
+        background-color: #0b5ed7;
+        color: white;
+    }
+</style>
 @endsection 

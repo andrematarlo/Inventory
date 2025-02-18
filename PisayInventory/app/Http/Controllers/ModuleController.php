@@ -5,34 +5,22 @@ namespace App\Http\Controllers;
 use App\Models\Module;
 use App\Models\RolePolicy;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ModuleController extends Controller
 {
     private function getUserPermissions()
     {
         $userRole = auth()->user()->role;
-        
-        // Debug line to check the query
-        $policy = RolePolicy::whereHas('role', function($query) use ($userRole) {
+        return RolePolicy::whereHas('role', function($query) use ($userRole) {
             $query->where('RoleName', $userRole);
         })->where('Module', 'Modules')->first();
-        
-        dd([
-            'userRole' => $userRole,
-            'sql' => $policy->toSql(),  // Check the actual SQL query
-            'bindings' => $policy->getBindings(),  // Check the query bindings
-            'policy' => $policy
-        ]);
-        
-        return $policy;
     }
 
     public function index()
     {
         try {
-            dd(auth()->user()->role);  // Check unsa ang value sa role
-            
             $userPermissions = $this->getUserPermissions();
             $modules = Module::orderBy('ModuleName')->get();
 
@@ -42,7 +30,7 @@ class ModuleController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error loading modules: ' . $e->getMessage());
+            \Log::error('Error loading modules: ' . $e->getMessage());
             return back()->with('error', 'Error loading modules: ' . $e->getMessage());
         }
     }
@@ -62,7 +50,7 @@ class ModuleController extends Controller
                 ->with('success', 'Module added successfully');
 
         } catch (\Exception $e) {
-            Log::error('Error adding module: ' . $e->getMessage());
+            \Log::error('Error adding module: ' . $e->getMessage());
             return back()->with('error', 'Failed to add module: ' . $e->getMessage());
         }
     }
@@ -83,7 +71,7 @@ class ModuleController extends Controller
                 ->with('success', 'Module updated successfully');
 
         } catch (\Exception $e) {
-            Log::error('Error updating module: ' . $e->getMessage());
+            \Log::error('Error updating module: ' . $e->getMessage());
             return back()->with('error', 'Failed to update module: ' . $e->getMessage());
         }
     }
@@ -98,7 +86,7 @@ class ModuleController extends Controller
                 ->with('success', 'Module deleted successfully');
 
         } catch (\Exception $e) {
-            Log::error('Error deleting module: ' . $e->getMessage());
+            \Log::error('Error deleting module: ' . $e->getMessage());
             return back()->with('error', 'Failed to delete module: ' . $e->getMessage());
         }
     }
