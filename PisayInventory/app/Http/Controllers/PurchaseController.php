@@ -7,6 +7,8 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Item;
 use App\Models\Supplier;
 use App\Models\Employee;
+use App\Models\Purchase;
+use App\Models\RolePolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,9 +16,24 @@ use Illuminate\Support\Facades\Log;
 
 class PurchaseController extends Controller
 {
+    private function getUserPermissions()
+    {
+        $userRole = auth()->user()->role;
+        return RolePolicy::whereHas('role', function($query) use ($userRole) {
+            $query->where('RoleName', $userRole);
+        })->where('Module', 'Purchasing Management')->first();
+    }
+
     public function index()
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has View permission
+            if (!$userPermissions || !$userPermissions->CanView) {
+                return redirect()->back()->with('error', 'You do not have permission to view purchases.');
+            }
+
             // Active purchase orders (Received status)
             $purchases = PurchaseOrder::with([
                 'supplier', 
@@ -58,7 +75,14 @@ class PurchaseController extends Controller
                 ->where('IsDeleted', false)
                 ->get();
 
-            return view('purchases.index', compact('purchases', 'pendingPurchases', 'deletedPurchases', 'suppliers', 'items'));
+            return view('purchases.index', [
+                'purchases' => $purchases,
+                'pendingPurchases' => $pendingPurchases,
+                'deletedPurchases' => $deletedPurchases,
+                'suppliers' => $suppliers,
+                'items' => $items,
+                'userPermissions' => $userPermissions
+            ]);
         } catch (\Exception $e) {
             Log::error('Error loading purchase orders: ' . $e->getMessage());
             return back()->with('error', 'Error loading purchase orders: ' . $e->getMessage());
@@ -83,6 +107,13 @@ class PurchaseController extends Controller
     public function store(Request $request)
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has Add permission
+            if (!$userPermissions || !$userPermissions->CanAdd) {
+                return redirect()->back()->with('error', 'You do not have permission to add purchases.');
+            }
+
             $request->validate([
                 'items' => 'required|array|min:1',
                 'items.*.ItemId' => 'required|exists:items,ItemId',
@@ -166,6 +197,13 @@ class PurchaseController extends Controller
     public function destroy($id)
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has Delete permission
+            if (!$userPermissions || !$userPermissions->CanDelete) {
+                return redirect()->back()->with('error', 'You do not have permission to delete purchases.');
+            }
+
             DB::beginTransaction();
 
             $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
@@ -205,6 +243,13 @@ class PurchaseController extends Controller
     public function restore($id)
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has Edit permission for restore
+            if (!$userPermissions || !$userPermissions->CanEdit) {
+                return redirect()->back()->with('error', 'You do not have permission to restore purchases.');
+            }
+
             Log::info('Starting restore process for purchase order: ' . $id);
             DB::beginTransaction();
 
@@ -269,6 +314,13 @@ class PurchaseController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has Edit permission
+            if (!$userPermissions || !$userPermissions->CanEdit) {
+                return redirect()->back()->with('error', 'You do not have permission to edit purchases.');
+            }
+
             $request->validate([
                 'SupplierID' => 'required|exists:suppliers,SupplierID',
                 'items' => 'required|array|min:1',

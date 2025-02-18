@@ -6,6 +6,7 @@ use App\Models\Receiving;
 use App\Models\PurchaseOrder;
 use App\Models\Employee;
 use App\Models\Inventory;
+use App\Models\RolePolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,9 +14,24 @@ use Illuminate\Support\Facades\Log;
 
 class ReceivingController extends Controller
 {
+    private function getUserPermissions()
+    {
+        $userRole = auth()->user()->role;
+        return RolePolicy::whereHas('role', function($query) use ($userRole) {
+            $query->where('RoleName', $userRole);
+        })->where('Module', 'Receiving Management')->first();
+    }
+
     public function index()
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has View permission
+            if (!$userPermissions || !$userPermissions->CanView) {
+                return redirect()->back()->with('error', 'You do not have permission to view receiving records.');
+            }
+
             // First check all receiving records
             $allRecords = Receiving::where('IsDeleted', false)->get();
             Log::info('All receiving records:', [
@@ -120,7 +136,8 @@ class ReceivingController extends Controller
                 'receivingRecords', 
                 'pendingRecords', 
                 'partialRecords',
-                'deletedRecords'
+                'deletedRecords',
+                'userPermissions'
             ));
         } catch (\Exception $e) {
             Log::error('Error loading receiving records: ' . $e->getMessage());
@@ -187,6 +204,13 @@ class ReceivingController extends Controller
     public function store(Request $request)
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has Add permission
+            if (!$userPermissions || !$userPermissions->CanAdd) {
+                return redirect()->back()->with('error', 'You do not have permission to add receiving records.');
+            }
+
             DB::beginTransaction();
 
             date_default_timezone_set('Asia/Manila');
@@ -364,6 +388,13 @@ class ReceivingController extends Controller
     public function destroy($id)
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has Delete permission
+            if (!$userPermissions || !$userPermissions->CanDelete) {
+                return redirect()->back()->with('error', 'You do not have permission to delete receiving records.');
+            }
+
             Log::info('Starting delete process for receiving record: ' . $id);
             DB::beginTransaction();
 
@@ -402,6 +433,13 @@ class ReceivingController extends Controller
     public function restore($id)
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has Edit permission for restore
+            if (!$userPermissions || !$userPermissions->CanEdit) {
+                return redirect()->back()->with('error', 'You do not have permission to restore receiving records.');
+            }
+
             Log::info('Starting restore process for receiving record: ' . $id);
             DB::beginTransaction();
 

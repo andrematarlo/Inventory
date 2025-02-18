@@ -35,6 +35,15 @@
 
 @section('content')
 <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Purchase Management</h2>
+        @if($userPermissions && $userPermissions->CanAdd)
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPurchaseModal">
+            <i class="bi bi-plus-lg"></i> New Purchase
+        </button>
+        @endif
+    </div>
+
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>Purchase Orders</h1>
         <div>
@@ -81,19 +90,26 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                     @if($po->Status === 'Pending')
-                                    <a href="{{ route('purchases.edit', $po->PurchaseOrderID) }}" 
-                                       class="btn btn-sm btn-primary" 
-                                       title="Edit">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editPurchaseModal{{ $po->PurchaseOrderID }}"
+                                            title="Edit">
                                         <i class="bi bi-pencil"></i>
-                                    </a>
+                                    </button>
                                     @endif
+                                    @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            onclick="deletePurchaseOrder({{ $po->PurchaseOrderID }})"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deletePurchaseModal{{ $po->PurchaseOrderID }}"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
+                                    @endif
+                                    @endif
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
@@ -148,17 +164,22 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                     <a href="{{ route('purchases.edit', $po->PurchaseOrderID) }}" 
                                        class="btn btn-sm btn-primary" 
                                        title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    @endif
+                                    @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            onclick="deletePurchaseOrder({{ $po->PurchaseOrderID }})"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deletePurchaseModal{{ $po->PurchaseOrderID }}"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
+                                    @endif
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>

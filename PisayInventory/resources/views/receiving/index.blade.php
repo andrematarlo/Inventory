@@ -45,8 +45,13 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Receiving Management</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Receiving Management</h2>
+        @if($userPermissions && $userPermissions->CanAdd)
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addReceivingModal">
+            <i class="bi bi-plus-lg"></i> New Receiving
+        </button>
+        @endif
     </div>
 
     <div class="mb-4">
@@ -92,19 +97,15 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    @if($record->Status === 'Pending')
-                                    <a href="{{ route('receiving.edit', $record->ReceivingID) }}" 
-                                       class="btn btn-sm btn-blue" 
-                                       title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    @endif
+                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            onclick="deleteRecord({{ $record->ReceivingID }})"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteReceivingModal{{ $record->ReceivingID }}"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
+                                    @endif
                                 </div>
                             </td>
                             <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
