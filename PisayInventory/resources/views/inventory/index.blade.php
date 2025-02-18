@@ -20,7 +20,7 @@
                 </a>
             </div>
             {{-- Only show Add Inventory button if not Inventory Staff --}}
-            @if(auth()->user()->role !== 'Inventory Staff')
+            @if($userPermissions && $userPermissions->CanAdd)
             <button type="button" 
                     class="btn btn-primary d-flex align-items-center gap-1" 
                     data-bs-toggle="modal" 
@@ -80,6 +80,7 @@
                     <tbody>
                         @forelse($inventories as $inventory)
                         <tr>
+                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     @if(!$inventory->IsDeleted)
@@ -92,21 +93,20 @@
                                             <i class="bi bi-box-arrow-right me-1"></i>
                                             Stock Out
                                         </button>
-                                        {{-- Show Delete button only if not Inventory Manager or Staff --}}
-                                        @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
-                                        <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
-                                              method="POST" 
-                                              style="margin: 0;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" 
-                                                    class="btn btn-danger"
-                                                    onclick="return confirm('Are you sure you want to delete this record?');">
-                                                <i class="bi bi-trash me-1"></i>
-                                                Delete
-                                            </button>
-                                        </form>
-                                        @endif
+                                    @if($userPermissions && $userPermissions->CanDelete)
+                                    <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
+                                        method="POST" 
+                                        style="margin: 0;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" 
+                                                class="btn btn-danger"
+                                                onclick="return confirm('Are you sure you want to delete this record?');">
+                                            <i class="bi bi-trash me-1"></i>
+                                            Delete
+                                        </button>
+                                    </form>
+                                    @endif
                                     @else
                                         {{-- Show Restore button only if not Inventory Manager or Staff --}}
                                         @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
@@ -126,6 +126,7 @@
                                     @endif
                                 </div>
                             </td>
+                            @endif
                             <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
                             <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
                             <td>{{ $inventory->StocksAdded }}</td>
@@ -273,8 +274,17 @@
 @endforeach
 
 <!-- Add Inventory Modal - Only include if not Inventory Staff -->
-@if(auth()->user()->role !== 'Inventory Staff')
+@if($userPermissions && $userPermissions->CanAdd)
     <!-- ... Add Inventory Modal code ... -->
+@endif
+
+{{-- Make sure the delete modal is also wrapped with permission check --}}
+@if($userPermissions && $userPermissions->CanDelete)
+    @foreach($activeInventory as $inventory)
+        <div class="modal fade" id="deleteModal{{ $inventory->InventoryID }}" tabindex="-1">
+            <!-- Delete modal content -->
+        </div>
+    @endforeach
 @endif
 @endsection
 

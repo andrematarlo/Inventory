@@ -6,9 +6,11 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Items Management</h2>
+        @if($userPermissions && $userPermissions->CanAdd)
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
-            <i class="bi bi-plus-lg"></i> Add Item
+            <i class="bi bi-plus-lg"></i> New Item
         </button>
+        @endif
     </div>
 
     <div class="btn-group mb-4" role="group">
@@ -77,22 +79,22 @@
                         <tbody>
                             @forelse($activeItems as $item)
                                 <tr>
+                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-blue"
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#editItemModal{{ $item->ItemId }}">
+                                            @if($userPermissions->CanEdit)
+                                            <button type="button" class="btn btn-sm btn-blue" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-danger" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#deleteModal{{ $item->ItemId }}">
+                                            @endif
+                                            @if($userPermissions->CanDelete)
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $item->ItemId }}">
                                                 <i class="bi bi-trash"></i>
                                             </button>
+                                            @endif
                                         </div>
                                     </td>
+                                    @endif
                                     <td>
                                         @if($item->ImagePath)
                                             <img src="{{ asset('storage/' . $item->ImagePath) }}" 
@@ -199,11 +201,17 @@
     </div>
 </div>
 
-@include('items.partials.add-modal')
+@if($userPermissions && $userPermissions->CanAdd)
+    @include('items.partials.add-modal')
+@endif
+
+@if($userPermissions && $userPermissions->CanEdit)
+    @foreach($activeItems as $item)
+        @include('items.partials.edit-modal', ['item' => $item])
+    @endforeach
+@endif
+
 @include('items.partials.delete-modal')
-@foreach($activeItems as $item)
-    @include('items.partials.edit-modal', ['item' => $item])
-@endforeach
 @endsection
 
 @section('scripts')

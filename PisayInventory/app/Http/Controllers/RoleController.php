@@ -53,6 +53,7 @@ class RoleController extends Controller
             // 1. Create new role
             $roleId = DB::table('roles')->insertGetId([
                 'RoleName' => $request->RoleName,
+                'Description' => $request->Description,
                 'DateCreated' => now(),
                 'CreatedById' => auth()->id(),
                 'IsDeleted' => false

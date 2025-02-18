@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Storage;
+use App\Models\RolePolicy;
 
 class SupplierController extends Controller
 {
@@ -26,9 +27,12 @@ class SupplierController extends Controller
                 ->orderBy('CompanyName')
                 ->paginate(10);
 
+            $userPermissions = $this->getUserPermissions();
+
             return view('suppliers.index', [
                 'activeSuppliers' => $activeSuppliers,
-                'deletedSuppliers' => $deletedSuppliers
+                'deletedSuppliers' => $deletedSuppliers,
+                'userPermissions' => $userPermissions
             ]);
 
         } catch (\Exception $e) {
@@ -218,5 +222,13 @@ class SupplierController extends Controller
             Log::error('Supplier restore failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to restore supplier: ' . $e->getMessage());
         }
+    }
+
+    private function getUserPermissions()
+    {
+        $userRole = auth()->user()->role;
+        return RolePolicy::whereHas('role', function($query) use ($userRole) {
+            $query->where('RoleName', $userRole);
+        })->where('Module', 'Suppliers')->first();
     }
 }

@@ -14,12 +14,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Storage;
+use App\Models\RolePolicy;
 
 class ItemController extends Controller
 {
     public function index()
     {
         try {
+            $userPermissions = $this->getUserPermissions();
             $activeItems = Item::with([
                 'classification', 
                 'unitOfMeasure', 
@@ -51,7 +53,14 @@ class ItemController extends Controller
             $units = UnitOfMeasure::all();
             $suppliers = Supplier::where('IsDeleted', false)->get();
 
-            return view('items.index', compact('activeItems', 'deletedItems', 'classifications', 'units', 'suppliers'));
+            return view('items.index', [
+                'activeItems' => $activeItems,
+                'deletedItems' => $deletedItems,
+                'classifications' => $classifications,
+                'units' => $units,
+                'suppliers' => $suppliers,
+                'userPermissions' => $userPermissions
+            ]);
         } catch (\Exception $e) {
             Log::error('Error loading items: ' . $e->getMessage());
             return back()->with('error', 'Error loading items: ' . $e->getMessage());
@@ -377,5 +386,13 @@ class ItemController extends Controller
         $units = UnitOfMeasure::all();
 
         return view('items.edit', compact('item', 'suppliers', 'classifications', 'units'));
+    }
+
+    private function getUserPermissions()
+    {
+        $userRole = auth()->user()->role;
+        return RolePolicy::whereHas('role', function($query) use ($userRole) {
+            $query->where('RoleName', $userRole);
+        })->where('Module', 'Items')->first();
     }
 } 

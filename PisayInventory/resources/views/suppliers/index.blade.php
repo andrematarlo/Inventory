@@ -249,9 +249,11 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Suppliers Management</h2>
+        @if($userPermissions && $userPermissions->CanAdd)
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
             <i class="bi bi-plus-lg"></i> New Supplier
         </button>
+        @endif
     </div>
 
     <div class="btn-group mb-4" role="group">
@@ -313,22 +315,22 @@
                     <tbody>
                         @forelse($activeSuppliers as $supplier)
                             <tr>
+                                @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <button type="button"
-                                            class="btn btn-sm btn-blue"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
+                                        @if($userPermissions->CanEdit)
+                                        <button type="button" class="btn btn-sm btn-blue" data-bs-toggle="modal" data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <button type="button" 
-                                                class="btn btn-sm btn-danger" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#deleteModal{{ $supplier->SupplierID }}">
+                                        @endif
+                                        @if($userPermissions->CanDelete)
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $supplier->SupplierID }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
+                                        @endif
                                     </div>
                                 </td>
+                                @endif
                                 <td>{{ $supplier->CompanyName }}</td>
                                 <td>{{ $supplier->ContactPerson }}</td>
                                 <td>{{ $supplier->TelephoneNumber }}</td>
@@ -402,11 +404,17 @@
     </div>
 </div>
 
-@include('suppliers.partials.add-modal')
+@if($userPermissions && $userPermissions->CanAdd)
+    @include('suppliers.partials.add-modal')
+@endif
+
+@if($userPermissions && $userPermissions->CanEdit)
+    @foreach($activeSuppliers as $supplier)
+        @include('suppliers.partials.edit-modal', ['supplier' => $supplier])
+    @endforeach
+@endif  
+
 @include('suppliers.partials.delete-modal')
-@foreach($activeSuppliers as $supplier)
-    @include('suppliers.partials.edit-modal', ['supplier' => $supplier])
-@endforeach
 @endsection
 
 @section('scripts')

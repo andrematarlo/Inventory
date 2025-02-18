@@ -101,6 +101,15 @@
             </a>
         </li>
 
+       
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('modules.*') ? 'active' : '' }}" href="{{ route('modules.index') }}">
+                <i class="bi bi-grid-3x3-gap me-2"></i>
+                <span>Modules</span>
+            </a>
+        </li>
+        
+
         <li class="nav-item mt-auto">
             <form method="POST" action="{{ route('logout') }}" onsubmit="return confirmLogout()">
                 @csrf

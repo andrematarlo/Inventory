@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use App\Models\RolePolicy;
 
 class InventoryController extends Controller
 {
@@ -20,6 +21,7 @@ class InventoryController extends Controller
      */
     public function index(Request $request)
     {
+        $userPermissions = $this->getUserPermissions();
         $query = Inventory::with([
             'item.classification',
             'created_by_user',
@@ -58,7 +60,7 @@ class InventoryController extends Controller
             ];
         })->toArray());
 
-        return view('inventory.index', compact('inventories', 'items'));
+        return view('inventory.index', compact('inventories', 'items', 'userPermissions'));
     }
 
     /**
@@ -288,5 +290,13 @@ class InventoryController extends Controller
             Log::error('Inventory restore failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to restore inventory record: ' . $e->getMessage());
         }
+    }
+
+    private function getUserPermissions()
+    {
+        $userRole = auth()->user()->role;
+        return RolePolicy::whereHas('role', function($query) use ($userRole) {
+            $query->where('RoleName', $userRole);
+        })->where('Module', 'Inventory')->first();
     }
 }
