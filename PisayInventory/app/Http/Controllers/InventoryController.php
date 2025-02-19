@@ -21,46 +21,44 @@ class InventoryController extends Controller
      */
     public function index(Request $request)
     {
-        $userPermissions = $this->getUserPermissions();
-        $query = Inventory::with([
-            'item.classification',
-            'created_by_user',
-            'modified_by_user',
-            'deleted_by_user'
-        ])
-            ->select('inventory.*', 'items.StocksAvailable as ItemStocksAvailable')
-            ->join('items', 'inventory.ItemId', '=', 'items.ItemId');
+        // Debug user and permissions
+        \Log::info('User details:', [
+            'user_id' => auth()->id(),
+            'user_role' => auth()->user()->role ?? 'No role',
+            'is_authenticated' => auth()->check()
+        ]);
 
-        // Show either active or deleted records based on request
-        if ($request->has('show_deleted')) {
-            $query->where('inventory.IsDeleted', 1);
-        } else {
-            $query->where('inventory.IsDeleted', 0);
+        $userPermissions = null;
+        if (auth()->check() && auth()->user()->role) {
+            $userPermissions = RolePolicy::where('RoleId', auth()->user()->role)
+                ->where('Module', 'LIKE', 'inventory')
+                ->where('IsDeleted', 0)
+                ->first();
+            
+            // Debug permissions
+            \Log::info('Permissions loaded:', [
+                'permissions' => $userPermissions ? 'Has permissions' : 'No permissions',
+                'role_id' => auth()->user()->role,
+                'can_delete' => $userPermissions?->CanDelete ?? false
+            ]);
         }
 
-        $inventories = $query->latest('inventory.DateCreated')
-            ->paginate(10)
-            ->withQueryString();
+        // Get all inventory items
+        $query = Inventory::with(['item.classification', 'created_by_user', 'modified_by_user', 'deleted_by_user']);
 
-        // Get all active items for the Add Inventory modal
-        $items = Item::with(['classification'])
-            ->where('IsDeleted', 0)
-            ->orderBy('ItemName')
-            ->get();
-        
-        // Debug log to check items
-        \Log::info('All items:', $items->map(function($item) {
-            return [
-                'ItemId' => $item->ItemId,
-                'ItemName' => $item->ItemName,
-                'ClassificationId' => $item->ClassificationId,
-                'IsDeleted' => $item->IsDeleted,
-                'StocksAvailable' => $item->StocksAvailable,
-                'Classification' => $item->classification ? $item->classification->ClassificationName : 'N/A'
-            ];
-        })->toArray());
+        // Show deleted records if requested
+        if ($request->has('show_deleted')) {
+            $query->where('IsDeleted', true);
+        } else {
+            $query->where('IsDeleted', false);
+        }
 
-        return view('inventory.index', compact('inventories', 'items', 'userPermissions'));
+        $inventories = $query->orderBy('DateCreated', 'desc')->paginate(10);
+
+        return view('inventory.index', [
+            'inventories' => $inventories,
+            'userPermissions' => $userPermissions
+        ]);
     }
 
     /**

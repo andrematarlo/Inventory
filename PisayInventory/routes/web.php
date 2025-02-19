@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
         // Inventory Management
         Route::resource('inventory', InventoryController::class);
         Route::put('inventory/{id}/restore', [InventoryController::class, 'restore'])->name('inventory.restore');
+        Route::post('/inventory/{id}/stockout', [InventoryController::class, 'stockout'])->name('inventory.stockout');
 
         // Suppliers Management
         Route::resource('suppliers', SupplierController::class);

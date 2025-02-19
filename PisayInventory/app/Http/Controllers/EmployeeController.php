@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Employee;
 use App\Models\UserAccount;
+use App\Models\RolePolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -14,43 +15,47 @@ use Illuminate\Support\Facades\Log;
 
 class EmployeeController extends Controller
 {
+    private function getUserPermissions()
+    {
+        $userRole = auth()->user()->role;
+        // Temporary debug to check permissions
+        $permissions = RolePolicy::whereHas('role', function($query) use ($userRole) {
+            $query->where('RoleName', $userRole);
+        })->where('Module', 'Employee Management')->first();
+        
+        \Log::info('User Permissions:', [
+            'role' => $userRole,
+            'permissions' => $permissions
+        ]);
+        
+        return $permissions;
+    }
+
     public function index()
     {
         try {
-            $activeEmployees = Employee::where('IsDeleted', false)
-                ->with(['userAccount', 'createdBy', 'modifiedBy'])
-                ->get();
-
-            // Debug each employee's relationships
-            foreach ($activeEmployees as $employee) {
-                \Log::info('Employee Details:', [
-                    'employee_id' => $employee->EmployeeID,
-                    'employee_name' => $employee->FirstName . ' ' . $employee->LastName,
-                    'created_by_id' => $employee->CreatedById,
-                    'modified_by_id' => $employee->ModifiedById,
-                    'created_by_relation' => $employee->createdBy ? [
-                        'id' => $employee->createdBy->EmployeeID,
-                        'name' => $employee->createdBy->FirstName . ' ' . $employee->createdBy->LastName
-                    ] : null,
-                    'modified_by_relation' => $employee->modifiedBy ? [
-                        'id' => $employee->modifiedBy->EmployeeID,
-                        'name' => $employee->modifiedBy->FirstName . ' ' . $employee->modifiedBy->LastName
-                    ] : null
-                ]);
+            $userPermissions = $this->getUserPermissions();
+            
+            if (!$userPermissions || !$userPermissions->CanView) {
+                return redirect()->back()->with('error', 'You do not have permission to view employees.');
             }
 
+            $activeEmployees = Employee::where('IsDeleted', false)
+                ->orderBy('LastName')
+                ->get();
+
             $deletedEmployees = Employee::where('IsDeleted', true)
-                ->with(['userAccount', 'createdBy', 'modifiedBy', 'deletedBy'])
                 ->orderBy('LastName')
                 ->get();
 
             return view('employees.index', [
                 'activeEmployees' => $activeEmployees,
-                'deletedEmployees' => $deletedEmployees
+                'deletedEmployees' => $deletedEmployees,
+                'userPermissions' => $userPermissions
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error loading employees: ' . $e->getMessage());
+            \Log::error('Error loading employees: ' . $e->getMessage());
             return back()->with('error', 'Error loading employees: ' . $e->getMessage());
         }
     }

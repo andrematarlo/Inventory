@@ -227,4 +227,4 @@
         color: white;
     }
 </style>
-@endsection 
+@endsection     

@@ -223,9 +223,9 @@
             <button class="btn btn-outline-secondary" type="button" id="toggleButton">
                 <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
             </button>
-            @if(str_contains(Auth::user()->role, 'Admin'))
+            @if($userPermissions && $userPermissions->CanAdd)
                 <a href="{{ route('employees.create') }}" class="btn btn-primary">
-                    <i class="bi bi-person-plus me-2"></i>Add Employee
+                    <i class="bi bi-plus-lg"></i> Add Employee
                 </a>
             @endif
         </div>
@@ -353,6 +353,51 @@
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Employee Modal -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEmployeeModalLabel">Add New Employee</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('employees.store') }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="FirstName" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="FirstName" name="FirstName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="LastName" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="LastName" name="LastName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="Email" name="Email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Gender" class="form-label">Gender</label>
+                        <select class="form-select" id="Gender" name="Gender" required>
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Address" class="form-label">Address</label>
+                        <textarea class="form-control" id="Address" name="Address" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Employee</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

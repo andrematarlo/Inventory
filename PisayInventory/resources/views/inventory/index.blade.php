@@ -2,6 +2,15 @@
 
 @section('title', 'Inventory')
 
+@php
+    \Log::info('User permissions:', [
+        'user_role' => auth()->user()->role ?? 'No role',
+        'permissions' => $userPermissions ?? 'No permissions',
+        'can_delete' => $userPermissions?->CanDelete ?? false,
+        'can_edit' => $userPermissions?->CanEdit ?? false,
+    ]);
+@endphp
+
 @section('content')
 <div class="container">
     <!-- Header Section -->
@@ -80,11 +89,10 @@
                     <tbody>
                         @forelse($inventories as $inventory)
                         <tr>
-                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     @if(!$inventory->IsDeleted)
-                                        {{-- Show Stock Out button for everyone --}}
+                                        {{-- Stock Out button always visible --}}
                                         <button type="button" 
                                                 class="btn btn-sm btn-blue" 
                                                 data-bs-toggle="modal" 
@@ -93,23 +101,29 @@
                                             <i class="bi bi-box-arrow-right me-1"></i>
                                             Stock Out
                                         </button>
-                                    @if($userPermissions && $userPermissions->CanDelete)
-                                    <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
-                                        method="POST" 
-                                        style="margin: 0;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" 
-                                                class="btn btn-danger"
-                                                onclick="return confirm('Are you sure you want to delete this record?');">
+                                        
+                                        {{-- Debug info --}}
+                                        @php
+                                            \Log::info('Delete button check:', [
+                                                'has_permissions' => isset($userPermissions),
+                                                'can_delete' => $userPermissions?->CanDelete ?? false,
+                                                'user_role' => auth()->user()->role
+                                            ]);
+                                        @endphp
+                                        
+                                        {{-- Show Delete button for users with delete permission --}}
+                                        @if(auth()->check() && (auth()->user()->role === 'System Admin' || auth()->user()->role === 'Admin'))
+                                        <button type="button" 
+                                                class="btn btn-sm btn-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteModal{{ $inventory->InventoryId }}">
                                             <i class="bi bi-trash me-1"></i>
                                             Delete
                                         </button>
-                                    </form>
-                                    @endif
+                                        @endif
                                     @else
-                                        {{-- Show Restore button only if not Inventory Manager or Staff --}}
-                                        @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
+                                        {{-- Show Restore button for admins --}}
+                                        @if(auth()->check() && (auth()->user()->role === 'System Admin' || auth()->user()->role === 'Admin'))
                                         <form action="{{ route('inventory.restore', $inventory->InventoryId) }}" 
                                               method="POST" 
                                               style="margin: 0;">
@@ -126,7 +140,6 @@
                                     @endif
                                 </div>
                             </td>
-                            @endif
                             <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
                             <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
                             <td>{{ $inventory->StocksAdded }}</td>
@@ -271,6 +284,33 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal{{ $inventory->InventoryId }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Inventory</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this inventory record?</p>
+                <p><strong>Item:</strong> {{ $inventory->item->ItemName }}</p>
+                <p><strong>Current Stock:</strong> {{ $inventory->StocksAvailable }}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 @endforeach
 
 <!-- Add Inventory Modal - Only include if not Inventory Staff -->
@@ -280,8 +320,8 @@
 
 {{-- Make sure the delete modal is also wrapped with permission check --}}
 @if($userPermissions && $userPermissions->CanDelete)
-    @foreach($activeInventory as $inventory)
-        <div class="modal fade" id="deleteModal{{ $inventory->InventoryID }}" tabindex="-1">
+    @foreach($inventories->where('IsDeleted', false) as $inventory)
+        <div class="modal fade" id="deleteModal{{ $inventory->InventoryId }}" tabindex="-1">
             <!-- Delete modal content -->
         </div>
     @endforeach

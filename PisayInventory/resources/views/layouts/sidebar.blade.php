@@ -27,7 +27,7 @@
         </li>
         @endif
         {{-- Show Employee Management for everyone EXCEPT Inventory roles --}}
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin']))
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'HR Manager', 'HR Staff']))
         <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-people"></i>
