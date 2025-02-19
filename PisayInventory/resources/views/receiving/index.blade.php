@@ -98,13 +98,24 @@
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
-                                    <button type="button" 
-                                            class="btn btn-sm btn-danger" 
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteReceivingModal{{ $record->ReceivingID }}"
-                                            title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                        @if($record->Status === 'Pending')
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-primary"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editReceivingModal{{ $record->ReceivingID }}"
+                                                    title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        @endif
+                                        @if($userPermissions->CanDelete)
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger" 
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteReceivingModal{{ $record->ReceivingID }}"
+                                                    title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        @endif
                                     @endif
                                 </div>
                             </td>
@@ -373,6 +384,10 @@ $(document).ready(function() {
         $('#deletedReceiving').show();
         $('#activeReceiving, #pendingReceiving, #partialReceiving').hide();
     });
+
+    setTimeout(function() {
+        $('.alert').alert('close');
+    }, 3000);
 });
 
 function restoreReceivingRecord(id) {
