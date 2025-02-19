@@ -16,7 +16,7 @@ class RoleController extends Controller
         $userRole = auth()->user()->role;
         return RolePolicy::whereHas('role', function($query) use ($userRole) {
             $query->where('RoleName', $userRole);
-        })->where('Module', 'Employees')->first();
+        })->where('Module', 'Roles')->first();
     }
 
     public function index()
