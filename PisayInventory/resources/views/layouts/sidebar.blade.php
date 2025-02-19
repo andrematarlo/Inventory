@@ -52,63 +52,70 @@
             </ul>
         </li>
         @endif
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Purchasing Manager', 'Purchasing Staff']))
         <li class="nav-item">
             <a href="{{ route('purchases.index') }}" class="nav-link text-white {{ request()->routeIs('purchases.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-cart4"></i>
                 <span>Purchase Management</span>
             </a>
         </li>
+        @endif
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Receiving Manager', 'Receiving Staff']))
         <li class="nav-item">
             <a href="{{ route('receiving.index') }}" class="nav-link text-white {{ request()->routeIs('receiving.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-box-seam"></i>
                 <span>Receiving Management</span>
             </a>
         </li>
+        @endif
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
         <li class="nav-item">
             <a href="{{ route('items.index') }}" class="nav-link text-white {{ request()->routeIs('items.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-box"></i>
                 <span>Items</span>
             </a>
         </li>
-
+        @endif
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff'])) 
         <li class="nav-item">
             <a href="{{ route('inventory.index') }}" class="nav-link text-white {{ request()->routeIs('inventory.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-clipboard-data"></i>
                 <span>Inventory</span>
             </a>
         </li>
-
+        @endif
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
         <li class="nav-item">
             <a href="{{ route('suppliers.index') }}" class="nav-link text-white {{ request()->routeIs('suppliers.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-truck"></i>
                 <span>Suppliers</span>
             </a>
         </li>
-
-        
-
+        @endif
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
         <li class="nav-item">
             <a href="{{ route('classifications.index') }}" class="nav-link text-white {{ request()->routeIs('classifications.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-tags"></i>
                 <span>Classifications</span>
             </a>
         </li>
-
+        @endif
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
         <li class="nav-item">
             <a href="{{ route('units.index') }}" class="nav-link text-white {{ request()->routeIs('units.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-rulers"></i>
                 <span>Units</span>
             </a>
         </li>
-
-        
+        @endif
+        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
         <li class="nav-item">
             <a href="{{ route('reports.index') }}" class="nav-link text-white {{ request()->routeIs('reports.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-file-earmark-text"></i>
                 <span>Reports</span>
             </a>
         </li>
-        
+        @endif
         <li class="nav-item mt-auto">
             <form method="POST" action="{{ route('logout') }}" onsubmit="return confirmLogout()">
                 @csrf

@@ -35,21 +35,16 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Purchase Management</h2>
-        @if($userPermissions && $userPermissions->CanAdd)
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPurchaseModal">
-            <i class="bi bi-plus-lg"></i> New Purchase
-        </button>
-        @endif
-    </div>
+
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>Purchase Orders</h1>
         <div>
+        @if($userPermissions && $userPermissions->CanAdd)
             <a href="{{ route('purchases.create') }}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> New Purchase Order
             </a>
+            @endif
         </div>
     </div>
 
