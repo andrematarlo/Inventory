@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Enums\PurchaseStatus;
 
 class Purchase extends Model
 {
@@ -47,7 +48,12 @@ class Purchase extends Model
         'TotalAmount' => 'decimal:2',
         'IsDeleted' => 'boolean',
         'PurchaseDate' => 'date',
-        'DeliveryDate' => 'date'
+        'DeliveryDate' => 'date',
+        'Status' => PurchaseStatus::class,
+        'OrderDate' => 'datetime',
+        'DateCreated' => 'datetime',
+        'DateModified' => 'datetime',
+        'DateDeleted' => 'datetime',
     ];
 
     // Scopes

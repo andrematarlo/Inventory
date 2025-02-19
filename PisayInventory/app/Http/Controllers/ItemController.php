@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\Classification;
 use App\Models\UnitOfMeasure;
-use App\Models\Supplier;
 use App\Models\Inventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,7 +24,6 @@ class ItemController extends Controller
             $activeItems = Item::with([
                 'classification', 
                 'unitOfMeasure', 
-                'supplier', 
                 'createdBy'
             ])
             ->where('IsDeleted', false)
@@ -43,7 +41,6 @@ class ItemController extends Controller
             $deletedItems = Item::with([
                 'classification', 
                 'unitOfMeasure', 
-                'supplier', 
                 'deletedBy'
             ])
             ->where('IsDeleted', true)
@@ -51,14 +48,12 @@ class ItemController extends Controller
 
             $classifications = Classification::where('IsDeleted', 0)->get();
             $units = UnitOfMeasure::all();
-            $suppliers = Supplier::where('IsDeleted', false)->get();
 
             return view('items.index', [
                 'activeItems' => $activeItems,
                 'deletedItems' => $deletedItems,
                 'classifications' => $classifications,
                 'units' => $units,
-                'suppliers' => $suppliers,
                 'userPermissions' => $userPermissions
             ]);
         } catch (\Exception $e) {
@@ -70,9 +65,8 @@ class ItemController extends Controller
     public function create()
     {
         $units = UnitOfMeasure::all();
-        $suppliers = Supplier::all();
         $classifications = Classification::all();
-        return view('items.create', compact('units', 'suppliers', 'classifications'));
+        return view('items.create', compact('units', 'classifications'));
     }
 
     public function store(Request $request)
@@ -97,7 +91,6 @@ class ItemController extends Controller
                 'ItemName' => 'required|string|max:255',
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
                 'UnitOfMeasureId' => 'required|exists:unitofmeasure,UnitOfMeasureId',
-                'SupplierID' => 'required|exists:suppliers,SupplierID',
                 'ReorderPoint' => 'required|integer|min:0',
                 'Description' => 'nullable|string',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
@@ -109,7 +102,6 @@ class ItemController extends Controller
             $item->Description = $validated['Description'];
             $item->UnitOfMeasureId = $validated['UnitOfMeasureId'];
             $item->ClassificationId = $validated['ClassificationId'];
-            $item->SupplierID = $validated['SupplierID'];
             $item->StocksAvailable = 0;
             $item->ReorderPoint = $validated['ReorderPoint'];
             $item->CreatedById = Auth::id();
@@ -152,7 +144,6 @@ class ItemController extends Controller
                 'ItemName' => 'required|string|max:255',
                 'UnitOfMeasureId' => 'required|exists:unitofmeasure,UnitOfMeasureId',
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
-                'SupplierID' => 'required|exists:suppliers,SupplierID',
                 'ReorderPoint' => 'required|integer|min:0',
                 'Description' => 'nullable|string',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
@@ -171,7 +162,6 @@ class ItemController extends Controller
             $item->Description = $request->Description;
             $item->UnitOfMeasureId = $request->UnitOfMeasureId;
             $item->ClassificationId = $request->ClassificationId;
-            $item->SupplierID = $request->SupplierID;
             $item->ReorderPoint = $request->ReorderPoint;
             $item->ModifiedById = $currentEmployee->EmployeeID;
             $item->DateModified = now();
@@ -345,15 +335,11 @@ class ItemController extends Controller
     public function manage()
     {
         try {
-            // Eager load relationships with correct names
             $items = Item::with([
                 'classification' => function($query) {
                     $query->where('IsDeleted', 0);
                 },
                 'unitOfMeasure' => function($query) {
-                    $query->where('IsDeleted', 0);
-                },
-                'supplier' => function($query) {
                     $query->where('IsDeleted', 0);
                 }
             ])
@@ -362,15 +348,12 @@ class ItemController extends Controller
             
             $classifications = Classification::where('IsDeleted', 0)->get();
             $units = UnitOfMeasure::where('IsDeleted', 0)->get();
-            $suppliers = Supplier::where('IsDeleted', 0)->get();
 
             Log::info('Items loaded:', [
                 'items_count' => $items->count(),
-                'items_with_null_supplier' => $items->whereNull('supplier')->count(),
-                'suppliers_count' => $suppliers->count()
             ]);
 
-            return view('items.manage', compact('items', 'classifications', 'units', 'suppliers'));
+            return view('items.manage', compact('items', 'classifications', 'units'));
         } catch (\Exception $e) {
             Log::error('Error in ItemController@manage: ' . $e->getMessage());
             Log::error($e->getTraceAsString());
@@ -380,17 +363,16 @@ class ItemController extends Controller
 
     public function edit(Item $item)
     {
-        // Get related data for dropdowns
-        $suppliers = Supplier::where('IsDeleted', false)->get();
+        // Remove suppliers
         $classifications = Classification::where('IsDeleted', false)->get();
         $units = UnitOfMeasure::all();
 
-        return view('items.edit', compact('item', 'suppliers', 'classifications', 'units'));
+        return view('items.edit', compact('item', 'classifications', 'units'));
     }
 
     private function getUserPermissions()
     {
-        $userRole = auth()->user()->role;
+        $userRole = Auth::user()->role;
         return RolePolicy::whereHas('role', function($query) use ($userRole) {
             $query->where('RoleName', $userRole);
         })->where('Module', 'Items')->first();

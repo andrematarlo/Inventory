@@ -61,28 +61,6 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Supplier</label>
-                        <select class="form-select @error('SupplierID') is-invalid @enderror" 
-                                name="SupplierID" required>
-                            <option value="">Select Supplier</option>
-                            @foreach($suppliers ?? [] as $supplier)
-                                <option value="{{ $supplier->SupplierID }}"
-                                    {{ old('SupplierID') == $supplier->SupplierID ? 'selected' : '' }}>
-                                    {{ $supplier->CompanyName }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('SupplierID')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        @if(empty($suppliers) || $suppliers->count() == 0)
-                            <div class="text-danger mt-1">
-                                <small>Please add suppliers first before creating items.</small>
-                            </div>
-                        @endif
-                    </div>
-
-                    <div class="mb-3">
                         <label class="form-label">Item Image</label>
                         <input type="file" class="form-control @error('image') is-invalid @enderror" 
                                name="image" accept="image/*" required>

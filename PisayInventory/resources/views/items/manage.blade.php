@@ -21,7 +21,6 @@
                                     <th>Description</th>
                                     <th>Classification</th>
                                     <th>Unit</th>
-                                    <th>Supplier</th>
                                     <th>Stocks</th>
                                     <th>Reorder Point</th>
                                     <th>Actions</th>
@@ -34,13 +33,6 @@
                                         <td>{{ $item->Description }}</td>
                                         <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
                                         <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
-                                        <td>
-                                            @if($item->supplier)
-                                                {{ $item->supplier->SupplierName }}
-                                            @else
-                                                <span class="text-danger">No Supplier</span>
-                                            @endif
-                                        </td>
                                         <td>{{ $item->StocksAvailable }}</td>
                                         <td>{{ $item->ReorderPoint }}</td>
                                         <td>
@@ -132,30 +124,6 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Supplier</label>
-                        <select class="form-select @error('SupplierID') is-invalid @enderror" 
-                                name="SupplierID" required>
-                            <option value="">Select Supplier</option>
-                            @foreach($suppliers ?? [] as $supplier)
-                                @if($supplier)
-                                    <option value="{{ $supplier->SupplierID }}"
-                                        {{ old('SupplierID') == $supplier->SupplierID ? 'selected' : '' }}>
-                                        {{ $supplier->SupplierName }}
-                                    </option>
-                                @endif
-                            @endforeach
-                        </select>
-                        @error('SupplierID')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        @if(empty($suppliers) || $suppliers->count() == 0)
-                            <div class="text-danger mt-1">
-                                <small>No suppliers available. Please add suppliers first.</small>
-                            </div>
-                        @endif
-                    </div>
-
-                    <div class="mb-3">
                         <label class="form-label">Initial Stock</label>
                         <input type="number" class="form-control @error('StocksAvailable') is-invalid @enderror" 
                                name="StocksAvailable" min="0" value="{{ old('StocksAvailable', 0) }}" required>
@@ -226,22 +194,6 @@
                                     {{ $item->UnitOfMeasureId == $unit->UnitOfMeasureId ? 'selected' : '' }}>
                                     {{ $unit->UnitName }}
                                 </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Supplier</label>
-                        <select class="form-select @error('SupplierID') is-invalid @enderror" 
-                                name="SupplierID" required>
-                            <option value="">Select Supplier</option>
-                            @foreach($suppliers as $supplier)
-                                @if($supplier)
-                                    <option value="{{ $supplier->SupplierID }}"
-                                        {{ $item->SupplierID == $supplier->SupplierID ? 'selected' : '' }}>
-                                        {{ $supplier->SupplierName }}
-                                    </option>
-                                @endif
                             @endforeach
                         </select>
                     </div>

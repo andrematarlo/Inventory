@@ -66,7 +66,6 @@
                                 <th>Description</th>
                                 <th>Classification</th>
                                 <th>Unit</th>
-                                <th>Supplier</th>
                                 <th>Stocks</th>
                                 <th>Reorder Point</th>
                                 <th>Created By</th>
@@ -108,7 +107,6 @@
                                     <td>{{ $item->Description }}</td>
                                     <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
                                     <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
-                                    <td>{{ $item->supplier->CompanyName ?? 'N/A' }}</td>
                                     <td>{{ $item->StocksAvailable }}</td>
                                     <td>{{ $item->ReorderPoint }}</td>
                                     <td>{{ $item->createdBy->Username ?? 'N/A' }}</td>
@@ -148,7 +146,6 @@
                                 <th>Description</th>
                                 <th>Classification</th>
                                 <th>Unit</th>
-                                <th>Supplier</th>
                                 <th>Stocks</th>
                                 <th>Deleted By</th>
                                 <th>Date Deleted</th>
@@ -180,7 +177,6 @@
                                     <td>{{ $item->Description }}</td>
                                     <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
                                     <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
-                                    <td>{{ $item->supplier->CompanyName ?? 'N/A' }}</td>
                                     <td>{{ $item->StocksAvailable }}</td>
                                     <td>{{ $item->deletedBy->Username ?? 'N/A' }}</td>
                                     <td>{{ $item->DateDeleted ? date('Y-m-d H:i:s', strtotime($item->DateDeleted)) : 'N/A' }}</td>

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Storage;
 use App\Models\RolePolicy;
+use App\Models\Item;
 
 class SupplierController extends Controller
 {
@@ -27,12 +28,15 @@ class SupplierController extends Controller
                 ->orderBy('CompanyName')
                 ->paginate(10);
 
+            $items = Item::where('IsDeleted', false)->get();
+
             $userPermissions = $this->getUserPermissions();
 
             return view('suppliers.index', [
                 'activeSuppliers' => $activeSuppliers,
                 'deletedSuppliers' => $deletedSuppliers,
-                'userPermissions' => $userPermissions
+                'userPermissions' => $userPermissions,
+                'items' => $items
             ]);
 
         } catch (\Exception $e) {
@@ -46,7 +50,8 @@ class SupplierController extends Controller
      */
     public function create()
     {
-        //
+        $items = Item::where('IsDeleted', false)->get();
+        return view('suppliers.create', compact('items'));
     }
 
     /**
@@ -55,45 +60,52 @@ class SupplierController extends Controller
     public function store(Request $request)
     {
         try {
-            $request->validate([
+            DB::beginTransaction();
+
+            $validated = $request->validate([
                 'CompanyName' => 'required|string|max:255',
-                'ContactPerson' => 'nullable|string|max:255',
+                'ContactPerson' => 'required|string|max:255',
                 'TelephoneNumber' => 'nullable|string|max:20',
-                'ContactNum' => 'nullable|string|max:20',
-                'Address' => 'nullable|string',
+                'ContactNum' => 'required|string|max:20',
+                'Address' => 'required|string',
+                'items' => 'nullable|array|exists:items,ItemId'
             ]);
 
-            // Get the last SupplierID
+            // Get the next SupplierID
             $lastSupplier = Supplier::orderBy('SupplierID', 'desc')->first();
             $nextSupplierId = $lastSupplier ? $lastSupplier->SupplierID + 1 : 1;
 
-            $now = Carbon::now('Asia/Manila');
+            $supplier = new Supplier();
+            $supplier->SupplierID = $nextSupplierId;  // Set the SupplierID manually
+            $supplier->CompanyName = $validated['CompanyName'];
+            $supplier->ContactPerson = $validated['ContactPerson'];
+            $supplier->TelephoneNumber = $validated['TelephoneNumber'];
+            $supplier->ContactNum = $validated['ContactNum'];
+            $supplier->Address = $validated['Address'];
+            $supplier->CreatedById = Auth::id();
+            $supplier->DateCreated = now();
+            $supplier->IsDeleted = false;
+            $supplier->save();
 
-            Supplier::create([
-                'SupplierID' => $nextSupplierId,
-                'CompanyName' => $request->CompanyName,
-                'ContactPerson' => $request->ContactPerson,
-                'TelephoneNumber' => $request->TelephoneNumber,
-                'ContactNum' => $request->ContactNum,
-                'Address' => $request->Address,
-                'CreatedById' => auth()->user()->UserAccountID,
-                'DateCreated' => $now,
-                'ModifiedById' => auth()->user()->UserAccountID,
-                'DateModified' => $now,
-                'IsDeleted' => false
-            ]);
+            // Attach items to supplier with the correct pivot data
+            if (!empty($validated['items'])) {
+                $now = now();
+                $itemData = array_fill_keys($validated['items'], [
+                    'CreatedById' => Auth::id(),
+                    'DateCreated' => $now,
+                    'ModifiedById' => Auth::id(),
+                    'DateModified' => $now,
+                    'IsDeleted' => false
+                ]);
+                $supplier->items()->attach($itemData);
+            }
 
-            return redirect()->route('suppliers.index')
-                ->with('success', 'Supplier added successfully');
-
+            DB::commit();
+            return redirect()->route('suppliers.index')->with('success', 'Supplier created successfully');
         } catch (\Exception $e) {
-            \Log::error('Error adding supplier:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return redirect()->route('suppliers.index')
-                ->with('error', 'Failed to add supplier: ' . $e->getMessage());
+            DB::rollBack();
+            Log::error('Error creating supplier: ' . $e->getMessage());
+            return back()->with('error', 'Error creating supplier: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -108,74 +120,83 @@ class SupplierController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Supplier $supplier)
     {
-        try {
-            $supplier = Supplier::where('IsDeleted', false)
-                ->findOrFail($id);
-
-            return view('suppliers.edit', compact('supplier'));
-            
-        } catch (\Exception $e) {
-            Log::error('Error loading edit supplier form: ' . $e->getMessage());
-            return back()->with('error', 'Error loading form: ' . $e->getMessage());
-        }
+        $items = Item::where('IsDeleted', false)->get();
+        return view('suppliers.edit', compact('supplier', 'items'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Supplier $supplier)
     {
         try {
-            $request->validate([
-                'CompanyName' => 'required|string|max:255',
-                'ContactPerson' => 'required|string|max:255',
-                'ContactNum' => 'required|string|max:20',
-                'TelephoneNumber' => 'nullable|string|max:20',
-                'Address' => 'required|string',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
-            ]);
-
             DB::beginTransaction();
 
-            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
-                ->where('IsDeleted', false)
-                ->firstOrFail();
-
-            $supplier = Supplier::findOrFail($id);
-            
-            // Handle image upload
-            if ($request->hasFile('image')) {
-                // Delete old image if exists
-                if ($supplier->ImagePath && Storage::disk('public')->exists($supplier->ImagePath)) {
-                    Storage::disk('public')->delete($supplier->ImagePath);
-                }
-                
-                // Store new image
-                $imagePath = $request->file('image')->store('suppliers', 'public');
-            }
-
-            $supplier->update([
-                'CompanyName' => $request->CompanyName,
-                'ContactPerson' => $request->ContactPerson,
-                'ContactNum' => $request->ContactNum,
-                'TelephoneNumber' => $request->TelephoneNumber,
-                'Address' => $request->Address,
-                'ImagePath' => $request->hasFile('image') ? $imagePath : $supplier->ImagePath,
-                'ModifiedById' => $currentEmployee->EmployeeID,
-                'DateModified' => now()
+            $validated = $request->validate([
+                'CompanyName' => 'required|string|max:255',
+                'ContactPerson' => 'required|string|max:255',
+                'TelephoneNumber' => 'nullable|string|max:20',
+                'ContactNum' => 'required|string|max:20',
+                'Address' => 'required|string',
+                'items' => 'nullable|array|exists:items,ItemId'
             ]);
 
-            DB::commit();
-            return redirect()->route('suppliers.index')
-                ->with('success', 'Supplier updated successfully');
+            $supplier->CompanyName = $validated['CompanyName'];
+            $supplier->ContactPerson = $validated['ContactPerson'];
+            $supplier->TelephoneNumber = $validated['TelephoneNumber'];
+            $supplier->ContactNum = $validated['ContactNum'];
+            $supplier->Address = $validated['Address'];
+            $supplier->ModifiedById = Auth::id();
+            $supplier->DateModified = now();
+            $supplier->save();
 
+            // Handle items relationship
+            if (isset($validated['items'])) {
+                // Soft delete removed relationships
+                DB::table('items_suppliers')
+                    ->where('SupplierID', $supplier->SupplierID)
+                    ->whereNotIn('ItemId', $validated['items'])
+                    ->update([
+                        'IsDeleted' => true,
+                        'DeletedById' => Auth::id(),
+                        'DateDeleted' => now()
+                    ]);
+
+                // Add new relationships and update existing ones
+                $now = now();
+                foreach ($validated['items'] as $itemId) {
+                    DB::table('items_suppliers')
+                        ->updateOrInsert(
+                            ['SupplierID' => $supplier->SupplierID, 'ItemId' => $itemId],
+                            [
+                                'CreatedById' => Auth::id(),
+                                'DateCreated' => $now,
+                                'ModifiedById' => Auth::id(),
+                                'DateModified' => $now,
+                                'IsDeleted' => false,
+                                'DeletedById' => null,
+                                'DateDeleted' => null
+                            ]
+                        );
+                }
+            } else {
+                // Soft delete all relationships if no items selected
+                DB::table('items_suppliers')
+                    ->where('SupplierID', $supplier->SupplierID)
+                    ->update([
+                        'IsDeleted' => true,
+                        'DeletedById' => Auth::id(),
+                        'DateDeleted' => now()
+                    ]);
+            }
+
+            DB::commit();
+            return redirect()->route('suppliers.index')->with('success', 'Supplier updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error updating supplier: ' . $e->getMessage());
-            return redirect()->route('suppliers.index')
-                ->with('error', 'Error updating supplier: ' . $e->getMessage());
+            return back()->with('error', 'Error updating supplier: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -188,7 +209,7 @@ class SupplierController extends Controller
         
         $supplier->update([
             'IsDeleted' => true,
-            'DeletedById' => auth()->user()->UserAccountID,
+            'DeletedById' => Auth::id(),
             'DateDeleted' => Carbon::now()->format('Y-m-d H:i:s')
         ]);
 
@@ -207,7 +228,7 @@ class SupplierController extends Controller
 
             $supplier->update([
                 'IsDeleted' => false,
-                'RestoredByID' => auth()->id(),
+                'RestoredByID' => Auth::id(),
                 'DateRestored' => now(),
                 'DeletedByID' => null,
                 'DateDeleted' => null
@@ -226,7 +247,7 @@ class SupplierController extends Controller
 
     private function getUserPermissions()
     {
-        $userRole = auth()->user()->role;
+        $userRole = Auth::user()->role;
         return RolePolicy::whereHas('role', function($query) use ($userRole) {
             $query->where('RoleName', $userRole);
         })->where('Module', 'Suppliers')->first();
