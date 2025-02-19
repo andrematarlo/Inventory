@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@php
+    use App\Enums\PurchaseStatus;
+@endphp
+
 @section('title', 'Purchase Orders')
 
 @section('styles')
@@ -75,7 +79,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($activePurchases as $po)
+                        @forelse($purchases->where('Status', '!=', PurchaseStatus::PENDING->value) as $po)
                         <tr>
                             <td>
                                 <div class="btn-group" role="group">
@@ -84,12 +88,14 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <button type="button" 
-                                            class="btn btn-sm btn-danger" 
-                                            onclick="deletePurchase({{ $po->PurchaseOrderID }})"
-                                            title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    @if($userPermissions && $userPermissions->CanDelete)
+                                        <button type="button" 
+                                                class="btn btn-sm btn-danger" 
+                                                onclick="deletePurchase({{ $po->PurchaseOrderID }})"
+                                                title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    @endif
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
@@ -306,13 +312,19 @@ function deletePurchase(id) {
                 },
                 success: function(response) {
                     if (response.success) {
-                        Swal.fire('Deleted!', 'Purchase order has been deleted.', 'success')
-                            .then(() => window.location.reload());
+                        Swal.fire({
+                            title: 'Deleted!',
+                            text: 'Purchase order has been deleted.',
+                            icon: 'success'
+                        }).then(() => {
+                            window.location.reload();
+                        });
                     } else {
                         Swal.fire('Error!', response.message || 'Failed to delete purchase order.', 'error');
                     }
                 },
                 error: function(xhr) {
+                    console.error('Delete error:', xhr);
                     Swal.fire('Error!', 'Failed to delete purchase order.', 'error');
                 }
             });
@@ -339,13 +351,19 @@ function restorePurchase(id) {
                 },
                 success: function(response) {
                     if (response.success) {
-                        Swal.fire('Restored!', 'Purchase order has been restored.', 'success')
-                            .then(() => window.location.reload());
+                        Swal.fire({
+                            title: 'Restored!',
+                            text: 'Purchase order has been restored.',
+                            icon: 'success'
+                        }).then(() => {
+                            window.location.reload();
+                        });
                     } else {
                         Swal.fire('Error!', response.message || 'Failed to restore purchase order.', 'error');
                     }
                 },
                 error: function(xhr) {
+                    console.error('Restore error:', xhr);
                     Swal.fire('Error!', 'Failed to restore purchase order.', 'error');
                 }
             });

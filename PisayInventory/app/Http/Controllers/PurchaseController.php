@@ -59,6 +59,7 @@ class PurchaseController extends Controller
             $userPermissions = $this->getUserPermissions();
 
             $purchases = Purchase::with(['supplier', 'items.item', 'createdBy', 'modifiedBy'])
+                ->where('IsDeleted', false)
                 ->when(request('search'), function($query, $search) {
                     $query->where('PONumber', 'like', "%{$search}%")
                           ->orWhereHas('supplier', function($q) use ($search) {
