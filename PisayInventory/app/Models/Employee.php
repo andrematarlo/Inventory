@@ -155,4 +155,17 @@ class Employee extends Model
     {
         return $this->roles->pluck('RoleName')->implode(', ');
     }
+
+    // Add this relationship if it doesn't exist
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'UserAccountID', 'UserAccountID');
+    }
+
+    // Add this scope to help with debugging
+    public function scopeWithUserAccount($query)
+    {
+        return $query->leftJoin('user_account', 'employee.UserAccountID', '=', 'user_account.UserAccountID')
+                     ->select('employee.*', 'user_account.Username');
+    }
 } 

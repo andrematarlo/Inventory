@@ -7,59 +7,61 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Enums\PurchaseStatus;
+use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
 
 class Purchase extends Model
 {
-    protected $table = 'purchases';
-    protected $primaryKey = 'PurchaseId';
+    protected $table = 'purchase_order';
+    protected $primaryKey = 'PurchaseOrderID';
     public $timestamps = false;
 
     protected $fillable = [
-        'ItemId',
-        'SupplierId',
-        'Quantity',
-        'UnitPrice',
-        'TotalAmount',
-        'PurchaseOrderNumber',
-        'PurchaseDate',
-        'DeliveryDate',
+        'PONumber',
+        'SupplierID',
+        'OrderDate',
         'Status',
-        'Notes',
-        'CreatedById',
+        'TotalAmount',
         'DateCreated',
-        'ModifiedById',
+        'CreatedByID',
+        'ModifiedByID',
         'DateModified',
-        'DeletedById',
+        'DeletedByID',
+        'RestoredById',
         'DateDeleted',
+        'DateRestored',
         'IsDeleted'
     ];
 
     protected $dates = [
-        'PurchaseDate',
-        'DeliveryDate',
+        'OrderDate',
         'DateCreated',
         'DateModified',
-        'DateDeleted'
+        'DateDeleted',
+        'DateRestored'
     ];
 
     protected $casts = [
-        'Quantity' => 'integer',
-        'UnitPrice' => 'decimal:2',
         'TotalAmount' => 'decimal:2',
         'IsDeleted' => 'boolean',
-        'PurchaseDate' => 'date',
-        'DeliveryDate' => 'date',
         'Status' => PurchaseStatus::class,
         'OrderDate' => 'datetime',
         'DateCreated' => 'datetime',
         'DateModified' => 'datetime',
         'DateDeleted' => 'datetime',
+        'DateRestored' => 'datetime'
     ];
 
     // Scopes
     public function scopeActive($query)
     {
         return $query->where('IsDeleted', false);
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('Status', PurchaseStatus::PENDING)
+                    ->where('IsDeleted', false);
     }
 
     public function scopeWithCustomTrashed($query)
@@ -75,44 +77,113 @@ class Purchase extends Model
     // Custom soft delete methods
     public function softDelete()
     {
-        $this->IsDeleted = true;
-        $this->DateDeleted = now();
-        $this->DeletedById = Auth::id();
-        return $this->save();
+        try {
+            DB::beginTransaction();
+            
+            // Get the employee record for the authenticated user
+            $userAccountId = Auth::id();
+            \Log::info('Attempting to find employee for UserAccountID:', ['user_account_id' => $userAccountId]);
+            
+            $employee = Employee::where('UserAccountID', $userAccountId)->first();
+            
+            if (!$employee) {
+                \Log::error('Employee not found for UserAccountID:', ['user_account_id' => $userAccountId]);
+                throw new \Exception('Employee not found for UserAccountID: ' . $userAccountId);
+            }
+            
+            \Log::info('Found employee:', ['employee_id' => $employee->EmployeeID]);
+
+            $this->IsDeleted = true;
+            $this->DeletedByID = $employee->EmployeeID;
+            $this->DateDeleted = now();
+            $this->ModifiedByID = $employee->EmployeeID;
+            $this->DateModified = now();
+            
+            $result = $this->save();
+            
+            DB::commit();
+            return $result;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error in softDelete:', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     public function restore()
     {
-        $this->IsDeleted = false;
-        $this->DateDeleted = null;
-        $this->DeletedById = null;
-        return $this->save();
+        try {
+            DB::beginTransaction();
+            
+            // Get the employee record for the authenticated user
+            $userAccountId = Auth::id();
+            \Log::info('Attempting to find employee for restore:', ['user_account_id' => $userAccountId]);
+            
+            $employee = Employee::where('UserAccountID', $userAccountId)->first();
+            
+            if (!$employee) {
+                \Log::error('Employee not found for restore:', ['user_account_id' => $userAccountId]);
+                throw new \Exception('Employee not found for UserAccountID: ' . $userAccountId);
+            }
+            
+            \Log::info('Found employee for restore:', ['employee_id' => $employee->EmployeeID]);
+
+            $this->IsDeleted = false;
+            $this->DateDeleted = null;
+            $this->DeletedByID = null;
+            $this->RestoredById = $employee->EmployeeID;
+            $this->DateRestored = now();
+            $this->ModifiedByID = $employee->EmployeeID;
+            $this->DateModified = now();
+            
+            $result = $this->save();
+            
+            DB::commit();
+            return $result;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error in restore:', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     // Relationships
-    public function item()
-    {
-        return $this->belongsTo(Item::class, 'ItemId', 'ItemId');
-    }
-
     public function supplier()
     {
-        return $this->belongsTo(Supplier::class, 'SupplierId', 'SupplierID');
+        return $this->belongsTo(Supplier::class, 'SupplierID', 'SupplierID');
     }
 
-    public function created_by()
+    public function items()
     {
-        return $this->belongsTo(UserAccount::class, 'CreatedById', 'UserAccountID');
+        return $this->hasMany(PurchaseItem::class, 'PurchaseOrderID', 'PurchaseOrderID');
     }
 
-    public function modified_by()
+    public function createdBy()
     {
-        return $this->belongsTo(UserAccount::class, 'ModifiedById', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID', 'employee');
     }
 
-    public function deleted_by()
+    public function modifiedBy()
     {
-        return $this->belongsTo(UserAccount::class, 'DeletedById', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID', 'employee');
+    }
+
+    public function deletedBy()
+    {
+        return $this->belongsTo(Employee::class, 'DeletedByID', 'EmployeeID', 'employee');
+    }
+
+    public function restoredBy()
+    {
+        return $this->belongsTo(Employee::class, 'RestoredById', 'EmployeeID', 'employee');
     }
 
     // Mutators
@@ -126,18 +197,49 @@ class Purchase extends Model
         $this->attributes['DateModified'] = Carbon::parse($value)->format('Y-m-d H:i:s');
     }
 
-    public static function boot()
+    // Helper methods
+    public function getTotalAmount()
+    {
+        return $this->items->sum(function($item) {
+            return $item->Quantity * $item->UnitPrice;
+        });
+    }
+
+    // Boot method
+    protected static function boot()
     {
         parent::boot();
 
-        // Add a macro to handle withTrashed method
-        static::macro('withTrashed', function () {
-            return $this;
+        static::creating(function ($purchase) {
+            if (!$purchase->Status) {
+                $purchase->Status = PurchaseStatus::PENDING;
+            }
+            
+            // Get the employee record
+            $employee = Employee::where('UserAccountID', Auth::id())->first();
+            if ($employee) {
+                $purchase->CreatedByID = $employee->EmployeeID;
+            }
+            $purchase->DateCreated = now();
         });
 
-        // Add a macro to the query builder
-        Builder::macro('withTrashed', function () {
-            return $this;
+        static::updating(function ($purchase) {
+            // Get the employee record
+            $employee = Employee::where('UserAccountID', Auth::id())->first();
+            if ($employee) {
+                $purchase->ModifiedByID = $employee->EmployeeID;
+            }
+            $purchase->DateModified = now();
+        });
+
+        // Fix for withTrashed macro
+        static::macro('withTrashed', function ($query) {
+            return $query;
+        });
+
+        // Fix for Builder macro
+        Builder::macro('withTrashed', function ($query) {
+            return $query;
         });
     }
 }

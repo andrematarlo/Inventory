@@ -96,6 +96,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('purchases', PurchaseController::class);
         Route::put('purchases/{id}/restore', [PurchaseController::class, 'restore'])->name('purchases.restore');
         Route::delete('/purchases/{id}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
+        Route::get('/purchases/{id}', [PurchaseController::class, 'show'])->name('purchases.show');
 
         // Receiving Management
         Route::get('receiving', [ReceivingController::class, 'index'])->name('receiving.index');

@@ -34,29 +34,24 @@
 @endsection
 
 @section('content')
-<div class="container-fluid">
-
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Purchase Orders</h1>
-        <div>
-        @if($userPermissions && $userPermissions->CanAdd)
-            <a href="{{ route('purchases.create') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> New Purchase Order
-            </a>
-            @endif
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Purchase Orders</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <button class="btn btn-primary" id="activeRecordsBtn">Active</button>
+                <button class="btn btn-warning" id="pendingRecordsBtn">Pending</button>
+                <button class="btn btn-secondary" id="showDeletedBtn">Deleted</button>
+            </div>
+            <button type="button" 
+                    class="btn btn-success" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#addPurchaseModal">
+                <i class="bi bi-plus-circle"></i> Add Purchase Order
+            </button>
         </div>
-    </div>
-
-    <div class="mb-4">
-        <button type="button" class="btn btn-primary" id="activeRecordsBtn">Active Records</button>
-        <button type="button" class="btn btn-warning" id="pendingRecordsBtn">Pending Records</button>
-        <button type="button" class="btn btn-danger" id="showDeletedBtn">
-            <i class="bi bi-archive"></i> Show Deleted Records
-        </button>
-    </div>
-
-    <div class="card">
+        
         <!-- Active Purchase Orders Section -->
         <div id="activePurchases" class="card-body">
             <div class="table-responsive">
@@ -85,7 +80,6 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                     @if($po->Status === 'Pending')
                                     <button type="button" 
                                             class="btn btn-sm btn-primary" 
@@ -95,15 +89,13 @@
                                         <i class="bi bi-pencil"></i>
                                     </button>
                                     @endif
-                                    @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            onclick="deletePurchaseOrder({{ $po->PurchaseOrderID }})"
+                                            data-purchase-id="{{ $po->PurchaseOrderID }}"
+                                            data-action="delete"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
-                                    @endif
-                                    @endif
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
@@ -158,21 +150,22 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
-                                    <a href="{{ route('purchases.edit', $po->PurchaseOrderID) }}" 
-                                       class="btn btn-sm btn-primary" 
-                                       title="Edit">
+                                    @if($po->Status === 'Pending')
+                                    <button type="button" 
+                                            class="btn btn-sm btn-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editPurchaseModal{{ $po->PurchaseOrderID }}"
+                                            title="Edit">
                                         <i class="bi bi-pencil"></i>
-                                    </a>
+                                    </button>
                                     @endif
-                                    @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            onclick="deletePurchaseOrder({{ $po->PurchaseOrderID }})"
+                                            data-purchase-id="{{ $po->PurchaseOrderID }}"
+                                            data-action="delete"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
-                                    @endif
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
@@ -225,7 +218,8 @@
                             <td>
                                 <button type="button" 
                                         class="btn btn-sm btn-success" 
-                                        onclick="restorePurchaseOrder({{ $po->PurchaseOrderID }})"
+                                        data-purchase-id="{{ $po->PurchaseOrderID }}"
+                                        data-action="restore"
                                         title="Restore">
                                     <i class="bi bi-arrow-counterclockwise"></i>
                                 </button>
@@ -257,6 +251,10 @@
         </div>
     </div>
 </div>
+
+<!-- Add Purchase Order Modal -->
+@include('purchases.partials.add-modal')
+
 @endsection
 
 @section('scripts')
@@ -310,70 +308,64 @@ $(document).ready(function() {
         $('#deletedPurchases').show();
         $('#activePurchases, #pendingPurchases').hide();
     });
+
+    // Handle delete button clicks
+    $('[data-action="delete"]').click(function() {
+        const purchaseId = $(this).data('purchase-id');
+        if (confirm('Are you sure you want to delete this purchase order?')) {
+            deletePurchaseOrder(purchaseId);
+        }
+    });
+
+    // Handle restore button clicks
+    $('[data-action="restore"]').click(function() {
+        const purchaseId = $(this).data('purchase-id');
+        if (confirm('Are you sure you want to restore this purchase order?')) {
+            restorePurchaseOrder(purchaseId);
+        }
+    });
 });
 
-function restorePurchaseOrder(id) {
-    if (confirm('Are you sure you want to restore this purchase order?')) {
-        fetch(`/inventory/purchases/${id}/restore`, {
-            method: 'PUT',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(json => Promise.reject(json));
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                alert('Purchase order restored successfully');
-                window.location.reload();
-            } else {
-                alert(data.message || 'Error restoring purchase order');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error restoring purchase order: ' + (error.message || 'Unknown error'));
-        });
-    }
-}
-
 function deletePurchaseOrder(id) {
-    if (confirm('Are you sure you want to delete this purchase order?')) {
-        fetch(`/inventory/purchases/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(json => Promise.reject(json));
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
+    $.ajax({
+        url: `/inventory/purchases/${id}`,
+        type: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response.success) {
                 alert('Purchase order deleted successfully');
                 window.location.reload();
             } else {
-                alert(data.message || 'Error deleting purchase order');
+                alert(response.message || 'Error deleting purchase order');
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting purchase order: ' + (error.message || 'Unknown error'));
-        });
-    }
+        },
+        error: function(xhr) {
+            alert('Error deleting purchase order: ' + xhr.responseJSON?.message);
+        }
+    });
+}
+
+function restorePurchaseOrder(id) {
+    $.ajax({
+        url: `/inventory/purchases/${id}/restore`,
+        type: 'PUT',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response.success) {
+                alert('Purchase order restored successfully');
+                window.location.reload();
+            } else {
+                alert(response.message || 'Error restoring purchase order');
+            }
+        },
+        error: function(xhr) {
+            alert('Error restoring purchase order: ' + xhr.responseJSON?.message);
+        }
+    });
 }
 </script>
 @endsection
