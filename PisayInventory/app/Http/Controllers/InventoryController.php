@@ -21,39 +21,43 @@ class InventoryController extends Controller
      */
     public function index(Request $request)
     {
-        // Debug user and permissions
-        \Log::info('User details:', [
-            'user_id' => auth()->id(),
-            'user_role' => auth()->user()->role ?? 'No role',
-            'is_authenticated' => auth()->check()
-        ]);
-
         $userPermissions = null;
         if (auth()->check() && auth()->user()->role) {
-            $userPermissions = RolePolicy::where('RoleId', auth()->user()->role)
-                ->where('Module', 'LIKE', 'inventory')
+            $roleId = DB::table('roles')
+                ->where('RoleName', auth()->user()->role)
+                ->value('RoleId');
+
+            $userPermissions = RolePolicy::where('RoleId', $roleId)
+                ->where('Module', 'Inventory')
                 ->where('IsDeleted', 0)
                 ->first();
             
-            // Debug permissions
-            \Log::info('Permissions loaded:', [
-                'permissions' => $userPermissions ? 'Has permissions' : 'No permissions',
-                'role_id' => auth()->user()->role,
-                'can_delete' => $userPermissions?->CanDelete ?? false
+            \Log::info('Permission details:', [
+                'role_name' => auth()->user()->role,
+                'role_id' => $roleId,
+                'permissions_found' => $userPermissions ? true : false,
+                'can_delete' => $userPermissions?->CanDelete ?? false,
+                'raw_permissions' => $userPermissions
             ]);
         }
 
-        // Get all inventory items
+        // Get inventory items based on deleted status
         $query = Inventory::with(['item.classification', 'created_by_user', 'modified_by_user', 'deleted_by_user']);
 
-        // Show deleted records if requested
         if ($request->has('show_deleted')) {
-            $query->where('IsDeleted', true);
+            $query->where('IsDeleted', 1);
+            $inventories = $query->orderBy('DateDeleted', 'desc')->paginate(10);
         } else {
-            $query->where('IsDeleted', false);
+            $query->where('IsDeleted', 0);
+            $inventories = $query->orderBy('DateCreated', 'desc')->paginate(10);
         }
 
-        $inventories = $query->orderBy('DateCreated', 'desc')->paginate(10);
+        // Add debug logging
+        \Log::info('Query details:', [
+            'show_deleted' => $request->has('show_deleted'),
+            'is_deleted_condition' => $request->has('show_deleted') ? 1 : 0,
+            'count' => $inventories->count()
+        ]);
 
         return view('inventory.index', [
             'inventories' => $inventories,

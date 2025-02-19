@@ -87,7 +87,7 @@
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             @endif
-                                            @if($userPermissions->CanDelete)
+                                            @if($userPermissions && $userPermissions->CanDelete)
                                             <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $item->ItemId }}">
                                                 <i class="bi bi-trash"></i>
                                             </button>

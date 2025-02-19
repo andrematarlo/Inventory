@@ -14,9 +14,18 @@ class RoleController extends Controller
     private function getUserPermissions()
     {
         $userRole = auth()->user()->role;
-        return RolePolicy::whereHas('role', function($query) use ($userRole) {
+        $permissions = RolePolicy::whereHas('role', function($query) use ($userRole) {
             $query->where('RoleName', $userRole);
-        })->where('Module', 'Roles')->first();
+        })->whereIn('Module', ['Inventory', 'Roles'])->get();
+
+        \Log::info('User Permissions Check:', [
+            'userRole' => $userRole,
+            'permissions' => $permissions,
+            'modules' => $permissions->pluck('Module'),
+            'canDelete' => $permissions->pluck('CanDelete')
+        ]);
+
+        return $permissions->where('Module', 'Inventory')->first();
     }
 
     public function index()
