@@ -59,9 +59,13 @@ class PurchaseController extends Controller
             $userPermissions = $this->getUserPermissions();
 
             $purchases = Purchase::with(['supplier', 'items.item', 'createdBy', 'modifiedBy'])
-                ->where('IsDeleted', false)
-                ->where('Status', '!=', PurchaseStatus::PENDING->value)
-                ->get();
+                ->when(request('search'), function($query, $search) {
+                    $query->where('PONumber', 'like', "%{$search}%")
+                          ->orWhereHas('supplier', function($q) use ($search) {
+                              $q->where('CompanyName', 'like', "%{$search}%");
+                          });
+                })
+                ->paginate(request('per_page', 10));
 
             $pendingPurchases = Purchase::with(['supplier', 'items.item', 'createdBy', 'modifiedBy'])
                 ->where('IsDeleted', false)
@@ -215,13 +219,13 @@ class PurchaseController extends Controller
 
             // Create the purchase order
             $purchase = new Purchase();
-            $purchase->PONumber = $request->PONumber;
+            $purchase->PONumber = $request->PONumber ?? 'PO-' . date('YmdHis');
             $purchase->OrderDate = now();
             $purchase->Status = PurchaseStatus::PENDING;
             $purchase->CreatedByID = $employee->EmployeeID;
             $purchase->DateCreated = now();
             $purchase->SupplierID = $request->items[0]['SupplierID'];
-            $purchase->TotalAmount = $totalAmount;  // Set initial total amount
+            $purchase->TotalAmount = $totalAmount;
             $purchase->save();
 
             // Add purchase items
@@ -260,6 +264,31 @@ class PurchaseController extends Controller
                 'success' => false,
                 'message' => 'Error creating purchase order: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function create()
+    {
+        try {
+            // Get user permissions
+            $userPermissions = $this->getUserPermissions();
+
+            // Load items with their active suppliers
+            $items = Item::with(['suppliers' => function($query) {
+                $query->where('items_suppliers.IsDeleted', false);
+            }])->where('IsDeleted', false)->get();
+
+            // Load all active suppliers
+            $suppliers = Supplier::where('IsDeleted', false)->get();
+
+            return view('purchases.create', compact('items', 'suppliers', 'userPermissions'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading create purchase form:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Error loading create purchase form: ' . $e->getMessage());
         }
     }
 

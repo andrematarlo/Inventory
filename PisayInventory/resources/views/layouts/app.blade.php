@@ -239,6 +239,7 @@
         <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
         <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
         <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
     </head>
     <body>
         @include('layouts.sidebar')
@@ -308,5 +309,36 @@
 
         @yield('scripts')
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+        <script src="{{ asset('js/sweet-alerts.js') }}"></script>
+
+        <!-- Flash message handling -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Handle success messages
+                @if(session('success'))
+                    showSuccess("{{ session('success') }}");
+                @endif
+
+                // Handle error messages
+                @if(session('error'))
+                    showError("{{ session('error') }}");
+                @endif
+
+                // Handle validation errors
+                @if($errors->any())
+                    showValidationErrors({!! json_encode($errors->all()) !!});
+                @endif
+
+                // Initialize delete buttons
+                document.querySelectorAll('[data-delete-form]').forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const form = document.querySelector(this.dataset.deleteForm);
+                        confirmDelete(() => form.submit());
+                    });
+                });
+            });
+        </script>
     </body>
 </html>

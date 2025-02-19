@@ -62,10 +62,6 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h4>Items to Receive</h4>
-                            <button type="button" class="btn btn-success" id="receiveAllBtn">
-                                <i class="bi bi-check-all"></i> 
-                                {{ isset($existingReceiving) ? 'Update All Items' : 'Receive All Items' }}
-                            </button>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-bordered">
@@ -78,7 +74,6 @@
                                         <th>Unit Price</th>
                                         <th>Total</th>
                                         <th>Status</th>
-                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -101,7 +96,6 @@
                                         <td class="item-total">₱0.00</td>
                                         <td>
                                             @php
-                                                // Force status to be a string and handle any array cases
                                                 $statusString = is_array($item->status) ? 
                                                     (string)($item->status['status'] ?? 'Pending') : 
                                                     (string)($item->status ?? 'Pending');
@@ -115,14 +109,6 @@
                                             <span class="badge {{ $statusClass }} item-status">
                                                 {{ $statusString }}
                                             </span>
-                                        </td>
-                                        <td>
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-success receive-item-btn"
-                                                    data-item-id="{{ $item->ItemId }}">
-                                                <i class="bi bi-check"></i> 
-                                                {{ isset($existingReceiving) ? 'Update This Item' : 'Receive This Item' }}
-                                            </button>
                                         </td>
                                     </tr>
                                     @endforeach
@@ -196,26 +182,25 @@ $(document).ready(function() {
         const total = previouslyReceived * unitPrice;
         row.find('.item-total').text('₱' + total.toFixed(2));
 
-        // Set initial status
+        // Set initial status and remaining quantity
         const statusBadge = row.find('.item-status');
         const currentStatus = statusBadge.text().trim();
+        const remainingQty = orderedQty - previouslyReceived;
         
-        // Keep existing status if it exists
+        // Keep existing status if it exists and set max quantity
         if (currentStatus === 'Complete') {
             statusBadge.removeClass('bg-warning').addClass('bg-success');
             input.prop('disabled', true);
-            input.closest('tr').find('.receive-item-btn').prop('disabled', true);
-        } else if (currentStatus === 'Partial') {
-            statusBadge.removeClass('bg-success').addClass('bg-warning');
             input.val(0);
         } else {
-            statusBadge.removeClass('bg-success').addClass('bg-warning').text('Pending');
+            input.attr('max', remainingQty);
             input.val(0);
+            if (previouslyReceived > 0) {
+                statusBadge.removeClass('bg-success').addClass('bg-warning').text('Partial');
+            } else {
+                statusBadge.removeClass('bg-success').addClass('bg-warning').text('Pending');
+            }
         }
-        
-        // Store initial values
-        input.data('initial-received', previouslyReceived);
-        input.data('initial-status', statusBadge.text());
     });
 
     function updateItemStatus(input) {
@@ -232,16 +217,13 @@ $(document).ready(function() {
         
         // Update status badge
         const statusBadge = row.find('.item-status');
-        const currentStatus = statusBadge.text().trim();
         
         if (totalReceived >= orderedQty) {
             statusBadge.removeClass('bg-warning').addClass('bg-success').text('Complete');
-        } else if (totalReceived > 0) {
+        } else if (totalReceived > previouslyReceived) {
             statusBadge.removeClass('bg-success').addClass('bg-warning').text('Partial');
         } else {
-            if (currentStatus !== 'Complete') {
-                statusBadge.removeClass('bg-success').addClass('bg-warning').text('Pending');
-            }
+            statusBadge.removeClass('bg-success').addClass('bg-warning').text('Pending');
         }
     }
 
@@ -251,40 +233,46 @@ $(document).ready(function() {
         const orderedQty = parseInt(input.data('ordered'));
         const previouslyReceived = parseInt(input.data('received')) || 0;
         const currentQty = parseInt(input.val()) || 0;
+        const remainingQty = orderedQty - previouslyReceived;
         
-        if (currentQty + previouslyReceived > orderedQty) {
-            alert('Total received quantity cannot exceed ordered quantity');
-            input.val(orderedQty - previouslyReceived);
+        if (currentQty > remainingQty) {
+            Swal.fire({
+                title: 'Invalid Quantity',
+                text: `Maximum receivable quantity is ${remainingQty}`,
+                icon: 'warning'
+            });
+            input.val(remainingQty);
+        } else if (currentQty < 0) {
+            input.val(0);
         }
         
         updateItemStatus(input);
     });
 
-    // Handle "Receive This Item" button
-    $('.receive-item-btn').click(function() {
-        const row = $(this).closest('tr');
-        const input = row.find('.received-qty');
-        const orderedQty = parseInt(input.data('ordered'));
-        const previouslyReceived = parseInt(input.data('received')) || 0;
-        const remainingQty = orderedQty - previouslyReceived;
+    // Form submission
+    $('form').on('submit', function(e) {
+        e.preventDefault();
         
-        input.val(remainingQty);
-        updateItemStatus(input);
-    });
-
-    // Handle "Receive All Items" button
-    $('#receiveAllBtn').click(function() {
+        let isValid = true;
+        let totalReceiving = 0;
+        
         $('.received-qty').each(function() {
-            const input = $(this);
-            if (!input.prop('disabled')) {
-                const orderedQty = parseInt(input.data('ordered'));
-                const previouslyReceived = parseInt(input.data('received')) || 0;
-                const remainingQty = orderedQty - previouslyReceived;
-                
-                input.val(remainingQty);
-                updateItemStatus(input);
-            }
+            const qty = parseInt($(this).val()) || 0;
+            totalReceiving += qty;
         });
+        
+        if (totalReceiving === 0) {
+            Swal.fire({
+                title: 'No Items to Receive',
+                text: 'Please enter quantity for at least one item',
+                icon: 'error'
+            });
+            return false;
+        }
+        
+        if (isValid) {
+            this.submit();
+        }
     });
 });
 </script>
