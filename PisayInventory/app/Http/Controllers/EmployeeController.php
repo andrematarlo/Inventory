@@ -358,36 +358,27 @@ class EmployeeController extends Controller
         }
     }
 
-    public function destroy($employeeId)
+    public function destroy($id)
     {
         try {
-            DB::beginTransaction();
-
-            $employee = Employee::findOrFail($employeeId);
+            $userPermissions = $this->getUserPermissions();
             
-            $employee->update([
-                'IsDeleted' => true,
-                'DeletedByID' => auth()->user()->UserAccountID,
-                'DateDeleted' => now()
-            ]);
-
-            if ($employee->userAccount) {
-                $employee->userAccount->update([
-                    'IsDeleted' => true,
-                    'DeletedByID' => auth()->user()->UserAccountID,
-                    'DateDeleted' => now()
-                ]);
+            if (!$userPermissions || !$userPermissions->CanDelete) {
+                return redirect()->back()->with('error', 'You do not have permission to delete employees.');
             }
 
-            DB::commit();
+            $employee = Employee::findOrFail($id);
+            $employee->IsDeleted = true;
+            $employee->DeletedByID = auth()->id();
+            $employee->DateDeleted = now();
+            $employee->save();
 
             return redirect()->route('employees.index')
                 ->with('success', 'Employee deleted successfully');
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->route('employees.index')
-                ->with('error', 'Failed to delete employee: ' . $e->getMessage());
+            \Log::error('Error deleting employee: ' . $e->getMessage());
+            return back()->with('error', 'Error deleting employee: ' . $e->getMessage());
         }
     }
 

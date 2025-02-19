@@ -241,24 +241,24 @@ class InventoryController extends Controller
     public function destroy($id)
     {
         try {
-            DB::beginTransaction();
+            $userPermissions = $this->getUserPermissions();
+            
+            if (!$userPermissions || !$userPermissions->CanDelete) {
+                return redirect()->back()->with('error', 'You do not have permission to delete inventory records.');
+            }
 
             $inventory = Inventory::findOrFail($id);
-            
-            // Soft delete
             $inventory->IsDeleted = true;
-            $inventory->DeletedById = Auth::user()->UserAccountID;
-            $inventory->DateDeleted = Carbon::now()->format('Y-m-d H:i:s');
+            $inventory->DeletedById = auth()->id();
+            $inventory->DateDeleted = now();
             $inventory->save();
 
-            DB::commit();
             return redirect()->route('inventory.index')
                 ->with('success', 'Inventory record deleted successfully');
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Inventory deletion failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to delete inventory record: ' . $e->getMessage());
+            \Log::error('Error deleting inventory: ' . $e->getMessage());
+            return back()->with('error', 'Error deleting inventory: ' . $e->getMessage());
         }
     }
 
