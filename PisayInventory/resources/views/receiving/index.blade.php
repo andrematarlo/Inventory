@@ -97,15 +97,12 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteReceivingModal{{ $record->ReceivingID }}"
+                                            onclick="deleteReceivingRecord({{ $record->ReceivingID }})"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
-                                    @endif
                                 </div>
                             </td>
                             <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
@@ -309,27 +306,6 @@
             </div>
         </div>
     </div>
-
-    @foreach($receivingRecords as $record)
-    <!-- Delete Modal -->
-    <div class="modal fade" id="deleteReceivingModal{{ $record->ReceivingID }}" tabindex="-1" aria-labelledby="deleteReceivingModalLabel{{ $record->ReceivingID }}" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteReceivingModalLabel{{ $record->ReceivingID }}">Confirm Delete</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Are you sure you want to delete this receiving record?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="deleteRecord({{ $record->ReceivingID }})" data-bs-dismiss="modal">Delete</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endforeach
 </div>
 @endsection
 
@@ -396,60 +372,69 @@ $(document).ready(function() {
     });
 });
 
-function restoreReceivingRecord(id) {
-    if (confirm('Are you sure you want to restore this receiving record?')) {
-        fetch(`/inventory/receiving/${id}/restore`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(json => Promise.reject(json));
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                alert('Receiving record restored successfully');
-                window.location.reload();
-            } else {
-                alert(data.message || 'Error restoring receiving record');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error restoring receiving record: ' + error.message);
-        });
-    }
+function deleteReceivingRecord(id) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `/inventory/receiving/${id}`,
+                type: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Deleted!', 'Receiving record has been deleted.', 'success')
+                            .then(() => window.location.reload());
+                    } else {
+                        Swal.fire('Error!', response.message || 'Failed to delete receiving record.', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire('Error!', 'Failed to delete receiving record.', 'error');
+                }
+            });
+        }
+    });
 }
 
-function deleteRecord(id) {
-    fetch(`/inventory/receiving/${id}`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Record deleted successfully');
-            window.location.reload();
-        } else {
-            alert(data.message || 'Error deleting record');
+function restoreReceivingRecord(id) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "Do you want to restore this receiving record?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, restore it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `/inventory/receiving/${id}/restore`,
+                type: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Restored!', 'Receiving record has been restored.', 'success')
+                            .then(() => window.location.reload());
+                    } else {
+                        Swal.fire('Error!', response.message || 'Failed to restore receiving record.', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire('Error!', 'Failed to restore receiving record.', 'error');
+                }
+            });
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error deleting record: ' + error.message);
     });
 }
 </script>
