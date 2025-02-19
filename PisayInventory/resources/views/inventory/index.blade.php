@@ -90,53 +90,23 @@
                         @forelse($inventories as $inventory)
                         <tr>
                             <td>
-                                <div class="btn-group btn-group-sm">
-                                    @if(!$inventory->IsDeleted)
-                                        {{-- Stock Out button always visible --}}
+                                <div class="btn-group" style="min-width: 150px;">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-primary d-flex align-items-center justify-content-center gap-1"
+                                            style="width: 120px; height: 32px;"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#stockOutModal{{ $inventory->InventoryId }}">
+                                        <i class="bi bi-box-arrow-right"></i>
+                                        <span>Stock Out</span>
+                                    </button>
+                                    {{-- Update permission check for delete button --}}
+                                    @if($userPermissions && $userPermissions->CanDelete && $userPermissions->CanEdit)
                                         <button type="button" 
-                                                class="btn btn-sm btn-blue" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#stockOutModal{{ $inventory->InventoryId }}"
-                                                title="Stock Out">
-                                            <i class="bi bi-box-arrow-right me-1"></i>
-                                            Stock Out
+                                                class="btn btn-sm btn-danger d-flex align-items-center justify-content-center"
+                                                style="width: 32px; height: 32px;"
+                                                onclick="confirmDelete({{ $inventory->InventoryId }})">
+                                            <i class="bi bi-trash"></i>
                                         </button>
-                                        
-                                        {{-- Debug info --}}
-                                        @php
-                                            \Log::info('Delete button check:', [
-                                                'has_permissions' => isset($userPermissions),
-                                                'can_delete' => $userPermissions?->CanDelete ?? false,
-                                                'user_role' => auth()->user()->role
-                                            ]);
-                                        @endphp
-                                        
-                                        {{-- Show Delete button for users with delete permission --}}
-                                        @if(auth()->check() && (auth()->user()->role === 'System Admin' || auth()->user()->role === 'Admin'))
-                                        <button type="button" 
-                                                class="btn btn-sm btn-danger" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#deleteModal{{ $inventory->InventoryId }}">
-                                            <i class="bi bi-trash me-1"></i>
-                                            Delete
-                                        </button>
-                                        @endif
-                                    @else
-                                        {{-- Show Restore button for admins --}}
-                                        @if(auth()->check() && (auth()->user()->role === 'System Admin' || auth()->user()->role === 'Admin'))
-                                        <form action="{{ route('inventory.restore', $inventory->InventoryId) }}" 
-                                              method="POST" 
-                                              style="margin: 0;">
-                                            @csrf
-                                            @method('PUT')
-                                            <button type="submit" 
-                                                    class="btn btn-success"
-                                                    onclick="return confirm('Are you sure you want to restore this record?');">
-                                                <i class="bi bi-arrow-counterclockwise me-1"></i>
-                                                Restore
-                                            </button>
-                                        </form>
-                                        @endif
                                     @endif
                                 </div>
                             </td>

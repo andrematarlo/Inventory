@@ -269,16 +269,19 @@
                                                 <i class="bi bi-pencil"></i>
                                             </a>
 
-                                            <form action="{{ route('employees.destroy', $employee->EmployeeID) }}" 
-                                                  method="POST" 
-                                                  class="d-inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this employee?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                            {{-- Only show delete button if user has delete permission --}}
+                                            @if($userPermissions && $userPermissions->CanDelete)
+                                                <form action="{{ route('employees.destroy', $employee->EmployeeID) }}" 
+                                                      method="POST" 
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Are you sure you want to delete this employee?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                     <td>{{ $employee->FullName }}</td>
