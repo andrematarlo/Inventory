@@ -172,6 +172,12 @@ class RoleController extends Controller
 
     public function policies()
     {
+        // Add permission checking
+        $userPermissions = $this->getUserPermissions();
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->back()->with('error', 'You do not have permission to view role policies.');
+        }
+
         try {
             // Get all active roles
             $roles = DB::table('roles')
@@ -244,6 +250,12 @@ class RoleController extends Controller
 
     public function updatePolicy(Request $request, $id)
     {
+        // Add permission checking
+        $userPermissions = $this->getUserPermissions();
+        if (!$userPermissions || !$userPermissions->CanEdit) {
+            return redirect()->back()->with('error', 'You do not have permission to update role policies.');
+        }
+
         $policy = RolePolicy::findOrFail($id);
         
         $policy->update([
