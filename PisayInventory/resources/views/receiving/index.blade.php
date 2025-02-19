@@ -98,24 +98,13 @@
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
-                                        @if($record->Status === 'Pending')
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-primary"
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#editReceivingModal{{ $record->ReceivingID }}"
-                                                    title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                        @endif
-                                        @if($userPermissions->CanDelete)
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-danger" 
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#deleteReceivingModal{{ $record->ReceivingID }}"
-                                                    title="Delete">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        @endif
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger" 
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteReceivingModal{{ $record->ReceivingID }}"
+                                            title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                     @endif
                                 </div>
                             </td>
@@ -320,6 +309,27 @@
             </div>
         </div>
     </div>
+
+    @foreach($receivingRecords as $record)
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteReceivingModal{{ $record->ReceivingID }}" tabindex="-1" aria-labelledby="deleteReceivingModalLabel{{ $record->ReceivingID }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteReceivingModalLabel{{ $record->ReceivingID }}">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this receiving record?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteRecord({{ $record->ReceivingID }})" data-bs-dismiss="modal">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endforeach
 </div>
 @endsection
 
@@ -384,10 +394,6 @@ $(document).ready(function() {
         $('#deletedReceiving').show();
         $('#activeReceiving, #pendingReceiving, #partialReceiving').hide();
     });
-
-    setTimeout(function() {
-        $('.alert').alert('close');
-    }, 3000);
 });
 
 function restoreReceivingRecord(id) {
@@ -423,30 +429,28 @@ function restoreReceivingRecord(id) {
 }
 
 function deleteRecord(id) {
-    if (confirm('Are you sure you want to delete this receiving record?')) {
-        fetch(`/inventory/receiving/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            return response.json().then(data => {
-                if (!response.ok) {
-                    throw new Error(data.message || 'Network response was not ok');
-                }
-                alert(data.message || 'Record deleted successfully');
-                window.location.reload();
-            });
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting receiving record: ' + error.message);
-        });
-    }
+    fetch(`/inventory/receiving/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Record deleted successfully');
+            window.location.reload();
+        } else {
+            alert(data.message || 'Error deleting record');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting record: ' + error.message);
+    });
 }
 </script>
 @endsection 

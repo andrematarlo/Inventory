@@ -98,8 +98,7 @@
                                     @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#deletePurchaseModal{{ $po->PurchaseOrderID }}"
+                                            onclick="deletePurchaseOrder({{ $po->PurchaseOrderID }})"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -169,8 +168,7 @@
                                     @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#deletePurchaseModal{{ $po->PurchaseOrderID }}"
+                                            onclick="deletePurchaseOrder({{ $po->PurchaseOrderID }})"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
