@@ -264,10 +264,13 @@
                                 <tr>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
-                                            <a href="{{ route('employees.edit', $employee->EmployeeID) }}" 
-                                               class="btn btn-sm btn-primary">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
+                                            {{-- Only show edit button if user has edit permission --}}
+                                            @if($userPermissions && $userPermissions->CanEdit)
+                                                <a href="{{ route('employees.edit', $employee->EmployeeID) }}" 
+                                                   class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                            @endif
 
                                             {{-- Only show delete button if user has delete permission --}}
                                             @if($userPermissions && $userPermissions->CanDelete)

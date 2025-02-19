@@ -16,7 +16,7 @@ class RoleController extends Controller
         $userRole = auth()->user()->role;
         return RolePolicy::whereHas('role', function($query) use ($userRole) {
             $query->where('RoleName', $userRole);
-        })->where('Module', 'Roles')->first();
+        })->where('Module', 'Employees')->first();
     }
 
     public function index()
@@ -92,12 +92,30 @@ class RoleController extends Controller
 
     public function edit($id)
     {
+        $userPermissions = $this->getUserPermissions();
+        
+        // Debug line
+        \Log::info('Edit Permissions: ', ['canEdit' => $userPermissions ? $userPermissions->CanEdit : false]);
+        
+        if (!$userPermissions || !$userPermissions->CanEdit) {
+            return redirect()->back()->with('error', 'You do not have permission to edit employees.');
+        }
+        
         $role = Role::with('policies')->findOrFail($id);
         return view('roles.edit', compact('role'));
     }
 
     public function update(Request $request, $id)
     {
+        $userPermissions = $this->getUserPermissions();
+        
+        // Debug line
+        \Log::info('Update Permissions: ', ['canEdit' => $userPermissions ? $userPermissions->CanEdit : false]);
+        
+        if (!$userPermissions || !$userPermissions->CanEdit) {
+            return redirect()->back()->with('error', 'You do not have permission to update employees.');
+        }
+        
         $role = Role::findOrFail($id);
         
         $request->validate([
