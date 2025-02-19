@@ -3,6 +3,16 @@
 @section('title', 'Inventory')
 
 @section('content')
+@if(auth()->check())
+    <div class="alert alert-info">
+        Debug Info:
+        <pre>
+        User Role: {{ auth()->user()->role }}
+        Has Permissions: {{ $userPermissions ? 'Yes' : 'No' }}
+        Can Delete: {{ $userPermissions?->CanDelete ? 'Yes' : 'No' }}
+        </pre>
+    </div>
+@endif
 <div class="container">
     <!-- Header Section -->
      

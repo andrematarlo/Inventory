@@ -23,21 +23,31 @@ class InventoryController extends Controller
     {
         $userPermissions = null;
         if (auth()->check() && auth()->user()->role) {
+            // Add debugging
+            \Log::info('User Role Details:', [
+                'user_id' => auth()->id(),
+                'role_name' => auth()->user()->role,
+                'raw_user' => auth()->user()
+            ]);
+
             $roleId = DB::table('roles')
                 ->where('RoleName', auth()->user()->role)
                 ->value('RoleId');
+
+            // Add more debugging
+            \Log::info('Role ID Found:', [
+                'role_id' => $roleId
+            ]);
 
             $userPermissions = RolePolicy::where('RoleId', $roleId)
                 ->where('Module', 'Inventory')
                 ->where('IsDeleted', 0)
                 ->first();
-            
-            \Log::info('Permission details:', [
-                'role_name' => auth()->user()->role,
-                'role_id' => $roleId,
-                'permissions_found' => $userPermissions ? true : false,
-                'can_delete' => $userPermissions?->CanDelete ?? false,
-                'raw_permissions' => $userPermissions
+
+            // Add permissions debugging
+            \Log::info('Permissions Found:', [
+                'permissions' => $userPermissions,
+                'can_delete' => $userPermissions?->CanDelete ?? false
             ]);
         }
 
