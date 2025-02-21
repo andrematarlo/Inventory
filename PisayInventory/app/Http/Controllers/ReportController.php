@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use PDF;
 
+
 class ReportController extends Controller
 {
     public function index()
