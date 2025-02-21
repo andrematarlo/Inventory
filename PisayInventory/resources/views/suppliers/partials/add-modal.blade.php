@@ -60,6 +60,26 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+
+                    <!-- Updated Items Selection Field -->
+                    <div class="mb-3">
+                        <label for="items" class="form-label">Items Supplied</label>
+                        <select class="form-select select2-multiple @error('items') is-invalid @enderror" 
+                                id="items" 
+                                name="items[]" 
+                                multiple="multiple"
+                                data-placeholder="Search items">
+                            @foreach($items as $item)
+                                <option value="{{ $item->ItemId }}"
+                                    {{ in_array($item->ItemId, old('items', [])) ? 'selected' : '' }}>
+                                    {{ $item->ItemName }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('items')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
                 </div>
 
                 <div class="modal-footer">
@@ -69,4 +89,26 @@
             </form>
         </div>
     </div>
-</div> 
+</div>
+
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('.select2-multiple').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        dropdownParent: $('#addSupplierModal'),
+        placeholder: 'Search items',
+        allowClear: true,
+        closeOnSelect: false,
+        tags: false
+    });
+});
+</script>
+@endpush 

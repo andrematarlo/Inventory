@@ -16,7 +16,6 @@ class Item extends Model
         'ImagePath',
         'UnitOfMeasureId',
         'ClassificationId',
-        'SupplierID',
         'StocksAvailable',
         'ReorderPoint',
         'CreatedById',
@@ -51,11 +50,6 @@ class Item extends Model
     {
         return $this->belongsTo(UnitOfMeasure::class, 'UnitOfMeasureId', 'UnitOfMeasureId')
                     ->withDefault(['UnitName' => 'N/A']);
-    }
-
-    public function supplier()
-    {
-        return $this->belongsTo(Supplier::class, 'SupplierID', 'SupplierID');
     }
 
     public function createdBy()
@@ -116,5 +110,12 @@ class Item extends Model
     public function restored_by_user()
     {
         return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID');
+    }
+
+    public function suppliers()
+    {
+        return $this->belongsToMany(Supplier::class, 'items_suppliers', 'ItemId', 'SupplierID')
+                    ->withPivot(['DateCreated', 'CreatedById', 'DateModified', 'ModifiedById', 'IsDeleted'])
+                    ->wherePivot('IsDeleted', false);
     }
 } 

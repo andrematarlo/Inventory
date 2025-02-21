@@ -9,59 +9,88 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="CompanyName{{ $supplier->SupplierID }}" class="form-label">Company Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('CompanyName') is-invalid @enderror" 
-                               id="CompanyName{{ $supplier->SupplierID }}" name="CompanyName" 
-                               value="{{ old('CompanyName', $supplier->CompanyName) }}" required>
-                        @error('CompanyName')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="CompanyName{{ $supplier->SupplierID }}" class="form-label">Company Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control @error('CompanyName') is-invalid @enderror" 
+                                       id="CompanyName{{ $supplier->SupplierID }}" name="CompanyName" 
+                                       value="{{ old('CompanyName', $supplier->CompanyName) }}" required>
+                                @error('CompanyName')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="ContactPerson{{ $supplier->SupplierID }}" class="form-label">Contact Person <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control @error('ContactPerson') is-invalid @enderror" 
+                                       id="ContactPerson{{ $supplier->SupplierID }}" name="ContactPerson" 
+                                       value="{{ old('ContactPerson', $supplier->ContactPerson) }}" required>
+                                @error('ContactPerson')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="TelephoneNumber{{ $supplier->SupplierID }}" class="form-label">Telephone Number</label>
+                                <input type="text" class="form-control @error('TelephoneNumber') is-invalid @enderror" 
+                                       id="TelephoneNumber{{ $supplier->SupplierID }}" name="TelephoneNumber" 
+                                       value="{{ old('TelephoneNumber', $supplier->TelephoneNumber) }}"
+                                       pattern="[0-9+\-\s]+"
+                                       title="Please enter a valid telephone number">
+                                @error('TelephoneNumber')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="ContactNum{{ $supplier->SupplierID }}" class="form-label">Contact Number <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control @error('ContactNum') is-invalid @enderror" 
+                                       id="ContactNum{{ $supplier->SupplierID }}" name="ContactNum" 
+                                       value="{{ old('ContactNum', $supplier->ContactNum) }}"
+                                       required
+                                       pattern="[0-9+\-\s]+"
+                                       title="Please enter a valid contact number">
+                                @error('ContactNum')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="Address{{ $supplier->SupplierID }}" class="form-label">Address <span class="text-danger">*</span></label>
+                                <textarea class="form-control @error('Address') is-invalid @enderror" 
+                                          id="Address{{ $supplier->SupplierID }}" name="Address" 
+                                          rows="3" required>{{ old('Address', $supplier->Address) }}</textarea>
+                                @error('Address')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="ContactPerson{{ $supplier->SupplierID }}" class="form-label">Contact Person <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('ContactPerson') is-invalid @enderror" 
-                               id="ContactPerson{{ $supplier->SupplierID }}" name="ContactPerson" 
-                               value="{{ old('ContactPerson', $supplier->ContactPerson) }}" required>
-                        @error('ContactPerson')
+                        <label for="items{{ $supplier->SupplierID }}" class="form-label">Items Supplied</label>
+                        <select class="form-select select2-multiple @error('items') is-invalid @enderror" 
+                                id="items{{ $supplier->SupplierID }}" 
+                                name="items[]" 
+                                multiple="multiple"
+                                data-placeholder="Select items">
+                            @foreach($items as $item)
+                                <option value="{{ $item->ItemId }}"
+                                    {{ in_array($item->ItemId, old('items', $supplier->items->pluck('ItemId')->toArray())) ? 'selected' : '' }}>
+                                    {{ $item->ItemName }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('items')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="TelephoneNumber{{ $supplier->SupplierID }}" class="form-label">Telephone Number</label>
-                        <input type="text" class="form-control @error('TelephoneNumber') is-invalid @enderror" 
-                               id="TelephoneNumber{{ $supplier->SupplierID }}" name="TelephoneNumber" 
-                               value="{{ old('TelephoneNumber', $supplier->TelephoneNumber) }}"
-                               pattern="[0-9+\-\s]+"
-                               title="Please enter a valid telephone number">
-                        @error('TelephoneNumber')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="ContactNum{{ $supplier->SupplierID }}" class="form-label">Contact Number <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('ContactNum') is-invalid @enderror" 
-                               id="ContactNum{{ $supplier->SupplierID }}" name="ContactNum" 
-                               value="{{ old('ContactNum', $supplier->ContactNum) }}"
-                               required
-                               pattern="[0-9+\-\s]+"
-                               title="Please enter a valid contact number">
-                        @error('ContactNum')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="Address{{ $supplier->SupplierID }}" class="form-label">Address <span class="text-danger">*</span></label>
-                        <textarea class="form-control @error('Address') is-invalid @enderror" 
-                                  id="Address{{ $supplier->SupplierID }}" name="Address" 
-                                  rows="3" required>{{ old('Address', $supplier->Address) }}</textarea>
-                        @error('Address')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                        <small class="form-text text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            Type to search items. Click an item to select it. You can select multiple items.
+                        </small>
                     </div>
                 </div>
                 <div class="modal-footer">

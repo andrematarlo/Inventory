@@ -7,6 +7,10 @@
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
 
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
 <style>
     /* Custom styles for suppliers table */
     .suppliers-table {
@@ -242,6 +246,43 @@
         content: '' !important;
         display: none !important;
     }
+
+    /* Custom Select2 Styles */
+    .select2-container--bootstrap-5 .select2-selection {
+        min-height: 38px;
+        border: 1px solid #ced4da;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__rendered {
+        padding: 0 6px;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+        background-color: #0d6efd;
+        color: #fff;
+        border: none;
+        padding: 2px 8px;
+        margin: 2px;
+        border-radius: 3px;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
+        color: #fff;
+        margin-right: 5px;
+    }
+    
+    .select2-container--bootstrap-5 .select2-search__field {
+        margin-top: 4px;
+    }
+    
+    .select2-container--bootstrap-5 .select2-dropdown {
+        border-color: #86b7fe;
+    }
+    
+    .select2-container--bootstrap-5 .select2-search__field:focus {
+        border-color: #86b7fe;
+        box-shadow: none;
+    }
 </style>
 @endsection
 
@@ -296,20 +337,21 @@
                 </div>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover" id="suppliersTable">
                     <thead>
                         <tr>
                             <th>Actions</th>
-                            <th>Company Name <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Contact Person <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Telephone <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Contact Number <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Address <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Date Created <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Date Modified <i class="bi bi-arrow-down-up small-icon"></i></th>
-                            <th>Status <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Company Name</th>
+                            <th>Contact Person</th>
+                            <th>Telephone</th>
+                            <th>Contact Number</th>
+                            <th>Address</th>
+                            <th>Items Supplied</th>
+                            <th>Created By</th>
+                            <th>Date Created</th>
+                            <th>Modified By</th>
+                            <th>Date Modified</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -336,6 +378,17 @@
                                 <td>{{ $supplier->TelephoneNumber }}</td>
                                 <td>{{ $supplier->ContactNum }}</td>
                                 <td>{{ $supplier->Address }}</td>
+                                <td>
+                                    @if($supplier->items->count() > 0)
+                                        <ul class="list-unstyled mb-0">
+                                            @foreach($supplier->items as $item)
+                                                <li>{{ $item->ItemName }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <span class="text-muted">No items</span>
+                                    @endif
+                                </td>
                                 <td>{{ $supplier->createdBy->Username ?? 'N/A' }}</td>
                                 <td>{{ $supplier->DateCreated ? date('Y-m-d H:i:s', strtotime($supplier->DateCreated)) : 'N/A' }}</td>
                                 <td>{{ $supplier->modifiedBy->Username ?? 'N/A' }}</td>
@@ -346,7 +399,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="text-center">No suppliers found</td>
+                                <td colspan="12" class="text-center">No suppliers found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -362,14 +415,15 @@
                 <thead>
                     <tr>
                         <th>Action</th>
-                        <th>Company Name <i class="bi bi-arrow-down-up small-icon"></i></th>
-                        <th>Contact Person <i class="bi bi-arrow-down-up small-icon"></i></th>
-                        <th>Telephone <i class="bi bi-arrow-down-up small-icon"></i></th>
-                        <th>Contact Number <i class="bi bi-arrow-down-up small-icon"></i></th>
-                        <th>Address <i class="bi bi-arrow-down-up small-icon"></i></th>
-                        <th>Deleted Date <i class="bi bi-arrow-down-up small-icon"></i></th>
-                        <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
-                        <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        <th>Company Name</th>
+                        <th>Contact Person</th>
+                        <th>Telephone</th>
+                        <th>Contact Number</th>
+                        <th>Address</th>
+                        <th>Items Supplied</th>
+                        <th>Deleted Date</th>
+                        <th>Created By</th>
+                        <th>Modified By</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -389,13 +443,24 @@
                             <td>{{ $supplier->TelephoneNumber }}</td>
                             <td>{{ $supplier->ContactNum }}</td>
                             <td>{{ $supplier->Address }}</td>
+                            <td>
+                                @if($supplier->items->count() > 0)
+                                    <ul class="list-unstyled mb-0">
+                                        @foreach($supplier->items as $item)
+                                            <li>{{ $item->ItemName }}</li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <span class="text-muted">No items</span>
+                                @endif
+                            </td>
                             <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i:s', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
                             <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
                             <td>{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center">No deleted suppliers found</td>
+                            <td colspan="10" class="text-center">No deleted suppliers found</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -424,6 +489,9 @@
 <!-- Add DataTables JS -->
 <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
     $(document).ready(function() {
@@ -484,6 +552,57 @@
             $('#activeSuppliers').hide();
             $('#deletedSuppliers').show();
             deletedTable.columns.adjust().draw();
+        });
+
+        // Initialize Select2 for multiple selection
+        function initializeSelect2(modalId) {
+            $(`#${modalId} .select2-multiple`).select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                dropdownParent: $(`#${modalId}`),
+                placeholder: 'Search and select items',
+                allowClear: true,
+                closeOnSelect: false,
+                tags: false,
+                language: {
+                    noResults: function() {
+                        return 'No items found';
+                    },
+                    searching: function() {
+                        return 'Searching...';
+                    }
+                },
+                templateResult: formatItem,
+                templateSelection: formatItemSelection
+            });
+        }
+
+        // Format each item in dropdown
+        function formatItem(item) {
+            if (!item.id) return item.text;
+            return $(`<span><i class="bi bi-box"></i> ${item.text}</span>`);
+        }
+
+        // Format selected items
+        function formatItemSelection(item) {
+            if (!item.id) return item.text;
+            return $(`<span><i class="bi bi-check2"></i> ${item.text}</span>`);
+        }
+
+        // Initialize Select2 for each modal
+        $('.modal').each(function() {
+            initializeSelect2($(this).attr('id'));
+        });
+
+        // Reinitialize Select2 when modal opens
+        $('.modal').on('shown.bs.modal', function() {
+            initializeSelect2($(this).attr('id'));
+        });
+
+        // Clear form and Select2 when modal closes
+        $('.modal').on('hidden.bs.modal', function() {
+            $(this).find('form').trigger('reset');
+            $(this).find('.select2-multiple').val(null).trigger('change');
         });
     });
 </script>

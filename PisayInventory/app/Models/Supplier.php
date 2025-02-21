@@ -9,6 +9,7 @@ class Supplier extends Model
     protected $table = 'suppliers';
     protected $primaryKey = 'SupplierID';
     public $timestamps = false;
+    public $incrementing = false;
 
     protected $fillable = [
         'SupplierID',
@@ -108,9 +109,9 @@ class Supplier extends Model
 
     public function items()
     {
-        return $this->belongsToMany(Item::class, 'item_supplier', 'SupplierID', 'ItemId')
-                    ->withPivot('UnitPrice')
-                    ->where('item_supplier.IsDeleted', false);
+        return $this->belongsToMany(Item::class, 'items_suppliers', 'SupplierID', 'ItemId')
+                    ->withPivot(['DateCreated', 'CreatedById', 'DateModified', 'ModifiedById', 'IsDeleted'])
+                    ->wherePivot('IsDeleted', false);
     }
 
     // Query scopes

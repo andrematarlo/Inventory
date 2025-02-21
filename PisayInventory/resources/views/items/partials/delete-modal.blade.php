@@ -1,5 +1,4 @@
 @foreach($activeItems as $item)
-<!-- Delete Item Modal -->
 <div class="modal fade" id="deleteModal{{ $item->ItemId }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -8,6 +7,9 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <!-- Add this temporarily for debugging -->
+                <small class="text-muted">Item ID: {{ $item->ItemId }}</small>
+                
                 <p>Are you sure you want to delete item: <strong>{{ $item->ItemName }}</strong>?</p>
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle me-2"></i>
@@ -17,9 +19,14 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
+                <!-- Modified form to ensure proper ID passing -->
+                <form action="{{ route('items.destroy', ['item' => $item->ItemId]) }}" 
+                      method="POST" 
+                      class="d-inline"
+                      id="deleteForm{{ $item->ItemId }}">
                     @csrf
                     @method('DELETE')
+                    <input type="hidden" name="item_id" value="{{ $item->ItemId }}">
                     <button type="submit" class="btn btn-danger">
                         <i class="bi bi-trash"></i> Delete Item
                     </button>
@@ -28,4 +35,4 @@
         </div>
     </div>
 </div>
-@endforeach 
+@endforeach

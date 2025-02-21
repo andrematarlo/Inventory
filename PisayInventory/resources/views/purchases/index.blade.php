@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@php
+    use App\Enums\PurchaseStatus;
+@endphp
+
 @section('title', 'Purchase Orders')
 
 @section('styles')
@@ -30,22 +34,21 @@
         background-color: #0b5ed7;
         color: white;
     }
+
+    .badge.bg-partial {
+        background-color: #ffc107;
+        color: #000;
+    }
 </style>
 @endsection
 
 @section('content')
 <div class="container-fluid">
-
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Purchase Orders</h1>
-        <div>
-        @if($userPermissions && $userPermissions->CanAdd)
-            <a href="{{ route('purchases.create') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> New Purchase Order
-            </a>
-            @endif
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Purchase Orders</h2>
+        <a href="{{ route('purchases.create') }}" class="btn btn-success">
+            <i class="bi bi-plus-lg"></i> Create Purchase Order
+        </a>
     </div>
 
     <div class="mb-4">
@@ -56,9 +59,9 @@
         </button>
     </div>
 
-    <div class="card">
-        <!-- Active Purchase Orders Section -->
-        <div id="activePurchases" class="card-body">
+    <!-- Active Records Section -->
+    <div class="card mb-4" id="activeRecords">
+        <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover" id="purchaseOrdersTable">
                     <thead>
@@ -76,7 +79,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($purchases as $po)
+                        @forelse($purchases->where('Status', '!=', PurchaseStatus::PENDING->value) as $po)
                         <tr>
                             <td>
                                 <div class="btn-group" role="group">
@@ -85,24 +88,13 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
-                                    @if($po->Status === 'Pending')
-                                    <button type="button" 
-                                            class="btn btn-sm btn-primary" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#editPurchaseModal{{ $po->PurchaseOrderID }}"
-                                            title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    @endif
-                                    @if($userPermissions->CanDelete)
-                                    <button type="button" 
-                                            class="btn btn-sm btn-danger" 
-                                            onclick="deletePurchaseOrder({{ $po->PurchaseOrderID }})"
-                                            title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                    @endif
+                                    @if($userPermissions && $userPermissions->CanDelete)
+                                        <button type="button" 
+                                                class="btn btn-sm btn-danger" 
+                                                onclick="deletePurchase({{ $po->PurchaseOrderID }})"
+                                                title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                     @endif
                                 </div>
                             </td>
@@ -110,7 +102,7 @@
                             <td>{{ $po->supplier->CompanyName }}</td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
                             <td>
-                                <span class="badge bg-{{ $po->Status === 'Pending' ? 'warning' : 'success' }}">
+                                <span class="badge bg-success">
                                     {{ $po->Status }}
                                 </span>
                             </td>
@@ -122,16 +114,18 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" class="text-center">No purchase orders found</td>
+                            <td colspan="10" class="text-center">No active purchase orders found</td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
+    </div>
 
-        <!-- Pending Purchase Orders Section -->
-        <div id="pendingPurchases" class="card-body" style="display: none;">
+    <!-- Pending Records Section -->
+    <div class="card mb-4" id="pendingRecords" style="display: none;">
+        <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover" id="pendingPurchaseTable">
                     <thead>
@@ -158,21 +152,12 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
-                                    <a href="{{ route('purchases.edit', $po->PurchaseOrderID) }}" 
-                                       class="btn btn-sm btn-primary" 
-                                       title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    @endif
-                                    @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            onclick="deletePurchaseOrder({{ $po->PurchaseOrderID }})"
+                                            onclick="deletePurchase({{ $po->PurchaseOrderID }})"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
-                                    @endif
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
@@ -198,9 +183,11 @@
                 </table>
             </div>
         </div>
+    </div>
 
-        <!-- Deleted Purchase Orders Section -->
-        <div id="deletedPurchases" class="card-body" style="display: none;">
+    <!-- Deleted Records Section -->
+    <div class="card mb-4" id="deletedRecords" style="display: none;">
+        <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover" id="deletedPurchaseTable">
                     <thead>
@@ -215,27 +202,32 @@
                             <th>Date Created</th>
                             <th>Modified By</th>
                             <th>Date Modified</th>
-                            <th>Deleted By</th>
-                            <th>Date Deleted</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($deletedPurchases as $po)
                         <tr>
                             <td>
-                                <button type="button" 
-                                        class="btn btn-sm btn-success" 
-                                        onclick="restorePurchaseOrder({{ $po->PurchaseOrderID }})"
-                                        title="Restore">
-                                    <i class="bi bi-arrow-counterclockwise"></i>
-                                </button>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ route('purchases.show', $po->PurchaseOrderID) }}" 
+                                       class="btn btn-sm btn-blue" 
+                                       title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-success" 
+                                            onclick="restorePurchase({{ $po->PurchaseOrderID }})"
+                                            title="Restore">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
                             <td>{{ $po->supplier->CompanyName }}</td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
                             <td>
-                                <span class="badge bg-{{ $po->Status === 'Pending' ? 'warning' : 'success' }}">
-                                    {{ $po->Status }}
+                                <span class="badge bg-danger">
+                                    Deleted
                                 </span>
                             </td>
                             <td>₱{{ number_format($po->getTotalAmount(), 2) }}</td>
@@ -243,12 +235,10 @@
                             <td>{{ $po->DateCreated ? date('Y-m-d H:i:s', strtotime($po->DateCreated)) : 'N/A' }}</td>
                             <td>{{ $po->modifiedBy->FirstName ?? 'N/A' }} {{ $po->modifiedBy->LastName ?? '' }}</td>
                             <td>{{ $po->DateModified ? date('Y-m-d H:i:s', strtotime($po->DateModified)) : 'N/A' }}</td>
-                            <td>{{ $po->deletedBy->FirstName ?? 'N/A' }} {{ $po->deletedBy->LastName ?? '' }}</td>
-                            <td>{{ $po->DateDeleted ? date('Y-m-d H:i:s', strtotime($po->DateDeleted)) : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="12" class="text-center">No deleted purchase orders found</td>
+                            <td colspan="10" class="text-center">No deleted purchase orders found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -257,123 +247,128 @@
         </div>
     </div>
 </div>
+
 @endsection
 
 @section('scripts')
 <script>
 $(document).ready(function() {
-    // Basic DataTable configuration
-    var config = {
-        pageLength: 10,
-        order: [[1, 'desc']],
-        columnDefs: [
-            { orderable: false, targets: 0 }
-        ],
-        searching: true,
-        info: true,
-        paging: true
-    };
-
-    // Only initialize tables that have data
-    var activeRows = $('#purchaseOrdersTable tbody tr').length;
-    var pendingRows = $('#pendingPurchaseTable tbody tr').length;
-    var deletedRows = $('#deletedPurchaseTable tbody tr').length;
-
-    // Initialize only if there are rows and not showing "No data" message
-    if (activeRows > 0 && !$('#purchaseOrdersTable tbody tr td').hasClass('text-center')) {
-        $('#purchaseOrdersTable').DataTable(config);
-    }
-
-    if (pendingRows > 0 && !$('#pendingPurchaseTable tbody tr td').hasClass('text-center')) {
-        $('#pendingPurchaseTable').DataTable(config);
-    }
-
-    if (deletedRows > 0 && !$('#deletedPurchaseTable tbody tr td').hasClass('text-center')) {
-        $('#deletedPurchaseTable').DataTable(config);
-    }
+    // Initialize DataTables
+    var tables = ['purchaseOrdersTable', 'pendingPurchaseTable', 'deletedPurchaseTable'];
+    tables.forEach(function(tableId) {
+        if ($('#' + tableId + ' tbody tr').length > 1) {
+            $('#' + tableId).DataTable({
+                pageLength: 10,
+                order: [[1, 'desc']],
+                columnDefs: [
+                    { orderable: false, targets: 0 }
+                ]
+            });
+        }
+    });
 
     // Hide other sections initially
-    $('#pendingPurchases, #deletedPurchases').hide();
+    $('#pendingRecords, #deletedRecords').hide();
 
     // Button click handlers
     $('#activeRecordsBtn').click(function() {
-        $('#activePurchases').show();
-        $('#pendingPurchases, #deletedPurchases').hide();
+        $('#activeRecords').show();
+        $('#pendingRecords, #deletedRecords').hide();
+        $(this).addClass('btn-primary').removeClass('btn-light');
+        $('#pendingRecordsBtn, #showDeletedBtn').removeClass('btn-primary btn-warning btn-danger').addClass('btn-light');
     });
 
     $('#pendingRecordsBtn').click(function() {
-        $('#pendingPurchases').show();
-        $('#activePurchases, #deletedPurchases').hide();
+        $('#pendingRecords').show();
+        $('#activeRecords, #deletedRecords').hide();
+        $(this).addClass('btn-warning').removeClass('btn-light');
+        $('#activeRecordsBtn, #showDeletedBtn').removeClass('btn-primary btn-warning btn-danger').addClass('btn-light');
     });
 
     $('#showDeletedBtn').click(function() {
-        $('#deletedPurchases').show();
-        $('#activePurchases, #pendingPurchases').hide();
+        $('#deletedRecords').show();
+        $('#activeRecords, #pendingRecords').hide();
+        $(this).addClass('btn-danger').removeClass('btn-light');
+        $('#activeRecordsBtn, #pendingRecordsBtn').removeClass('btn-primary btn-warning btn-danger').addClass('btn-light');
     });
 });
 
-function restorePurchaseOrder(id) {
-    if (confirm('Are you sure you want to restore this purchase order?')) {
-        fetch(`/inventory/purchases/${id}/restore`, {
-            method: 'PUT',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(json => Promise.reject(json));
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                alert('Purchase order restored successfully');
-                window.location.reload();
-            } else {
-                alert(data.message || 'Error restoring purchase order');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error restoring purchase order: ' + (error.message || 'Unknown error'));
-        });
-    }
+function deletePurchase(id) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `/inventory/purchases/${id}`,
+                type: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Deleted!',
+                            text: 'Purchase order has been deleted.',
+                            icon: 'success'
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error!', response.message || 'Failed to delete purchase order.', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Delete error:', xhr);
+                    Swal.fire('Error!', 'Failed to delete purchase order.', 'error');
+                }
+            });
+        }
+    });
 }
 
-function deletePurchaseOrder(id) {
-    if (confirm('Are you sure you want to delete this purchase order?')) {
-        fetch(`/inventory/purchases/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(json => Promise.reject(json));
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                alert('Purchase order deleted successfully');
-                window.location.reload();
-            } else {
-                alert(data.message || 'Error deleting purchase order');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting purchase order: ' + (error.message || 'Unknown error'));
-        });
-    }
+function restorePurchase(id) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "Do you want to restore this purchase order?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, restore it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `/inventory/purchases/${id}/restore`,
+                type: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Restored!',
+                            text: 'Purchase order has been restored.',
+                            icon: 'success'
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error!', response.message || 'Failed to restore purchase order.', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Restore error:', xhr);
+                    Swal.fire('Error!', 'Failed to restore purchase order.', 'error');
+                }
+            });
+        }
+    });
 }
 </script>
-@endsection
+@endsection 

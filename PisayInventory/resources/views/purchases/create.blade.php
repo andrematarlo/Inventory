@@ -55,8 +55,7 @@
                                                 <option value="">Select Item</option>
                                                 @foreach($items as $item)
                                                 <option value="{{ $item->ItemId }}" 
-                                                        data-price="{{ $item->UnitPrice }}"
-                                                        data-supplier="{{ $item->SupplierID }}">
+                                                        data-suppliers='@json($item->suppliers)'>
                                                     {{ $item->ItemName }}
                                                 </option>
                                                 @endforeach
@@ -132,6 +131,7 @@
                         <div class="mb-3">
                             <label class="form-label">PO Number</label>
                             <input type="text" 
+                                   name="PONumber"
                                    class="form-control" 
                                    value="PO-{{ date('YmdHis') }}" 
                                    readonly>
@@ -159,148 +159,207 @@
 <script>
 $(document).ready(function() {
     // Initialize Select2
-    $('.supplier-select').select2({
-        placeholder: 'Select Supplier',
-        width: '100%',
-        disabled: true  // Make supplier select disabled by default
-    });
-
     initializeItemRow($('.item-row:first'));
 
     // Add new item row
     $('#addItem').click(function() {
         let rowCount = $('.item-row').length;
+        let newRow = $('<tr class="item-row">' + 
+            '<td>' +
+                '<select name="items[' + rowCount + '][ItemId]" class="form-control item-select" required>' +
+                    '<option value="">Select Item</option>' +
+                    '@foreach($items as $item)' +
+                    '<option value="{{ $item->ItemId }}" data-suppliers=\'@json($item->suppliers)\'>' +
+                        '{{ $item->ItemName }}' +
+                    '</option>' +
+                    '@endforeach' +
+                '</select>' +
+            '</td>' +
+            '<td>' +
+                '<select name="items[' + rowCount + '][SupplierID]" class="form-control supplier-select" required disabled>' +
+                    '<option value="">Select Item First</option>' +
+                '</select>' +
+            '</td>' +
+            '<td>' +
+                '<input type="number" name="items[' + rowCount + '][Quantity]" class="form-control quantity" min="1" required>' +
+            '</td>' +
+            '<td>' +
+                '<input type="number" name="items[' + rowCount + '][UnitPrice]" class="form-control unit-price" step="0.01" required>' +
+            '</td>' +
+            '<td>' +
+                '<input type="number" class="form-control total-price" readonly>' +
+            '</td>' +
+            '<td>' +
+                '<button type="button" class="btn btn-danger btn-sm remove-item">' +
+                    '<i class="bi bi-trash"></i>' +
+                '</button>' +
+            '</td>' +
+        '</tr>');
         
-        // Get all currently selected item IDs
-        let selectedItems = [];
-        $('.item-select').each(function() {
-            let selectedValue = $(this).val();
-            if (selectedValue) {
-                selectedItems.push(selectedValue);
+        $('#itemsTable tbody').append(newRow);
+        initializeItemRow(newRow);
+    });
+
+    function initializeItemRow(row) {
+        // Initialize Select2 for items
+        row.find('.item-select').select2({
+            placeholder: 'Select Item',
+            width: '100%'
+        });
+
+        // Initialize Select2 for suppliers
+        row.find('.supplier-select').select2({
+            placeholder: 'Select Item First',
+            width: '100%'
+        });
+
+        // Item selection change
+        row.find('.item-select').on('change', function() {
+            const row = $(this).closest('tr');
+            const supplierSelect = row.find('.supplier-select');
+            
+            if (this.value) {
+                const selectedOption = $(this).find('option:selected');
+                const suppliers = selectedOption.data('suppliers');
+                
+                supplierSelect.empty();
+                
+                if (suppliers && suppliers.length > 0) {
+                    supplierSelect.prop('disabled', false);
+                    supplierSelect.append('<option value="">Select Supplier</option>');
+                    
+                    suppliers.forEach(supplier => {
+                        supplierSelect.append(`
+                            <option value="${supplier.SupplierID}">
+                                ${supplier.CompanyName}
+                            </option>
+                        `);
+                    });
+                } else {
+                    supplierSelect.prop('disabled', true);
+                    supplierSelect.append('<option value="">No suppliers available</option>');
+                }
+                
+                supplierSelect.trigger('change');
+            } else {
+                supplierSelect.empty();
+                supplierSelect.prop('disabled', true);
+                supplierSelect.append('<option value="">Select Item First</option>');
+                supplierSelect.trigger('change');
             }
         });
 
-        // Filter out already selected items
-        let availableOptions = $('.item-row:first .item-select option').filter(function() {
-            return !selectedItems.includes($(this).val()) && $(this).val() !== '';
+        // Quantity and price change handlers
+        row.find('.quantity, .unit-price').on('input', function() {
+            calculateRowTotal(row);
         });
+    }
 
-        // Check if there are any items left to add
-        if (availableOptions.length === 0) {
-            alert('All items have been added to the purchase order.');
-            return;
-        }
-
-        let newRowHtml = `
-            <tr class="item-row">
-                <td>
-                    <select name="items[${rowCount}][ItemId]" class="form-control item-select" required>
-                        <option value="">Select Item</option>
-                        ${availableOptions.map(function() {
-                            return `<option value="${$(this).val()}" 
-                                    data-price="${$(this).data('price')}"
-                                    data-supplier="${$(this).data('supplier')}">
-                                    ${$(this).text()}
-                                    </option>`;
-                        }).get().join('')}
-                    </select>
-                </td>
-                <td>
-                    <select name="items[${rowCount}][SupplierID]" class="form-control supplier-select" required>
-                        <option value="">Select Supplier</option>
-                        ${$('.item-row:first .supplier-select option').map(function() {
-                            return `<option value="${$(this).val()}">${$(this).text()}</option>`;
-                        }).get().join('')}
-                    </select>
-                </td>
-                <td>
-                    <input type="number" name="items[${rowCount}][Quantity]" class="form-control quantity" min="1" required>
-                </td>
-                <td>
-                    <input type="number" name="items[${rowCount}][UnitPrice]" class="form-control unit-price" step="0.01" required>
-                </td>
-                <td>
-                    <input type="number" class="form-control total-price" readonly>
-                </td>
-                <td>
-                    <button type="button" class="btn btn-danger btn-sm remove-item">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-        
-        $('#itemsTable tbody').append(newRowHtml);
-        initializeItemRow($('.item-row:last'));
-    });
-
-    // Remove item row
+    // Remove item row with SweetAlert
     $(document).on('click', '.remove-item', function() {
+        const row = $(this).closest('.item-row');
         if ($('.item-row').length > 1) {
-            $(this).closest('.item-row').remove();
+            Swal.fire({
+                title: 'Remove Item?',
+                text: "Are you sure you want to remove this item?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, remove it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    row.remove();
             calculateGrandTotal();
+                }
+            });
+        } else {
+            Swal.fire({
+                title: 'Cannot Remove',
+                text: 'At least one item is required.',
+                icon: 'error'
+            });
         }
     });
 
-    // Form submission
+    // Form submission with SweetAlert
     $('#purchaseOrderForm').submit(function(e) {
+        e.preventDefault();
+
         if ($('.item-row').length === 0) {
-            e.preventDefault();
-            alert('Please add at least one item to the purchase order.');
+            Swal.fire({
+                title: 'Error',
+                text: 'Please add at least one item to the purchase order.',
+                icon: 'error'
+            });
             return false;
         }
 
         // Enable all supplier selects before submitting
         $('.supplier-select').prop('disabled', false);
+
+        // Submit form via AJAX
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: response.message,
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        if (response.redirect) {
+                            window.location.href = response.redirect;
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: response.message,
+                        icon: 'error'
+                    });
+                }
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: xhr.responseJSON?.message || 'An error occurred while creating the purchase order.',
+                    icon: 'error'
+                });
+            }
+        });
+    });
+
+    // Add item validation
+    $('#addItem').click(function() {
+        const existingItems = [];
+        $('.item-select').each(function() {
+            const selectedValue = $(this).val();
+            if (selectedValue) {
+                existingItems.push(selectedValue);
+            }
+        });
+
+        const availableItems = $('option', '.item-select:first').filter(function() {
+            return !existingItems.includes($(this).val()) && $(this).val() !== '';
+        });
+
+        if (availableItems.length === 0) {
+            Swal.fire({
+                title: 'No More Items',
+                text: 'All available items have been added to the purchase order.',
+                icon: 'info'
+            });
+            return;
+        }
+
+        // Add new row code remains the same...
     });
 });
-
-function initializeItemRow(row) {
-    // Initialize Select2 for items
-    row.find('.item-select').select2({
-        placeholder: 'Select Item',
-        width: '100%'
-    });
-
-    // Item selection change
-    row.find('.item-select').on('change', function() {
-        let selectedOption = $(this).find('option:selected');
-        let unitPrice = selectedOption.data('price');
-        let supplierId = selectedOption.data('supplier');
-        let row = $(this).closest('.item-row');
-        
-        // Set the unit price
-        row.find('.unit-price').val(unitPrice);
-        calculateRowTotal(row);
-
-        // Set the supplier for THIS ROW ONLY
-        if (supplierId) {
-            row.find('.supplier-select')
-                .val(supplierId)
-                .trigger('change')
-                .prop('disabled', true)
-                .trigger('select2:disable');
-        }
-    });
-
-    // When item is deselected or changed
-    row.find('.item-select').on('select2:unselecting', function() {
-        let row = $(this).closest('.item-row');
-        row.find('.supplier-select')
-            .prop('disabled', false)
-            .trigger('select2:enable');
-    });
-
-    // Quantity change
-    row.find('.quantity').on('input', function() {
-        calculateRowTotal($(this).closest('.item-row'));
-    });
-
-    // Add Unit Price change listener
-    row.find('.unit-price').on('input', function() {
-        calculateRowTotal($(this).closest('.item-row'));
-    });
-}
 
 function calculateRowTotal(row) {
     let quantity = parseFloat(row.find('.quantity').val()) || 0;

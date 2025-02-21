@@ -71,23 +71,6 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="SupplierID" class="form-label">Supplier <span class="text-danger">*</span></label>
-                            <select class="form-select @error('SupplierID') is-invalid @enderror" 
-                                    id="SupplierID" name="SupplierID" required>
-                                <option value="">Select Supplier</option>
-                                @foreach($suppliers as $supplier)
-                                    <option value="{{ $supplier->SupplierID }}" 
-                                        {{ old('SupplierID', $item->SupplierID) == $supplier->SupplierID ? 'selected' : '' }}>
-                                        {{ $supplier->CompanyName }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('SupplierID')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
                             <label for="ReorderPoint" class="form-label">Reorder Point <span class="text-danger">*</span></label>
                             <input type="number" class="form-control @error('ReorderPoint') is-invalid @enderror" 
                                    id="ReorderPoint" name="ReorderPoint" value="{{ old('ReorderPoint', $item->ReorderPoint) }}" 
