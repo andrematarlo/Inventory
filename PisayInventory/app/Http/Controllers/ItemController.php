@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Models\Item;
 use App\Models\Classification;
 use App\Models\UnitOfMeasure;
@@ -14,6 +13,9 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Storage;
 use App\Models\RolePolicy;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\ItemsImport;
 
 class ItemController extends Controller
 {
@@ -61,6 +63,86 @@ class ItemController extends Controller
             return back()->with('error', 'Error loading items: ' . $e->getMessage());
         }
     }
+
+
+    public function previewColumns(Request $request)
+{
+    try {
+        $request->validate([
+            'excel_file' => 'required|mimes:xlsx,xls',
+        ]);
+
+        $path = $request->file('excel_file')->getRealPath();
+        $spreadsheet = IOFactory::load($path);
+        $worksheet = $spreadsheet->getActiveSheet();
+        $columns = [];
+
+        foreach ($worksheet->getRowIterator(1, 1) as $row) {
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+
+            foreach ($cellIterator as $cell) {
+                $colName = trim(strtolower($cell->getValue())); // Trim spaces and convert to lowercase
+                if (!empty($colName)) {
+                    $columns[] = $colName;
+                }
+            }
+        }
+
+        Log::info('Extracted Columns from Excel:', $columns);
+        return response()->json(['columns' => $columns]);
+
+    } catch (\Exception $e) {
+        Log::error('Error previewing Excel columns: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+
+
+    public function import(Request $request)
+{
+    try {
+        $request->validate([
+            'excel_file' => 'required|mimes:xlsx,xls',
+            'column_mapping' => 'required|array',
+            'column_mapping.ItemName' => 'required|string',  // Changed this line
+        ]);
+
+        // Add debug logging
+        Log::info('Import Request Data:', [
+            'column_mapping' => $request->column_mapping,
+            'default_values' => [
+                'classification' => $request->default_classification,
+                'unit' => $request->default_unit,
+                'stocks' => $request->default_stocks,
+                'reorder_point' => $request->default_reorder_point
+            ]
+        ]);
+
+        DB::beginTransaction();
+
+        $import = new ItemsImport(
+            $request->column_mapping,
+            $request->default_classification,
+            $request->default_unit,
+            $request->default_stocks ?? 0,
+            $request->default_reorder_point ?? 0,
+            Auth::id()
+        );
+
+        Excel::import($import, $request->file('excel_file'));
+        
+        DB::commit();
+        return redirect()->route('items.index')->with('success', 'Items imported successfully!');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error importing items:', [
+            'error' => $e->getMessage(),
+            'column_mapping' => $request->column_mapping ?? null
+        ]);
+        return redirect()->back()->with('error', $e->getMessage());
+    }
+}
 
     public function create()
     {

@@ -38,6 +38,8 @@ Route::middleware('guest')->group(function () {
 // Protected Routes with /inventory Prefix
 Route::middleware('auth')->group(function () {
     Route::prefix('inventory')->group(function () {
+        Route::post('/items/preview-columns', [ItemController::class, 'previewColumns'])->name('items.preview-columns');
+Route::post('/items/import', [ItemController::class, 'import'])->name('items.import');
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
         // Dashboard
@@ -49,6 +51,7 @@ Route::middleware('auth')->group(function () {
         Route::post('items/{id}/restore', [ItemController::class, 'restore'])->name('items.restore');
         Route::post('items/{id}/stock-in', [ItemController::class, 'stockIn'])->name('items.stock-in');
         Route::post('items/{id}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
+        
 
         // Inventory Management
         Route::resource('inventory', InventoryController::class);
