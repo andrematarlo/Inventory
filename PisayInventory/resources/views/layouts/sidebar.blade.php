@@ -10,6 +10,19 @@
         </div>
     </div>
 
+    @php
+        // Get user roles and convert to array
+        $userRoles = auth()->check() && auth()->user()->role ? 
+            array_map('trim', explode(',', auth()->user()->role)) : [];
+        
+        // Check if user has any of these roles
+        $isAdmin = in_array('Admin', $userRoles);
+        $isHR = count(array_intersect($userRoles, ['Admin', 'HR Manager', 'HR Staff'])) > 0;
+        $isPurchasing = count(array_intersect($userRoles, ['Admin', 'Purchasing Manager', 'Purchasing Staff'])) > 0;
+        $isReceiving = count(array_intersect($userRoles, ['Admin', 'Receiving Manager', 'Receiving Staff'])) > 0;
+        $isInventory = count(array_intersect($userRoles, ['Admin', 'Inventory Manager', 'Inventory Staff'])) > 0;
+    @endphp
+
     <ul class="nav flex-column py-2">
         <li class="nav-item">
             <a href="{{ route('dashboard') }}" class="nav-link text-white {{ request()->routeIs('dashboard') ? 'active bg-primary' : '' }}">
@@ -17,8 +30,7 @@
                 <span>Dashboard</span>
             </a>
         </li>
-        {{-- Show Employee Management for everyone EXCEPT Inventory roles --}}
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin']))
+        @if($isAdmin)
         <li class="nav-item">
             <a class="nav-link {{ request()->routeIs('modules.*') ? 'active' : '' }}" href="{{ route('modules.index') }}">
                 <i class="bi bi-grid-3x3-gap me-2"></i>
@@ -26,8 +38,7 @@
             </a>
         </li>
         @endif
-        {{-- Show Employee Management for everyone EXCEPT Inventory roles --}}
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'HR Manager', 'HR Staff']))
+        @if($isHR)
         <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-people"></i>
@@ -52,7 +63,7 @@
             </ul>
         </li>
         @endif
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Purchasing Manager', 'Purchasing Staff']))
+        @if($isPurchasing)
         <li class="nav-item">
             <a href="{{ route('purchases.index') }}" class="nav-link text-white {{ request()->routeIs('purchases.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-cart4"></i>
@@ -60,7 +71,7 @@
             </a>
         </li>
         @endif
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Receiving Manager', 'Receiving Staff']))
+        @if($isReceiving)
         <li class="nav-item">
             <a href="{{ route('receiving.index') }}" class="nav-link text-white {{ request()->routeIs('receiving.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-box-seam"></i>
@@ -68,47 +79,37 @@
             </a>
         </li>
         @endif
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
+        @if($isInventory)
         <li class="nav-item">
             <a href="{{ route('items.index') }}" class="nav-link text-white {{ request()->routeIs('items.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-box"></i>
                 <span>Items</span>
             </a>
         </li>
-        @endif
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff'])) 
         <li class="nav-item">
             <a href="{{ route('inventory.index') }}" class="nav-link text-white {{ request()->routeIs('inventory.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-clipboard-data"></i>
                 <span>Inventory</span>
             </a>
         </li>
-        @endif
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
         <li class="nav-item">
             <a href="{{ route('suppliers.index') }}" class="nav-link text-white {{ request()->routeIs('suppliers.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-truck"></i>
                 <span>Suppliers</span>
             </a>
         </li>
-        @endif
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
         <li class="nav-item">
             <a href="{{ route('classifications.index') }}" class="nav-link text-white {{ request()->routeIs('classifications.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-tags"></i>
                 <span>Classifications</span>
             </a>
         </li>
-        @endif
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
         <li class="nav-item">
             <a href="{{ route('units.index') }}" class="nav-link text-white {{ request()->routeIs('units.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-rulers"></i>
                 <span>Units</span>
             </a>
         </li>
-        @endif
-        @if(auth()->check() && auth()->user()->role && in_array(trim(auth()->user()->role), ['System Admin', 'Admin', 'Inventory Manager', 'Inventory Staff']))
         <li class="nav-item">
             <a href="{{ route('reports.index') }}" class="nav-link text-white {{ request()->routeIs('reports.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-file-earmark-text"></i>
