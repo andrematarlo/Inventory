@@ -42,7 +42,8 @@ class ItemsImport implements ToModel, WithHeadingRow, WithValidation
             'ClassificationId' => $classificationId,
             'UnitOfMeasureId' => $unitId,
             'StocksAvailable' => (int)$this->getValue($row, 'StocksAvailable', $this->defaultStocks),
-            'ReorderPoint' => (int)$this->getValue($row, 'ReorderPoint', $this->defaultReorderPoint),
+            'ReorderPoint' => (int) $this->getValue($row, 'ReorderPoint', $this->defaultReorderPoint)
+                            ?: (int) ($row['reorder_point'] ?? $this->defaultReorderPoint),
             'CreatedById' => $this->createdById,
             'DateCreated' => now(),
             'IsDeleted' => false
@@ -129,10 +130,19 @@ private function getValue($row, $field, $default = null)
         $normalizedRow[trim(strtolower($key))] = $value;
     }
 
-    // Try to find the column with case-insensitive matching
+    // Normalize mapped column name
     $normalizedMappedColumn = trim(strtolower($mappedColumn));
-    return $normalizedRow[$normalizedMappedColumn] ?? $default;
+
+    // Ensure numeric values (for Stocks and ReorderPoint)
+    if (isset($normalizedRow[$normalizedMappedColumn])) {
+        return is_numeric($normalizedRow[$normalizedMappedColumn]) 
+            ? (int) $normalizedRow[$normalizedMappedColumn] 
+            : $default;
+    }
+
+    return $default;
 }
+
 
 
 public function rules(): array

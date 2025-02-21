@@ -370,21 +370,53 @@ class ItemController extends Controller
         try {
             DB::beginTransaction();
             
-            $item = Item::findOrFail($id);
+            // Enhanced debug logging
+            Log::info('Delete attempt details:', [
+                'received_id' => $id,
+                'id_type' => gettype($id),
+                'request_item_id' => request('item_id')
+            ]);
+            
+            // Try to get ID from different sources
+            $itemId = is_numeric($id) ? $id : request('item_id');
+            
+            if (!is_numeric($itemId)) {
+                Log::error('Invalid item ID received:', ['id' => $itemId]);
+                throw new \Exception('Invalid item ID');
+            }
+    
+            $item = Item::find($itemId);
+            if (!$item) {
+                Log::error('Item not found:', ['id' => $itemId]);
+                throw new \Exception('Item not found');
+            }
+    
+            // Log the item being deleted
+            Log::info('Found item to delete:', [
+                'item_id' => $item->ItemId,
+                'item_name' => $item->ItemName
+            ]);
+    
             $item->update([
                 'IsDeleted' => true,
                 'DeletedById' => Auth::id(),
-                'DateDeleted' => Carbon::now()
+                'DateDeleted' => now()
             ]);
-
+    
             DB::commit();
             return redirect()->route('items.index')->with('success', 'Item deleted successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Item deletion failed: ' . $e->getMessage());
+            Log::error('Item deletion failed:', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', 'Error deleting item: ' . $e->getMessage());
         }
     }
+
+
 
     public function restore($id)
     {
