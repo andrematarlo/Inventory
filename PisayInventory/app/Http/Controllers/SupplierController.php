@@ -204,19 +204,64 @@ class SupplierController extends Controller
      * Remove the specified resource from storage.
      */
     public function destroy($id)
-    {
-        $supplier = Supplier::findOrFail($id);
+{
+    try {
+        DB::beginTransaction();
         
+        // Debug logging
+        Log::info('Raw delete data:', [
+            'received_id' => $id,
+            'id_type' => gettype($id)
+        ]);
+
+        // Extract ID from object if needed
+        if (is_object($id) || is_array($id)) {
+            if (isset($id->SupplierID)) {
+                $id = $id->SupplierID;
+            } elseif (is_array($id) && isset($id['SupplierID'])) {
+                $id = $id['SupplierID'];
+            } elseif (property_exists($id, 'App\Models\Supplier')) {
+                $supplierData = $id->{'App\Models\Supplier'};
+                $id = $supplierData->SupplierID;
+            }
+        }
+
+        // If it's a JSON string, try to decode it
+        if (is_string($id) && strpos($id, '{') !== false) {
+            $decoded = json_decode($id, true);
+            if (isset($decoded['SupplierID'])) {
+                $id = $decoded['SupplierID'];
+            }
+        }
+
+        // Final validation
+        if (!is_numeric($id)) {
+            throw new \Exception('Invalid supplier ID');
+        }
+
+        $supplier = Supplier::where('SupplierID', $id)->first();
+        if (!$supplier) {
+            throw new \Exception('Supplier not found');
+        }
+
         $supplier->update([
             'IsDeleted' => true,
             'DeletedById' => Auth::id(),
-            'DateDeleted' => Carbon::now()->format('Y-m-d H:i:s')
+            'DateDeleted' => Carbon::now()
         ]);
 
+        DB::commit();
         return redirect()->route('suppliers.index')
             ->with('success', 'Supplier moved to trash successfully');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Supplier deletion failed:', [
+            'id' => $id,
+            'error' => $e->getMessage()
+        ]);
+        return back()->with('error', 'Failed to delete supplier: ' . $e->getMessage());
     }
-
+}
     public function restore($id)
     {
         try {

@@ -1,5 +1,4 @@
 @foreach($activeSuppliers as $supplier)
-<!-- Delete Supplier Modal -->
 <div class="modal fade" id="deleteModal{{ $supplier->SupplierID }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -8,6 +7,8 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <small class="text-muted">Supplier ID: {{ $supplier->SupplierID }}</small>
+                
                 <p>Are you sure you want to delete supplier: <strong>{{ $supplier->CompanyName }}</strong>?</p>
                 
                 @if($supplier->items->count() > 0)
@@ -25,7 +26,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST" class="d-inline">
+                <form action="{{ route('suppliers.destroy', ['supplier' => $supplier->SupplierID]) }}" 
+                    method="POST" 
+                    class="d-inline">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">
@@ -36,4 +39,4 @@
         </div>
     </div>
 </div>
-@endforeach 
+@endforeach
