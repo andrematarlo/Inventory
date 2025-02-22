@@ -224,163 +224,276 @@ class EmployeeController extends Controller
     }
 
     public function edit($id)
-    {
-        try {
-            $employee = Employee::with('roles')
-                ->where('IsDeleted', false)
-                ->findOrFail($id);
+{
+    try {
+        // Debug logging
+        Log::info('Raw employee edit data:', [
+            'received_id' => $id,
+            'id_type' => gettype($id)
+        ]);
 
-            $roles = Role::where('IsDeleted', false)
-                ->orderBy('RoleName')
-                ->get();
-
-            return view('employees.edit', compact('employee', 'roles'));
-        } catch (\Exception $e) {
-            Log::error('Error loading edit employee form: ' . $e->getMessage());
-            return back()->with('error', 'Error loading form: ' . $e->getMessage());
-        }
-    }
-
-    public function update(Request $request, $id)
-    {
-        try {
-            // Find the employee first
-            $employee = Employee::findOrFail($id);
-
-            // Validate basic fields
-            $validationRules = [
-                'FirstName' => 'required|string|max:100',
-                'LastName' => 'required|string|max:100',
-                'Email' => [
-                    'required',
-                    'email',
-                    'max:100',
-                    'unique:employee,Email,' . $id . ',EmployeeID',
-                    'regex:/^[a-zA-Z0-9._%+-]+@gmail\.com$/',
-                    'ends_with:gmail.com'
-                ],
-                'Username' => 'required|string|max:100|unique:UserAccount,Username,' . $employee->userAccount->UserAccountID . ',UserAccountID',
-                'Gender' => 'required|in:Male,Female',
-                'Address' => 'required|string|max:65535', // for TEXT field
-                'roles' => 'required|array|min:1',
-                'roles.*' => 'exists:roles,RoleId'
-            ];
-
-            $messages = [
-                'Email.regex' => 'The email must be a valid Gmail address (@gmail.com)',
-                'Email.ends_with' => 'The email must end with @gmail.com'
-            ];
-
-            // Add password validation only if password is being updated
-            if ($request->filled('Password')) {
-                $validationRules['Password'] = 'required|string|min:6|confirmed';
+        // Extract ID from object if needed
+        if (is_object($id) || is_array($id)) {
+            if (isset($id->EmployeeID)) {
+                $id = $id->EmployeeID;
+            } elseif (is_array($id) && isset($id['EmployeeID'])) {
+                $id = $id['EmployeeID'];
+            } elseif (property_exists($id, 'App\Models\Employee')) {
+                $employeeData = $id->{'App\Models\Employee'};
+                $id = $employeeData->EmployeeID;
             }
+        }
 
-            $request->validate($validationRules, $messages);
+        // If it's a JSON string, try to decode it
+        if (is_string($id) && strpos($id, '{') !== false) {
+            $decoded = json_decode($id, true);
+            if (isset($decoded['EmployeeID'])) {
+                $id = $decoded['EmployeeID'];
+            }
+        }
 
-            DB::beginTransaction();
+        // Final validation
+        if (!is_numeric($id)) {
+            throw new \Exception('Invalid employee ID');
+        }
 
-            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
-                ->where('IsDeleted', false)
-                ->firstOrFail();
+        $employee = Employee::with('roles')
+            ->where('EmployeeID', $id)
+            ->where('IsDeleted', false)
+            ->first();
 
-            // Get role names for UserAccount
-            $roleNames = Role::whereIn('RoleId', $request->roles)
-                ->pluck('RoleName')
-                ->implode(', ');
+        if (!$employee) {
+            throw new \Exception('Employee not found');
+        }
 
-            // Update employee details
-            $employee->update([
-                'FirstName' => $request->FirstName,
-                'LastName' => $request->LastName,
-                'Email' => $request->Email,
-                'Gender' => $request->Gender,
-                'Address' => $request->Address,
-                'ModifiedByID' => $currentEmployee->EmployeeID,
+        $roles = Role::where('IsDeleted', false)
+            ->orderBy('RoleName')
+            ->get();
+
+        return view('employees.edit', compact('employee', 'roles'));
+    } catch (\Exception $e) {
+        Log::error('Error loading edit employee form:', [
+            'id' => $id,
+            'error' => $e->getMessage()
+        ]);
+        return back()->with('error', 'Error loading form: ' . $e->getMessage());
+    }
+}
+
+public function update(Request $request, $id)
+{
+    try {
+        // Debug logging
+        Log::info('Raw employee update data:', [
+            'received_id' => $id,
+            'id_type' => gettype($id)
+        ]);
+
+        // Extract ID from object if needed
+        if (is_object($id) || is_array($id)) {
+            if (isset($id->EmployeeID)) {
+                $id = $id->EmployeeID;
+            } elseif (is_array($id) && isset($id['EmployeeID'])) {
+                $id = $id['EmployeeID'];
+            } elseif (property_exists($id, 'App\Models\Employee')) {
+                $employeeData = $id->{'App\Models\Employee'};
+                $id = $employeeData->EmployeeID;
+            }
+        }
+
+        // If it's a JSON string, try to decode it
+        if (is_string($id) && strpos($id, '{') !== false) {
+            $decoded = json_decode($id, true);
+            if (isset($decoded['EmployeeID'])) {
+                $id = $decoded['EmployeeID'];
+            }
+        }
+
+        // Final validation
+        if (!is_numeric($id)) {
+            throw new \Exception('Invalid employee ID');
+        }
+
+        // Find the employee
+        $employee = Employee::where('EmployeeID', $id)->first();
+        if (!$employee) {
+            throw new \Exception('Employee not found');
+        }
+
+        // Validate basic fields
+        $validationRules = [
+            'FirstName' => 'required|string|max:100',
+            'LastName' => 'required|string|max:100',
+            'Email' => [
+                'required',
+                'email',
+                'max:100',
+                'unique:employee,Email,' . $id . ',EmployeeID',
+                'regex:/^[a-zA-Z0-9._%+-]+@gmail\.com$/',
+                'ends_with:gmail.com'
+            ],
+            'Username' => 'required|string|max:100|unique:UserAccount,Username,' . $employee->userAccount->UserAccountID . ',UserAccountID',
+            'Gender' => 'required|in:Male,Female',
+            'Address' => 'required|string|max:65535',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'exists:roles,RoleId'
+        ];
+
+        $messages = [
+            'Email.regex' => 'The email must be a valid Gmail address (@gmail.com)',
+            'Email.ends_with' => 'The email must end with @gmail.com'
+        ];
+
+        // Add password validation only if password is being updated
+        if ($request->filled('Password')) {
+            $validationRules['Password'] = 'required|string|min:6|confirmed';
+        }
+
+        $request->validate($validationRules, $messages);
+
+        DB::beginTransaction();
+
+        $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+            ->where('IsDeleted', false)
+            ->firstOrFail();
+
+        // Get role names for UserAccount
+        $roleNames = Role::whereIn('RoleId', $request->roles)
+            ->pluck('RoleName')
+            ->implode(', ');
+
+        // Update employee details
+        $employee->update([
+            'FirstName' => $request->FirstName,
+            'LastName' => $request->LastName,
+            'Email' => $request->Email,
+            'Gender' => $request->Gender,
+            'Address' => $request->Address,
+            'ModifiedByID' => $currentEmployee->EmployeeID,
+            'DateModified' => now()
+        ]);
+
+        // Handle roles update
+        DB::table('employee_roles')
+            ->where('EmployeeId', $id)
+            ->where('IsDeleted', false)
+            ->update([
+                'IsDeleted' => true,
+                'DeletedById' => $currentEmployee->EmployeeID,
+                'DateDeleted' => now(),
+                'ModifiedById' => $currentEmployee->EmployeeID,
                 'DateModified' => now()
             ]);
 
-            // Handle roles update
-            DB::table('employee_roles')
-                ->where('EmployeeId', $id)
-                ->where('IsDeleted', false)
-                ->update([
-                    'IsDeleted' => true,
-                    'DeletedById' => $currentEmployee->EmployeeID,
-                    'DateDeleted' => now(),
-                    'ModifiedById' => $currentEmployee->EmployeeID,
-                    'DateModified' => now()
-                ]);
-
-            foreach ($request->roles as $roleId) {
-                DB::table('employee_roles')->insert([
-                    'EmployeeId' => $id,
-                    'RoleId' => $roleId,
-                    'IsDeleted' => false,
-                    'DateCreated' => now(),
-                    'CreatedById' => $currentEmployee->EmployeeID
-                ]);
-            }
-
-            // Update user account if it exists
-            if ($employee->userAccount) {
-                $updateData = [
-                    'Username' => $request->Username,
-                    'role' => $roleNames,
-                    'ModifiedByID' => $currentEmployee->EmployeeID,
-                    'DateModified' => now()
-                ];
-
-                // Add password to update data if provided
-                if ($request->filled('Password')) {
-                    // Use Hash facade directly for password hashing
-                    $updateData['Password'] = Hash::make($request->Password);
-                }
-
-                // Debug log to check the password value
-                \Log::info('Password Update Data:', [
-                    'has_password' => $request->filled('Password'),
-                    'password_hash' => $updateData['Password'] ?? 'no password update'
-                ]);
-
-                $employee->userAccount->update($updateData);
-            }
-
-            DB::commit();
-            return redirect()->route('employees.index')
-                ->with('success', 'Employee updated successfully');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error updating employee: ' . $e->getMessage());
-            return back()->with('error', 'Error updating employee: ' . $e->getMessage())
-                ->withInput();
+        foreach ($request->roles as $roleId) {
+            DB::table('employee_roles')->insert([
+                'EmployeeId' => $id,
+                'RoleId' => $roleId,
+                'IsDeleted' => false,
+                'DateCreated' => now(),
+                'CreatedById' => $currentEmployee->EmployeeID
+            ]);
         }
+
+        // Update user account if it exists
+        if ($employee->userAccount) {
+            $updateData = [
+                'Username' => $request->Username,
+                'role' => $roleNames,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
+                'DateModified' => now()
+            ];
+
+            // Add password to update data if provided
+            if ($request->filled('Password')) {
+                $updateData['Password'] = Hash::make($request->Password);
+            }
+
+            $employee->userAccount->update($updateData);
+        }
+
+        DB::commit();
+        return redirect()->route('employees.index')
+            ->with('success', 'Employee updated successfully');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error updating employee:', [
+            'id' => $id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return back()->with('error', 'Error updating employee: ' . $e->getMessage())
+            ->withInput();
     }
+}
 
     public function destroy($id)
-    {
-        try {
-            $userPermissions = $this->getUserPermissions();
-            
-            if (!$userPermissions || !$userPermissions->CanDelete) {
-                return redirect()->back()->with('error', 'You do not have permission to delete employees.');
-            }
+{
+    try {
+        DB::beginTransaction();
 
-            $employee = Employee::findOrFail($id);
-            $employee->IsDeleted = true;
-            $employee->DeletedByID = auth()->id();
-            $employee->DateDeleted = now();
-            $employee->save();
+        // Debug logging
+        Log::info('Raw employee delete data:', [
+            'received_id' => $id,
+            'id_type' => gettype($id)
+        ]);
 
-            return redirect()->route('employees.index')
-                ->with('success', 'Employee deleted successfully');
-
-        } catch (\Exception $e) {
-            \Log::error('Error deleting employee: ' . $e->getMessage());
-            return back()->with('error', 'Error deleting employee: ' . $e->getMessage());
+        // Check permissions first
+        $userPermissions = $this->getUserPermissions();
+        if (!$userPermissions || !$userPermissions->CanDelete) {
+            throw new \Exception('You do not have permission to delete employees.');
         }
+
+        // Extract ID from object if needed
+        if (is_object($id) || is_array($id)) {
+            if (isset($id->EmployeeID)) {
+                $id = $id->EmployeeID;
+            } elseif (is_array($id) && isset($id['EmployeeID'])) {
+                $id = $id['EmployeeID'];
+            } elseif (property_exists($id, 'App\Models\Employee')) {
+                $employeeData = $id->{'App\Models\Employee'};
+                $id = $employeeData->EmployeeID;
+            }
+        }
+
+        // If it's a JSON string, try to decode it
+        if (is_string($id) && strpos($id, '{') !== false) {
+            $decoded = json_decode($id, true);
+            if (isset($decoded['EmployeeID'])) {
+                $id = $decoded['EmployeeID'];
+            }
+        }
+
+        // Final validation
+        if (!is_numeric($id)) {
+            throw new \Exception('Invalid employee ID');
+        }
+
+        $employee = Employee::where('EmployeeID', $id)->first();
+        if (!$employee) {
+            throw new \Exception('Employee not found');
+        }
+
+        $employee->update([
+            'IsDeleted' => true,
+            'DeletedById' => Auth::id(),
+            'DateDeleted' => now()
+        ]);
+
+        DB::commit();
+        return redirect()->route('employees.index')
+            ->with('success', 'Employee moved to trash successfully');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Employee deletion failed:', [
+            'id' => $id,
+            'error' => $e->getMessage()
+        ]);
+        return back()->with('error', 'Error deleting employee: ' . $e->getMessage());
     }
+}
 
     public function restore($id)
     {
