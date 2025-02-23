@@ -217,13 +217,16 @@
 
 @section('content')
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Employee Management</h2>
         <div>
             <button class="btn btn-outline-secondary" type="button" id="toggleButton">
                 <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
             </button>
             @if($userPermissions && $userPermissions->CanAdd)
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importEmployeesModal">
+                    <i class="bi bi-upload"></i> Import Employees
+                </button>
                 <a href="{{ route('employees.create') }}" class="btn btn-primary">
                     <i class="bi bi-plus-lg"></i> Add Employee
                 </a>
@@ -358,6 +361,93 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Employees Modal -->
+<div class="modal fade" id="importEmployeesModal" tabindex="-1" aria-labelledby="importEmployeesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importEmployeesModalLabel">Import Employees</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="importForm" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div id="step1">
+                        <div class="mb-3">
+                            <label for="excel_file" class="form-label">Upload Excel File</label>
+                            <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="previewBtn">Preview Columns</button>
+                    </div>
+
+                    <div id="step2" style="display: none;">
+                        <h5>Map Excel Columns to Employee Fields</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Field</th>
+                                        <th>Excel Column</th>
+                                        
+                                    </tr>
+                                </thead>
+                                <tbody>
+    <tr>
+        <td>Name <span class="text-danger">*</span></td>
+        <td>
+            <select name="column_mapping[Name]" class="form-select form-select-sm" required>
+                <option value="">Select Column</option>
+            </select>
+        </td>
+        
+    </tr>
+    <tr>
+        <td>Email <span class="text-danger">*</span></td>
+        <td>
+            <select name="column_mapping[Email]" class="form-select form-select-sm" required>
+                <option value="">Select Column</option>
+            </select>
+        </td>
+        
+    </tr>
+    <tr>
+        <td>Address <span class="text-danger">*</span></td>
+        <td>
+            <select name="column_mapping[Address]" class="form-select form-select-sm" required>
+                <option value="">Select Column</option>
+            </select>
+        </td>
+        
+    </tr>
+    <tr>
+        <td>Gender <span class="text-danger">*</span></td>
+        <td>
+            <select name="column_mapping[Gender]" class="form-select form-select-sm" required>
+                <option value="">Select Column</option>
+            </select>
+        </td>
+        
+    </tr>
+    <tr>
+        <td>Role <span class="text-danger">*</span></td>
+        <td>
+            <select name="column_mapping[Role]" class="form-select form-select-sm" required>
+                <option value="">Select Column</option>
+            </select>
+        </td>
+        
+    </tr>
+</tbody>
+                            </table>
+                        </div>
+                        <button type="submit" class="btn btn-success" id="importBtn">Import Data</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -521,6 +611,118 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initial column adjustment
     setTimeout(adjustTables, 100);
+
+
+                   // Preview function similar to Items Import
+                   $('#previewBtn').click(function() {
+    const fileInput = document.getElementById('excel_file');
+    if (!fileInput.files.length) {
+        alert('Please select a file first');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('excel_file', fileInput.files[0]);
+    formData.append('_token', '{{ csrf_token() }}');
+
+    $.ajax({
+        url: '{{ route("employees.preview-columns") }}',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            // Clear and populate all column mapping dropdowns
+            const columnSelects = $('select[name^="column_mapping"]');
+            columnSelects.empty().append('<option value="">Select Column</option>');
+            
+            response.columns.forEach(column => {
+                columnSelects.append(`<option value="${column}">${column}</option>`);
+            });
+
+            // Auto-map columns based on similar names
+            response.columns.forEach(column => {
+                const lowerColumn = column.toLowerCase();
+                
+                if (lowerColumn.includes('name')) {
+                    $('select[name="column_mapping[Name]"]').val(column);
+                }
+                if (lowerColumn.includes('email')) {
+                    $('select[name="column_mapping[Email]"]').val(column);
+                }
+                if (lowerColumn.includes('address')) {
+                    $('select[name="column_mapping[Address]"]').val(column);
+                }
+                if (lowerColumn.includes('gender')) {
+                    $('select[name="column_mapping[Gender]"]').val(column);
+                }
+                if (lowerColumn.includes('role')) {
+                    $('select[name="column_mapping[Role]"]').val(column);
+                }
+            });
+
+            $('#step1').hide();
+            $('#step2').show();
+            $('#importBtn').show();
+        },
+        error: function(xhr) {
+            alert('Error reading Excel file: ' + xhr.responseText);
+        }
+    });
+});
+// Add form submission handler
+$('#importForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    // Check if file is selected
+    if (!$('#excel_file').val()) {
+        alert('Please select an Excel file');
+        return;
+    }
+
+    // Check if all required column mappings are selected
+    const requiredFields = ['Name', 'Email', 'Address', 'Gender', 'Role'];
+    let missingFields = [];
+    
+    requiredFields.forEach(field => {
+        if (!$(`select[name="column_mapping[${field}]"]`).val()) {
+            missingFields.push(field);
+        }
+    });
+
+    if (missingFields.length > 0) {
+        alert(`Please map the following required columns: ${missingFields.join(', ')}`);
+        return;
+    }
+
+    // Show loading state
+    const importBtn = $('#importBtn');
+    importBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importing...');
+    
+    const formData = new FormData(this);
+    
+    $.ajax({
+        url: '{{ route("employees.import") }}',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                alert('Import successful!');
+                window.location.reload();
+            } else {
+                alert('Import failed: ' + (response.error || 'Unknown error'));
+                importBtn.prop('disabled', false).text('Import Data');
+            }
+        },
+        error: function(xhr) {
+            const errorMessage = xhr.responseJSON?.error || 'An error occurred during import';
+            alert('Import failed: ' + errorMessage);
+            importBtn.prop('disabled', false).text('Import Data');
+        }
+    });
+});
 });
 </script>
 @endsection

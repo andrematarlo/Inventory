@@ -38,8 +38,6 @@ Route::middleware('guest')->group(function () {
 // Protected Routes with /inventory Prefix
 Route::middleware('auth')->group(function () {
     Route::prefix('inventory')->group(function () {
-        Route::post('/items/preview-columns', [ItemController::class, 'previewColumns'])->name('items.preview-columns');
-Route::post('/items/import', [ItemController::class, 'import'])->name('items.import');
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
         // Dashboard
@@ -51,6 +49,8 @@ Route::post('/items/import', [ItemController::class, 'import'])->name('items.imp
         Route::post('items/{id}/restore', [ItemController::class, 'restore'])->name('items.restore');
         Route::post('items/{id}/stock-in', [ItemController::class, 'stockIn'])->name('items.stock-in');
         Route::post('items/{id}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
+        Route::post('/items/preview-columns', [ItemController::class, 'previewColumns'])->name('items.preview-columns');
+        Route::post('/items/import', [ItemController::class, 'import'])->name('items.import');
         
 
         // Inventory Management
@@ -88,6 +88,9 @@ Route::post('/items/import', [ItemController::class, 'import'])->name('items.imp
         // Employee Management
         Route::resource('employees', EmployeeController::class);
         Route::post('employees/{employeeId}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+        Route::post('/employees/preview-columns', [EmployeeController::class, 'previewColumns'])->name('employees.preview-columns');
+        Route::post('/employees/import', [EmployeeController::class, 'import'])->name('employees.import');
+
 
         // Role Management
         Route::resource('roles', RoleController::class, ['except' => ['show']]);

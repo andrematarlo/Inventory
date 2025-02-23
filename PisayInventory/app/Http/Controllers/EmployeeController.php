@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Imports\EmployeesImport;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class EmployeeController extends Controller
 {
@@ -32,33 +35,158 @@ class EmployeeController extends Controller
     }
 
     public function index()
-    {
-        try {
-            $userPermissions = $this->getUserPermissions();
-            
-            if (!$userPermissions || !$userPermissions->CanView) {
-                return redirect()->back()->with('error', 'You do not have permission to view employees.');
-            }
-
-            $activeEmployees = Employee::where('IsDeleted', false)
-                ->orderBy('LastName')
-                ->get();
-
-            $deletedEmployees = Employee::where('IsDeleted', true)
-                ->orderBy('LastName')
-                ->get();
-
-            return view('employees.index', [
-                'activeEmployees' => $activeEmployees,
-                'deletedEmployees' => $deletedEmployees,
-                'userPermissions' => $userPermissions
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Error loading employees: ' . $e->getMessage());
-            return back()->with('error', 'Error loading employees: ' . $e->getMessage());
+{
+    try {
+        $userPermissions = $this->getUserPermissions();
+        
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->back()->with('error', 'You do not have permission to view employees.');
         }
+
+        $activeEmployees = Employee::where('IsDeleted', false)
+            ->orderBy('LastName')
+            ->get();
+
+        $deletedEmployees = Employee::where('IsDeleted', true)
+            ->orderBy('LastName')
+            ->get();
+
+        // Get roles for the import modal
+        $roles = Role::where('IsDeleted', false)->get();
+
+        return view('employees.index', [
+            'activeEmployees' => $activeEmployees,
+            'deletedEmployees' => $deletedEmployees,
+            'userPermissions' => $userPermissions,
+            'roles' => $roles
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error loading employees: ' . $e->getMessage());
+        return back()->with('error', 'Error loading employees: ' . $e->getMessage());
     }
+}
+
+
+
+public function import(Request $request)
+{
+    try {
+        // First check permissions
+        $userPermissions = $this->getUserPermissions();
+        if (!$userPermissions || !$userPermissions->CanAdd) {
+            throw new \Exception('You do not have permission to import employees.');
+        }
+
+        // Validate request
+        $request->validate([
+            'excel_file' => 'required|mimes:xlsx,xls',
+            'column_mapping' => 'required|array',
+            'column_mapping.Name' => 'required|string',
+            'column_mapping.Email' => 'required|string',
+            'column_mapping.Address' => 'required|string',
+            'column_mapping.Gender' => 'required|string',
+            'column_mapping.Role' => 'required|string'
+        ]);
+
+        DB::beginTransaction();
+
+        // Simplified import constructor - only needs column mapping and created by ID
+        $import = new EmployeesImport(
+            $request->column_mapping,
+            Auth::id()
+        );
+
+        Excel::import($import, $request->file('excel_file'));
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Employees imported successfully!'
+        ]);
+
+    } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+        DB::rollBack();
+        $failures = $e->failures();
+        $error = $failures[0]->errors()[0] ?? 'Validation error during import';
+        
+        Log::error('Import validation error:', [
+            'error' => $error,
+            'failures' => $failures
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'error' => $error
+        ], 422);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error importing employees:', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'error' => 'Import failed: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function previewColumns(Request $request)
+{
+    try {
+        $request->validate([
+            'excel_file' => 'required|mimes:xlsx,xls',
+        ]);
+
+        $path = $request->file('excel_file')->getRealPath();
+        $spreadsheet = IOFactory::load($path);
+        $worksheet = $spreadsheet->getActiveSheet();
+        $columns = [];
+
+        // Get the first row (headers)
+        foreach ($worksheet->getRowIterator(1, 1) as $row) {
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+
+            foreach ($cellIterator as $cell) {
+                $colName = trim($cell->getValue());
+                if (!empty($colName)) {
+                    // Clean the column name
+                    $colName = str_replace(['_', '-'], ' ', $colName);
+                    $colName = trim($colName);
+                    $columns[] = $colName;
+                }
+            }
+        }
+
+        // Map similar column names
+        $columnMappings = [
+            'Name' => ['name', 'full name', 'fullname', 'complete name'],
+            'Email' => ['email', 'e-mail', 'mail', 'email address'],
+            'Address' => ['address', 'addr', 'location'],
+            'Gender' => ['gender', 'sex'],
+            'Role' => ['role', 'roles', 'position', 'designation']
+        ];
+
+        Log::info('Excel columns found:', [
+            'columns' => $columns,
+            'mappings' => $columnMappings
+        ]);
+
+        return response()->json([
+            'columns' => $columns,
+            'mappings' => $columnMappings
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error previewing Excel columns: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
 
     public function create()
     {
