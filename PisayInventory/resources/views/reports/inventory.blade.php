@@ -1,73 +1,86 @@
-@extends('layouts.app')
+@extends('reports.layout')
 
-@section('title', 'Inventory Report')
+@section('report-title', 'Inventory Report')
 
-@section('content')
-<div class="container">
-    <!-- Report Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2>Inventory Report</h2>
-            <p class="text-muted">
-                Period: {{ $startDate->format('M d, Y') }} - {{ $endDate->format('M d, Y') }}
-            </p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{{ route('reports.inventory', ['start_date' => $startDate->format('Y-m-d'), 'end_date' => $endDate->format('Y-m-d'), 'report_type' => 'all']) }}" 
-               class="btn btn-outline-primary {{ $reportType === 'all' ? 'active' : '' }}">
-                All Movements
-            </a>
-            <a href="{{ route('reports.inventory', ['start_date' => $startDate->format('Y-m-d'), 'end_date' => $endDate->format('Y-m-d'), 'report_type' => 'in']) }}"
-               class="btn btn-outline-success {{ $reportType === 'in' ? 'active' : '' }}">
-                Stock In
-            </a>
-            <a href="{{ route('reports.inventory', ['start_date' => $startDate->format('Y-m-d'), 'end_date' => $endDate->format('Y-m-d'), 'report_type' => 'out']) }}"
-               class="btn btn-outline-danger {{ $reportType === 'out' ? 'active' : '' }}">
-                Stock Out
-            </a>
-            <button onclick="window.print()" class="btn btn-secondary">
-                <i class="bi bi-printer"></i> Print
-            </button>
-            <a href="{{ route('reports.inventory.pdf', ['start_date' => $startDate->format('Y-m-d'), 'end_date' => $endDate->format('Y-m-d'), 'report_type' => $reportType]) }}" class="btn btn-primary">
-                <i class="fas fa-file-pdf"></i> Download PDF
-            </a>
+@section('report-subtitle')
+Period: {{ $startDate->format('M d, Y') }} - {{ $endDate->format('M d, Y') }}
+@endsection
+
+@section('report-actions')
+<a href="{{ route('reports.inventory', ['start_date' => $startDate->format('Y-m-d'), 'end_date' => $endDate->format('Y-m-d'), 'report_type' => 'all']) }}" 
+   class="btn btn-outline-primary {{ $reportType === 'all' ? 'active' : '' }}">
+    All Movements
+</a>
+<a href="{{ route('reports.inventory', ['start_date' => $startDate->format('Y-m-d'), 'end_date' => $endDate->format('Y-m-d'), 'report_type' => 'in']) }}"
+   class="btn btn-outline-success {{ $reportType === 'in' ? 'active' : '' }}">
+    Stock In
+</a>
+<a href="{{ route('reports.inventory', ['start_date' => $startDate->format('Y-m-d'), 'end_date' => $endDate->format('Y-m-d'), 'report_type' => 'out']) }}"
+   class="btn btn-outline-danger {{ $reportType === 'out' ? 'active' : '' }}">
+    Stock Out
+</a>
+<a href="{{ route('reports.inventory.pdf', ['start_date' => $startDate->format('Y-m-d'), 'end_date' => $endDate->format('Y-m-d'), 'report_type' => $reportType]) }}" 
+   class="btn btn-primary">
+    <i class="bi bi-file-pdf"></i> Download PDF
+</a>
+@endsection
+
+@section('report-content')
+<!-- Summary Stats Cards (Screen only) -->
+<div class="row g-4 mb-4 no-print">
+    <div class="col-md-6 col-lg-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6 class="card-title">Total Movements</h6>
+                <h3 class="card-text">{{ number_format($summary['total_items']) }}</h3>
+            </div>
         </div>
     </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6 class="card-title">Total Stock In</h6>
+                <h3 class="card-text">{{ number_format($summary['total_in']) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h6 class="card-title">Total Stock Out</h6>
+                <h3 class="card-text">{{ number_format($summary['total_out']) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6 class="card-title">Unique Items</h6>
+                <h3 class="card-text">{{ number_format($summary['unique_items']) }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- Summary Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-6 col-lg-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Total Movements</h6>
-                    <h3 class="card-text">{{ number_format($summary['total_items']) }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Total Stock In</h6>
-                    <h3 class="card-text">{{ number_format($summary['total_in']) }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="card bg-danger text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Total Stock Out</h6>
-                    <h3 class="card-text">{{ number_format($summary['total_out']) }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Unique Items</h6>
-                    <h3 class="card-text">{{ number_format($summary['unique_items']) }}</h3>
-                </div>
-            </div>
-        </div>
+<!-- Main Content (Both Print and Screen) -->
+<div class="print-content">
+    <!-- Print-only Header -->
+    <div class="text-center mb-4 print-only">
+        <h2>PSHS Inventory System</h2>
+        <h3>Inventory Report</h3>
+        <p>Period: {{ $startDate->format('M d, Y') }} - {{ $endDate->format('M d, Y') }}</p>
+    </div>
+
+    <!-- Summary Table (Print-only) -->
+    <div class="mb-4 print-only">
+        <table class="table table-bordered">
+            <tr>
+                <td><strong>Total Movements:</strong> {{ number_format($summary['total_items']) }}</td>
+                <td><strong>Total Stock In:</strong> {{ number_format($summary['total_in']) }}</td>
+                <td><strong>Total Stock Out:</strong> {{ number_format($summary['total_out']) }}</td>
+                <td><strong>Unique Items:</strong> {{ number_format($summary['unique_items']) }}</td>
+            </tr>
+        </table>
     </div>
 
     <!-- Stock Movements -->
@@ -160,29 +173,4 @@
         </div>
     </div>
 </div>
-
-@push('styles')
-<style>
-    @media print {
-        .btn, .nav, .footer {
-            display: none !important;
-        }
-        .card {
-            border: none !important;
-        }
-        .card-header {
-            background: none !important;
-        }
-        .badge {
-            border: 1px solid #000 !important;
-        }
-        .text-success {
-            color: #000 !important;
-        }
-        .text-danger {
-            color: #000 !important;
-        }
-    }
-</style>
-@endpush
 @endsection
