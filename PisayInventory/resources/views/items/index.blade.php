@@ -229,14 +229,6 @@
                             @endforelse
                         </tbody>
                     </table>
-<<<<<<< HEAD
-=======
-                    <div class="d-flex justify-content-end mt-3">
-                        <div class="custom-pagination">
-                            {{ $deletedItems->links() }}
-                        </div>
-                    </div>
->>>>>>> 236dfd44d8e294a7284511103c7dca911d0ea9d3
                 </div>
             </div>
         </div>
