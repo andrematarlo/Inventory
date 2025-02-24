@@ -5,35 +5,41 @@
 @section('content')
 
 <div class="container">
-    <!-- Header Section -->
-     
-    <div class="mb-4">
-        <h2 class="mb-3">Inventory Management</h2>
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="btn-group" role="group">
-                <a href="{{ route('inventory.index') }}" 
-                   class="btn btn-outline-primary {{ !request('show_deleted') ? 'active' : '' }}">
-                    Active Records
-                </a>
-                <a href="{{ route('inventory.index', ['show_deleted' => 1]) }}" 
-                   class="btn btn-danger {{ request('show_deleted') ? 'active' : '' }}">
-                    <i class="bi bi-trash"></i> Show Deleted Records
-                </a>
-            </div>
-            {{-- Only show Add Inventory button if not Inventory Staff --}}
-            @if($userPermissions && $userPermissions->CanAdd)
-            <button type="button" 
-                    class="btn btn-primary d-flex align-items-center gap-1" 
-                    data-bs-toggle="modal" 
-                    data-bs-target="#addInventoryModal">
-                <i class="bi bi-plus-lg"></i>
-                Add Inventory
-            </button>
-            @endif
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Inventory Management</h2>
+        @if($userPermissions && $userPermissions->CanAdd)
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addInventoryModal">
+            <i class="bi bi-plus-lg"></i> Add Inventory
+        </button>
+        @endif
     </div>
 
-    <div class="card">
+    <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn btn-primary active" id="activeRecords">Active Records</button>
+        <button type="button" class="btn btn-outline-danger" id="deletedRecords">
+            <i class="bi bi-trash"></i> Show Deleted Records
+        </button>
+    </div>
+
+    <!-- Active Records Card -->
+    <div class="card mb-4" id="activeRecordsCard">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Active Inventory</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <div class="input-group">
+                        <input type="text" 
+                               class="form-control" 
+                               id="activeSearchInput" 
+                               placeholder="Search..."
+                               aria-label="Search">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>Showing {{ $inventories->firstItem() ?? 0 }} to {{ $inventories->lastItem() ?? 0 }} of {{ $inventories->total() }} results</div>
@@ -78,14 +84,13 @@
                             <th>Status <i class="bi bi-arrow-down-up small-icon"></i></th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="activeTableBody">
                         @forelse($inventories as $inventory)
                         <tr>
-                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                             <td>
                                 <div class="btn-group btn-group-sm">
+                                    {{-- Show Stock Out button for everyone --}}
                                     @if(!$inventory->IsDeleted)
-                                        {{-- Show Stock Out button for everyone --}}
                                         <button type="button" 
                                                 class="btn btn-sm btn-blue" 
                                                 data-bs-toggle="modal" 
@@ -94,23 +99,24 @@
                                             <i class="bi bi-box-arrow-right me-1"></i>
                                             Stock Out
                                         </button>
-                                    @if($userPermissions && $userPermissions->CanDelete)
-                                    <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
-                                        method="POST" 
-                                        style="margin: 0;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" 
-                                                class="btn btn-danger"
-                                                onclick="return confirm('Are you sure you want to delete this record?');">
-                                            <i class="bi bi-trash me-1"></i>
-                                            Delete
-                                        </button>
-                                    </form>
-                                    @endif
+                                        {{-- Show Delete button for admin or users with delete permission --}}
+                                        @if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanDelete))
+                                        <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
+                                            method="POST" 
+                                            style="margin: 0;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    class="btn btn-danger"
+                                                    onclick="return confirm('Are you sure you want to delete this record?');">
+                                                <i class="bi bi-trash me-1"></i>
+                                                Delete
+                                            </button>
+                                        </form>
+                                        @endif
                                     @else
-                                        {{-- Show Restore button only if not Inventory Manager or Staff --}}
-                                        @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
+                                        {{-- Show Restore button for admin or non-inventory staff --}}
+                                        @if(auth()->user()->role === 'Admin' || (auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff'))
                                         <form action="{{ route('inventory.restore', $inventory->InventoryId) }}" 
                                               method="POST" 
                                               style="margin: 0;">
@@ -127,7 +133,148 @@
                                     @endif
                                 </div>
                             </td>
-                            @endif
+                            <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
+                            <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
+                            <td>{{ $inventory->StocksAdded }}</td>
+                            <td>{{ $inventory->StockOut }}</td>
+                            <td>{{ $inventory->StocksAvailable }}</td>
+                            <td>{{ $inventory->created_by_user->Username ?? 'N/A' }}</td>
+                            <td>{{ date('Y-m-d h:i:s A', strtotime($inventory->DateCreated)) }}</td>
+                            <td>{{ optional($inventory->modified_by_user)->Username ?? 'N/A' }}</td>
+                            <td>{{ date('Y-m-d h:i:s A', strtotime($inventory->DateModified)) }}</td>
+                            <td>{{ optional($inventory->deleted_by_user)->Username ?? 'N/A' }}</td>
+                            <td>{{ $inventory->DateDeleted ? date('Y-m-d H:i', strtotime($inventory->DateDeleted)) : 'N/A' }}</td>
+                            <td>
+                                @if($inventory->IsDeleted)
+                                    <span class="badge bg-danger">Deleted</span>
+                                @else
+                                    <span class="badge bg-success">Active</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="13" class="text-center">No inventory records found</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deleted Records Card -->
+    <div class="card mb-4" id="deletedRecordsCard" style="display: none;">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Deleted Inventory</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <div class="input-group">
+                        <input type="text" 
+                               class="form-control" 
+                               id="deletedSearchInput" 
+                               placeholder="Search..."
+                               aria-label="Search">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>Showing {{ $trashedInventories->firstItem() ?? 0 }} to {{ $trashedInventories->lastItem() ?? 0 }} of {{ $trashedInventories->total() }} results</div>
+                <div class="pagination-sm">
+                    @if($trashedInventories->currentPage() > 1)
+                        <a href="{{ $trashedInventories->previousPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </a>
+                    @endif
+                    
+                    @for($i = 1; $i <= $trashedInventories->lastPage(); $i++)
+                        <a href="{{ $trashedInventories->url($i) }}" 
+                           class="btn btn-sm {{ $i == $trashedInventories->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
+                            {{ $i }}
+                        </a>
+                    @endfor
+
+                    @if($trashedInventories->hasMorePages())
+                        <a href="{{ $trashedInventories->nextPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </a>
+                    @endif
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 320px">Actions</th>
+                            <th>Item <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Classification <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Stocks In <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Stocks Out <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Stocks Available <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Created By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Created <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Modified By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Modified <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Deleted By <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Date Deleted <i class="bi bi-arrow-down-up small-icon"></i></th>
+                            <th>Status <i class="bi bi-arrow-down-up small-icon"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="deletedTableBody">
+                        @forelse($trashedInventories as $inventory)
+                        <tr>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {{-- Show Stock Out button for everyone --}}
+                                    @if(!$inventory->IsDeleted)
+                                        <button type="button" 
+                                                class="btn btn-sm btn-blue" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#stockOutModal{{ $inventory->InventoryId }}"
+                                                title="Stock Out">
+                                            <i class="bi bi-box-arrow-right me-1"></i>
+                                            Stock Out
+                                        </button>
+                                        {{-- Show Delete button for admin or users with delete permission --}}
+                                        @if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanDelete))
+                                        <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" 
+                                            method="POST" 
+                                            style="margin: 0;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    class="btn btn-danger"
+                                                    onclick="return confirm('Are you sure you want to delete this record?');">
+                                                <i class="bi bi-trash me-1"></i>
+                                                Delete
+                                            </button>
+                                        </form>
+                                        @endif
+                                    @else
+                                        {{-- Show Restore button for admin or non-inventory staff --}}
+                                        @if(auth()->user()->role === 'Admin' || (auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff'))
+                                        <form action="{{ route('inventory.restore', $inventory->InventoryId) }}" 
+                                              method="POST" 
+                                              style="margin: 0;">
+                                            @csrf
+                                            @method('PUT')
+                                            <button type="submit" 
+                                                    class="btn btn-success"
+                                                    onclick="return confirm('Are you sure you want to restore this record?');">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i>
+                                                Restore
+                                            </button>
+                                        </form>
+                                        @endif
+                                    @endif
+                                </div>
+                            </td>
                             <td>{{ $inventory->item->ItemName ?? 'N/A' }}</td>
                             <td>{{ $inventory->item->classification->ClassificationName ?? 'N/A' }}</td>
                             <td>{{ $inventory->StocksAdded }}</td>
@@ -291,7 +438,78 @@
 
 @section('scripts')
 <script>
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
+    const activeRecordsBtn = document.getElementById('activeRecords');
+    const deletedRecordsBtn = document.getElementById('deletedRecords');
+    const activeRecordsCard = document.getElementById('activeRecordsCard');
+    const deletedRecordsCard = document.getElementById('deletedRecordsCard');
+    const activeSearchInput = document.getElementById('activeSearchInput');
+    const deletedSearchInput = document.getElementById('deletedSearchInput');
+
+    function filterTable(tableBody, searchTerm) {
+        const rows = tableBody.getElementsByTagName('tr');
+        
+        for (let row of rows) {
+            const cells = row.getElementsByTagName('td');
+            let shouldShow = false;
+            
+            // Skip header row or empty message row
+            if (cells.length <= 1) continue;
+
+            for (let cell of cells) {
+                const text = cell.textContent.toLowerCase();
+                if (text.includes(searchTerm.toLowerCase())) {
+                    shouldShow = true;
+                    break;
+                }
+            }
+            
+            row.style.display = shouldShow ? '' : 'none';
+        }
+    }
+
+    activeSearchInput.addEventListener('input', (e) => {
+        const activeTableBody = activeRecordsCard.querySelector('tbody');
+        filterTable(activeTableBody, e.target.value);
+    });
+
+    deletedSearchInput.addEventListener('input', (e) => {
+        const deletedTableBody = deletedRecordsCard.querySelector('tbody');
+        filterTable(deletedTableBody, e.target.value);
+    });
+
+    function toggleRecords(showActive) {
+        if (showActive) {
+            activeRecordsCard.style.display = 'block';
+            deletedRecordsCard.style.display = 'none';
+            activeRecordsBtn.classList.add('active');
+            activeRecordsBtn.classList.remove('btn-outline-primary');
+            activeRecordsBtn.classList.add('btn-primary');
+            deletedRecordsBtn.classList.remove('active');
+            deletedRecordsBtn.classList.add('btn-outline-danger');
+            deletedRecordsBtn.classList.remove('btn-danger');
+            // Clear deleted search when switching
+            deletedSearchInput.value = '';
+        } else {
+            activeRecordsCard.style.display = 'none';
+            deletedRecordsCard.style.display = 'block';
+            deletedRecordsBtn.classList.add('active');
+            deletedRecordsBtn.classList.remove('btn-outline-danger');
+            deletedRecordsBtn.classList.add('btn-danger');
+            activeRecordsBtn.classList.remove('active');
+            activeRecordsBtn.classList.add('btn-outline-primary');
+            activeRecordsBtn.classList.remove('btn-primary');
+            // Clear active search when switching
+            activeSearchInput.value = '';
+        }
+    }
+
+    activeRecordsBtn.addEventListener('click', () => toggleRecords(true));
+    deletedRecordsBtn.addEventListener('click', () => toggleRecords(false));
+
+    // Initialize view
+    toggleRecords(true);
+
     // Initialize all modals with static backdrop
     const stockOutModals = document.querySelectorAll('[id^="stockOutModal"]');
     stockOutModals.forEach(modal => {
