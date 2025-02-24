@@ -1,5 +1,9 @@
 <!-- Add Inventory Modal -->
-<div class="modal fade" id="addInventoryModal" tabindex="-1">
+<div class="modal fade" 
+     id="addInventoryModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">

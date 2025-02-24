@@ -369,45 +369,58 @@ class ItemController extends Controller
     {
         try {
             DB::beginTransaction();
-            
-            // Enhanced debug logging
-            Log::info('Delete attempt details:', [
-                'received_id' => $id,
-                'id_type' => gettype($id),
-                'request_item_id' => request('item_id')
-            ]);
-            
-            // Try to get ID from different sources
-            $itemId = is_numeric($id) ? $id : request('item_id');
-            
-            if (!is_numeric($itemId)) {
-                Log::error('Invalid item ID received:', ['id' => $itemId]);
+
+            // Debug logging
+            Log::info('Attempting to delete item:', ['id' => $id]);
+
+            // Extract ID from object if needed
+            if (is_object($id) || is_array($id)) {
+                if (isset($id->ItemId)) {
+                    $id = $id->ItemId;
+                } elseif (is_array($id) && isset($id['ItemId'])) {
+                    $id = $id['ItemId'];
+                }
+            }
+
+            // If it's a string containing JSON, try to decode it
+            if (is_string($id) && strpos($id, '{') !== false) {
+                $decoded = json_decode($id, true);
+                if (isset($decoded['ItemId'])) {
+                    $id = $decoded['ItemId'];
+                }
+            }
+
+            // Final validation
+            if (!is_numeric($id)) {
                 throw new \Exception('Invalid item ID');
             }
-    
-            $item = Item::find($itemId);
+
+            // Find the item
+            $item = Item::where('ItemId', $id)->first();
             if (!$item) {
-                Log::error('Item not found:', ['id' => $itemId]);
                 throw new \Exception('Item not found');
             }
-    
-            // Log the item being deleted
-            Log::info('Found item to delete:', [
-                'item_id' => $item->ItemId,
-                'item_name' => $item->ItemName
-            ]);
-    
+
+            // Check permissions
+            $userPermissions = $this->getUserPermissions();
+            if (!$userPermissions || !$userPermissions->CanDelete) {
+                throw new \Exception('You do not have permission to delete items.');
+            }
+
+            // Perform soft delete
             $item->update([
                 'IsDeleted' => true,
                 'DeletedById' => Auth::id(),
                 'DateDeleted' => now()
             ]);
-    
+
             DB::commit();
-            return redirect()->route('items.index')->with('success', 'Item deleted successfully');
+            return redirect()->route('items.index')
+                ->with('success', 'Item moved to trash successfully');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Item deletion failed:', [
+            Log::error('Error deleting item:', [
                 'id' => $id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()

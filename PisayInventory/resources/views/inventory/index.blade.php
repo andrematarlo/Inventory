@@ -292,86 +292,68 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
-    // Add Inventory Form Submit
-    $('#addInventoryForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = {
-            ItemId: $('#ItemId').val(),
-            type: $('select[name="type"]').val(),
-            StocksAdded: $('#StocksAdded').val(),
-            _token: $('meta[name="csrf-token"]').attr('content')
-        };
+    // Initialize all modals with static backdrop
+    const stockOutModals = document.querySelectorAll('[id^="stockOutModal"]');
+    stockOutModals.forEach(modal => {
+        // Initialize with Bootstrap's options
+        const bsModal = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: false
+        });
 
-        console.log('Sending data:', formData);
+        // Add click handler to prevent closing
+        $(modal).on('click mousedown', function(e) {
+            if ($(e.target).hasClass('modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
 
-        $.ajax({
-            url: "{{ route('inventory.store') }}",
-            type: 'POST',
-            data: formData,
-            success: function(response) {
-                console.log('Success response:', response);
-                if (response.success) {
-                    const newRow = `
-                        <tr data-inventory-id="${response.data.InventoryID}">
-                            <td>
-                                <div class="d-flex gap-2">
-                                    <button type="button" 
-                                            class="btn btn-sm btn-blue flex-grow-1 d-flex align-items-center justify-content-center" 
-                                            style="width: 100px; height: 31px;"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#stockOutModal${response.data.InventoryID}">
-                                        <i class="bi bi-box-arrow-right me-1"></i>
-                                        Stock Out
-                                    </button>
-                                    <form action="/inventory/${response.data.InventoryID}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                            <td>${response.data.ItemName}</td>
-                            <td>${response.data.ClassificationName}</td>
-                            <td>${response.data.StocksAdded}</td>
-                            <td>${response.data.StockOut}</td>
-                            <td>${response.data.StocksAvailable}</td>
-                            <td>${response.data.CreatedBy}</td>
-                            <td>${response.data.DateCreated}</td>
-                            <td>N/A</td>
-                            <td>N/A</td>
-                            <td>N/A</td>
-                            <td>N/A</td>
-                            <td><span class="badge bg-success">Active</span></td>
-                        </tr>
-                    `;
-                    
-                    $('#inventoryTable tbody').prepend(newRow);
-                    $('#addInventoryForm')[0].reset();
-                    $('#addInventoryModal').modal('hide');
-                    
-                    alert('Inventory ' + (formData.type === 'in' ? 'added' : 'removed') + ' successfully!');
-                    location.reload(); // Reload to update all values
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error details:', {
-                    xhr: xhr.responseJSON,
-                    status: status,
-                    error: error
-                });
-                
-                let errorMessage = 'Failed to add inventory';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                
-                alert(errorMessage);
+        // Also prevent Esc key
+        $(modal).on('keydown', function(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                return false;
             }
         });
     });
+
+    // Same for stock in modals
+    const stockInModals = document.querySelectorAll('[id^="stockInModal"]');
+    stockInModals.forEach(modal => {
+        const bsModal = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        $(modal).on('click mousedown', function(e) {
+            if ($(e.target).hasClass('modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+    });
+
+    // And for add inventory modal
+    const addModal = document.getElementById('addInventoryModal');
+    if (addModal) {
+        const bsModal = new bootstrap.Modal(addModal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        $(addModal).on('click mousedown', function(e) {
+            if ($(e.target).hasClass('modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+    }
+
+    // Your existing form submit handlers...
 });
 </script>
 @endsection

@@ -105,7 +105,7 @@
                                             </button>
                                             @endif
                                             @if($userPermissions && $userPermissions->CanDelete)
-                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $item->ItemId }}">
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteItemModal{{ $item->ItemId }}">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                             @endif
@@ -150,10 +150,33 @@
     <!-- Deleted Items Section -->
     <div id="deletedItems" style="display: none;">
         <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">
+            <div class="card-header">
                 <h5 class="mb-0">Deleted Items</h5>
             </div>
             <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>Showing {{ $deletedItems->firstItem() ?? 0 }} to {{ $deletedItems->lastItem() ?? 0 }} of {{ $deletedItems->total() }} results</div>
+                    <div class="pagination-sm">
+                        @if($deletedItems->currentPage() > 1)
+                            <a href="{{ $deletedItems->previousPageUrl() . '&tab=deleted' }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </a>
+                        @endif
+                        
+                        @for($i = 1; $i <= $deletedItems->lastPage(); $i++)
+                            <a href="{{ $deletedItems->url($i) . '&tab=deleted' }}" 
+                               class="btn btn-sm {{ $i == $deletedItems->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
+                                {{ $i }}
+                            </a>
+                        @endfor
+
+                        @if($deletedItems->hasMorePages())
+                            <a href="{{ $deletedItems->nextPageUrl() . '&tab=deleted' }}" class="btn btn-outline-secondary btn-sm">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </a>
+                        @endif
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover" id="deletedItemsTable">
                         <thead>
@@ -206,11 +229,14 @@
                             @endforelse
                         </tbody>
                     </table>
+<<<<<<< HEAD
+=======
                     <div class="d-flex justify-content-end mt-3">
                         <div class="custom-pagination">
                             {{ $deletedItems->links() }}
                         </div>
                     </div>
+>>>>>>> 236dfd44d8e294a7284511103c7dca911d0ea9d3
                 </div>
             </div>
         </div>
@@ -347,7 +373,11 @@
     @endforeach
 @endif
 
-@include('items.partials.delete-modal')
+@if($userPermissions && $userPermissions->CanDelete)
+    @foreach($activeItems as $item)
+        @include('items.partials.delete-modal', ['item' => $item])
+    @endforeach
+@endif
 @endsection
 
 @section('scripts')
@@ -375,117 +405,140 @@
             }
         });
 
+        // Initialize import modal
+        const importModal = document.getElementById('importExcelModal');
+        if (importModal) {
+            const bsModal = new bootstrap.Modal(importModal, {
+                backdrop: 'static',
+                keyboard: false
+            });
 
-                // New script for Excel import
-                
-    // Preview button click handler
-    $('#previewBtn').click(function() {
-        const fileInput = document.getElementById('excel_file');
-        if (!fileInput.files.length) {
-            alert('Please select a file first');
-            return;
-        }
+            // Prevent modal from closing when clicking outside
+            $(importModal).on('mousedown', function(e) {
+                if ($(e.target).is('.modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
 
-        const formData = new FormData();
-        formData.append('excel_file', fileInput.files[0]);
-        formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+            // Preview button click handler
+            $('#previewBtn').click(function() {
+                const fileInput = document.getElementById('excel_file');
+                if (!fileInput.files.length) {
+                    alert('Please select a file first');
+                    return;
+                }
 
-        // Show loading state
-        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Loading...');
+                const formData = new FormData();
+                formData.append('excel_file', fileInput.files[0]);
+                formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
 
-        $.ajax({
-            url: "{{ route('items.preview-columns') }}",
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                // Reset all dropdowns first
-                const columnSelects = $('select[name^="column_mapping"]');
-                columnSelects.empty().append('<option value="">Select Column</option>');
-                
-                // Add the columns to all dropdowns
-                response.columns.forEach(column => {
-                    columnSelects.append(`<option value="${column}">${column}</option>`);
+                // Show loading state
+                $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Loading...');
+
+                $.ajax({
+                    url: "{{ route('items.preview-columns') }}",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        // Reset all dropdowns first
+                        const columnSelects = $('select[name^="column_mapping"]');
+                        columnSelects.empty().append('<option value="">Select Column</option>');
+                        
+                        // Add the columns to all dropdowns
+                        response.columns.forEach(column => {
+                            columnSelects.append(`<option value="${column}">${column}</option>`);
+                        });
+
+                        // Auto-map columns based on similar names
+                        response.columns.forEach(column => {
+                            const lowerColumn = column.toLowerCase();
+                            if (lowerColumn.includes('name')) {
+                                $('select[name="column_mapping[ItemName]"]').val(column);
+                            }
+                            if (lowerColumn.includes('desc')) {
+                                $('select[name="column_mapping[Description]"]').val(column);
+                            }
+                            if (lowerColumn.includes('stock') || lowerColumn.includes('qty')) {
+                                $('select[name="column_mapping[StocksAvailable]"]').val(column);
+                            }
+                            if (lowerColumn.includes('reorder') || lowerColumn.includes('minimum')) {
+                                $('select[name="column_mapping[ReorderPoint]"]').val(column);
+                            }
+                        });
+
+                        // Show step 2
+                        $('#step1').hide();
+                        $('#step2').show();
+                    },
+                    error: function(xhr) {
+                        const errorMessage = xhr.responseJSON?.error || 'An error occurred while previewing columns';
+                        alert('Preview failed: ' + errorMessage);
+                    },
+                    complete: function() {
+                        // Reset button state
+                        $('#previewBtn').prop('disabled', false).text('Preview Columns');
+                    }
                 });
+            });
 
-                // Auto-map columns based on similar names
-                response.columns.forEach(column => {
-                    if (column.includes('name')) {
-                        $('select[name="column_mapping[ItemName]"]').val(column);
-                    }
-                    if (column.includes('desc')) {
-                        $('select[name="column_mapping[Description]"]').val(column);
-                    }
-                    if (column.includes('class')) {
-                        $('select[name="column_mapping[ClassificationId]"]').val(column);
-                    }
-                    if (column.includes('unit')) {
-                        $('select[name="column_mapping[UnitId]"]').val(column);
-                    }
-                    if (column.includes('stock') || column.includes('qty')) {
-                        $('select[name="column_mapping[StocksAvailable]"]').val(column);
-                    }
-                    if (column.includes('reorder') || column.includes('minimum')) {
-                        $('select[name="column_mapping[ReorderPoint]"]').val(column);
+            // Handle form submission
+            $('#importForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                // Check if file is selected
+                if (!$('#excel_file').val()) {
+                    alert('Please select an Excel file');
+                    return;
+                }
+
+                // Check if required field (Name) is mapped
+                if (!$('select[name="column_mapping[ItemName]"]').val()) {
+                    alert('Please map the Name field');
+                    return;
+                }
+
+                // Show loading state on the import button
+                const importBtn = $('#importBtn');
+                importBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importing...');
+                
+                const formData = new FormData(this);
+                
+                $.ajax({
+                    url: "{{ route('items.import') }}",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        alert('Import successful!');
+                        window.location.reload();
+                    },
+                    error: function(xhr) {
+                        const errorMessage = xhr.responseJSON?.error || 'An error occurred during import';
+                        alert('Import failed: ' + errorMessage);
+                        importBtn.prop('disabled', false).text('Import Data');
                     }
                 });
-
-                // Show step 2
-                $('#step1').hide();
-                $('#step2').show();
-            },
-            error: function(xhr) {
-                const errorMessage = xhr.responseJSON?.error || 'An error occurred while previewing columns';
-                alert('Preview failed: ' + errorMessage);
-            },
-            complete: function() {
-                // Reset button state
-                $('#previewBtn').prop('disabled', false).text('Preview Columns');
-            }
-        });
-    });
-
-    // Form submission handler
-    $('#importForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        // Check if file is selected
-        if (!$('#excel_file').val()) {
-            alert('Please select an Excel file');
-            return;
+            });
         }
 
-        // Check if required field (Name) is mapped
-        if (!$('select[name="column_mapping[ItemName]"]').val()) {
-            alert('Please map the Name field');
-            return;
+        // Initialize DataTable
+        if (!$.fn.DataTable.isDataTable('#itemsTable')) {
+            $('#itemsTable').DataTable({
+                pageLength: 10,
+                responsive: true,
+                dom: '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center"ip>',
+                language: {
+                    search: "Search:",
+                    searchPlaceholder: "Search items..."
+                }
+            });
         }
-
-        // Show loading state on the import button
-        const importBtn = $('#importBtn');
-        importBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importing...');
-        
-        const formData = new FormData(this);
-        
-        $.ajax({
-            url: "{{ route('items.import') }}",
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                alert('Import successful!');
-                window.location.reload();
-            },
-            error: function(xhr) {
-                const errorMessage = xhr.responseJSON?.error || 'An error occurred during import';
-                alert('Import failed: ' + errorMessage);
-                importBtn.prop('disabled', false).text('Import Data');
-            }
-        });
     });
-});
 </script>
 @endsection
 

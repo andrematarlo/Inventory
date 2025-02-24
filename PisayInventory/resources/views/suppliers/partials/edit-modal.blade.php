@@ -1,4 +1,10 @@
-<div class="modal fade" id="editSupplierModal{{ $supplier->SupplierID }}" tabindex="-1" aria-labelledby="editSupplierModalLabel{{ $supplier->SupplierID }}" aria-hidden="true">
+<div class="modal fade" 
+     id="editSupplierModal{{ $supplier->SupplierID }}" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="editSupplierModalLabel{{ $supplier->SupplierID }}" 
+     aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">

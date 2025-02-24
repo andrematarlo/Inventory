@@ -64,7 +64,11 @@
 
 <!-- Add Module Modal -->
 @if($userPermissions && $userPermissions->CanAdd)
-<div class="modal fade" id="addModuleModal" tabindex="-1">
+<div class="modal fade" 
+     id="addModuleModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -92,7 +96,11 @@
 <!-- Edit Module Modals -->
 @if($userPermissions && $userPermissions->CanEdit)
 @foreach($modules as $module)
-<div class="modal fade" id="editModuleModal{{ $module->ModuleId }}" tabindex="-1">
+<div class="modal fade" 
+     id="editModuleModal{{ $module->ModuleId }}" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -122,7 +130,11 @@
 <!-- Delete Module Modals -->
 @if($userPermissions && $userPermissions->CanDelete)
 @foreach($modules as $module)
-<div class="modal fade" id="deleteModuleModal{{ $module->ModuleId }}" tabindex="-1">
+<div class="modal fade" 
+     id="deleteModuleModal{{ $module->ModuleId }}" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">

@@ -58,8 +58,8 @@
                             <tr>
                                 <td>{{ $purchase->DateCreated ? \Carbon\Carbon::parse($purchase->DateCreated)->format('M d, Y H:i') : 'N/A' }}</td>
                                 <td>{{ $purchase->item->ItemName ?? 'N/A' }}</td>
-                                <td>{{ $purchase->classification->ClassificationName ?? 'N/A' }}</td>
-                                <td>{{ $purchase->unitOfMeasure->UnitName ?? 'N/A' }}</td>
+                                <td>{{ optional($purchase->classification)->ClassificationName ?? 'N/A' }}</td>
+                                <td>{{ optional($purchase->unitOfMeasure)->UnitName ?? 'N/A' }}</td>
                                 <td>{{ $purchase->Quantity }}</td>
                                 <td>{{ $purchase->StocksAdded }}</td>
                             </tr>

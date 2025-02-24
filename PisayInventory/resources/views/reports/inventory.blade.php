@@ -91,8 +91,8 @@
                         @forelse($movements as $movement)
                         <tr>
                             <td>{{ Carbon\Carbon::parse($movement->DateCreated)->format('M d, Y h:i A') }}</td>
-                            <td>{{ $movement->item->ItemName }}</td>
-                            <td>{{ $movement->item->classification->ClassificationName }}</td>
+                            <td>{{ $movement->item->ItemName ?? 'N/A' }}</td>
+                            <td>{{ optional($movement->item->classification)->ClassificationName ?? 'N/A' }}</td>
                             <td>
                                 <span class="badge {{ $movement->StocksAdded > 0 ? 'bg-success' : 'bg-danger' }}">
                                     {{ $movement->StocksAdded > 0 ? '+' : '' }}{{ number_format($movement->StocksAdded) }}
@@ -133,8 +133,8 @@
                     <tbody>
                         @forelse($currentStock as $stock)
                         <tr>
-                            <td>{{ $stock->item->ItemName }}</td>
-                            <td>{{ $stock->item->classification->ClassificationName }}</td>
+                            <td>{{ $stock->item->ItemName ?? 'N/A' }}</td>
+                            <td>{{ optional($stock->item->classification)->ClassificationName ?? 'N/A' }}</td>
                             <td>{{ number_format($stock->current_stock) }}</td>
                             <td class="text-success">+{{ number_format($stock->stock_in) }}</td>
                             <td class="text-danger">-{{ number_format($stock->stock_out) }}</td>

@@ -80,8 +80,8 @@
                             <tr>
                                 <td>{{ \Carbon\Carbon::parse($sale->DateCreated)->format('M d, Y H:i') }}</td>
                                 <td>{{ $sale->item->ItemName ?? 'N/A' }}</td>
-                                <td>{{ $sale->classification->ClassificationName ?? 'N/A' }}</td>
-                                <td>{{ $sale->unitOfMeasure->UnitName ?? 'N/A' }}</td>
+                                <td>{{ optional($sale->classification)->ClassificationName ?? 'N/A' }}</td>
+                                <td>{{ optional($sale->unitOfMeasure)->UnitName ?? 'N/A' }}</td>
                                 <td>{{ $sale->Quantity }}</td>
                             </tr>
                             @endforeach
