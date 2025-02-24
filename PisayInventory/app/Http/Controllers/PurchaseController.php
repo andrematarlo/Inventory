@@ -23,13 +23,20 @@ class PurchaseController extends Controller
     private function getUserPermissions()
     {
         try {
+            // Debug: I-print nato ang user role
+            \Log::info('User Role:', ['role' => Auth::user()->role]);
+            
             $userRole = Auth::user()->role;
             $permissions = RolePolicy::whereHas('role', function($query) use ($userRole) {
                 $query->where('RoleName', $userRole);
-            })->where('Module', 'Purchases')->first();
+            })->where('Module', 'Purchasing Management')->first();
+
+            // Debug: I-print nato ang nakuha nga permissions
+            \Log::info('Permissions found:', ['permissions' => $permissions]);
 
             // If no permissions found, return default permissions
             if (!$permissions) {
+                \Log::warning('No permissions found for role: ' . $userRole);
                 return (object)[
                     'CanAdd' => false,
                     'CanEdit' => false,
@@ -40,10 +47,7 @@ class PurchaseController extends Controller
 
             return $permissions;
         } catch (\Exception $e) {
-            // Log the error
             \Log::error('Error getting user permissions: ' . $e->getMessage());
-            
-            // Return default permissions
             return (object)[
                 'CanAdd' => false,
                 'CanEdit' => false,

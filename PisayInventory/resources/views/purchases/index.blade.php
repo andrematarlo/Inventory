@@ -44,6 +44,8 @@
 
 @section('content')
 <div class="container-fluid">
+
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Purchase Orders</h2>
         <a href="{{ route('purchases.create') }}" class="btn btn-success">
@@ -88,13 +90,19 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    @if($userPermissions && $userPermissions->CanDelete)
+                                    {{-- Temporary debugging --}}
+                                    <!-- @php dump($userPermissions->CanDelete); @endphp -->
+                                    
+                                    @if($userPermissions && $userPermissions->CanDelete == true)
                                         <button type="button" 
                                                 class="btn btn-sm btn-danger" 
                                                 onclick="deletePurchase({{ $po->PurchaseOrderID }})"
                                                 title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>
+                                    @else
+                                        <!-- For debugging: show why button is hidden -->
+                                        <!-- Hidden because: {{ !$userPermissions ? 'No permissions object' : 'CanDelete is false' }} -->
                                     @endif
                                 </div>
                             </td>
@@ -152,12 +160,20 @@
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <button type="button" 
-                                            class="btn btn-sm btn-danger" 
-                                            onclick="deletePurchase({{ $po->PurchaseOrderID }})"
-                                            title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    {{-- Temporary debugging --}}
+                                    <!-- @php dump($userPermissions->CanDelete); @endphp -->
+                                    
+                                    @if($userPermissions && $userPermissions->CanDelete == true)
+                                        <button type="button" 
+                                                class="btn btn-sm btn-danger" 
+                                                onclick="deletePurchase({{ $po->PurchaseOrderID }})"
+                                                title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    @else
+                                        <!-- For debugging: show why button is hidden -->
+                                        <!-- Hidden because: {{ !$userPermissions ? 'No permissions object' : 'CanDelete is false' }} -->
+                                    @endif
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
