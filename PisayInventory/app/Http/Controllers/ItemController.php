@@ -222,7 +222,30 @@ class ItemController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $request->validate([
+            // Debug logging for incoming ID
+            Log::info('Update item request:', [
+                'raw_id' => $id,
+                'id_type' => gettype($id),
+                'request_data' => $request->all()
+            ]);
+
+            // Clean and validate the ID
+            $cleanId = is_numeric($id) ? $id : null;
+            
+            if (!$cleanId) {
+                // Try to extract ID if it's an object or array
+                if (is_object($id) && isset($id->ItemId)) {
+                    $cleanId = $id->ItemId;
+                } elseif (is_array($id) && isset($id['ItemId'])) {
+                    $cleanId = $id['ItemId'];
+                }
+            }
+
+            // Log the cleaned ID
+            Log::info('Cleaned item ID:', ['clean_id' => $cleanId]);
+
+            // Validate request
+            $validated = $request->validate([
                 'ItemName' => 'required|string|max:255',
                 'UnitOfMeasureId' => 'required|exists:unitofmeasure,UnitOfMeasureId',
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
@@ -233,42 +256,75 @@ class ItemController extends Controller
 
             DB::beginTransaction();
 
+            // Find the item with detailed logging
+            $item = Item::where('ItemId', $cleanId)
+                       ->where('IsDeleted', false)
+                       ->first();
+
+            // Log item lookup result
+            Log::info('Item lookup result:', [
+                'clean_id' => $cleanId,
+                'item_found' => $item ? true : false,
+                'item_details' => $item ? [
+                    'ItemId' => $item->ItemId,
+                    'ItemName' => $item->ItemName
+                ] : null
+            ]);
+            
+            if (!$item) {
+                throw new \Exception("Item not found with ID: $cleanId");
+            }
+
+            // Get current employee
             $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
                 ->where('IsDeleted', false)
                 ->firstOrFail();
-
-            $item = Item::findOrFail($id);
             
             // Update item details
-            $item->ItemName = $request->ItemName;
-            $item->Description = $request->Description;
-            $item->UnitOfMeasureId = $request->UnitOfMeasureId;
-            $item->ClassificationId = $request->ClassificationId;
-            $item->ReorderPoint = $request->ReorderPoint;
+            $item->ItemName = $validated['ItemName'];
+            $item->Description = $validated['Description'];
+            $item->UnitOfMeasureId = $validated['UnitOfMeasureId'];
+            $item->ClassificationId = $validated['ClassificationId'];
+            $item->ReorderPoint = $validated['ReorderPoint'];
             $item->ModifiedById = $currentEmployee->EmployeeID;
             $item->DateModified = now();
 
             // Handle image upload if new image is provided
             if ($request->hasFile('image')) {
                 // Delete old image if exists
-                if ($item->ImagePath) {
+                if ($item->ImagePath && Storage::disk('public')->exists($item->ImagePath)) {
                     Storage::disk('public')->delete($item->ImagePath);
                 }
                 $imagePath = $request->file('image')->store('items', 'public');
                 $item->ImagePath = $imagePath;
             }
 
+            // Save the changes
             $item->save();
 
             DB::commit();
+
+            // Log successful update
+            Log::info('Item updated successfully:', [
+                'item_id' => $item->ItemId,
+                'modified_by' => $currentEmployee->EmployeeID,
+                'updated_values' => $validated
+            ]);
+
             return redirect()->route('items.index')
                 ->with('success', 'Item updated successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error updating item: ' . $e->getMessage());
-            return back()->with('error', 'Error updating item: ' . $e->getMessage())
-                ->withInput();
+            Log::error('Error updating item:', [
+                'id' => $id,
+                'clean_id' => $cleanId ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()
+                ->withInput()
+                ->with('error', 'Error updating item: ' . $e->getMessage());
         }
     }
 

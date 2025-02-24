@@ -17,7 +17,34 @@
                     <form action="{{ route('items.update', $item->ItemId) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
-                        
+
+                        <div class="mb-3">
+                            <label class="form-label">Current Image</label>
+                            <div>
+                                @if($item->ImagePath)
+                                    <img src="{{ asset('storage/' . $item->ImagePath) }}" 
+                                         alt="Current item image" 
+                                         class="img-thumbnail"
+                                         style="max-height: 100px;">
+                                @else
+                                    <p class="text-muted">No image uploaded</p>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="image" class="form-label">Update Image</label>
+                            <input type="file" 
+                                   class="form-control @error('image') is-invalid @enderror" 
+                                   id="image" 
+                                   name="image"
+                                   accept="image/*">
+                            <small class="form-text text-muted">Leave empty to keep current image</small>
+                            @error('image')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <div class="mb-3">
                             <label for="ItemName" class="form-label">Item Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('ItemName') is-invalid @enderror" 
