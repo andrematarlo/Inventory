@@ -40,26 +40,39 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>Showing {{ $activeItems->firstItem() ?? 0 }} to {{ $activeItems->lastItem() ?? 0 }} of {{ $activeItems->total() }} results</div>
-                    <div class="pagination-sm">
-                        @if($activeItems->currentPage() > 1)
-                            <a href="{{ $activeItems->previousPageUrl() }}" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-chevron-left"></i> Previous
-                            </a>
-                        @endif
-                        
-                        @for($i = 1; $i <= $activeItems->lastPage(); $i++)
-                            <a href="{{ $activeItems->url($i) }}" 
-                               class="btn btn-sm {{ $i == $activeItems->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
-                                {{ $i }}
-                            </a>
-                        @endfor
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            @if($activeItems->onFirstPage())
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="bi bi-chevron-left small"></i></span>
+                                </li>
+                            @else
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $activeItems->previousPageUrl() }}">
+                                        <i class="bi bi-chevron-left small"></i>
+                                    </a>
+                                </li>
+                            @endif
 
-                        @if($activeItems->hasMorePages())
-                            <a href="{{ $activeItems->nextPageUrl() }}" class="btn btn-outline-secondary btn-sm">
-                                Next <i class="bi bi-chevron-right"></i>
-                            </a>
-                        @endif
-                    </div>
+                            @for($i = 1; $i <= $activeItems->lastPage(); $i++)
+                                <li class="page-item {{ $activeItems->currentPage() == $i ? 'active' : '' }}">
+                                    <a class="page-link" href="{{ $activeItems->url($i) }}">{{ $i }}</a>
+                                </li>
+                            @endfor
+
+                            @if($activeItems->hasMorePages())
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $activeItems->nextPageUrl() }}">
+                                        <i class="bi bi-chevron-right small"></i>
+                                    </a>
+                                </li>
+                            @else
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="bi bi-chevron-right small"></i></span>
+                                </li>
+                            @endif
+                        </ul>
+                    </nav>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover" id="itemsTable">
@@ -188,7 +201,7 @@
                                               class="d-inline">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                                <i class="bi bi-arrow-counterclockwise" style="font-size: 14px;"></i>
                                             </button>
                                         </form>
                                     </td>
@@ -216,6 +229,14 @@
                             @endforelse
                         </tbody>
                     </table>
+<<<<<<< HEAD
+=======
+                    <div class="d-flex justify-content-end mt-3">
+                        <div class="custom-pagination">
+                            {{ $deletedItems->links() }}
+                        </div>
+                    </div>
+>>>>>>> 236dfd44d8e294a7284511103c7dca911d0ea9d3
                 </div>
             </div>
         </div>
@@ -533,21 +554,32 @@
         color: white;
     }
 
-    /* Pagination styling */
-    .pagination-sm {
-        display: flex;
-        gap: 5px;
-        align-items: center;
+    /* Custom pagination styles */
+    .pagination {
+        margin: 0;
     }
-
-    .pagination-sm .btn {
-        min-width: 32px;
-        padding: 4px 8px;
+    
+    .pagination .page-link {
+        padding: 0.25rem 0.5rem;
         font-size: 0.875rem;
+        line-height: 1.5;
+        border-radius: 0.2rem;
     }
 
-    .pagination-sm .btn i {
-        font-size: 12px;
+    .pagination .page-link i {
+        font-size: 10px;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        pointer-events: none;
+        background-color: #fff;
+        border-color: #dee2e6;
     }
 
     .btn-outline-secondary {
@@ -609,6 +641,45 @@
         padding-bottom: 0.25rem;
         padding-left: 0.5rem;
         font-size: 0.875rem;
+    }
+
+    /* Restore button icon style */
+    .btn-success i {
+        font-size: 14px !important;
+    }
+
+    .btn-success {
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* Override Laravel pagination styling */
+    .custom-pagination svg {
+        width: 12px !important;
+        height: 12px !important;
+    }
+
+    .custom-pagination nav {
+        display: flex;
+        justify-content: center;
+    }
+
+    .custom-pagination .shadow-sm {
+        box-shadow: none !important;
+    }
+
+    .custom-pagination .relative {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .custom-pagination .relative, 
+    .custom-pagination button {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+        line-height: 1.5 !important;
+        height: auto !important;
+        min-width: auto !important;
     }
 </style>
 @endsection
