@@ -157,8 +157,22 @@
     }
 
     /* Action buttons */
+    .btn-group {
+        white-space: nowrap;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .d-flex.gap-1 {
+        gap: 0.25rem !important;
+    }
+    
     .btn-group .btn {
-        padding: 4px 8px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
     }
 
     /* Table container */
@@ -357,22 +371,26 @@
                     <tbody>
                         @forelse($activeSuppliers as $supplier)
                             <tr>
-                                @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                 <td>
-                                    <div class="btn-group" role="group">
+                                    <div class="d-flex gap-1">
                                         @if($userPermissions->CanEdit)
-                                        <button type="button" class="btn btn-sm btn-blue" data-bs-toggle="modal" data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-primary" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
                                         @endif
-                                        @if($userPermissions && $userPermissions->CanDelete)
-                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $supplier->SupplierID }}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        @if($userPermissions->CanDelete)
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteSupplierModal{{ $supplier->SupplierID }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
-                                @endif
                                 <td>{{ $supplier->CompanyName }}</td>
                                 <td>{{ $supplier->ContactPerson }}</td>
                                 <td>{{ $supplier->TelephoneNumber }}</td>
@@ -603,6 +621,33 @@
         $('.modal').on('hidden.bs.modal', function() {
             $(this).find('form').trigger('reset');
             $(this).find('.select2-multiple').val(null).trigger('change');
+        });
+
+        // Initialize all supplier modals
+        const supplierModals = document.querySelectorAll('[id^="addSupplierModal"], [id^="editSupplierModal"], [id^="deleteSupplierModal"]');
+        supplierModals.forEach(modal => {
+            // Initialize with Bootstrap's options
+            const bsModal = new bootstrap.Modal(modal, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            // Add click handler to prevent closing
+            $(modal).on('click mousedown', function(e) {
+                if ($(e.target).hasClass('modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+
+            // Also prevent Esc key
+            $(modal).on('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
         });
     });
 </script>

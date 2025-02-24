@@ -1,5 +1,9 @@
 <!-- Stock In Modal for {{ $inventory->item->ItemName }} -->
-<div class="modal fade" id="stockInModal{{ $inventory->InventoryId }}" tabindex="-1">
+<div class="modal fade" 
+     id="stockInModal{{ $inventory->InventoryId }}" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">

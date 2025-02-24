@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Unit extends Model
 {
-     protected $table = 'unitofmeasure';
+    protected $table = 'UnitOfMeasure';
     protected $primaryKey = 'UnitOfMeasureId';
     public $timestamps = false;
     public $incrementing = false;  // Disable auto-incrementing
@@ -25,8 +25,8 @@ class Unit extends Model
         'ModifiedById',
         'DateModified',
         'DeletedById',
-        'DateDeleted',
         'RestoredById',
+        'DateDeleted',
         'DateRestored',
         'IsDeleted'
     ];

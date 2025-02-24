@@ -253,6 +253,33 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
+    // Initialize all purchase modals
+    const purchaseModals = document.querySelectorAll('[id^="addPurchaseModal"], [id^="editPurchaseModal"]');
+    purchaseModals.forEach(modal => {
+        // Initialize with Bootstrap's options
+        const bsModal = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        // Add click handler to prevent closing
+        $(modal).on('click mousedown', function(e) {
+            if ($(e.target).hasClass('modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+
+        // Also prevent Esc key
+        $(modal).on('keydown', function(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                return false;
+            }
+        });
+    });
+
     // Initialize DataTables
     var tables = ['purchaseOrdersTable', 'pendingPurchaseTable', 'deletedPurchaseTable'];
     tables.forEach(function(tableId) {

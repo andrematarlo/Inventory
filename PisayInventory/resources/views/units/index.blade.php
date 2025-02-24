@@ -13,65 +13,132 @@
         @endif
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr>
-                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
-                            <th>Actions</th>
-                            @endif
-                            <th>Name</th>
-                            <th>Created By</th>
-                            <th>Date Created</th>
-                            <th>Modified By</th>
-                            <th>Date Modified</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($units as $unit)
-                        <tr>
-                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
-                            <td>
-                                <div class="btn-group">
+    <!-- Tab buttons -->
+    <div class="btn-group mb-4" role="group">
+        <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
+            Active Records
+        </button>
+        <button class="btn btn-danger" type="button" id="showDeletedBtn">
+            <i class="bi bi-archive"></i> Show Deleted Records
+        </button>
+    </div>
+
+    <!-- Active Units Section -->
+    <div id="activeUnits">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Active Units</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
+                                <th>Actions</th>
+                                @endif
+                                <th>Name</th>
+                                <th>Created By</th>
+                                <th>Date Created</th>
+                                <th>Modified By</th>
+                                <th>Date Modified</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($units as $unit)
+                            <tr>
+                                @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
+                                <td>
+                                    <div class="btn-group">
+                                        @if($userPermissions->CanEdit)
+                                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUnitModal{{ $unit->UnitOfMeasureId }}">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        @endif
+                                        @if($userPermissions->CanDelete)
+                                        <form action="{{ route('units.destroy', $unit->UnitOfMeasureId) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this unit?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                        @endif
+                                    </div>
+                                </td>
+                                @endif
+                                <td>{{ $unit->UnitName }}</td>
+                                <td>{{ $unit->created_by_user->Username ?? 'N/A' }}</td>
+                                <td>{{ $unit->DateCreated ? date('M d, Y h:i A', strtotime($unit->DateCreated)) : 'N/A' }}</td>
+                                <td>{{ $unit->modified_by_user->Username ?? 'N/A' }}</td>
+                                <td>{{ $unit->DateModified ? date('M d, Y h:i A', strtotime($unit->DateModified)) : 'N/A' }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="{{ ($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete)) ? '6' : '5' }}" class="text-center">No units found</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deleted Units Section -->
+    <div id="deletedUnits" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Deleted Units</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="deletedUnitsTable">
+                        <thead>
+                            <tr>
+                                <th>Actions</th>
+                                <th>Unit Name</th>
+                                <th>Deleted By</th>
+                                <th>Date Deleted</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($trashedUnits as $unit)
+                            <tr>
+                                <td>
                                     @if($userPermissions->CanEdit)
-                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUnitModal{{ $unit->UnitOfMeasureId }}">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
-                                    @endif
-                                    @if($userPermissions->CanDelete)
-                                    <form action="{{ route('units.destroy', $unit->UnitOfMeasureId) }}" method="POST" class="d-inline">
+                                    <form action="{{ route('units.restore', $unit->UnitOfMeasureId) }}" method="POST" class="d-inline">
                                         @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this unit?')">
-                                            <i class="bi bi-trash"></i>
+                                        <button type="submit" class="btn btn-sm btn-success" title="Restore">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
                                         </button>
                                     </form>
                                     @endif
-                                </div>
-                            </td>
-                            @endif
-                            <td>{{ $unit->UnitName }}</td>
-                            <td>{{ $unit->created_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $unit->DateCreated ? date('M d, Y h:i A', strtotime($unit->DateCreated)) : 'N/A' }}</td>
-                            <td>{{ $unit->modified_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $unit->DateModified ? date('M d, Y h:i A', strtotime($unit->DateModified)) : 'N/A' }}</td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="{{ ($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete)) ? '6' : '5' }}" class="text-center">No units found</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                                </td>
+                                <td>{{ $unit->UnitName }}</td>
+                                <td>{{ $unit->deletedBy->Username ?? 'N/A' }}</td>
+                                <td>{{ $unit->DateDeleted ? date('M d, Y h:i A', strtotime($unit->DateDeleted)) : 'N/A' }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="4" class="text-center">No deleted units found</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Add Unit Modal -->
-<div class="modal fade" id="addUnitModal" tabindex="-1" aria-labelledby="addUnitModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="addUnitModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="addUnitModalLabel">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -97,21 +164,28 @@
 
 <!-- Edit Unit Modal -->
 @foreach($units as $unit)
-<div class="modal fade" id="editUnitModal{{ $unit->UnitOfMeasureId }}" tabindex="-1">
+<div class="modal fade" 
+     id="editUnitModal{{ $unit->UnitOfMeasureId }}" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Edit Unit</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('units.update', ['unit' => $unit->UnitOfMeasureId]) }}" method="POST">
+            <form action="{{ route('units.update', ['id' => $unit->UnitOfMeasureId]) }}" method="POST">
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="UnitName{{ $unit->UnitOfMeasureId }}" class="form-label">Unit Name</label>
-                        <input type="text" class="form-control" id="UnitName{{ $unit->UnitOfMeasureId }}" 
-                               name="UnitName" value="{{ $unit->UnitName }}" required>
+                        <input type="text" class="form-control" 
+                               id="UnitName{{ $unit->UnitOfMeasureId }}" 
+                               name="UnitName" 
+                               value="{{ $unit->UnitName }}" 
+                               required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -124,14 +198,18 @@
 </div>
 
 <!-- Delete Unit Modal -->
-<div class="modal fade" id="deleteUnitModal{{ $unit->UnitOfMeasureId }}" tabindex="-1">
+<div class="modal fade" 
+     id="deleteUnitModal{{ $unit->UnitOfMeasureId }}" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Delete Unit</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('units.destroy', ['unit' => $unit->UnitOfMeasureId]) }}" method="POST">
+            <form action="{{ route('units.destroy', ['id' => $unit->UnitOfMeasureId]) }}" method="POST">
                 @csrf
                 @method('DELETE')
                 <div class="modal-body">
@@ -156,6 +234,33 @@
 
 <script>
     $(document).ready(function() {
+        // Initialize all unit modals
+        const unitModals = document.querySelectorAll('[id^="addUnitModal"], [id^="editUnitModal"], [id^="deleteUnitModal"]');
+        unitModals.forEach(modal => {
+            // Initialize with Bootstrap's options
+            const bsModal = new bootstrap.Modal(modal, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            // Add click handler to prevent closing
+            $(modal).on('click mousedown', function(e) {
+                if ($(e.target).hasClass('modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+
+            // Also prevent Esc key
+            $(modal).on('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+
         // Destroy existing DataTable if it exists
         if ($.fn.DataTable.isDataTable('#unitsTable')) {
             $('#unitsTable').DataTable().destroy();
@@ -183,6 +288,69 @@
                 table.draw();
             }
         });
+
+        // Tab switching functionality
+        $('#activeRecordsBtn').click(function() {
+            $(this).addClass('active');
+            $('#showDeletedBtn').removeClass('active');
+            $('#activeUnits').show();
+            $('#deletedUnits').hide();
+        });
+
+        $('#showDeletedBtn').click(function() {
+            $(this).addClass('active');
+            $('#activeRecordsBtn').removeClass('active');
+            $('#activeUnits').hide();
+            $('#deletedUnits').show();
+        });
+
+        // Initialize DataTable for deleted records
+        if (!$.fn.DataTable.isDataTable('#deletedUnitsTable')) {
+            $('#deletedUnitsTable').DataTable({
+                pageLength: 10,
+                ordering: true,
+                order: [[3, 'desc']], // Sort by date deleted by default
+                responsive: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search deleted units..."
+                },
+                columnDefs: [
+                    { orderable: false, targets: 0 } // Disable sorting on actions column
+                ]
+            });
+        }
     });
 </script>
+@endsection
+
+@section('styles')
+<style>
+    /* Your existing styles plus: */
+    .btn-group .btn {
+        border-radius: 0;
+    }
+    
+    .btn-group .btn:first-child {
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+    }
+    
+    .btn-group .btn:last-child {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+    }
+
+    .btn-group .btn.active {
+        opacity: 1;
+    }
+
+    .btn-group .btn:not(.active) {
+        opacity: 0.8;
+    }
+
+    .btn-group .btn:hover:not(.active) {
+        opacity: 0.9;
+    }
+</style>
 @endsection 

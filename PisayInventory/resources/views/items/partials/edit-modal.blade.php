@@ -1,5 +1,9 @@
 <!-- Edit Item Modal -->
-<div class="modal fade" id="editItemModal{{ $item->ItemId }}" tabindex="-1">
+<div class="modal fade" 
+     id="editItemModal{{ $item->ItemId }}" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">

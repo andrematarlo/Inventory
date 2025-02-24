@@ -1,5 +1,9 @@
 <!-- Add Supplier Modal -->
-<div class="modal fade" id="addSupplierModal" tabindex="-1">
+<div class="modal fade" 
+     id="addSupplierModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">

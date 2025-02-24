@@ -20,13 +20,13 @@ class EmployeeController extends Controller
 {
     private function getUserPermissions()
     {
-        $userRole = auth()->user()->role;
-        // Temporary debug to check permissions
+        $userRole = Auth::user()->role;
+        
         $permissions = RolePolicy::whereHas('role', function($query) use ($userRole) {
             $query->where('RoleName', $userRole);
         })->where('Module', 'Employee Management')->first();
         
-        \Log::info('User Permissions:', [
+        Log::info('User Permissions:', [
             'role' => $userRole,
             'permissions' => $permissions
         ]);
@@ -35,158 +35,156 @@ class EmployeeController extends Controller
     }
 
     public function index()
-{
-    try {
-        $userPermissions = $this->getUserPermissions();
-        
-        if (!$userPermissions || !$userPermissions->CanView) {
-            return redirect()->back()->with('error', 'You do not have permission to view employees.');
+    {
+        try {
+            $userPermissions = $this->getUserPermissions();
+            
+            if (!$userPermissions || !$userPermissions->CanView) {
+                return redirect()->back()->with('error', 'You do not have permission to view employees.');
+            }
+
+            $activeEmployees = Employee::where('IsDeleted', false)
+                ->orderBy('LastName')
+                ->get();
+
+            $deletedEmployees = Employee::where('IsDeleted', true)
+                ->orderBy('LastName')
+                ->get();
+
+            // Get roles for the import modal
+            $roles = Role::where('IsDeleted', false)->get();
+
+            return view('employees.index', [
+                'activeEmployees' => $activeEmployees,
+                'deletedEmployees' => $deletedEmployees,
+                'userPermissions' => $userPermissions,
+                'roles' => $roles
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading employees: ' . $e->getMessage());
+            return back()->with('error', 'Error loading employees: ' . $e->getMessage());
         }
-
-        $activeEmployees = Employee::where('IsDeleted', false)
-            ->orderBy('LastName')
-            ->get();
-
-        $deletedEmployees = Employee::where('IsDeleted', true)
-            ->orderBy('LastName')
-            ->get();
-
-        // Get roles for the import modal
-        $roles = Role::where('IsDeleted', false)->get();
-
-        return view('employees.index', [
-            'activeEmployees' => $activeEmployees,
-            'deletedEmployees' => $deletedEmployees,
-            'userPermissions' => $userPermissions,
-            'roles' => $roles
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('Error loading employees: ' . $e->getMessage());
-        return back()->with('error', 'Error loading employees: ' . $e->getMessage());
     }
-}
 
+    public function import(Request $request)
+    {
+        try {
+            // First check permissions
+            $userPermissions = $this->getUserPermissions();
+            if (!$userPermissions || !$userPermissions->CanAdd) {
+                throw new \Exception('You do not have permission to import employees.');
+            }
 
+            // Validate request
+            $request->validate([
+                'excel_file' => 'required|mimes:xlsx,xls',
+                'column_mapping' => 'required|array',
+                'column_mapping.Name' => 'required|string',
+                'column_mapping.Email' => 'required|string',
+                'column_mapping.Address' => 'required|string',
+                'column_mapping.Gender' => 'required|string',
+                'column_mapping.Role' => 'required|string'
+            ]);
 
-public function import(Request $request)
-{
-    try {
-        // First check permissions
-        $userPermissions = $this->getUserPermissions();
-        if (!$userPermissions || !$userPermissions->CanAdd) {
-            throw new \Exception('You do not have permission to import employees.');
+            DB::beginTransaction();
+
+            // Simplified import constructor - only needs column mapping and created by ID
+            $import = new EmployeesImport(
+                $request->column_mapping,
+                Auth::id()
+            );
+
+            Excel::import($import, $request->file('excel_file'));
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Employees imported successfully!'
+            ]);
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            DB::rollBack();
+            $failures = $e->failures();
+            $error = $failures[0]->errors()[0] ?? 'Validation error during import';
+            
+            Log::error('Import validation error:', [
+                'error' => $error,
+                'failures' => $failures
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $error
+            ], 422);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error importing employees:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Import failed: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Validate request
-        $request->validate([
-            'excel_file' => 'required|mimes:xlsx,xls',
-            'column_mapping' => 'required|array',
-            'column_mapping.Name' => 'required|string',
-            'column_mapping.Email' => 'required|string',
-            'column_mapping.Address' => 'required|string',
-            'column_mapping.Gender' => 'required|string',
-            'column_mapping.Role' => 'required|string'
-        ]);
-
-        DB::beginTransaction();
-
-        // Simplified import constructor - only needs column mapping and created by ID
-        $import = new EmployeesImport(
-            $request->column_mapping,
-            Auth::id()
-        );
-
-        Excel::import($import, $request->file('excel_file'));
-
-        DB::commit();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Employees imported successfully!'
-        ]);
-
-    } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-        DB::rollBack();
-        $failures = $e->failures();
-        $error = $failures[0]->errors()[0] ?? 'Validation error during import';
-        
-        Log::error('Import validation error:', [
-            'error' => $error,
-            'failures' => $failures
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'error' => $error
-        ], 422);
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error importing employees:', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'error' => 'Import failed: ' . $e->getMessage()
-        ], 500);
     }
-}
 
-public function previewColumns(Request $request)
-{
-    try {
-        $request->validate([
-            'excel_file' => 'required|mimes:xlsx,xls',
-        ]);
+    public function previewColumns(Request $request)
+    {
+        try {
+            $request->validate([
+                'excel_file' => 'required|mimes:xlsx,xls',
+            ]);
 
-        $path = $request->file('excel_file')->getRealPath();
-        $spreadsheet = IOFactory::load($path);
-        $worksheet = $spreadsheet->getActiveSheet();
-        $columns = [];
+            $path = $request->file('excel_file')->getRealPath();
+            $spreadsheet = IOFactory::load($path);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $columns = [];
 
-        // Get the first row (headers)
-        foreach ($worksheet->getRowIterator(1, 1) as $row) {
-            $cellIterator = $row->getCellIterator();
-            $cellIterator->setIterateOnlyExistingCells(false);
+            // Get the first row (headers)
+            foreach ($worksheet->getRowIterator(1, 1) as $row) {
+                $cellIterator = $row->getCellIterator();
+                $cellIterator->setIterateOnlyExistingCells(false);
 
-            foreach ($cellIterator as $cell) {
-                $colName = trim($cell->getValue());
-                if (!empty($colName)) {
-                    // Clean the column name
-                    $colName = str_replace(['_', '-'], ' ', $colName);
-                    $colName = trim($colName);
-                    $columns[] = $colName;
+                foreach ($cellIterator as $cell) {
+                    $colName = trim($cell->getValue());
+                    if (!empty($colName)) {
+                        // Clean the column name
+                        $colName = str_replace(['_', '-'], ' ', $colName);
+                        $colName = trim($colName);
+                        $columns[] = $colName;
+                    }
                 }
             }
+
+            // Map similar column names
+            $columnMappings = [
+                'Name' => ['name', 'full name', 'fullname', 'complete name'],
+                'Email' => ['email', 'e-mail', 'mail', 'email address'],
+                'Address' => ['address', 'addr', 'location'],
+                'Gender' => ['gender', 'sex'],
+                'Role' => ['role', 'roles', 'position', 'designation']
+            ];
+
+            Log::info('Excel columns found:', [
+                'columns' => $columns,
+                'mappings' => $columnMappings
+            ]);
+
+            return response()->json([
+                'columns' => $columns,
+                'mappings' => $columnMappings
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error previewing Excel columns: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        // Map similar column names
-        $columnMappings = [
-            'Name' => ['name', 'full name', 'fullname', 'complete name'],
-            'Email' => ['email', 'e-mail', 'mail', 'email address'],
-            'Address' => ['address', 'addr', 'location'],
-            'Gender' => ['gender', 'sex'],
-            'Role' => ['role', 'roles', 'position', 'designation']
-        ];
-
-        Log::info('Excel columns found:', [
-            'columns' => $columns,
-            'mappings' => $columnMappings
-        ]);
-
-        return response()->json([
-            'columns' => $columns,
-            'mappings' => $columnMappings
-        ]);
-        
-    } catch (\Exception $e) {
-        Log::error('Error previewing Excel columns: ' . $e->getMessage());
-        return response()->json(['error' => $e->getMessage()], 500);
     }
-}
 
     public function create()
     {
@@ -352,276 +350,276 @@ public function previewColumns(Request $request)
     }
 
     public function edit($id)
-{
-    try {
-        // Debug logging
-        Log::info('Raw employee edit data:', [
-            'received_id' => $id,
-            'id_type' => gettype($id)
-        ]);
+    {
+        try {
+            // Debug logging
+            Log::info('Raw employee edit data:', [
+                'received_id' => $id,
+                'id_type' => gettype($id)
+            ]);
 
-        // Extract ID from object if needed
-        if (is_object($id) || is_array($id)) {
-            if (isset($id->EmployeeID)) {
-                $id = $id->EmployeeID;
-            } elseif (is_array($id) && isset($id['EmployeeID'])) {
-                $id = $id['EmployeeID'];
-            } elseif (property_exists($id, 'App\Models\Employee')) {
-                $employeeData = $id->{'App\Models\Employee'};
-                $id = $employeeData->EmployeeID;
+            // Extract ID from object if needed
+            if (is_object($id) || is_array($id)) {
+                if (isset($id->EmployeeID)) {
+                    $id = $id->EmployeeID;
+                } elseif (is_array($id) && isset($id['EmployeeID'])) {
+                    $id = $id['EmployeeID'];
+                } elseif (property_exists($id, 'App\Models\Employee')) {
+                    $employeeData = $id->{'App\Models\Employee'};
+                    $id = $employeeData->EmployeeID;
+                }
             }
-        }
 
-        // If it's a JSON string, try to decode it
-        if (is_string($id) && strpos($id, '{') !== false) {
-            $decoded = json_decode($id, true);
-            if (isset($decoded['EmployeeID'])) {
-                $id = $decoded['EmployeeID'];
+            // If it's a JSON string, try to decode it
+            if (is_string($id) && strpos($id, '{') !== false) {
+                $decoded = json_decode($id, true);
+                if (isset($decoded['EmployeeID'])) {
+                    $id = $decoded['EmployeeID'];
+                }
             }
+
+            // Final validation
+            if (!is_numeric($id)) {
+                throw new \Exception('Invalid employee ID');
+            }
+
+            $employee = Employee::with('roles')
+                ->where('EmployeeID', $id)
+                ->where('IsDeleted', false)
+                ->first();
+
+            if (!$employee) {
+                throw new \Exception('Employee not found');
+            }
+
+            $roles = Role::where('IsDeleted', false)
+                ->orderBy('RoleName')
+                ->get();
+
+            return view('employees.edit', compact('employee', 'roles'));
+        } catch (\Exception $e) {
+            Log::error('Error loading edit employee form:', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            return back()->with('error', 'Error loading form: ' . $e->getMessage());
         }
-
-        // Final validation
-        if (!is_numeric($id)) {
-            throw new \Exception('Invalid employee ID');
-        }
-
-        $employee = Employee::with('roles')
-            ->where('EmployeeID', $id)
-            ->where('IsDeleted', false)
-            ->first();
-
-        if (!$employee) {
-            throw new \Exception('Employee not found');
-        }
-
-        $roles = Role::where('IsDeleted', false)
-            ->orderBy('RoleName')
-            ->get();
-
-        return view('employees.edit', compact('employee', 'roles'));
-    } catch (\Exception $e) {
-        Log::error('Error loading edit employee form:', [
-            'id' => $id,
-            'error' => $e->getMessage()
-        ]);
-        return back()->with('error', 'Error loading form: ' . $e->getMessage());
     }
-}
 
-public function update(Request $request, $id)
-{
-    try {
-        // Debug logging
-        Log::info('Raw employee update data:', [
-            'received_id' => $id,
-            'id_type' => gettype($id)
-        ]);
-
-        // Extract ID from object if needed
-        if (is_object($id) || is_array($id)) {
-            if (isset($id->EmployeeID)) {
-                $id = $id->EmployeeID;
-            } elseif (is_array($id) && isset($id['EmployeeID'])) {
-                $id = $id['EmployeeID'];
-            } elseif (property_exists($id, 'App\Models\Employee')) {
-                $employeeData = $id->{'App\Models\Employee'};
-                $id = $employeeData->EmployeeID;
-            }
-        }
-
-        // If it's a JSON string, try to decode it
-        if (is_string($id) && strpos($id, '{') !== false) {
-            $decoded = json_decode($id, true);
-            if (isset($decoded['EmployeeID'])) {
-                $id = $decoded['EmployeeID'];
-            }
-        }
-
-        // Final validation
-        if (!is_numeric($id)) {
-            throw new \Exception('Invalid employee ID');
-        }
-
-        // Find the employee
-        $employee = Employee::where('EmployeeID', $id)->first();
-        if (!$employee) {
-            throw new \Exception('Employee not found');
-        }
-
-        // Validate basic fields
-        $validationRules = [
-            'FirstName' => 'required|string|max:100',
-            'LastName' => 'required|string|max:100',
-            'Email' => [
-                'required',
-                'email',
-                'max:100',
-                'unique:employee,Email,' . $id . ',EmployeeID',
-                'regex:/^[a-zA-Z0-9._%+-]+@gmail\.com$/',
-                'ends_with:gmail.com'
-            ],
-            'Username' => 'required|string|max:100|unique:UserAccount,Username,' . $employee->userAccount->UserAccountID . ',UserAccountID',
-            'Gender' => 'required|in:Male,Female',
-            'Address' => 'required|string|max:65535',
-            'roles' => 'required|array|min:1',
-            'roles.*' => 'exists:roles,RoleId'
-        ];
-
-        $messages = [
-            'Email.regex' => 'The email must be a valid Gmail address (@gmail.com)',
-            'Email.ends_with' => 'The email must end with @gmail.com'
-        ];
-
-        // Add password validation only if password is being updated
-        if ($request->filled('Password')) {
-            $validationRules['Password'] = 'required|string|min:6|confirmed';
-        }
-
-        $request->validate($validationRules, $messages);
-
-        DB::beginTransaction();
-
-        $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
-            ->where('IsDeleted', false)
-            ->firstOrFail();
-
-        // Get role names for UserAccount
-        $roleNames = Role::whereIn('RoleId', $request->roles)
-            ->pluck('RoleName')
-            ->implode(', ');
-
-        // Update employee details
-        $employee->update([
-            'FirstName' => $request->FirstName,
-            'LastName' => $request->LastName,
-            'Email' => $request->Email,
-            'Gender' => $request->Gender,
-            'Address' => $request->Address,
-            'ModifiedByID' => $currentEmployee->EmployeeID,
-            'DateModified' => now()
-        ]);
-
-        // Handle roles update
-        DB::table('employee_roles')
-            ->where('EmployeeId', $id)
-            ->where('IsDeleted', false)
-            ->update([
-                'IsDeleted' => true,
-                'DeletedById' => $currentEmployee->EmployeeID,
-                'DateDeleted' => now(),
-                'ModifiedById' => $currentEmployee->EmployeeID,
-                'DateModified' => now()
+    public function update(Request $request, $id)
+    {
+        try {
+            // Debug logging
+            Log::info('Raw employee update data:', [
+                'received_id' => $id,
+                'id_type' => gettype($id)
             ]);
 
-        foreach ($request->roles as $roleId) {
-            DB::table('employee_roles')->insert([
-                'EmployeeId' => $id,
-                'RoleId' => $roleId,
-                'IsDeleted' => false,
-                'DateCreated' => now(),
-                'CreatedById' => $currentEmployee->EmployeeID
-            ]);
-        }
+            // Extract ID from object if needed
+            if (is_object($id) || is_array($id)) {
+                if (isset($id->EmployeeID)) {
+                    $id = $id->EmployeeID;
+                } elseif (is_array($id) && isset($id['EmployeeID'])) {
+                    $id = $id['EmployeeID'];
+                } elseif (property_exists($id, 'App\Models\Employee')) {
+                    $employeeData = $id->{'App\Models\Employee'};
+                    $id = $employeeData->EmployeeID;
+                }
+            }
 
-        // Update user account if it exists
-        if ($employee->userAccount) {
-            $updateData = [
-                'Username' => $request->Username,
-                'role' => $roleNames,
-                'ModifiedByID' => $currentEmployee->EmployeeID,
-                'DateModified' => now()
+            // If it's a JSON string, try to decode it
+            if (is_string($id) && strpos($id, '{') !== false) {
+                $decoded = json_decode($id, true);
+                if (isset($decoded['EmployeeID'])) {
+                    $id = $decoded['EmployeeID'];
+                }
+            }
+
+            // Final validation
+            if (!is_numeric($id)) {
+                throw new \Exception('Invalid employee ID');
+            }
+
+            // Find the employee
+            $employee = Employee::where('EmployeeID', $id)->first();
+            if (!$employee) {
+                throw new \Exception('Employee not found');
+            }
+
+            // Validate basic fields
+            $validationRules = [
+                'FirstName' => 'required|string|max:100',
+                'LastName' => 'required|string|max:100',
+                'Email' => [
+                    'required',
+                    'email',
+                    'max:100',
+                    'unique:employee,Email,' . $id . ',EmployeeID',
+                    'regex:/^[a-zA-Z0-9._%+-]+@gmail\.com$/',
+                    'ends_with:gmail.com'
+                ],
+                'Username' => 'required|string|max:100|unique:UserAccount,Username,' . $employee->userAccount->UserAccountID . ',UserAccountID',
+                'Gender' => 'required|in:Male,Female',
+                'Address' => 'required|string|max:65535',
+                'roles' => 'required|array|min:1',
+                'roles.*' => 'exists:roles,RoleId'
             ];
 
-            // Add password to update data if provided
+            $messages = [
+                'Email.regex' => 'The email must be a valid Gmail address (@gmail.com)',
+                'Email.ends_with' => 'The email must end with @gmail.com'
+            ];
+
+            // Add password validation only if password is being updated
             if ($request->filled('Password')) {
-                $updateData['Password'] = Hash::make($request->Password);
+                $validationRules['Password'] = 'required|string|min:6|confirmed';
             }
 
-            $employee->userAccount->update($updateData);
+            $request->validate($validationRules, $messages);
+
+            DB::beginTransaction();
+
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            // Get role names for UserAccount
+            $roleNames = Role::whereIn('RoleId', $request->roles)
+                ->pluck('RoleName')
+                ->implode(', ');
+
+            // Update employee details
+            $employee->update([
+                'FirstName' => $request->FirstName,
+                'LastName' => $request->LastName,
+                'Email' => $request->Email,
+                'Gender' => $request->Gender,
+                'Address' => $request->Address,
+                'ModifiedByID' => $currentEmployee->EmployeeID,
+                'DateModified' => now()
+            ]);
+
+            // Handle roles update
+            DB::table('employee_roles')
+                ->where('EmployeeId', $id)
+                ->where('IsDeleted', false)
+                ->update([
+                    'IsDeleted' => true,
+                    'DeletedById' => $currentEmployee->EmployeeID,
+                    'DateDeleted' => now(),
+                    'ModifiedById' => $currentEmployee->EmployeeID,
+                    'DateModified' => now()
+                ]);
+
+            foreach ($request->roles as $roleId) {
+                DB::table('employee_roles')->insert([
+                    'EmployeeId' => $id,
+                    'RoleId' => $roleId,
+                    'IsDeleted' => false,
+                    'DateCreated' => now(),
+                    'CreatedById' => $currentEmployee->EmployeeID
+                ]);
+            }
+
+            // Update user account if it exists
+            if ($employee->userAccount) {
+                $updateData = [
+                    'Username' => $request->Username,
+                    'role' => $roleNames,
+                    'ModifiedByID' => $currentEmployee->EmployeeID,
+                    'DateModified' => now()
+                ];
+
+                // Add password to update data if provided
+                if ($request->filled('Password')) {
+                    $updateData['Password'] = Hash::make($request->Password);
+                }
+
+                $employee->userAccount->update($updateData);
+            }
+
+            DB::commit();
+            return redirect()->route('employees.index')
+                ->with('success', 'Employee updated successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating employee:', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Error updating employee: ' . $e->getMessage())
+                ->withInput();
         }
-
-        DB::commit();
-        return redirect()->route('employees.index')
-            ->with('success', 'Employee updated successfully');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error updating employee:', [
-            'id' => $id,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return back()->with('error', 'Error updating employee: ' . $e->getMessage())
-            ->withInput();
     }
-}
 
     public function destroy($id)
-{
-    try {
-        DB::beginTransaction();
+    {
+        try {
+            DB::beginTransaction();
 
-        // Debug logging
-        Log::info('Raw employee delete data:', [
-            'received_id' => $id,
-            'id_type' => gettype($id)
-        ]);
+            // Debug logging
+            Log::info('Raw employee delete data:', [
+                'received_id' => $id,
+                'id_type' => gettype($id)
+            ]);
 
-        // Check permissions first
-        $userPermissions = $this->getUserPermissions();
-        if (!$userPermissions || !$userPermissions->CanDelete) {
-            throw new \Exception('You do not have permission to delete employees.');
-        }
-
-        // Extract ID from object if needed
-        if (is_object($id) || is_array($id)) {
-            if (isset($id->EmployeeID)) {
-                $id = $id->EmployeeID;
-            } elseif (is_array($id) && isset($id['EmployeeID'])) {
-                $id = $id['EmployeeID'];
-            } elseif (property_exists($id, 'App\Models\Employee')) {
-                $employeeData = $id->{'App\Models\Employee'};
-                $id = $employeeData->EmployeeID;
+            // Check permissions first
+            $userPermissions = $this->getUserPermissions();
+            if (!$userPermissions || !$userPermissions->CanDelete) {
+                throw new \Exception('You do not have permission to delete employees.');
             }
-        }
 
-        // If it's a JSON string, try to decode it
-        if (is_string($id) && strpos($id, '{') !== false) {
-            $decoded = json_decode($id, true);
-            if (isset($decoded['EmployeeID'])) {
-                $id = $decoded['EmployeeID'];
+            // Extract ID from object if needed
+            if (is_object($id) || is_array($id)) {
+                if (isset($id->EmployeeID)) {
+                    $id = $id->EmployeeID;
+                } elseif (is_array($id) && isset($id['EmployeeID'])) {
+                    $id = $id['EmployeeID'];
+                } elseif (property_exists($id, 'App\Models\Employee')) {
+                    $employeeData = $id->{'App\Models\Employee'};
+                    $id = $employeeData->EmployeeID;
+                }
             }
+
+            // If it's a JSON string, try to decode it
+            if (is_string($id) && strpos($id, '{') !== false) {
+                $decoded = json_decode($id, true);
+                if (isset($decoded['EmployeeID'])) {
+                    $id = $decoded['EmployeeID'];
+                }
+            }
+
+            // Final validation
+            if (!is_numeric($id)) {
+                throw new \Exception('Invalid employee ID');
+            }
+
+            $employee = Employee::where('EmployeeID', $id)->first();
+            if (!$employee) {
+                throw new \Exception('Employee not found');
+            }
+
+            $employee->update([
+                'IsDeleted' => true,
+                'DeletedById' => Auth::id(),
+                'DateDeleted' => now()
+            ]);
+
+            DB::commit();
+            return redirect()->route('employees.index')
+                ->with('success', 'Employee moved to trash successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Employee deletion failed:', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            return back()->with('error', 'Error deleting employee: ' . $e->getMessage());
         }
-
-        // Final validation
-        if (!is_numeric($id)) {
-            throw new \Exception('Invalid employee ID');
-        }
-
-        $employee = Employee::where('EmployeeID', $id)->first();
-        if (!$employee) {
-            throw new \Exception('Employee not found');
-        }
-
-        $employee->update([
-            'IsDeleted' => true,
-            'DeletedById' => Auth::id(),
-            'DateDeleted' => now()
-        ]);
-
-        DB::commit();
-        return redirect()->route('employees.index')
-            ->with('success', 'Employee moved to trash successfully');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Employee deletion failed:', [
-            'id' => $id,
-            'error' => $e->getMessage()
-        ]);
-        return back()->with('error', 'Error deleting employee: ' . $e->getMessage());
     }
-}
 
     public function restore($id)
     {

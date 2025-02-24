@@ -71,8 +71,9 @@ Route::middleware('auth')->group(function () {
         Route::controller(UnitController::class)->group(function () {
             Route::get('/units', 'index')->name('units.index');
             Route::post('/units', 'store')->name('units.store');
-            Route::put('/units/{unit}', 'update')->name('units.update');
-            Route::delete('/units/{unit}', 'destroy')->name('units.destroy');
+            Route::put('/units/{id}', 'update')->name('units.update');
+            Route::delete('/units/{id}', 'destroy')->name('units.destroy');
+            Route::post('/units/{id}/restore', 'restore')->name('units.restore');
         });
 
         // Reports
