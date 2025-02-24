@@ -121,21 +121,47 @@ class ClassificationController extends Controller
             return redirect()->back()->with('error', 'You do not have permission to edit classifications.');
         }
 
-        $request->validate([
-            'ClassificationName' => 'required|string|max:255',
-            'ParentClassificationId' => 'nullable|exists:classification,ClassificationId'
-        ]);
+        try {
+            DB::beginTransaction();
 
-        $classification = Classification::findOrFail($id);
-        $classification->update([
-            'ClassificationName' => $request->ClassificationName,
-            'ParentClassificationId' => $request->ParentClassificationId,
-            'ModifiedById' => auth()->user()->UserAccountID,
-            'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
-        ]);
+            // Clean and extract the ID
+            if (is_object($id)) {
+                $id = $id->ClassificationId;
+            } else if (is_string($id) && strpos($id, '{') !== false) {
+                $data = json_decode($id, true);
+                $id = $data['ClassificationId'] ?? null;
+            }
 
-        return redirect()->route('classifications.index')
-            ->with('success', 'Classification updated successfully');
+            // Verify we have a valid ID
+            if (!$id) {
+                throw new \Exception('Invalid Classification ID');
+            }
+
+            $request->validate([
+                'ClassificationName' => 'required|string|max:255',
+                'ParentClassificationId' => 'nullable|exists:classification,ClassificationId'
+            ]);
+
+            $classification = Classification::where('ClassificationId', $id)->first();
+            
+            if (!$classification) {
+                throw new \Exception('Classification not found');
+            }
+
+            $classification->update([
+                'ClassificationName' => $request->ClassificationName,
+                'ParentClassificationId' => $request->ParentClassificationId,
+                'ModifiedById' => auth()->user()->UserAccountID,
+                'DateModified' => Carbon::now()->format('Y-m-d H:i:s')
+            ]);
+
+            DB::commit();
+            return back()->with('success', 'Classification updated successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Classification update failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to update classification: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -148,16 +174,42 @@ class ClassificationController extends Controller
             return redirect()->back()->with('error', 'You do not have permission to delete classifications.');
         }
 
-        $classification = Classification::findOrFail($id);
-        
-        $classification->update([
-            'IsDeleted' => true,
-            'DeletedById' => Auth::user()->UserAccountID,
-            'DateDeleted' => Carbon::now()->format('Y-m-d H:i:s')
-        ]);
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('classifications.index')
-            ->with('success', 'Classification moved to trash successfully');
+            // If $id is an object, extract the ClassificationId
+            if (is_object($id)) {
+                $id = $id->ClassificationId;
+            } else if (is_string($id) && strpos($id, '{') !== false) {
+                // If it's a JSON string, decode it and get ClassificationId
+                $data = json_decode($id, true);
+                $id = $data['ClassificationId'] ?? null;
+            }
+
+            // Verify we have a valid ID
+            if (!$id) {
+                throw new \Exception('Invalid Classification ID');
+            }
+
+            $classification = Classification::where('ClassificationId', $id)->first();
+            
+            if (!$classification) {
+                throw new \Exception('Classification not found');
+            }
+
+            $classification->update([
+                'IsDeleted' => true,
+                'DeletedById' => Auth::user()->UserAccountID,
+                'DateDeleted' => Carbon::now()->format('Y-m-d H:i:s')
+            ]);
+
+            DB::commit();
+            return back()->with('success', 'Classification moved to trash successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Classification deletion failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete classification: ' . $e->getMessage());
+        }
     }
 
     public function restore($id)
