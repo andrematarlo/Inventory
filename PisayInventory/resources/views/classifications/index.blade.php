@@ -6,7 +6,6 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Classification Management</h2>
-        {{-- Show Add button only if user has Add permission --}}
         @if($userPermissions && $userPermissions->CanAdd)
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClassificationModal">
             <i class="bi bi-plus-lg"></i> Add Classification
@@ -14,7 +13,15 @@
         @endif
     </div>
 
-    <div class="card mb-4">
+    <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn btn-primary active" id="activeRecords">Active Records</button>
+        <button type="button" class="btn btn-outline-danger" id="deletedRecords">
+            <i class="bi bi-trash"></i> Show Deleted Records
+        </button>
+    </div>
+
+    <!-- Active Classifications Card -->
+    <div class="card mb-4" id="activeRecordsCard">
         <div class="card-header">
             <h5 class="card-title mb-0">Active Classifications</h5>
         </div>
@@ -78,7 +85,7 @@
     </div>
 
     <!-- Deleted Classifications Card -->
-    <div class="card">
+    <div class="card mb-4" id="deletedRecordsCard" style="display: none;">
         <div class="card-header">
             <h5 class="card-title mb-0">Deleted Classifications</h5>
         </div>
@@ -135,31 +142,7 @@
 <!-- Edit Classification Modals -->
 @if($userPermissions && $userPermissions->CanEdit)
     @foreach($classifications as $classification)
-        <div class="modal fade" id="editClassificationModal{{ $classification->ClassificationId }}" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="editClassificationModalLabel{{ $classification->ClassificationId }}" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editClassificationModalLabel{{ $classification->ClassificationId }}">Edit Classification</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form action="{{ route('classifications.update', $classification->ClassificationId) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="ClassificationName" class="form-label">Classification Name</label>
-                                <input type="text" class="form-control" id="ClassificationName" name="ClassificationName" value="{{ $classification->ClassificationName }}" required>
-                            </div>
-                            <!-- Add other fields if needed -->
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+        @include('classifications.partials.edit-modal', ['classification' => $classification])
     @endforeach
 @endif
 
@@ -167,6 +150,41 @@
 
 @section('scripts')
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const activeRecordsBtn = document.getElementById('activeRecords');
+    const deletedRecordsBtn = document.getElementById('deletedRecords');
+    const activeRecordsCard = document.getElementById('activeRecordsCard');
+    const deletedRecordsCard = document.getElementById('deletedRecordsCard');
+
+    function toggleRecords(showActive) {
+        if (showActive) {
+            activeRecordsCard.style.display = 'block';
+            deletedRecordsCard.style.display = 'none';
+            activeRecordsBtn.classList.add('active');
+            activeRecordsBtn.classList.remove('btn-outline-primary');
+            activeRecordsBtn.classList.add('btn-primary');
+            deletedRecordsBtn.classList.remove('active');
+            deletedRecordsBtn.classList.add('btn-outline-danger');
+            deletedRecordsBtn.classList.remove('btn-danger');
+        } else {
+            activeRecordsCard.style.display = 'none';
+            deletedRecordsCard.style.display = 'block';
+            deletedRecordsBtn.classList.add('active');
+            deletedRecordsBtn.classList.remove('btn-outline-danger');
+            deletedRecordsBtn.classList.add('btn-danger');
+            activeRecordsBtn.classList.remove('active');
+            activeRecordsBtn.classList.add('btn-outline-primary');
+            activeRecordsBtn.classList.remove('btn-primary');
+        }
+    }
+
+    activeRecordsBtn.addEventListener('click', () => toggleRecords(true));
+    deletedRecordsBtn.addEventListener('click', () => toggleRecords(false));
+
+    // Initialize view
+    toggleRecords(true);
+});
+
 function updatePerPage(value) {
     const url = new URL(window.location.href);
     url.searchParams.set('per_page', value);
