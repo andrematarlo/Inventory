@@ -21,47 +21,27 @@ class ItemController extends Controller
 {
     public function index()
     {
-        try {
-            $userPermissions = $this->getUserPermissions();
-            $activeItems = Item::with([
-                'classification', 
-                'unitOfMeasure', 
-                'createdBy'
-            ])
-            ->where('IsDeleted', false)
+        $activeItems = Item::with(['classification', 'unitOfMeasure', 'createdBy', 'modifiedBy'])
+            ->where('IsDeleted', 0)
+            ->orderBy('DateCreated', 'desc')
             ->paginate(10);
 
-            // Add this debugging
-            foreach ($activeItems as $item) {
-                Log::info('Item creator details:', [
-                    'item_id' => $item->ItemId,
-                    'created_by_id' => $item->CreatedById,
-                    'creator_info' => $item->createdBy
-                ]);
-            }
-
-            $deletedItems = Item::with([
-                'classification', 
-                'unitOfMeasure', 
-                'deletedBy'
-            ])
-            ->where('IsDeleted', true)
+        $deletedItems = Item::with(['classification', 'unitOfMeasure', 'deletedBy'])
+            ->where('IsDeleted', 1)
+            ->orderBy('DateDeleted', 'desc')
             ->paginate(10);
 
-            $classifications = Classification::where('IsDeleted', 0)->get();
-            $units = UnitOfMeasure::all();
+        $userPermissions = auth()->user()->permissions;
+        $classifications = Classification::where('IsDeleted', 0)->get();
+        $units = UnitOfMeasure::where('IsDeleted', 0)->get();
 
-            return view('items.index', [
-                'activeItems' => $activeItems,
-                'deletedItems' => $deletedItems,
-                'classifications' => $classifications,
-                'units' => $units,
-                'userPermissions' => $userPermissions
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error loading items: ' . $e->getMessage());
-            return back()->with('error', 'Error loading items: ' . $e->getMessage());
-        }
+        return view('items.index', compact(
+            'activeItems',
+            'deletedItems',
+            'userPermissions',
+            'classifications',
+            'units'
+        ));
     }
 
 

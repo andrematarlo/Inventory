@@ -23,7 +23,21 @@
     <!-- Active Classifications Card -->
     <div class="card mb-4" id="activeRecordsCard">
         <div class="card-header">
-            <h5 class="card-title mb-0">Active Classifications</h5>
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Active Classifications</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <div class="input-group">
+                        <input type="text" 
+                               class="form-control" 
+                               id="activeSearchInput" 
+                               placeholder="Search..."
+                               aria-label="Search">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -87,7 +101,21 @@
     <!-- Deleted Classifications Card -->
     <div class="card mb-4" id="deletedRecordsCard" style="display: none;">
         <div class="card-header">
-            <h5 class="card-title mb-0">Deleted Classifications</h5>
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Deleted Classifications</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <div class="input-group">
+                        <input type="text" 
+                               class="form-control" 
+                               id="deletedSearchInput" 
+                               placeholder="Search..."
+                               aria-label="Search">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -156,6 +184,42 @@ document.addEventListener('DOMContentLoaded', function() {
     const activeRecordsCard = document.getElementById('activeRecordsCard');
     const deletedRecordsCard = document.getElementById('deletedRecordsCard');
 
+    // Search functionality
+    const activeSearchInput = document.getElementById('activeSearchInput');
+    const deletedSearchInput = document.getElementById('deletedSearchInput');
+
+    function filterTable(tableBody, searchTerm) {
+        const rows = tableBody.getElementsByTagName('tr');
+        
+        for (let row of rows) {
+            const cells = row.getElementsByTagName('td');
+            let shouldShow = false;
+            
+            // Skip header row or empty message row
+            if (cells.length <= 1) continue;
+
+            for (let cell of cells) {
+                const text = cell.textContent.toLowerCase();
+                if (text.includes(searchTerm.toLowerCase())) {
+                    shouldShow = true;
+                    break;
+                }
+            }
+            
+            row.style.display = shouldShow ? '' : 'none';
+        }
+    }
+
+    activeSearchInput.addEventListener('input', (e) => {
+        const activeTableBody = activeRecordsCard.querySelector('tbody');
+        filterTable(activeTableBody, e.target.value);
+    });
+
+    deletedSearchInput.addEventListener('input', (e) => {
+        const deletedTableBody = deletedRecordsCard.querySelector('tbody');
+        filterTable(deletedTableBody, e.target.value);
+    });
+
     function toggleRecords(showActive) {
         if (showActive) {
             activeRecordsCard.style.display = 'block';
@@ -166,6 +230,8 @@ document.addEventListener('DOMContentLoaded', function() {
             deletedRecordsBtn.classList.remove('active');
             deletedRecordsBtn.classList.add('btn-outline-danger');
             deletedRecordsBtn.classList.remove('btn-danger');
+            // Clear deleted search when switching
+            deletedSearchInput.value = '';
         } else {
             activeRecordsCard.style.display = 'none';
             deletedRecordsCard.style.display = 'block';
@@ -175,6 +241,8 @@ document.addEventListener('DOMContentLoaded', function() {
             activeRecordsBtn.classList.remove('active');
             activeRecordsBtn.classList.add('btn-outline-primary');
             activeRecordsBtn.classList.remove('btn-primary');
+            // Clear active search when switching
+            activeSearchInput.value = '';
         }
     }
 

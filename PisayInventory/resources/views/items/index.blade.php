@@ -3,27 +3,25 @@
 @section('title', 'Items')
 
 @section('content')
-<div class="container-fluid px-4">
+<div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Items Management</h2>
+        <h2 class="mb-0">Items Management</h2>
+        @if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanAdd))
         <div>
-            @if($userPermissions && $userPermissions->CanAdd)
-                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importExcelModal">
-                    <i class="bi bi-upload"></i> Import Items
-                </button>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                    <i class="bi bi-plus-lg"></i> New Item
-                </button>
-            @endif
+            <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                <i class="bi bi-upload"></i> Import Items
+            </button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                <i class="bi bi-plus-lg"></i> Add Item
+            </button>
         </div>
+        @endif
     </div>
 
-    <div class="btn-group mb-4" role="group">
-        <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
-            Active Records
-        </button>
-        <button class="btn btn-danger" type="button" id="showDeletedBtn">
-            <i class="bi bi-archive"></i> Show Deleted Records
+    <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn btn-primary active" id="activeRecords">Active Records</button>
+        <button type="button" class="btn btn-outline-danger" id="deletedRecords">
+            <i class="bi bi-trash"></i> Show Deleted Records
         </button>
     </div>
 
@@ -31,514 +29,421 @@
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
-    <!-- Active Items Section -->
-    <div id="activeItems">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Active Items</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>Showing {{ $activeItems->firstItem() ?? 0 }} to {{ $activeItems->lastItem() ?? 0 }} of {{ $activeItems->total() }} results</div>
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination pagination-sm mb-0">
-                            @if($activeItems->onFirstPage())
-                                <li class="page-item disabled">
-                                    <span class="page-link"><i class="bi bi-chevron-left small"></i></span>
-                                </li>
-                            @else
-                                <li class="page-item">
-                                    <a class="page-link" href="{{ $activeItems->previousPageUrl() }}">
-                                        <i class="bi bi-chevron-left small"></i>
-                                    </a>
-                                </li>
-                            @endif
-
-                            @for($i = 1; $i <= $activeItems->lastPage(); $i++)
-                                <li class="page-item {{ $activeItems->currentPage() == $i ? 'active' : '' }}">
-                                    <a class="page-link" href="{{ $activeItems->url($i) }}">{{ $i }}</a>
-                                </li>
-                            @endfor
-
-                            @if($activeItems->hasMorePages())
-                                <li class="page-item">
-                                    <a class="page-link" href="{{ $activeItems->nextPageUrl() }}">
-                                        <i class="bi bi-chevron-right small"></i>
-                                    </a>
-                                </li>
-                            @else
-                                <li class="page-item disabled">
-                                    <span class="page-link"><i class="bi bi-chevron-right small"></i></span>
-                                </li>
-                            @endif
-                        </ul>
-                    </nav>
+    <!-- Active Items Card -->
+    <div class="card mb-4" id="activeRecordsCard">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Active Items</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <div class="input-group">
+                        <input type="text" 
+                               class="form-control" 
+                               id="activeSearchInput" 
+                               placeholder="Search..."
+                               aria-label="Search">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                    </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover" id="itemsTable">
-                        <thead>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>Showing {{ $activeItems->firstItem() ?? 0 }} to {{ $activeItems->lastItem() ?? 0 }} of {{ $activeItems->total() }} results</div>
+                <div class="pagination-sm">
+                    @if($activeItems->currentPage() > 1)
+                        <a href="{{ $activeItems->previousPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </a>
+                    @endif
+                    
+                    @for($i = 1; $i <= $activeItems->lastPage(); $i++)
+                        <a href="{{ $activeItems->url($i) }}" 
+                           class="btn btn-sm {{ $i == $activeItems->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
+                            {{ $i }}
+                        </a>
+                    @endfor
+
+                    @if($activeItems->hasMorePages())
+                        <a href="{{ $activeItems->nextPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </a>
+                    @endif
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover" id="itemsTable">
+                    <thead>
+                        <tr>
+                            @if(auth()->user()->role === 'Admin' || ($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete)))
+                            <th style="width: 100px">Actions</th>
+                            @endif
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Classification</th>
+                            <th>Unit</th>
+                            <th>Stocks</th>
+                            <th>Reorder Point</th>
+                            <th>Created By</th>
+                            <th>Date Created</th>
+                            <th>Modified By</th>
+                            <th>Date Modified</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($activeItems as $item)
                             <tr>
-                                <th>Actions</th>
-                                <th>Image</th>
-                                <th>Name</th>
-                                <th>Description</th>
-                                <th>Classification</th>
-                                <th>Unit</th>
-                                <th>Stocks</th>
-                                <th>Reorder Point</th>
-                                <th>Created By</th>
-                                <th>Date Created</th>
-                                <th>Modified By</th>
-                                <th>Date Modified</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($activeItems as $item)
-                                <tr>
-                                    @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            @if($userPermissions->CanEdit)
-                                            <button type="button" class="btn btn-sm btn-blue" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            @endif
-                                            @if($userPermissions && $userPermissions->CanDelete)
-                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteItemModal{{ $item->ItemId }}">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                            @endif
-                                        </div>
-                                    </td>
+                                @if(auth()->user()->role === 'Admin' || ($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete)))
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        @if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanEdit))
+                                        <button type="button" class="btn btn-sm btn-blue" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->ItemId }}">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        @endif
+                                        @if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanDelete))
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteItemModal{{ $item->ItemId }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        @endif
+                                    </div>
+                                </td>
+                                @endif
+                                <td>
+                                    @if($item->ImagePath)
+                                        <img src="{{ asset('storage/' . $item->ImagePath) }}" 
+                                             alt="{{ $item->ItemName }}" 
+                                             style="height: 50px; width: 50px; object-fit: cover;">
+                                    @else
+                                        <span class="text-muted">No image</span>
                                     @endif
-                                    <td>
-                                        @if($item->ImagePath)
-                                            <img src="{{ asset('storage/' . $item->ImagePath) }}" 
-                                                 alt="{{ $item->ItemName }}" 
-                                                 style="height: 50px; width: 50px; object-fit: cover;">
-                                        @else
-                                            <span class="text-muted">No image</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $item->ItemName }}</td>
-                                    <td>{{ $item->Description }}</td>
-                                    <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
-                                    <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
-                                    <td>{{ $item->StocksAvailable }}</td>
-                                    <td>{{ $item->ReorderPoint }}</td>
-                                    <td>{{ $item->createdBy->Username ?? 'N/A' }}</td>
-                                    <td>{{ $item->DateCreated ? date('Y-m-d H:i:s', strtotime($item->DateCreated)) : 'N/A' }}</td>
-                                    <td>{{ $item->modifiedBy->Username ?? 'N/A' }}</td>
-                                    <td>{{ $item->DateModified ? date('Y-m-d H:i:s', strtotime($item->DateModified)) : 'N/A' }}</td>
-                                    <td>
-                                        <span class="badge bg-success">Active</span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="14" class="text-center">No active items found</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Deleted Items Section -->
-    <div id="deletedItems" style="display: none;">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Deleted Items</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>Showing {{ $deletedItems->firstItem() ?? 0 }} to {{ $deletedItems->lastItem() ?? 0 }} of {{ $deletedItems->total() }} results</div>
-                    <div class="pagination-sm">
-                        @if($deletedItems->currentPage() > 1)
-                            <a href="{{ $deletedItems->previousPageUrl() . '&tab=deleted' }}" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-chevron-left"></i> Previous
-                            </a>
-                        @endif
-                        
-                        @for($i = 1; $i <= $deletedItems->lastPage(); $i++)
-                            <a href="{{ $deletedItems->url($i) . '&tab=deleted' }}" 
-                               class="btn btn-sm {{ $i == $deletedItems->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
-                                {{ $i }}
-                            </a>
-                        @endfor
-
-                        @if($deletedItems->hasMorePages())
-                            <a href="{{ $deletedItems->nextPageUrl() . '&tab=deleted' }}" class="btn btn-outline-secondary btn-sm">
-                                Next <i class="bi bi-chevron-right"></i>
-                            </a>
-                        @endif
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover" id="deletedItemsTable">
-                        <thead>
-                            <tr>
-                                <th>Actions</th>
-                                <th>Image</th>
-                                <th>Name</th>
-                                <th>Description</th>
-                                <th>Classification</th>
-                                <th>Unit</th>
-                                <th>Stocks</th>
-                                <th>Deleted By</th>
-                                <th>Date Deleted</th>
+                                </td>
+                                <td>{{ $item->ItemName }}</td>
+                                <td>{{ $item->Description }}</td>
+                                <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
+                                <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
+                                <td>{{ $item->StocksAvailable }}</td>
+                                <td>{{ $item->ReorderPoint }}</td>
+                                <td>{{ $item->createdBy->Username ?? 'N/A' }}</td>
+                                <td>{{ $item->DateCreated ? date('Y-m-d H:i:s', strtotime($item->DateCreated)) : 'N/A' }}</td>
+                                <td>{{ $item->modifiedBy->Username ?? 'N/A' }}</td>
+                                <td>{{ $item->DateModified ? date('Y-m-d H:i:s', strtotime($item->DateModified)) : 'N/A' }}</td>
+                                <td>
+                                    <span class="badge bg-success">Active</span>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($deletedItems as $item)
-                                <tr>
-                                    <td>
-                                        <form action="{{ route('items.restore', $item->ItemId) }}" 
-                                              method="POST" 
-                                              class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-arrow-counterclockwise" style="font-size: 14px;"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                    <td>
-                                        @if($item->ImagePath)
-                                            <img src="{{ asset('storage/' . $item->ImagePath) }}" 
-                                                 alt="{{ $item->ItemName }}" 
-                                                 style="height: 50px; width: 50px; object-fit: cover;">
-                                        @else
-                                            <span class="text-muted">No image</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $item->ItemName }}</td>
-                                    <td>{{ $item->Description }}</td>
-                                    <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
-                                    <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
-                                    <td>{{ $item->StocksAvailable }}</td>
-                                    <td>{{ $item->deletedBy->Username ?? 'N/A' }}</td>
-                                    <td>{{ $item->DateDeleted ? date('Y-m-d H:i:s', strtotime($item->DateDeleted)) : 'N/A' }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="10" class="text-center">No deleted items found</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-<<<<<<< HEAD
-=======
-                    <div class="d-flex justify-content-end mt-3">
-                        <div class="custom-pagination">
-                            {{ $deletedItems->links() }}
-                        </div>
+                        @empty
+                            <tr>
+                                <td colspan="{{ auth()->user()->role === 'Admin' || ($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete)) ? '14' : '13' }}" class="text-center">No active items found</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deleted Items Card -->
+    <div class="card mb-4" id="deletedRecordsCard" style="display: none;">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Deleted Items</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <div class="input-group">
+                        <input type="text" 
+                               class="form-control" 
+                               id="deletedSearchInput" 
+                               placeholder="Search..."
+                               aria-label="Search">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
                     </div>
->>>>>>> 236dfd44d8e294a7284511103c7dca911d0ea9d3
                 </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>Showing {{ $deletedItems->firstItem() ?? 0 }} to {{ $deletedItems->lastItem() ?? 0 }} of {{ $deletedItems->total() }} results</div>
+                <div class="pagination-sm">
+                    @if($deletedItems->currentPage() > 1)
+                        <a href="{{ $deletedItems->previousPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </a>
+                    @endif
+                    
+                    @for($i = 1; $i <= $deletedItems->lastPage(); $i++)
+                        <a href="{{ $deletedItems->url($i) }}" 
+                           class="btn btn-sm {{ $i == $deletedItems->currentPage() ? 'btn-primary' : 'btn-outline-secondary' }}">
+                            {{ $i }}
+                        </a>
+                    @endfor
+
+                    @if($deletedItems->hasMorePages())
+                        <a href="{{ $deletedItems->nextPageUrl() }}" class="btn btn-outline-secondary btn-sm">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </a>
+                    @endif
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover" id="deletedItemsTable">
+                    <thead>
+                        <tr>
+                            <th>Actions</th>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Classification</th>
+                            <th>Unit</th>
+                            <th>Stocks</th>
+                            <th>Deleted By</th>
+                            <th>Date Deleted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($deletedItems as $item)
+                            <tr>
+                                <td>
+                                    <form action="{{ route('items.restore', $item->ItemId) }}" 
+                                          method="POST" 
+                                          class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="bi bi-arrow-counterclockwise" style="font-size: 14px;"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>
+                                    @if($item->ImagePath)
+                                        <img src="{{ asset('storage/' . $item->ImagePath) }}" 
+                                             alt="{{ $item->ItemName }}" 
+                                             style="height: 50px; width: 50px; object-fit: cover;">
+                                    @else
+                                        <span class="text-muted">No image</span>
+                                    @endif
+                                </td>
+                                <td>{{ $item->ItemName }}</td>
+                                <td>{{ $item->Description }}</td>
+                                <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
+                                <td>{{ $item->unitOfMeasure->UnitName ?? 'N/A' }}</td>
+                                <td>{{ $item->StocksAvailable }}</td>
+                                <td>{{ $item->deletedBy->Username ?? 'N/A' }}</td>
+                                <td>{{ $item->DateDeleted ? date('Y-m-d H:i:s', strtotime($item->DateDeleted)) : 'N/A' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="10" class="text-center">No deleted items found</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
-@if($userPermissions && $userPermissions->CanAdd)
-        @include('items.partials.add-modal')
+<!-- Include modals -->
+@if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanAdd))
+    @include('items.partials.add-modal')
+    @include('items.partials.import-modal')
+@endif
 
-        <!-- Import Excel Modal -->
-<div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="importExcelModalLabel">Import Items</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('items.import') }}" method="POST" enctype="multipart/form-data" id="importForm">
-                @csrf
-                <div class="modal-body">
-                    <!-- Step 1: File Upload -->
-                    <div id="step1">
-                        <div class="mb-3">
-                            <label for="excel_file" class="form-label">Upload Excel File</label>
-                            <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
-                        </div>
-                        <button type="button" class="btn btn-primary" id="previewBtn">Preview Columns</button>
+@if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanEdit))
+    @foreach($activeItems as $item)
+        <div class="modal fade" id="editItemModal{{ $item->ItemId }}" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Item</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
+                    <form action="{{ route('items.update', $item->ItemId) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        @method('PUT')
+                        <div class="modal-body">
+                            <!-- Current Image Preview -->
+                            <div class="mb-3">
+                                <label class="form-label">Current Image</label>
+                                <div>
+                                    @if($item->ImagePath)
+                                        <img src="{{ asset('storage/' . $item->ImagePath) }}" 
+                                             alt="Current item image" 
+                                             class="img-thumbnail"
+                                             style="max-height: 100px;">
+                                    @else
+                                        <p class="text-muted">No image uploaded</p>
+                                    @endif
+                                </div>
+                            </div>
 
-                    <!-- Step 2: Column Mapping -->
-                    <div id="step2" style="display: none;">
-                        <h5>Map Excel Columns to Item Fields</h5>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Field</th>
-                                        <th>Excel Column</th>
-                                        <th>Required/Default Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Name</td>
-                                        <td>
-                                            <select name="column_mapping[ItemName]" class="form-select form-select-sm" required>
-                                                <option value="">Select Column</option>
-                                            </select>
-                                        </td>
-                                        <td><span class="badge bg-danger">Required</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Description</td>
-                                        <td>
-                                            <select name="column_mapping[Description]" class="form-select form-select-sm">
-                                                <option value="">Select Column</option>
-                                            </select>
-                                        </td>
-                                        <td><span class="badge bg-secondary">Optional</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Classification</td>
-                                        <td>
-                                            <select name="column_mapping[ClassificationId]" class="form-select form-select-sm">
-                                                <option value="">Select Column</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select name="default_classification" class="form-select form-select-sm">
-                                                <option value="">Default Classification</option>
-                                                @foreach($classifications as $classification)
-                                                    <option value="{{ $classification->ClassificationId }}">
-                                                        {{ $classification->ClassificationName }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Unit</td>
-                                        <td>
-                                            <select name="column_mapping[UnitId]" class="form-select form-select-sm">
-                                                <option value="">Select Column</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select name="default_unit" class="form-select form-select-sm">
-                                                <option value="">Default Unit</option>
-                                                @foreach($units as $unit)
-                                                    <option value="{{ $unit->UnitId }}">
-                                                        {{ $unit->UnitName }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Stocks Available</td>
-                                        <td>
-                                            <select name="column_mapping[StocksAvailable]" class="form-select form-select-sm">
-                                                <option value="">Select Column</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="number" name="default_stocks" class="form-control form-control-sm" placeholder="Default: 0" min="0">
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Reorder Point</td>
-                                        <td>
-                                            <select name="column_mapping[ReorderPoint]" class="form-select form-select-sm">
-                                                <option value="">Select Column</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="number" name="default_reorder_point" class="form-control form-control-sm" placeholder="Default: 0" min="0">
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <div class="mb-3">
+                                <label class="form-label">Update Image</label>
+                                <input type="file" class="form-control" name="image" accept="image/*">
+                                <small class="text-muted">Leave empty to keep current image</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Item Name</label>
+                                <input type="text" class="form-control" name="ItemName" value="{{ $item->ItemName }}" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" name="Description" rows="3">{{ $item->Description }}</textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Classification</label>
+                                <select class="form-select" name="ClassificationId" required>
+                                    @foreach($classifications as $classification)
+                                        <option value="{{ $classification->ClassificationId }}" 
+                                            {{ $item->ClassificationId == $classification->ClassificationId ? 'selected' : '' }}>
+                                            {{ $classification->ClassificationName }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Unit of Measure</label>
+                                <select class="form-select" name="UnitOfMeasureId" required>
+                                    @foreach($units as $unit)
+                                        <option value="{{ $unit->UnitOfMeasureId }}" 
+                                            {{ $item->UnitOfMeasureId == $unit->UnitOfMeasureId ? 'selected' : '' }}>
+                                            {{ $unit->UnitName }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Reorder Point</label>
+                                <input type="number" class="form-control" name="ReorderPoint" value="{{ $item->ReorderPoint }}" min="0" required>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-success" id="importBtn">Import Data</button>
-                    </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Update Item</button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
-</div>
-    @endif
-
-@if($userPermissions && $userPermissions->CanEdit)
-    @foreach($activeItems as $item)
-        @include('items.partials.edit-modal', ['item' => $item])
     @endforeach
 @endif
 
-@if($userPermissions && $userPermissions->CanDelete)
+@if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanDelete))
     @foreach($activeItems as $item)
-        @include('items.partials.delete-modal', ['item' => $item])
+        <div class="modal fade" id="deleteItemModal{{ $item->ItemId }}" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Delete Item</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete this item?</p>
+                            <p><strong>{{ $item->ItemName }}</strong></p>
+                            @if($item->StocksAvailable > 0)
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    This item has {{ $item->StocksAvailable }} units in stock.
+                                </div>
+                            @endif
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">Delete Item</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     @endforeach
 @endif
+
 @endsection
 
 @section('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <script>
-    $(document).ready(function() {
-        // Toggle between active and deleted items
-        $('#activeRecordsBtn, #showDeletedBtn').on('click', function() {
-            const activeDiv = $('#activeItems');
-            const deletedDiv = $('#deletedItems');
-            const activeBtn = $('#activeRecordsBtn');
-            const deletedBtn = $('#showDeletedBtn');
+document.addEventListener('DOMContentLoaded', function() {
+    const activeRecordsBtn = document.getElementById('activeRecords');
+    const deletedRecordsBtn = document.getElementById('deletedRecords');
+    const activeRecordsCard = document.getElementById('activeRecordsCard');
+    const deletedRecordsCard = document.getElementById('deletedRecordsCard');
+    const activeSearchInput = document.getElementById('activeSearchInput');
+    const deletedSearchInput = document.getElementById('deletedSearchInput');
 
-            if ($(this).attr('id') === 'showDeletedBtn') {
-                activeDiv.hide();
-                deletedDiv.show();
-                activeBtn.removeClass('active');
-                deletedBtn.addClass('active');
-            } else {
-                deletedDiv.hide();
-                activeDiv.show();
-                deletedBtn.removeClass('active');
-                activeBtn.addClass('active');
+    function filterTable(tableBody, searchTerm) {
+        const rows = tableBody.getElementsByTagName('tr');
+        
+        for (let row of rows) {
+            const cells = row.getElementsByTagName('td');
+            let shouldShow = false;
+            
+            if (cells.length <= 1) continue;
+
+            for (let cell of cells) {
+                const text = cell.textContent.toLowerCase();
+                if (text.includes(searchTerm.toLowerCase())) {
+                    shouldShow = true;
+                    break;
+                }
             }
-        });
-
-        // Initialize import modal
-        const importModal = document.getElementById('importExcelModal');
-        if (importModal) {
-            const bsModal = new bootstrap.Modal(importModal, {
-                backdrop: 'static',
-                keyboard: false
-            });
-
-            // Prevent modal from closing when clicking outside
-            $(importModal).on('mousedown', function(e) {
-                if ($(e.target).is('.modal')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-            });
-
-            // Preview button click handler
-            $('#previewBtn').click(function() {
-                const fileInput = document.getElementById('excel_file');
-                if (!fileInput.files.length) {
-                    alert('Please select a file first');
-                    return;
-                }
-
-                const formData = new FormData();
-                formData.append('excel_file', fileInput.files[0]);
-                formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
-
-                // Show loading state
-                $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Loading...');
-
-                $.ajax({
-                    url: "{{ route('items.preview-columns') }}",
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        // Reset all dropdowns first
-                        const columnSelects = $('select[name^="column_mapping"]');
-                        columnSelects.empty().append('<option value="">Select Column</option>');
-                        
-                        // Add the columns to all dropdowns
-                        response.columns.forEach(column => {
-                            columnSelects.append(`<option value="${column}">${column}</option>`);
-                        });
-
-                        // Auto-map columns based on similar names
-                        response.columns.forEach(column => {
-                            const lowerColumn = column.toLowerCase();
-                            if (lowerColumn.includes('name')) {
-                                $('select[name="column_mapping[ItemName]"]').val(column);
-                            }
-                            if (lowerColumn.includes('desc')) {
-                                $('select[name="column_mapping[Description]"]').val(column);
-                            }
-                            if (lowerColumn.includes('stock') || lowerColumn.includes('qty')) {
-                                $('select[name="column_mapping[StocksAvailable]"]').val(column);
-                            }
-                            if (lowerColumn.includes('reorder') || lowerColumn.includes('minimum')) {
-                                $('select[name="column_mapping[ReorderPoint]"]').val(column);
-                            }
-                        });
-
-                        // Show step 2
-                        $('#step1').hide();
-                        $('#step2').show();
-                    },
-                    error: function(xhr) {
-                        const errorMessage = xhr.responseJSON?.error || 'An error occurred while previewing columns';
-                        alert('Preview failed: ' + errorMessage);
-                    },
-                    complete: function() {
-                        // Reset button state
-                        $('#previewBtn').prop('disabled', false).text('Preview Columns');
-                    }
-                });
-            });
-
-            // Handle form submission
-            $('#importForm').on('submit', function(e) {
-                e.preventDefault();
-                
-                // Check if file is selected
-                if (!$('#excel_file').val()) {
-                    alert('Please select an Excel file');
-                    return;
-                }
-
-                // Check if required field (Name) is mapped
-                if (!$('select[name="column_mapping[ItemName]"]').val()) {
-                    alert('Please map the Name field');
-                    return;
-                }
-
-                // Show loading state on the import button
-                const importBtn = $('#importBtn');
-                importBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importing...');
-                
-                const formData = new FormData(this);
-                
-                $.ajax({
-                    url: "{{ route('items.import') }}",
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        alert('Import successful!');
-                        window.location.reload();
-                    },
-                    error: function(xhr) {
-                        const errorMessage = xhr.responseJSON?.error || 'An error occurred during import';
-                        alert('Import failed: ' + errorMessage);
-                        importBtn.prop('disabled', false).text('Import Data');
-                    }
-                });
-            });
+            
+            row.style.display = shouldShow ? '' : 'none';
         }
+    }
 
-        // Initialize DataTable
-        if (!$.fn.DataTable.isDataTable('#itemsTable')) {
-            $('#itemsTable').DataTable({
-                pageLength: 10,
-                responsive: true,
-                dom: '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center"ip>',
-                language: {
-                    search: "Search:",
-                    searchPlaceholder: "Search items..."
-                }
-            });
-        }
+    activeSearchInput.addEventListener('input', (e) => {
+        const activeTableBody = activeRecordsCard.querySelector('tbody');
+        filterTable(activeTableBody, e.target.value);
     });
+
+    deletedSearchInput.addEventListener('input', (e) => {
+        const deletedTableBody = deletedRecordsCard.querySelector('tbody');
+        filterTable(deletedTableBody, e.target.value);
+    });
+
+    function toggleRecords(showActive) {
+        if (showActive) {
+            activeRecordsCard.style.display = 'block';
+            deletedRecordsCard.style.display = 'none';
+            activeRecordsBtn.classList.add('active');
+            activeRecordsBtn.classList.remove('btn-outline-primary');
+            activeRecordsBtn.classList.add('btn-primary');
+            deletedRecordsBtn.classList.remove('active');
+            deletedRecordsBtn.classList.add('btn-outline-danger');
+            deletedRecordsBtn.classList.remove('btn-danger');
+            deletedSearchInput.value = '';
+        } else {
+            activeRecordsCard.style.display = 'none';
+            deletedRecordsCard.style.display = 'block';
+            deletedRecordsBtn.classList.add('active');
+            deletedRecordsBtn.classList.remove('btn-outline-danger');
+            deletedRecordsBtn.classList.add('btn-danger');
+            activeRecordsBtn.classList.remove('active');
+            activeRecordsBtn.classList.add('btn-outline-primary');
+            activeRecordsBtn.classList.remove('btn-primary');
+            activeSearchInput.value = '';
+        }
+    }
+
+    activeRecordsBtn.addEventListener('click', () => toggleRecords(true));
+    deletedRecordsBtn.addEventListener('click', () => toggleRecords(false));
+
+    // Initialize view
+    toggleRecords(true);
+});
 </script>
 @endsection
 

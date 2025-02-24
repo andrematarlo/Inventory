@@ -27,7 +27,21 @@
     <div id="activeUnits">
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Active Units</h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Active Units</h5>
+                    <div class="d-flex gap-2 align-items-center">
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="activeSearchInput" 
+                                   placeholder="Search..."
+                                   aria-label="Search">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -89,7 +103,21 @@
     <div id="deletedUnits" style="display: none;">
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Deleted Units</h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Deleted Units</h5>
+                    <div class="d-flex gap-2 align-items-center">
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="deletedSearchInput" 
+                                   placeholder="Search..."
+                                   aria-label="Search">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -322,6 +350,90 @@
         }
     });
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const activeRecordsBtn = document.getElementById('activeRecordsBtn');
+    const showDeletedBtn = document.getElementById('showDeletedBtn');
+    const activeUnits = document.getElementById('activeUnits');
+    const deletedUnits = document.getElementById('deletedUnits');
+    const activeSearchInput = document.getElementById('activeSearchInput');
+    const deletedSearchInput = document.getElementById('deletedSearchInput');
+
+    function filterTable(tableBody, searchTerm) {
+        const rows = tableBody.getElementsByTagName('tr');
+        
+        for (let row of rows) {
+            const cells = row.getElementsByTagName('td');
+            let shouldShow = false;
+            
+            // Skip header row or empty message row
+            if (cells.length <= 1) continue;
+
+            for (let cell of cells) {
+                const text = cell.textContent.toLowerCase();
+                if (text.includes(searchTerm.toLowerCase())) {
+                    shouldShow = true;
+                    break;
+                }
+            }
+            
+            row.style.display = shouldShow ? '' : 'none';
+        }
+    }
+
+    activeSearchInput.addEventListener('input', (e) => {
+        const activeTableBody = activeUnits.querySelector('tbody');
+        filterTable(activeTableBody, e.target.value);
+    });
+
+    deletedSearchInput.addEventListener('input', (e) => {
+        const deletedTableBody = deletedUnits.querySelector('tbody');
+        filterTable(deletedTableBody, e.target.value);
+    });
+
+    function toggleRecords(showActive) {
+        if (showActive) {
+            activeUnits.style.display = 'block';
+            deletedUnits.style.display = 'none';
+            activeRecordsBtn.classList.add('active');
+            activeRecordsBtn.classList.remove('btn-outline-primary');
+            activeRecordsBtn.classList.add('btn-primary');
+            showDeletedBtn.classList.remove('active');
+            showDeletedBtn.classList.add('btn-outline-danger');
+            showDeletedBtn.classList.remove('btn-danger');
+            // Clear deleted search when switching
+            deletedSearchInput.value = '';
+        } else {
+            activeUnits.style.display = 'none';
+            deletedUnits.style.display = 'block';
+            showDeletedBtn.classList.add('active');
+            showDeletedBtn.classList.remove('btn-outline-danger');
+            showDeletedBtn.classList.add('btn-danger');
+            activeRecordsBtn.classList.remove('active');
+            activeRecordsBtn.classList.add('btn-outline-primary');
+            activeRecordsBtn.classList.remove('btn-primary');
+            // Clear active search when switching
+            activeSearchInput.value = '';
+        }
+    }
+
+    activeRecordsBtn.addEventListener('click', () => toggleRecords(true));
+    showDeletedBtn.addEventListener('click', () => toggleRecords(false));
+
+    // Initialize view
+    toggleRecords(true);
+
+    // Initialize all modals with static backdrop
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        const bsModal = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+    });
+});
+</script>
 @endsection
 
 @section('styles')
@@ -351,6 +463,24 @@
 
     .btn-group .btn:hover:not(.active) {
         opacity: 0.9;
+    }
+
+    .input-group {
+        width: 250px;
+    }
+
+    .input-group-text {
+        background-color: white;
+        border-left: none;
+    }
+
+    .form-control:focus + .input-group-text {
+        border-color: #86b7fe;
+    }
+
+    .input-group .form-control:focus {
+        border-right: none;
+        box-shadow: none;
     }
 </style>
 @endsection 
