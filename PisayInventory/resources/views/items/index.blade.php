@@ -8,12 +8,12 @@
         <h2>Items Management</h2>
         <div>
             @if($userPermissions && $userPermissions->CanAdd)
-            <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importExcelModal">
-                <i class="bi bi-file-earmark-excel"></i> Import Excel
-            </button>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                <i class="bi bi-plus-lg"></i> New Item
-            </button>
+                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                    <i class="bi bi-upload"></i> Import Items
+                </button>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                    <i class="bi bi-plus-lg"></i> New Item
+                </button>
             @endif
         </div>
     </div>
@@ -206,127 +206,124 @@
         @include('items.partials.add-modal')
 
         <!-- Import Excel Modal -->
-        <div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="importExcelModalLabel">Import Items from Excel</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form action="{{ route('items.import') }}" method="POST" enctype="multipart/form-data" id="importForm">
-                        @csrf
-                        <div class="modal-body">
-                            <!-- Step 1: File Upload -->
-                            <div id="step1">
-                                <div class="mb-3">
-                                    <label for="excel_file" class="form-label">Select Excel File</label>
-                                    <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
-                                </div>
-                                <button type="button" class="btn btn-primary" id="previewBtn">Preview & Map Columns</button>
-                            </div>
-
-                            <!-- Step 2: Column Mapping -->
-                            <div id="step2" style="display: none;">
-                                <h6 class="mb-3">Map Your Excel Columns to System Fields</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>System Field</th>
-                                                <th>Excel Column</th>
-                                                <th>Required/Default Value</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>Name</td>
-                                                <td>
-                                                    <select name="column_mapping[ItemName]" class="form-select form-select-sm" required>
-                                                        <option value="">Select Column</option>
-                                                    </select>
-                                                </td>
-                                                <td><span class="badge bg-danger">Required</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Description</td>
-                                                <td>
-                                                    <select name="column_mapping[Description]" class="form-select form-select-sm">
-                                                        <option value="">Select Column</option>
-                                                    </select>
-                                                </td>
-                                                <td><span class="badge bg-secondary">Optional</span></td>
-                                            </tr>
-                                            <tr>
-                                            <td>Classification</td>
-                                                <td>
-                                                    <select name="column_mapping[ClassificationId]" class="form-select form-select-sm">
-                                                        <option value="">Select Column</option>
-                                                    </select>
-                                                </td>
-                                                <td>
-                                                    <select name="default_classification" class="form-select form-select-sm">
-                                                        <option value="">Default Classification</option>
-                                                        @foreach($classifications as $classification)
-                                                            <option value="{{ $classification->ClassificationId }}">
-                                                                {{ $classification->ClassificationName }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                            <td>Unit</td>
-                                                <td>
-                                                    <select name="column_mapping[UnitId]" class="form-select form-select-sm">
-                                                        <option value="">Select Column</option>
-                                                    </select>
-                                                </td>
-                                                <td>
-                                                    <select name="default_unit" class="form-select form-select-sm">
-                                                        <option value="">Default Unit</option>
-                                                        @foreach($units as $unit)
-                                                            <option value="{{ $unit->UnitId }}">
-                                                                {{ $unit->UnitName }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                            <td>Stocks Available</td>
-                                                <td>
-                                                    <select name="column_mapping[StocksAvailable]" class="form-select form-select-sm">
-                                                        <option value="">Select Column</option>
-                                                    </select>
-                                                </td>
-                                                <td>
-                                                    <input type="number" name="default_stocks" class="form-control form-control-sm" placeholder="Default: 0" min="0">
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Reorder Point</td>
-                                                <td>
-                                                    <select name="column_mapping[ReorderPoint]" class="form-select form-select-sm">
-                                                        <option value="">Select Column</option>
-                                                    </select>
-                                                </td>
-                                                <td>
-                                                    <input type="number" name="default_reorder_point" class="form-control form-control-sm" placeholder="Default: 0" min="0">
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary" id="importBtn" style="display: none;">Import Data</button>
-                        </div>
-                    </form>
-                </div>
+<div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importExcelModalLabel">Import Items</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <form action="{{ route('items.import') }}" method="POST" enctype="multipart/form-data" id="importForm">
+                @csrf
+                <div class="modal-body">
+                    <!-- Step 1: File Upload -->
+                    <div id="step1">
+                        <div class="mb-3">
+                            <label for="excel_file" class="form-label">Upload Excel File</label>
+                            <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="previewBtn">Preview Columns</button>
+                    </div>
+
+                    <!-- Step 2: Column Mapping -->
+                    <div id="step2" style="display: none;">
+                        <h5>Map Excel Columns to Item Fields</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Field</th>
+                                        <th>Excel Column</th>
+                                        <th>Required/Default Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Name</td>
+                                        <td>
+                                            <select name="column_mapping[ItemName]" class="form-select form-select-sm" required>
+                                                <option value="">Select Column</option>
+                                            </select>
+                                        </td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Description</td>
+                                        <td>
+                                            <select name="column_mapping[Description]" class="form-select form-select-sm">
+                                                <option value="">Select Column</option>
+                                            </select>
+                                        </td>
+                                        <td><span class="badge bg-secondary">Optional</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Classification</td>
+                                        <td>
+                                            <select name="column_mapping[ClassificationId]" class="form-select form-select-sm">
+                                                <option value="">Select Column</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="default_classification" class="form-select form-select-sm">
+                                                <option value="">Default Classification</option>
+                                                @foreach($classifications as $classification)
+                                                    <option value="{{ $classification->ClassificationId }}">
+                                                        {{ $classification->ClassificationName }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Unit</td>
+                                        <td>
+                                            <select name="column_mapping[UnitId]" class="form-select form-select-sm">
+                                                <option value="">Select Column</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="default_unit" class="form-select form-select-sm">
+                                                <option value="">Default Unit</option>
+                                                @foreach($units as $unit)
+                                                    <option value="{{ $unit->UnitId }}">
+                                                        {{ $unit->UnitName }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Stocks Available</td>
+                                        <td>
+                                            <select name="column_mapping[StocksAvailable]" class="form-select form-select-sm">
+                                                <option value="">Select Column</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="default_stocks" class="form-control form-control-sm" placeholder="Default: 0" min="0">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Reorder Point</td>
+                                        <td>
+                                            <select name="column_mapping[ReorderPoint]" class="form-select form-select-sm">
+                                                <option value="">Select Column</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="default_reorder_point" class="form-control form-control-sm" placeholder="Default: 0" min="0">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="submit" class="btn btn-success" id="importBtn">Import Data</button>
+                    </div>
+                </div>
+            </form>
         </div>
+    </div>
+</div>
     @endif
 
 @if($userPermissions && $userPermissions->CanEdit)
@@ -365,66 +362,115 @@
 
 
                 // New script for Excel import
-                $('#previewBtn').click(function() {
-            const fileInput = document.getElementById('excel_file');
-            if (!fileInput.files.length) {
-                alert('Please select a file first');
-                return;
+                
+    // Preview button click handler
+    $('#previewBtn').click(function() {
+        const fileInput = document.getElementById('excel_file');
+        if (!fileInput.files.length) {
+            alert('Please select a file first');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('excel_file', fileInput.files[0]);
+        formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+
+        // Show loading state
+        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Loading...');
+
+        $.ajax({
+            url: "{{ route('items.preview-columns') }}",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                // Reset all dropdowns first
+                const columnSelects = $('select[name^="column_mapping"]');
+                columnSelects.empty().append('<option value="">Select Column</option>');
+                
+                // Add the columns to all dropdowns
+                response.columns.forEach(column => {
+                    columnSelects.append(`<option value="${column}">${column}</option>`);
+                });
+
+                // Auto-map columns based on similar names
+                response.columns.forEach(column => {
+                    if (column.includes('name')) {
+                        $('select[name="column_mapping[ItemName]"]').val(column);
+                    }
+                    if (column.includes('desc')) {
+                        $('select[name="column_mapping[Description]"]').val(column);
+                    }
+                    if (column.includes('class')) {
+                        $('select[name="column_mapping[ClassificationId]"]').val(column);
+                    }
+                    if (column.includes('unit')) {
+                        $('select[name="column_mapping[UnitId]"]').val(column);
+                    }
+                    if (column.includes('stock') || column.includes('qty')) {
+                        $('select[name="column_mapping[StocksAvailable]"]').val(column);
+                    }
+                    if (column.includes('reorder') || column.includes('minimum')) {
+                        $('select[name="column_mapping[ReorderPoint]"]').val(column);
+                    }
+                });
+
+                // Show step 2
+                $('#step1').hide();
+                $('#step2').show();
+            },
+            error: function(xhr) {
+                const errorMessage = xhr.responseJSON?.error || 'An error occurred while previewing columns';
+                alert('Preview failed: ' + errorMessage);
+            },
+            complete: function() {
+                // Reset button state
+                $('#previewBtn').prop('disabled', false).text('Preview Columns');
             }
-
-            const formData = new FormData();
-            formData.append('excel_file', fileInput.files[0]);
-            formData.append('_token', '{{ csrf_token() }}');
-
-            $.ajax({
-                url: '{{ route("items.preview-columns") }}',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                                        // Populate all column mapping dropdowns with Excel columns
-                                        const columnSelects = $('select[name^="column_mapping"]');
-                    columnSelects.empty().append('<option value="">Select Column</option>');
-                    
-                    response.columns.forEach(column => {
-                        columnSelects.append(`<option value="${column}">${column}</option>`);
-                    });
-                                        // Try to auto-map columns based on similar names
-                                        response.columns.forEach(column => {
-                        const lowerColumn = column.toLowerCase();
-                        if (lowerColumn.includes('name')) {
-                            $('select[name="column_mapping[ItemName]"]').val(column);
-                        }
-                        if (lowerColumn.includes('desc')) {
-                            $('select[name="column_mapping[Description]"]').val(column);
-                        }
-                        if (lowerColumn.includes('stock') || lowerColumn.includes('qty')) {
-                            $('select[name="column_mapping[StocksAvailable]"]').val(column);
-                        }
-                        if (lowerColumn.includes('reorder') || lowerColumn.includes('minimum')) {
-                            $('select[name="column_mapping[ReorderPoint]"]').val(column);
-                        }
-                    });
-
-                    $('#step1').hide();
-                    $('#step2').show();
-                    $('#importBtn').show();
-                },
-                error: function(xhr) {
-                    alert('Error reading Excel file: ' + xhr.responseText);
-                }
-            });
         });
-
-        // Remove any existing success alerts at the top of the page
-        $('.alert-success:not(.fade)').remove();
-        
-        // Auto dismiss alerts after 3 seconds
-        setTimeout(function() {
-            $('.alert').alert('close');
-        }, 3000);
     });
+
+    // Form submission handler
+    $('#importForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Check if file is selected
+        if (!$('#excel_file').val()) {
+            alert('Please select an Excel file');
+            return;
+        }
+
+        // Check if required field (Name) is mapped
+        if (!$('select[name="column_mapping[ItemName]"]').val()) {
+            alert('Please map the Name field');
+            return;
+        }
+
+        // Show loading state on the import button
+        const importBtn = $('#importBtn');
+        importBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importing...');
+        
+        const formData = new FormData(this);
+        
+        $.ajax({
+            url: "{{ route('items.import') }}",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                alert('Import successful!');
+                window.location.reload();
+            },
+            error: function(xhr) {
+                const errorMessage = xhr.responseJSON?.error || 'An error occurred during import';
+                alert('Import failed: ' + errorMessage);
+                importBtn.prop('disabled', false).text('Import Data');
+            }
+        });
+    });
+});
 </script>
 @endsection
 

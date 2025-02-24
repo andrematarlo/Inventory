@@ -32,13 +32,24 @@ class ItemsImport implements ToModel, WithHeadingRow, WithValidation
     try {
         Log::info('Processing row:', ['row_data' => $row, 'column_mapping' => $this->columnMapping]);
 
+        // Debug Description specifically
+        $descriptionColumn = $this->columnMapping['Description'];
+        $rawDescription = $row[$descriptionColumn] ?? null;
+        $processedDescription = $this->getValue($row, 'Description', '');
+        
+        Log::info('Description debug:', [
+            'mapped_column' => $descriptionColumn,
+            'raw_value' => $rawDescription,
+            'processed_value' => $processedDescription
+        ]);
+
         // Convert names to IDs
         $classificationId = $this->getClassificationId($row);
         $unitId = $this->getUnitId($row);
 
         return new Item([
             'ItemName' => $row[$this->columnMapping['ItemName']] ?? null,
-            'Description' => $this->getValue($row, 'Description', ''),
+            'Description' => $rawDescription, // Try using raw value directly
             'ClassificationId' => $classificationId,
             'UnitOfMeasureId' => $unitId,
             'StocksAvailable' => (int)$this->getValue($row, 'StocksAvailable', $this->defaultStocks),
@@ -58,7 +69,6 @@ class ItemsImport implements ToModel, WithHeadingRow, WithValidation
         throw $e;
     }
 }
-
 
 private function getClassificationId($row)
 {
