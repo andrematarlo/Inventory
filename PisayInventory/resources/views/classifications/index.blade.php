@@ -135,7 +135,7 @@
 <!-- Edit Classification Modals -->
 @if($userPermissions && $userPermissions->CanEdit)
     @foreach($classifications as $classification)
-        <div class="modal fade" id="editClassificationModal{{ $classification->ClassificationId }}" tabindex="-1" aria-labelledby="editClassificationModalLabel{{ $classification->ClassificationId }}" aria-hidden="true">
+        <div class="modal fade" id="editClassificationModal{{ $classification->ClassificationId }}" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="editClassificationModalLabel{{ $classification->ClassificationId }}" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
