@@ -755,6 +755,7 @@
 
 // Update the column mappings in the JavaScript
 const columnMappings = {
+    'Name': ['name', 'full name', 'fullname', 'complete name'], // Add this line
     'FirstName': ['first name', 'firstname', 'given name', 'first'],
     'LastName': ['last name', 'lastname', 'surname', 'family name', 'last'],
     'Email': ['email', 'e-mail', 'mail', 'email address'],

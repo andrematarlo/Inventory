@@ -39,27 +39,77 @@ class EmployeesImport implements ToModel, WithHeadingRow, WithValidation
     }
 
     public function model(array $row)
-    {
-        try {
-            // Convert row keys to the same format as the mapping
-            $processedRow = [];
-            foreach ($row as $key => $value) {
-                $processedKey = Str::slug($key, '');
-                $processedRow[$processedKey] = $value;
-            }
+{
+    try {
+        // Convert row keys to the same format as the mapping
+        $processedRow = [];
+        foreach ($row as $key => $value) {
+            $processedKey = Str::slug($key, '');
+            $processedRow[$processedKey] = $value;
+        }
 
-            // Get values from Excel using the processed column mapping
-            $firstName = $processedRow[$this->columnMapping['FirstName']] ?? null;
-            $lastName = $processedRow[$this->columnMapping['LastName']] ?? null;
-            $email = $processedRow[$this->columnMapping['Email']] ?? null;
-            $gender = $processedRow[$this->columnMapping['Gender']] ?? null;
-            $role = $processedRow[$this->columnMapping['Role']] ?? null;
-            $address = $processedRow[$this->columnMapping['Address']] ?? null;
+        // Debug log the processed row and column mapping
+        Log::info('Processing row:', [
+            'raw_row' => $row,
+            'processed_row' => $processedRow,
+            'column_mapping' => $this->columnMapping
+        ]);
 
-            // Validate required fields
-            if (!$firstName || !$lastName || !$email || !$role) {
-                throw new \Exception("Missing required fields");
+        // Initialize name variables
+        $firstName = null;
+        $lastName = null;
+
+        // Check if the Excel has a combined Name column
+        $nameColumnExists = false;
+        foreach ($processedRow as $key => $value) {
+            if (in_array(strtolower($key), ['name', 'fullname', 'full-name', 'full_name'])) {
+                $nameColumnExists = true;
+                $fullName = trim($value);
+                
+                // Split the full name into parts
+                $nameParts = array_filter(explode(' ', $fullName));
+                
+                // Take the last word as lastName
+                $lastName = array_pop($nameParts);
+                
+                // Join the remaining words as firstName
+                $firstName = !empty($nameParts) ? implode(' ', $nameParts) : '';
+                
+                Log::info('Split name:', [
+                    'full_name' => $fullName,
+                    'first_name' => $firstName,
+                    'last_name' => $lastName
+                ]);
+                break;
             }
+        }
+
+        // If no combined name column found, look for separate FirstName and LastName
+        if (!$nameColumnExists) {
+            $firstName = trim($processedRow[Str::slug($this->columnMapping['FirstName'], '')] ?? '');
+            $lastName = trim($processedRow[Str::slug($this->columnMapping['LastName'], '')] ?? '');
+            
+            Log::info('Using separate name fields:', [
+                'first_name' => $firstName,
+                'last_name' => $lastName
+            ]);
+        }
+
+        // Validate that we have both names
+        if (empty($firstName) || empty($lastName)) {
+            throw new \Exception("Both first name and last name are required");
+        }
+
+        // Get other fields
+        $email = $processedRow[Str::slug($this->columnMapping['Email'], '')] ?? null;
+        $gender = $processedRow[Str::slug($this->columnMapping['Gender'], '')] ?? null;
+        $role = $processedRow[Str::slug($this->columnMapping['Role'], '')] ?? null;
+        $address = $processedRow[Str::slug($this->columnMapping['Address'], '')] ?? null;
+
+        // Validate required fields
+        if (!$firstName || !$lastName || !$email || !$role) {
+            throw new \Exception("Missing required fields");
+        }
 
             // Normalize gender and role
             $gender = $this->normalizeGender($gender);
