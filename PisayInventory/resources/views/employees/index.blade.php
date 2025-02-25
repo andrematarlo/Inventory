@@ -740,8 +740,72 @@
             }
         });
         
+
+
+        // Toggle button functionality
+        const toggleButton = document.getElementById('toggleButton');
+        const buttonText = document.getElementById('buttonText');
+        const activeEmployees = document.getElementById('activeEmployees');
+        const deletedEmployees = document.getElementById('deletedEmployees');
         
-    });
+        if (toggleButton) {
+            toggleButton.addEventListener('click', function() {
+                // Toggle visibility
+                if (activeEmployees.style.display !== 'none') {
+                    activeEmployees.style.display = 'none';
+                    deletedEmployees.style.display = 'block';
+                    buttonText.textContent = 'Show Active';
+                    toggleButton.classList.remove('btn-outline-secondary');
+                    toggleButton.classList.add('btn-outline-primary');
+                } else {
+                    activeEmployees.style.display = 'block';
+                    deletedEmployees.style.display = 'none';
+                    buttonText.textContent = 'Show Deleted';
+                    toggleButton.classList.remove('btn-outline-primary');
+                    toggleButton.classList.add('btn-outline-secondary');
+                }
+            
+            // Initialize DataTable for deleted employees table if not already initialized
+            const deletedTable = document.getElementById('deletedEmployeesTable');
+            if (deletedTable && !$.fn.DataTable.isDataTable(deletedTable)) {
+                $(deletedTable).DataTable({
+                    scrollY: '60vh',
+                    scrollX: true,
+                    scrollCollapse: true,
+                    paging: true,
+                    responsive: false,
+                    autoWidth: false,
+                    fixedHeader: {
+                        header: true,
+                        headerOffset: 0
+                    },
+                    columnDefs: [
+                        { targets: 0, width: '100px' },
+                        { targets: 1, width: '200px' },
+                        { targets: 2, width: '150px' },
+                        { targets: 3, width: '200px' },
+                        { targets: 4, width: '150px' },
+                        { targets: 5, width: '100px' },
+                        { targets: 6, width: '150px' },
+                        { targets: 7, width: '150px' },
+                        { targets: 8, width: '150px' }
+                    ],
+                    dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                         "<'row'<'col-sm-12'tr>>" +
+                         "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                    language: {
+                        search: "Search:",
+                        searchPlaceholder: "Search records..."
+                    }
+                });
+            }
+        });
+    }
+});
+
+
+
+
 })();
 
 // Update the column mappings in the JavaScript
@@ -754,6 +818,8 @@ const columnMappings = {
     'Gender': ['gender', 'sex'],
     'Role': ['role', 'roles', 'position', 'designation']
 };
+
+
 </script>
 @endsection
 
