@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Model;
 
 class User extends Authenticatable
 {
@@ -34,15 +35,15 @@ class User extends Authenticatable
         'Username',
         'Password',
         'role',
-        'IsDeleted',
+        'CreatedById',
         'DateCreated',
-        'CreatedByID',
-        'ModifiedByID',
+        'ModifiedById',
         'DateModified',
-        'DeletedByID',
-        'DateDeleted',
+        'DeletedById',
         'RestoredById',
-        'DateRestored'
+        'DateDeleted',
+        'DateRestored',
+        'IsDeleted'
     ];
 
     /**
@@ -68,8 +69,11 @@ class User extends Authenticatable
      * @return array<string, string>
      */
     protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'DateCreated' => 'datetime',
+        'DateModified' => 'datetime',
+        'DateDeleted' => 'datetime',
+        'DateRestored' => 'datetime',
+        'IsDeleted' => 'boolean'
     ];
 
     protected $attributes = [
@@ -90,12 +94,12 @@ class User extends Authenticatable
 
     public function createdBy()
     {
-        return $this->belongsTo(User::class, 'CreatedById', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'CreatedById', 'EmployeeID');
     }
 
     public function modifiedBy()
     {
-        return $this->belongsTo(User::class, 'ModifiedById', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'ModifiedById', 'EmployeeID');
     }
     
 

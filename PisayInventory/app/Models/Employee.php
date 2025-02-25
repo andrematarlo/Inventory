@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class Employee extends Model
 {
@@ -18,9 +19,9 @@ class Employee extends Model
         'UserAccountID',
         'FirstName',
         'LastName',
-        'Address',
         'Email',
         'Gender',
+        'Address',
         'DateCreated',
         'CreatedByID',
         'ModifiedByID',
@@ -43,7 +44,11 @@ class Employee extends Model
     // Define relationships
     public function userAccount()
     {
-        return $this->belongsTo(User::class, 'UserAccountID', 'UserAccountID');
+        return $this->belongsTo(User::class, 'UserAccountID', 'UserAccountID')
+            ->withDefault([
+                'Username' => 'N/A',
+                'role' => 'No Role'
+            ]);
     }
 
     public function roles()
@@ -66,16 +71,8 @@ class Employee extends Model
 
     public function createdBy()
     {
-        \Log::info('CreatedBy Relationship Debug:', [
-            'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->CreatedByID,
-            'all_attributes' => $this->attributes
-        ]);
-
         return $this->belongsTo(Employee::class, 'CreatedByID', 'EmployeeID')
-            ->select(['EmployeeID', 'FirstName', 'LastName'])
             ->withDefault([
-                'EmployeeID' => null,
                 'FirstName' => 'System',
                 'LastName' => 'User'
             ]);
@@ -125,15 +122,23 @@ class Employee extends Model
     // Helper method to get full name of creator
     public function getCreatedByNameAttribute()
     {
-        // Get raw values from database
-        \Log::info('Raw CreatedBy Values:', [
+        // Debug the values
+        Log::info('CreatedByName Debug:', [
             'employee_id' => $this->EmployeeID,
-            'created_by_id' => $this->attributes['CreatedByID'] ?? null,
-            'raw_attributes' => array_intersect_key($this->attributes, array_flip(['CreatedByID', 'ModifiedByID']))
+            'created_by_id' => $this->CreatedByID,
+            'created_by' => $this->createdBy
         ]);
-        
+
+        if (!$this->CreatedByID) {
+            return 'System User';
+        }
+
         $creator = $this->createdBy;
-        return $creator ? "{$creator->FirstName} {$creator->LastName}" : 'Unknown User';
+        if (!$creator) {
+            return 'System User';
+        }
+
+        return "{$creator->FirstName} {$creator->LastName}";
     }
 
     // Helper method to get full name of modifier
@@ -165,7 +170,14 @@ class Employee extends Model
     // Add this scope to help with debugging
     public function scopeWithUserAccount($query)
     {
-        return $query->leftJoin('user_account', 'employee.UserAccountID', '=', 'user_account.UserAccountID')
-                     ->select('employee.*', 'user_account.Username');
+        return $query->leftJoin('UserAccount', 'employee.UserAccountID', '=', 'UserAccount.UserAccountID')
+                     ->select('employee.*', 'UserAccount.Username');
+    }
+
+    public function getRoleAttribute()
+    {
+        // Get roles from the relationship
+        $roles = $this->roles->pluck('RoleName');
+        return $roles->isNotEmpty() ? $roles->implode(', ') : 'No Role Assigned';
     }
 } 

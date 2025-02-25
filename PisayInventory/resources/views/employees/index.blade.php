@@ -315,11 +315,21 @@
                                             @endif
                                         </div>
                                     </td>
-                                    <td>{{ $employee->FullName }}</td>
+                                    <td>{{ $employee->FirstName }} {{ $employee->LastName }}</td>
                                     <td>{{ $employee->Email }}</td>
                                     <td>{{ $employee->Gender }}</td>
-                                    <td>{{ $employee->RoleNames }}</td>
-                                    <td>{{ $employee->CreatedByName }}</td>
+                                    <td>{{ $employee->Role ?: 'No Role Assigned' }}</td>
+                                    <td>
+                                        @php
+                                            Log::info('Employee Creator Debug:', [
+                                                'employee_id' => $employee->EmployeeID,
+                                                'created_by_id' => $employee->CreatedByID,
+                                                'created_by' => $employee->createdBy,
+                                                'created_by_name' => $employee->CreatedByName
+                                            ]);
+                                        @endphp
+                                        {{ $employee->CreatedByName }}
+                                    </td>
                                     <td>{{ $employee->DateCreated->format('M d, Y') }}</td>
                                 </tr>
                             @empty
@@ -414,8 +424,12 @@
                     <h6 class="mb-3">Map Excel Columns to Employee Fields</h6>
                     <form id="standaloneImportForm">
                         <div class="mb-3">
-                            <label for="nameColumn" class="form-label">Name</label>
-                            <select id="nameColumn" name="column_mapping[Name]" class="form-select" required></select>
+                            <label for="firstNameColumn" class="form-label">First Name</label>
+                            <select id="firstNameColumn" name="column_mapping[FirstName]" class="form-select" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="lastNameColumn" class="form-label">Last Name</label>
+                            <select id="lastNameColumn" name="column_mapping[LastName]" class="form-select" required></select>
                         </div>
                         <div class="mb-3">
                             <label for="emailColumn" class="form-label">Email</label>
@@ -619,51 +633,74 @@
         if (importForm) {
             importForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                
-                // Check if all required fields are mapped
-                const selects = importForm.querySelectorAll('select');
-                let allMapped = true;
-                
-                selects.forEach(select => {
-                    if (!select.value) {
-                        allMapped = false;
-                    }
-                });
-                
-                if (!allMapped) {
-                    alert('Please map all required fields');
+
+                // Check if file is selected
+                const fileInput = document.getElementById('excelFileInput');
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    alert('Please select a file first');
                     return;
                 }
-                
+
+                // Check if all required fields are mapped
+                const selects = importForm.querySelectorAll('select');
+                const columnMapping = {};
+                const unmappedFields = [];
+
+                selects.forEach(select => {
+                    const fieldName = select.name.match(/\[(.*?)\]/)[1];
+                    if (!select.value) {
+                        unmappedFields.push(fieldName);
+                    } else {
+                        columnMapping[fieldName] = select.value;
+                    }
+                });
+
+                if (unmappedFields.length > 0) {
+                    alert(`Please map the following required fields: ${unmappedFields.join(', ')}`);
+                    return;
+                }
+
                 // Create FormData object
                 const formData = new FormData();
-                formData.append('excel_file', fileInput.files[0]);
+                formData.append('file', fileInput.files[0]);
                 
                 // Add column mappings
-                selects.forEach(select => {
-                    formData.append(select.name, select.value);
+                Object.entries(columnMapping).forEach(([key, value]) => {
+                    formData.append(`column_mapping[${key}]`, value);
                 });
-                
+
+                // Show loading state
+                const submitBtn = importForm.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn.textContent;
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Importing...';
+
                 // Send data to server
                 fetch('{{ route("employees.import") }}', {
                     method: 'POST',
                     body: formData,
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
                     }
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Import successful!');
+                        alert(data.message || 'Import successful!');
                         window.location.reload();
                     } else {
-                        alert('Import failed: ' + (data.error || 'Unknown error'));
+                        throw new Error(data.error || 'Import failed');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Import failed: ' + error.message);
+                    alert(error.message || 'Import failed. Please try again.');
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
                 });
             });
         }
@@ -715,5 +752,16 @@
         }
     });
 })();
+
+// Update the column mappings in the JavaScript
+const columnMappings = {
+    'FirstName': ['first name', 'firstname', 'given name', 'first'],
+    'LastName': ['last name', 'lastname', 'surname', 'family name', 'last'],
+    'Email': ['email', 'e-mail', 'mail', 'email address'],
+    'Address': ['address', 'addr', 'location'],
+    'Gender': ['gender', 'sex'],
+    'Role': ['role', 'roles', 'position', 'designation']
+};
 </script>
 @endsection
+

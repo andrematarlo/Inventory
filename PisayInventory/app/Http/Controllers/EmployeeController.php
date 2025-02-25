@@ -43,11 +43,13 @@ class EmployeeController extends Controller
                 return redirect()->back()->with('error', 'You do not have permission to view employees.');
             }
 
-            $activeEmployees = Employee::where('IsDeleted', false)
+            $activeEmployees = Employee::with(['createdBy', 'roles'])
+                ->where('IsDeleted', false)
                 ->orderBy('LastName')
                 ->get();
 
-            $deletedEmployees = Employee::where('IsDeleted', true)
+            $deletedEmployees = Employee::with(['createdBy', 'roles'])
+                ->where('IsDeleted', true)
                 ->orderBy('LastName')
                 ->get();
 
@@ -62,7 +64,7 @@ class EmployeeController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error loading employees: ' . $e->getMessage());
+            Log::error('Error loading employees: ' . $e->getMessage());
             return back()->with('error', 'Error loading employees: ' . $e->getMessage());
         }
     }
@@ -73,54 +75,54 @@ class EmployeeController extends Controller
             // First check permissions
             $userPermissions = $this->getUserPermissions();
             if (!$userPermissions || !$userPermissions->CanAdd) {
-                throw new \Exception('You do not have permission to import employees.');
+                return response()->json([
+                    'success' => false,
+                    'error' => 'You do not have permission to import employees.'
+                ], 403);
             }
 
             // Validate request
             $request->validate([
-                'excel_file' => 'required|mimes:xlsx,xls',
-                'column_mapping' => 'required|array',
-                'column_mapping.Name' => 'required|string',
-                'column_mapping.Email' => 'required|string',
-                'column_mapping.Address' => 'required|string',
-                'column_mapping.Gender' => 'required|string',
-                'column_mapping.Role' => 'required|string'
+                'file' => 'required|mimes:xlsx,xls',
+                'column_mapping' => 'required|array'
             ]);
 
             DB::beginTransaction();
 
-            // Simplified import constructor - only needs column mapping and created by ID
-            $import = new EmployeesImport(
-                $request->column_mapping,
-                Auth::id()
-            );
+            try {
+                // Get the current authenticated employee
+                $currentEmployee = Employee::where('UserAccountID', Auth::id())
+                    ->where('IsDeleted', false)
+                    ->first();
 
-            Excel::import($import, $request->file('excel_file'));
+                if (!$currentEmployee) {
+                    throw new \Exception('Current employee record not found');
+                }
 
-            DB::commit();
+                Log::info('Import initiated by:', [
+                    'employee_id' => $currentEmployee->EmployeeID,
+                    'name' => $currentEmployee->FirstName . ' ' . $currentEmployee->LastName
+                ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Employees imported successfully!'
-            ]);
+                $import = new EmployeesImport(
+                    $request->column_mapping,
+                    $currentEmployee->EmployeeID
+                );
 
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-            DB::rollBack();
-            $failures = $e->failures();
-            $error = $failures[0]->errors()[0] ?? 'Validation error during import';
-            
-            Log::error('Import validation error:', [
-                'error' => $error,
-                'failures' => $failures
-            ]);
+                Excel::import($import, $request->file('file'));
 
-            return response()->json([
-                'success' => false,
-                'error' => $error
-            ], 422);
+                DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Employees imported successfully.'
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
 
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Error importing employees:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -128,7 +130,7 @@ class EmployeeController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'Import failed: ' . $e->getMessage()
+                'error' => 'Error importing employees: ' . $e->getMessage()
             ], 500);
         }
     }
