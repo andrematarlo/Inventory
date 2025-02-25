@@ -6,9 +6,10 @@
 <style>
     /* Table container */
     .table-responsive {
-        overflow: hidden;
+        overflow: hidden; /* Change from auto to visible */
         margin-bottom: 1rem;
         padding: 0;
+        width: 100%;
     }
 
     /* Table styles */
@@ -39,12 +40,12 @@
     }
 
     .dataTables_scrollBody {
-        position: relative;
-        overflow-y: auto !important;
-        overflow-x: auto !important;
-        max-height: 60vh;
-        width: 100%;
-    }
+    position: relative;
+    max-height: 60vh !important;
+    overflow-y: scroll !important; /* change from auto to scroll */
+    overflow-x: scroll !important; /* change from auto to scroll */
+    width: 100%;
+}
 
     /* Ensure header cells align with body cells */
     .dataTables_scrollHead .table,
@@ -66,8 +67,8 @@
 
     /* DataTables Scrollbar Styling */
     .dataTables_scrollBody::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 12px;
+        height: 12px;
     }
 
     .dataTables_scrollBody::-webkit-scrollbar-track {
@@ -76,7 +77,7 @@
 
     .dataTables_scrollBody::-webkit-scrollbar-thumb {
         background: #cbd5e0;
-        border-radius: 3px;
+        border-radius: 6px;
     }
 
     .dataTables_scrollBody::-webkit-scrollbar-thumb:hover {
@@ -87,6 +88,10 @@
     .dataTables_wrapper {
         padding: 0;
         margin-top: 1rem;
+       
+       
+     
+       
     }
 
     .dataTables_length,
@@ -189,16 +194,7 @@
         padding: 8px 12px;
     }
 
-    /* Adjust other column widths */
-    .actions-column { width: 120px !important; min-width: 120px !important; }
-    .name-column { width: 200px !important; min-width: 200px !important; }
-    .username-column { width: 180px !important; min-width: 180px !important; }
-    .email-column { width: 220px !important; min-width: 220px !important; }
-    .gender-column { width: 100px !important; min-width: 100px !important; }
-    .status-column { width: 100px !important; min-width: 100px !important; }
-    .created-by-column { width: 150px !important; min-width: 150px !important; }
-    .modified-by-column { width: 150px !important; min-width: 150px !important; }
-    .deleted-date-column { width: 150px !important; min-width: 150px !important; }
+    
 
     /* Ensure table cells don't wrap by default except for role column */
     .table td:not(.role-column) {
@@ -207,23 +203,6 @@
         text-overflow: ellipsis;
     }
 
-    /* DataTables body container */
-    .dataTables_scrollBody {
-        min-height: 400px;
-        max-height: 60vh;
-    }
-
-    /* Fix for table scrolling */
-    .dataTables_wrapper {
-        max-height: 70vh;
-        overflow-y: auto;
-    }
-    
-    .dataTables_scrollBody {
-        min-height: 300px;
-        max-height: 60vh !important;
-        overflow-y: auto !important;
-    }
     
     /* Ensure the table header stays fixed */
     .dataTables_scrollHead {
@@ -236,7 +215,8 @@
     /* Make sure the table takes full width */
     table.dataTable {
         width: 100% !important;
-    }
+        min-width: 1200px; /* Add a minimum width to prevent squishing */
+}
 </style>
 @endsection
 
@@ -284,7 +264,9 @@
                                 <th>Gender</th>
                                 <th>Roles</th>
                                 <th>Created By</th>
-                                <th>Created Date</th>
+                                <th>Date Created</th>
+                                <th>Modified By</th>
+                                <th>Date Modified</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -331,10 +313,12 @@
                                         {{ $employee->CreatedByName }}
                                     </td>
                                     <td>{{ $employee->DateCreated->format('M d, Y') }}</td>
+                                    <td>{{ $employee->modifiedBy ? $employee->modifiedBy->FirstName . ' ' . $employee->modifiedBy->LastName : '-' }}</td>
+                                    <td>{{ $employee->DateModified ? $employee->DateModified->format('M d, Y') : '-' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center">No employees found</td>
+                                    <td colspan="9" class="text-center">No employees found</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -729,27 +713,34 @@
             scrollY: '60vh',        // Set a fixed height for vertical scrolling
             scrollX: true,          // Enable horizontal scrolling
             scrollCollapse: true,   // Enable scroll collapse
-            paging: true,           // Enable pagination
-            responsive: true,       // Make the table responsive
+            paging: true,          // Enable pagination
+            responsive: false,      // Disable responsive to prevent column wrapping
+            autoWidth: false,       // Disable auto width calculation
             fixedHeader: {
                 header: true,       // Fix the header
                 headerOffset: 0     // Header offset
             },
+            columnDefs: [          // Define column widths
+                { targets: 0, width: '100px' },  // Actions
+                { targets: 1, width: '200px' },  // Name
+                { targets: 2, width: '200px' },  // Email
+                { targets: 3, width: '100px' },  // Gender
+                { targets: 4, width: '150px' },  // Roles
+                { targets: 5, width: '150px' },  // Created By
+                { targets: 6, width: '120px' },  // Date Created
+                { targets: 7, width: '150px' },  // Modified By
+                { targets: 8, width: '120px' }   // Date Modified
+            ],
             dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                 "<'row'<'col-sm-12'tr>>" +
-                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                "<'row'<'col-sm-12'tr>>" +
+                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
             language: {
                 search: "Search:",
                 searchPlaceholder: "Search records..."
             }
         });
         
-        // Add CSS to ensure table container has proper height
-        const tableContainer = employeesTable.closest('.dataTables_wrapper');
-        if (tableContainer) {
-            tableContainer.style.maxHeight = '70vh';
-            tableContainer.style.overflowY = 'auto';
-        }
+        
     });
 })();
 
