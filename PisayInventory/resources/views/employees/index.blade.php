@@ -4,6 +4,23 @@
 
 @section('styles')
 <style>
+
+    h2.m-0 {
+        color: #2d3748;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Button container styling */
+    .d-flex.gap-2.flex-nowrap {
+        white-space: nowrap;
+        min-width: fit-content;
+    }
+
+    /* Ensure buttons don't shrink */
+    .btn {
+        flex-shrink: 0;
+    }
     /* Table container */
     .table-responsive {
         overflow: hidden; /* Change from auto to visible */
@@ -67,21 +84,21 @@
 
     /* DataTables Scrollbar Styling */
     .dataTables_scrollBody::-webkit-scrollbar {
-        width: 12px;
-        height: 12px;
+        width: 8px;
+        height: 8px;
     }
 
     .dataTables_scrollBody::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background:rgb(209, 209, 209);
     }
 
     .dataTables_scrollBody::-webkit-scrollbar-thumb {
-        background: #cbd5e0;
+        background:rgb(172, 181, 190);
         border-radius: 6px;
     }
 
     .dataTables_scrollBody::-webkit-scrollbar-thumb:hover {
-        background: #a0aec0;
+        background:rgb(123, 133, 146);
     }
 
     /* DataTables Styling */
@@ -222,22 +239,24 @@
 
 @section('content')
 <div class="container-fluid px-4">
-<div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Employee Management</h2>
-        <div>
-            <button class="btn btn-outline-secondary" type="button" id="toggleButton">
-                <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
-            </button>
-            @if($userPermissions && $userPermissions->CanAdd)
-                <button type="button" class="btn btn-success" id="openExcelImportBtn">
-                    <i class="bi bi-upload"></i> Import Employees
+    <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="m-0">Employee Management</h2>
+            </div>
+            <div class="d-flex justify-content-end gap-2 flex-nowrap">
+                <button class="btn btn-outline-secondary" type="button" id="toggleButton">
+                    <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
                 </button>
-                <a href="{{ route('employees.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-lg"></i> Add Employee
-                </a>
-            @endif
+                @if($userPermissions && $userPermissions->CanAdd)
+                    <button type="button" class="btn btn-success" id="openExcelImportBtn">
+                        <i class="bi bi-upload"></i> Import Employees
+                    </button>
+                    <a href="{{ route('employees.create') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i> Add Employee
+                    </a>
+                @endif
+            </div>
         </div>
-    </div>
 
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
