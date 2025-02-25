@@ -212,6 +212,31 @@
         min-height: 400px;
         max-height: 60vh;
     }
+
+    /* Fix for table scrolling */
+    .dataTables_wrapper {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    
+    .dataTables_scrollBody {
+        min-height: 300px;
+        max-height: 60vh !important;
+        overflow-y: auto !important;
+    }
+    
+    /* Ensure the table header stays fixed */
+    .dataTables_scrollHead {
+        overflow: hidden !important;
+        position: sticky !important;
+        top: 0;
+        z-index: 10;
+    }
+    
+    /* Make sure the table takes full width */
+    table.dataTable {
+        width: 100% !important;
+    }
 </style>
 @endsection
 
@@ -224,7 +249,7 @@
                 <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
             </button>
             @if($userPermissions && $userPermissions->CanAdd)
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importEmployeesModal">
+                <button type="button" class="btn btn-success" id="openExcelImportBtn">
                     <i class="bi bi-upload"></i> Import Employees
                 </button>
                 <a href="{{ route('employees.create') }}" class="btn btn-primary">
@@ -366,88 +391,52 @@
     </div>
 </div>
 
-<!-- Import Employees Modal -->
-<div class="modal fade" id="importEmployeesModal" tabindex="-1" aria-labelledby="importEmployeesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- Standalone Import Modal -->
+<div class="modal" id="standaloneImportModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="importEmployeesModalLabel">Import Employees</h5>
+                <h5 class="modal-title">Import Employees</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="importForm" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <div id="step1">
+                <!-- Step 1: File Selection -->
+                <div id="importStep1">
+                    <div class="mb-3">
+                        <label for="excelFileInput" class="form-label">Select Excel File</label>
+                        <input type="file" class="form-control" id="excelFileInput" accept=".xlsx, .xls">
+                    </div>
+                    <button type="button" id="readExcelBtn" class="btn btn-primary">Preview Columns</button>
+                </div>
+                
+                <!-- Step 2: Column Mapping -->
+                <div id="importStep2" style="display: none;">
+                    <h6 class="mb-3">Map Excel Columns to Employee Fields</h6>
+                    <form id="standaloneImportForm">
                         <div class="mb-3">
-                            <label for="excel_file" class="form-label">Upload Excel File</label>
-                            <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                            <label for="nameColumn" class="form-label">Name</label>
+                            <select id="nameColumn" name="column_mapping[Name]" class="form-select" required></select>
                         </div>
-                        <button type="button" class="btn btn-primary" id="previewBtn">Preview Columns</button>
-                    </div>
-
-                    <div id="step2" style="display: none;">
-                        <h5>Map Excel Columns to Employee Fields</h5>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Field</th>
-                                        <th>Excel Column</th>
-                                        
-                                    </tr>
-                                </thead>
-                                <tbody>
-    <tr>
-        <td>Name <span class="text-danger">*</span></td>
-        <td>
-            <select name="column_mapping[Name]" class="form-select form-select-sm" required>
-                <option value="">Select Column</option>
-            </select>
-        </td>
-        
-    </tr>
-    <tr>
-        <td>Email <span class="text-danger">*</span></td>
-        <td>
-            <select name="column_mapping[Email]" class="form-select form-select-sm" required>
-                <option value="">Select Column</option>
-            </select>
-        </td>
-        
-    </tr>
-    <tr>
-        <td>Address <span class="text-danger">*</span></td>
-        <td>
-            <select name="column_mapping[Address]" class="form-select form-select-sm" required>
-                <option value="">Select Column</option>
-            </select>
-        </td>
-        
-    </tr>
-    <tr>
-        <td>Gender <span class="text-danger">*</span></td>
-        <td>
-            <select name="column_mapping[Gender]" class="form-select form-select-sm" required>
-                <option value="">Select Column</option>
-            </select>
-        </td>
-        
-    </tr>
-    <tr>
-        <td>Role <span class="text-danger">*</span></td>
-        <td>
-            <select name="column_mapping[Role]" class="form-select form-select-sm" required>
-                <option value="">Select Column</option>
-            </select>
-        </td>
-        
-    </tr>
-</tbody>
-                            </table>
+                        <div class="mb-3">
+                            <label for="emailColumn" class="form-label">Email</label>
+                            <select id="emailColumn" name="column_mapping[Email]" class="form-select" required></select>
                         </div>
-                        <button type="submit" class="btn btn-success" id="importBtn">Import Data</button>
-                    </div>
-                </form>
+                        <div class="mb-3">
+                            <label for="addressColumn" class="form-label">Address</label>
+                            <select id="addressColumn" name="column_mapping[Address]" class="form-select" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="genderColumn" class="form-label">Gender</label>
+                            <select id="genderColumn" name="column_mapping[Gender]" class="form-select" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="roleColumn" class="form-label">Role</label>
+                            <select id="roleColumn" name="column_mapping[Role]" class="form-select" required></select>
+                        </div>
+                        <button type="submit" class="btn btn-success">Import Data</button>
+                        <button type="button" class="btn btn-secondary" id="backToStep1Btn">Back</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -500,229 +489,231 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    let commonConfig = {
-        pageLength: 10,
-        scrollY: '60vh',
-        scrollX: true,
-        scrollCollapse: true,
-        autoWidth: false,
-        fixedHeader: {
-            header: true,
-            headerOffset: 0
-        },
-        dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-             "<'row'<'col-sm-12'tr>>" +
-             "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-        language: {
-            search: "Search:",
-            searchPlaceholder: "Search records..."
-        },
-        columnDefs: [
-            { className: "actions-column", targets: 0, width: "100px", orderable: false },
-            { className: "name-column", targets: 1, width: "200px" },
-            { className: "email-column", targets: 2, width: "220px" },
-            { className: "gender-column", targets: 3, width: "100px" },
-            { className: "role-column", targets: 4, width: "250px" },
-            { className: "created-by-column", targets: 5, width: "150px" },
-            { className: "created-date-column", targets: 6, width: "150px" }
-        ],
-        order: [[1, 'asc']],
-    };
-
-    // Active employees table
-    let activeTable = $('#employeesTable').DataTable({
-        ...commonConfig,
-        createdRow: function(row, data, dataIndex) {
-            // Add max-width to role column cells
-            $(row).find('.role-column').css('max-width', '250px');
-        }
-    });
-
-    // Deleted employees table
-    let deletedTable = $('#deletedEmployeesTable').DataTable({
-        ...commonConfig,
-        columnDefs: [
-            { className: "actions-column", targets: 0, width: "100px", orderable: false },
-            { className: "name-column", targets: 1, width: "200px" },
-            { className: "username-column", targets: 2, width: "180px" },
-            { className: "email-column", targets: 3, width: "220px" },
-            { className: "role-column", targets: 4, width: "250px", render: function(data, type, row) {
-                if (type === 'display') {
-                    return '<div class="role-content">' + data + '</div>';
+// Use an immediately invoked function expression (IIFE) to avoid conflicts
+(function() {
+    // Wait until DOM is fully loaded
+    window.addEventListener('DOMContentLoaded', function() {
+        // Get elements
+        const openModalBtn = document.getElementById('openExcelImportBtn');
+        const modal = document.getElementById('standaloneImportModal');
+        const fileInput = document.getElementById('excelFileInput');
+        const readExcelBtn = document.getElementById('readExcelBtn');
+        const step1 = document.getElementById('importStep1');
+        const step2 = document.getElementById('importStep2');
+        const backBtn = document.getElementById('backToStep1Btn');
+        const importForm = document.getElementById('standaloneImportForm');
+        
+        // Initialize Bootstrap modal
+        let bootstrapModal = null;
+        
+        // Open modal button click handler
+        if (openModalBtn) {
+            openModalBtn.addEventListener('click', function() {
+                if (typeof bootstrap !== 'undefined') {
+                    bootstrapModal = new bootstrap.Modal(modal);
+                    bootstrapModal.show();
+                } else {
+                    // Fallback if Bootstrap JS is not available
+                    modal.style.display = 'block';
                 }
-                return data;
-            }},
-            { className: "gender-column", targets: 5, width: "100px" },
-            { className: "deleted-date-column", targets: 6, width: "150px" },
-            { className: "created-by-column", targets: 7, width: "150px" },
-            { className: "modified-by-column", targets: 8, width: "150px" }
-        ],
-        order: [[1, 'asc']],
-        createdRow: function(row, data, dataIndex) {
-            $(row).find('.role-column').css('max-width', '250px');
-        }
-    });
-
-    // Function to adjust columns and redraw tables
-    function adjustTables() {
-        activeTable.columns.adjust();
-        deletedTable.columns.adjust();
-    }
-
-    // Adjust on window resize
-    window.addEventListener('resize', adjustTables);
-
-    // Toggle functionality
-    const toggleButton = document.getElementById('toggleButton');
-    const activeDiv = document.getElementById('activeEmployees');
-    const deletedDiv = document.getElementById('deletedEmployees');
-    const buttonText = document.getElementById('buttonText');
-
-    function showActiveTable() {
-        deletedDiv.style.display = 'none';
-        activeDiv.style.display = 'block';
-        buttonText.textContent = 'Show Deleted';
-        toggleButton.classList.remove('btn-outline-primary');
-        toggleButton.classList.add('btn-outline-secondary');
-        setTimeout(adjustTables, 0);
-    }
-
-    function showDeletedTable() {
-        activeDiv.style.display = 'none';
-        deletedDiv.style.display = 'block';
-        buttonText.textContent = 'Show Active';
-        toggleButton.classList.remove('btn-outline-secondary');
-        toggleButton.classList.add('btn-outline-primary');
-        setTimeout(adjustTables, 0);
-    }
-
-    toggleButton.addEventListener('click', function() {
-        if (activeDiv.style.display !== 'none') {
-            showDeletedTable();
-        } else {
-            showActiveTable();
-        }
-    });
-
-    // Initial setup
-    showActiveTable();
-    
-    // Initial column adjustment
-    setTimeout(adjustTables, 100);
-
-
-                   // Preview function similar to Items Import
-                   $('#previewBtn').click(function() {
-    const fileInput = document.getElementById('excel_file');
-    if (!fileInput.files.length) {
-        alert('Please select a file first');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('excel_file', fileInput.files[0]);
-    formData.append('_token', '{{ csrf_token() }}');
-
-    $.ajax({
-        url: '{{ route("employees.preview-columns") }}',
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-            // Clear and populate all column mapping dropdowns
-            const columnSelects = $('select[name^="column_mapping"]');
-            columnSelects.empty().append('<option value="">Select Column</option>');
-            
-            response.columns.forEach(column => {
-                columnSelects.append(`<option value="${column}">${column}</option>`);
             });
-
-            // Auto-map columns based on similar names
-            response.columns.forEach(column => {
-                const lowerColumn = column.toLowerCase();
+        }
+        
+        // Preview button click handler
+        if (readExcelBtn) {
+            readExcelBtn.addEventListener('click', function() {
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    alert('Please select an Excel file first');
+                    return;
+                }
                 
-                if (lowerColumn.includes('name')) {
-                    $('select[name="column_mapping[Name]"]').val(column);
-                }
-                if (lowerColumn.includes('email')) {
-                    $('select[name="column_mapping[Email]"]').val(column);
-                }
-                if (lowerColumn.includes('address')) {
-                    $('select[name="column_mapping[Address]"]').val(column);
-                }
-                if (lowerColumn.includes('gender')) {
-                    $('select[name="column_mapping[Gender]"]').val(column);
-                }
-                if (lowerColumn.includes('role')) {
-                    $('select[name="column_mapping[Role]"]').val(column);
-                }
+                const file = fileInput.files[0];
+                readExcelBtn.textContent = 'Loading...';
+                readExcelBtn.disabled = true;
+                
+                // Read the Excel file
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Get first sheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Get headers (first row)
+                        const headers = [];
+                        const range = XLSX.utils.decode_range(worksheet['!ref']);
+                        
+                        for (let col = range.s.c; col <= range.e.c; col++) {
+                            const cellAddress = XLSX.utils.encode_cell({ r: range.s.r, c: col });
+                            const cell = worksheet[cellAddress];
+                            
+                            if (cell && cell.v) {
+                                headers.push(cell.v.toString().trim());
+                            }
+                        }
+                        
+                        // Populate all select elements
+                        const selects = document.querySelectorAll('#standaloneImportForm select');
+                        
+                        selects.forEach(select => {
+                            // Clear existing options
+                            select.innerHTML = '<option value="">Select a column</option>';
+                            
+                            // Add header options
+                            headers.forEach(header => {
+                                const option = document.createElement('option');
+                                option.value = header;
+                                option.textContent = header;
+                                select.appendChild(option);
+                            });
+                            
+                            // Try to auto-map based on field name
+                            const fieldName = select.name.match(/\[(.*?)\]/)[1].toLowerCase();
+                            
+                            for (const header of headers) {
+                                if (header.toLowerCase().includes(fieldName.toLowerCase())) {
+                                    select.value = header;
+                                    break;
+                                }
+                            }
+                        });
+                        
+                        // Show mapping form
+                        step1.style.display = 'none';
+                        step2.style.display = 'block';
+                        
+                    } catch (error) {
+                        console.error('Error processing Excel file:', error);
+                        alert('Error processing Excel file: ' + error.message);
+                    }
+                    
+                    // Reset button state
+                    readExcelBtn.textContent = 'Preview Columns';
+                    readExcelBtn.disabled = false;
+                };
+                
+                reader.onerror = function() {
+                    alert('Error reading file');
+                    readExcelBtn.textContent = 'Preview Columns';
+                    readExcelBtn.disabled = false;
+                };
+                
+                reader.readAsArrayBuffer(file);
             });
-
-            $('#step1').hide();
-            $('#step2').show();
-            $('#importBtn').show();
-        },
-        error: function(xhr) {
-            alert('Error reading Excel file: ' + xhr.responseText);
+        }
+        
+        // Back button click handler
+        if (backBtn) {
+            backBtn.addEventListener('click', function() {
+                step1.style.display = 'block';
+                step2.style.display = 'none';
+            });
+        }
+        
+        // Form submission handler
+        if (importForm) {
+            importForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Check if all required fields are mapped
+                const selects = importForm.querySelectorAll('select');
+                let allMapped = true;
+                
+                selects.forEach(select => {
+                    if (!select.value) {
+                        allMapped = false;
+                    }
+                });
+                
+                if (!allMapped) {
+                    alert('Please map all required fields');
+                    return;
+                }
+                
+                // Create FormData object
+                const formData = new FormData();
+                formData.append('excel_file', fileInput.files[0]);
+                
+                // Add column mappings
+                selects.forEach(select => {
+                    formData.append(select.name, select.value);
+                });
+                
+                // Send data to server
+                fetch('{{ route("employees.import") }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Import successful!');
+                        window.location.reload();
+                    } else {
+                        alert('Import failed: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Import failed: ' + error.message);
+                });
+            });
         }
     });
-});
-// Add form submission handler
-$('#importForm').on('submit', function(e) {
-    e.preventDefault();
-    
-    // Check if file is selected
-    if (!$('#excel_file').val()) {
-        alert('Please select an Excel file');
-        return;
-    }
+})();
 
-    // Check if all required column mappings are selected
-    const requiredFields = ['Name', 'Email', 'Address', 'Gender', 'Role'];
-    let missingFields = [];
-    
-    requiredFields.forEach(field => {
-        if (!$(`select[name="column_mapping[${field}]"]`).val()) {
-            missingFields.push(field);
+// Add this script to fix table scrolling
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Find your employees table
+        const employeesTable = document.querySelector('#employeesTable'); // Replace with your actual table ID
+        
+        if (!employeesTable) {
+            console.warn('Employees table not found');
+            return;
         }
-    });
-
-    if (missingFields.length > 0) {
-        alert(`Please map the following required columns: ${missingFields.join(', ')}`);
-        return;
-    }
-
-    // Show loading state
-    const importBtn = $('#importBtn');
-    importBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importing...');
-    
-    const formData = new FormData(this);
-    
-    $.ajax({
-        url: '{{ route("employees.import") }}',
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-            if (response.success) {
-                alert('Import successful!');
-                window.location.reload();
-            } else {
-                alert('Import failed: ' + (response.error || 'Unknown error'));
-                importBtn.prop('disabled', false).text('Import Data');
+        
+        // Check if DataTable is already initialized
+        if ($.fn.DataTable.isDataTable(employeesTable)) {
+            // Destroy existing DataTable
+            $(employeesTable).DataTable().destroy();
+        }
+        
+        // Initialize DataTable with proper scrolling options
+        $(employeesTable).DataTable({
+            scrollY: '60vh',        // Set a fixed height for vertical scrolling
+            scrollX: true,          // Enable horizontal scrolling
+            scrollCollapse: true,   // Enable scroll collapse
+            paging: true,           // Enable pagination
+            responsive: true,       // Make the table responsive
+            fixedHeader: {
+                header: true,       // Fix the header
+                headerOffset: 0     // Header offset
+            },
+            dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                 "<'row'<'col-sm-12'tr>>" +
+                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            language: {
+                search: "Search:",
+                searchPlaceholder: "Search records..."
             }
-        },
-        error: function(xhr) {
-            const errorMessage = xhr.responseJSON?.error || 'An error occurred during import';
-            alert('Import failed: ' + errorMessage);
-            importBtn.prop('disabled', false).text('Import Data');
+        });
+        
+        // Add CSS to ensure table container has proper height
+        const tableContainer = employeesTable.closest('.dataTables_wrapper');
+        if (tableContainer) {
+            tableContainer.style.maxHeight = '70vh';
+            tableContainer.style.overflowY = 'auto';
         }
     });
-});
-});
+})();
 </script>
 @endsection
