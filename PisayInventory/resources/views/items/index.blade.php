@@ -18,13 +18,15 @@
         </div>
     </div>
 
-    <div class="btn-group mb-4" role="group">
-        <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
-            Active Records
-        </button>
-        <button class="btn btn-danger" type="button" id="showDeletedBtn">
-            <i class="bi bi-archive"></i> Show Deleted Records
-        </button>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="btn-group" role="group">
+            <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
+                Active Records
+            </button>
+            <button class="btn btn-danger" type="button" id="showDeletedBtn">
+                <i class="bi bi-archive"></i> Show Deleted Records
+            </button>
+        </div>
     </div>
 
     @if(session('error'))
@@ -34,8 +36,14 @@
     <!-- Active Items Section -->
     <div id="activeItems">
         <div class="card mb-4">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Active Items</h5>
+                <div class="input-group" style="width: 250px;">
+                    <input type="text" id="searchActiveItems" class="form-control" placeholder="Search...">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -150,8 +158,14 @@
     <!-- Deleted Items Section -->
     <div id="deletedItems" style="display: none;">
         <div class="card mb-4">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Deleted Items</h5>
+                <div class="input-group" style="width: 250px;">
+                    <input type="text" id="searchDeletedItems" class="form-control" placeholder="Search...">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -518,18 +532,80 @@
             });
         }
 
-        // Initialize DataTable
-        if (!$.fn.DataTable.isDataTable('#itemsTable')) {
-            $('#itemsTable').DataTable({
-                pageLength: 10,
-                responsive: true,
-                dom: '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center"ip>',
-                language: {
-                    search: "Search:",
-                    searchPlaceholder: "Search items..."
-                }
+        // Real-time search for active items
+        $('#searchActiveItems').on('keyup', function() {
+            const searchText = $(this).val().toLowerCase();
+            
+            $('#itemsTable tbody tr').each(function() {
+                const $row = $(this);
+                let text = '';
+                
+                // Get text from each cell except Actions column
+                $row.find('td:not(:first-child)').each(function() {
+                    text += $(this).text() + ' ';
+                });
+                
+                text = text.toLowerCase();
+                $row.toggle(text.includes(searchText));
             });
+
+            // Update the "Showing X to Y of Z results" text
+            updateActiveItemsCounter();
+        });
+
+        // Real-time search for deleted items
+        $('#searchDeletedItems').on('keyup', function() {
+            const searchText = $(this).val().toLowerCase();
+            
+            $('#deletedItemsTable tbody tr').each(function() {
+                const $row = $(this);
+                let text = '';
+                
+                // Get text from each cell except Actions column
+                $row.find('td:not(:first-child)').each(function() {
+                    text += $(this).text() + ' ';
+                });
+                
+                text = text.toLowerCase();
+                $row.toggle(text.includes(searchText));
+            });
+
+            // Update the "Showing X to Y of Z results" text
+            updateDeletedItemsCounter();
+        });
+
+        // Function to update active items counter
+        function updateActiveItemsCounter() {
+            const totalRows = $('#itemsTable tbody tr').length;
+            const visibleRows = $('#itemsTable tbody tr:visible').length;
+            const counterText = `Showing ${visibleRows} of ${totalRows} results`;
+            $('#activeItems .card-body .d-flex:first-child div:first-child').text(counterText);
         }
+
+        // Function to update deleted items counter
+        function updateDeletedItemsCounter() {
+            const totalRows = $('#deletedItemsTable tbody tr').length;
+            const visibleRows = $('#deletedItemsTable tbody tr:visible').length;
+            const counterText = `Showing ${visibleRows} of ${totalRows} results`;
+            $('#deletedItems .card-body .d-flex:first-child div:first-child').text(counterText);
+        }
+
+        // Clear search and reset view when switching between active and deleted
+        $('#activeRecordsBtn').on('click', function() {
+            $('#searchActiveItems').val('').trigger('keyup');
+            $('#activeItems').show();
+            $('#deletedItems').hide();
+            $(this).addClass('active');
+            $('#showDeletedBtn').removeClass('active');
+        });
+
+        $('#showDeletedBtn').on('click', function() {
+            $('#searchDeletedItems').val('').trigger('keyup');
+            $('#deletedItems').show();
+            $('#activeItems').hide();
+            $(this).addClass('active');
+            $('#activeRecordsBtn').removeClass('active');
+        });
     });
 </script>
 @endsection
@@ -672,6 +748,32 @@
         line-height: 1.5 !important;
         height: auto !important;
         min-width: auto !important;
+    }
+
+    /* Add these styles for the search input */
+    .input-group .form-control {
+        border-right: 0;
+        height: 38px;
+        font-size: 14px;
+    }
+
+    .input-group .btn-outline-secondary {
+        border-left: 0;
+        background-color: white;
+        border-color: #ced4da;
+    }
+
+    .input-group .btn-outline-secondary:hover {
+        background-color: #f8f9fa;
+    }
+
+    .input-group .form-control:focus {
+        border-color: #ced4da;
+        box-shadow: none;
+    }
+
+    .input-group .form-control:focus + .btn-outline-secondary {
+        border-color: #ced4da;
     }
 </style>
 @endsection
