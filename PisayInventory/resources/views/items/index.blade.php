@@ -124,7 +124,8 @@
                                         @if($item->ImagePath)
                                             <img src="{{ asset('storage/' . $item->ImagePath) }}" 
                                                  alt="{{ $item->ItemName }}" 
-                                                 style="height: 50px; width: 50px; object-fit: cover;">
+                                                 class="img-thumbnail"
+                                                 style="max-width: 100px;">
                                         @else
                                             <span class="text-muted">No image</span>
                                         @endif
@@ -223,7 +224,8 @@
                                         @if($item->ImagePath)
                                             <img src="{{ asset('storage/' . $item->ImagePath) }}" 
                                                  alt="{{ $item->ItemName }}" 
-                                                 style="height: 50px; width: 50px; object-fit: cover;">
+                                                 class="img-thumbnail"
+                                                 style="max-width: 100px;">
                                         @else
                                             <span class="text-muted">No image</span>
                                         @endif

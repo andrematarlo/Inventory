@@ -54,19 +54,8 @@ class Employee extends Model
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'employee_roles', 'EmployeeId', 'RoleId')
-            ->where('employee_roles.IsDeleted', false)
-            ->withPivot([
-                'id',
-                'IsDeleted',
-                'DateCreated',
-                'CreatedById',
-                'DateModified',
-                'ModifiedById',
-                'DateDeleted',
-                'DeletedById',
-                'DateRestored',
-                'RestoredById'
-            ]);
+                    ->where('roles.IsDeleted', false)
+                    ->where('employee_roles.IsDeleted', false);
     }
 
     public function createdBy()
@@ -179,5 +168,45 @@ class Employee extends Model
         // Get roles from the relationship
         $roles = $this->roles->pluck('RoleName');
         return $roles->isNotEmpty() ? $roles->implode(', ') : 'No Role Assigned';
+    }
+
+    // Add method to get merged permissions
+    public function getMergedPermissions()
+    {
+        $mergedPermissions = [];
+        
+        // Get all active roles of the employee
+        $roles = $this->roles()
+            ->with(['policies' => function($query) {
+                $query->where('role_policies.IsDeleted', false);
+            }])
+            ->get();
+        
+        foreach ($roles as $role) {
+            // Get active policies for each role
+            $policies = $role->policies;
+                                
+            foreach ($policies as $policy) {
+                $module = $policy->Module;
+                
+                // Initialize module permissions if not exists
+                if (!isset($mergedPermissions[$module])) {
+                    $mergedPermissions[$module] = [
+                        'CanView' => false,
+                        'CanAdd' => false,
+                        'CanEdit' => false,
+                        'CanDelete' => false
+                    ];
+                }
+                
+                // Merge permissions using OR operation
+                $mergedPermissions[$module]['CanView'] |= $policy->CanView;
+                $mergedPermissions[$module]['CanAdd'] |= $policy->CanAdd;
+                $mergedPermissions[$module]['CanEdit'] |= $policy->CanEdit;
+                $mergedPermissions[$module]['CanDelete'] |= $policy->CanDelete;
+            }
+        }
+        
+        return $mergedPermissions;
     }
 } 

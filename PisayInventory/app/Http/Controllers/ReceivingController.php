@@ -14,12 +14,9 @@ use Illuminate\Support\Facades\Log;
 
 class ReceivingController extends Controller
 {
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        $userRole = auth()->user()->role;
-        return RolePolicy::whereHas('role', function($query) use ($userRole) {
-            $query->where('RoleName', $userRole);
-        })->where('Module', 'Receiving Management')->first();
+        return parent::getUserPermissions('Receiving Management');
     }
 
     public function index()

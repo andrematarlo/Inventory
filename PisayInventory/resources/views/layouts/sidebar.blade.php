@@ -11,16 +11,24 @@
     </div>
 
     @php
-        // Get user roles and convert to array
-        $userRoles = auth()->check() && auth()->user()->role ? 
-            array_map('trim', explode(',', auth()->user()->role)) : [];
+        use Illuminate\Support\Facades\Auth;
         
-        // Check if user has any of these roles
-        $isAdmin = in_array('Admin', $userRoles);
-        $isHR = count(array_intersect($userRoles, ['Admin', 'HR Manager', 'HR Staff'])) > 0;
-        $isPurchasing = count(array_intersect($userRoles, ['Admin', 'Purchasing Manager', 'Purchasing Staff'])) > 0;
-        $isReceiving = count(array_intersect($userRoles, ['Admin', 'Receiving Manager', 'Receiving Staff'])) > 0;
-        $isInventory = count(array_intersect($userRoles, ['Admin', 'Inventory Manager', 'Inventory Staff'])) > 0;
+        // Get user roles and convert to array
+        $userPermissions = null;
+        if (Auth::check()) {
+            $controller = app(\App\Http\Controllers\Controller::class);
+            $hrPermissions = $controller->getUserPermissions('Employee Management');
+            $purchasingPermissions = $controller->getUserPermissions('Purchasing Management');
+            $receivingPermissions = $controller->getUserPermissions('Receiving Management'); 
+            $inventoryPermissions = $controller->getUserPermissions('Inventory');
+        }
+        
+        // Check permissions for each module
+        $isAdmin = Auth::check() && Auth::user()->role === 'Admin';
+        $hasHRAccess = $hrPermissions && $hrPermissions->CanView;
+        $hasPurchasingAccess = $purchasingPermissions && $purchasingPermissions->CanView;
+        $hasReceivingAccess = $receivingPermissions && $receivingPermissions->CanView;
+        $hasInventoryAccess = $inventoryPermissions && $inventoryPermissions->CanView;
     @endphp
 
     <ul class="nav flex-column py-2">
@@ -38,7 +46,7 @@
             </a>
         </li>
         @endif
-        @if($isHR)
+        @if($hasHRAccess)
         <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-people"></i>
@@ -63,7 +71,7 @@
             </ul>
         </li>
         @endif
-        @if($isPurchasing)
+        @if($hasPurchasingAccess)
         <li class="nav-item">
             <a href="{{ route('purchases.index') }}" class="nav-link text-white {{ request()->routeIs('purchases.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-cart4"></i>
@@ -71,7 +79,7 @@
             </a>
         </li>
         @endif
-        @if($isReceiving)
+        @if($hasReceivingAccess)
         <li class="nav-item">
             <a href="{{ route('receiving.index') }}" class="nav-link text-white {{ request()->routeIs('receiving.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-box-seam"></i>
@@ -79,7 +87,7 @@
             </a>
         </li>
         @endif
-        @if($isInventory)
+        @if($hasInventoryAccess)
         <li class="nav-item">
             <a href="{{ route('items.index') }}" class="nav-link text-white {{ request()->routeIs('items.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-box"></i>

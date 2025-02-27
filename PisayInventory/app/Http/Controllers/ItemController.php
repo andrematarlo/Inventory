@@ -192,8 +192,10 @@ class ItemController extends Controller
 
             // Handle image upload
             if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('items', 'public');
-                $item->ImagePath = $imagePath;
+                $file = $request->file('image');
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('public/items', $filename);
+                $item->ImagePath = str_replace('public/', '', $path); // Store relative path
             }
 
             $item->save();
@@ -291,12 +293,15 @@ class ItemController extends Controller
 
             // Handle image upload if new image is provided
             if ($request->hasFile('image')) {
-                // Delete old image if exists
-                if ($item->ImagePath && Storage::disk('public')->exists($item->ImagePath)) {
-                    Storage::disk('public')->delete($item->ImagePath);
+                // Delete old image
+                if ($item->ImagePath) {
+                    Storage::delete('public/' . $item->ImagePath);
                 }
-                $imagePath = $request->file('image')->store('items', 'public');
-                $item->ImagePath = $imagePath;
+                
+                $file = $request->file('image');
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('public/items', $filename);
+                $item->ImagePath = str_replace('public/', '', $path); // Store relative path
             }
 
             // Save the changes
@@ -553,11 +558,8 @@ class ItemController extends Controller
         return view('items.edit', compact('item', 'classifications', 'units'));
     }
 
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        $userRole = Auth::user()->role;
-        return RolePolicy::whereHas('role', function($query) use ($userRole) {
-            $query->where('RoleName', $userRole);
-        })->where('Module', 'Items')->first();
+        return parent::getUserPermissions('Items');
     }
 } 

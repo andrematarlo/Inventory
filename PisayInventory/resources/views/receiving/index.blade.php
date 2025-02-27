@@ -99,7 +99,7 @@
                                     </a>
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            onclick="deleteReceivingRecord({{ $record->ReceivingID }})"
+                                            onclick="deleteReceivingRecord('{{ $record->ReceivingID }}')"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -275,7 +275,7 @@
                         <tr>
                             <td>
                                 <button type="button" class="btn btn-sm btn-success" 
-                                        onclick="restoreReceivingRecord({{ $record->ReceivingID }})"
+                                        onclick="restoreReceivingRecord('{{ $record->ReceivingID }}')"
                                         title="Restore">
                                     <i class="bi bi-arrow-counterclockwise"></i>
                                 </button>
