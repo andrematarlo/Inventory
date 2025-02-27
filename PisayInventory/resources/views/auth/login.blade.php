@@ -20,8 +20,9 @@
             justify-content: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 0;
-            overflow: hidden;
+            padding: 1rem;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
         /* Add overlay */
         body::before {
@@ -37,23 +38,21 @@
 
         .page-layout {
             display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
+            align-items: center;
+            justify-content: center;
             width: 100%;
             max-width: 1400px;
-            height: auto;
-            padding: 2rem 4rem;
-            gap: 4rem;
-            position: relative;
+            min-height: calc(100vh - 2rem);
+            padding: 1rem;
+            gap: 2rem;
+            flex-wrap: wrap;
         }
 
         .background-content {
-            width: 45%;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            height: auto;
-            padding-top: 0;
+            flex: 1;
+            min-width: 300px;
+            max-width: 600px;
+            padding: 1rem;
         }
 
         .background-content h1 {
@@ -71,24 +70,24 @@
         }
 
         .login-container {
-            width: 45%;
+            flex: 1;
+            min-width: 300px;
+            max-width: 450px;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 15px;
             padding: 2rem;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            height: auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            margin-top: 4.5rem;
         }
 
         .form-control {
+            width: 100%;
+            max-width: 100%;
+            min-height: 40px;
+            padding: 0.5rem;
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            padding: 0.75rem 1rem;
             color: white;
             margin-bottom: 1rem;
         }
@@ -102,9 +101,10 @@
         }
 
         .btn-login {
+            min-height: 40px;
+            padding: 0.5rem 1.5rem;
             width: auto;
-            padding: 0.4rem 1.5rem;
-            margin: 0.5rem auto 0;
+            min-width: 120px;
             display: block;
             background: rgba(255, 255, 255, 0.2);
             color: white;
@@ -229,6 +229,127 @@
             padding: 0.5rem 0.75rem;
             font-size: 0.85rem;
             border-radius: 8px;
+        }
+
+        /* Add responsive breakpoints */
+        @media (max-width: 1200px) {
+            .page-layout {
+                max-width: 100%;
+                padding: 2rem;
+            }
+
+            .background-content h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .page-layout {
+                padding: 1.5rem;
+                gap: 1.5rem;
+            }
+
+            .background-content h1 {
+                font-size: 2rem;
+            }
+
+            .feature-item {
+                padding: 0.75rem 1rem;
+            }
+
+            .feature-icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            .feature-icon svg {
+                width: 24px;
+                height: 24px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-layout {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 0.5rem;
+            }
+
+            .background-content,
+            .login-container {
+                width: 100%;
+                max-width: 100%;
+                padding: 1rem;
+            }
+
+            .background-content {
+                text-align: center;
+            }
+
+            .background-content h1 {
+                font-size: 2rem !important;
+            }
+
+            .features-grid {
+                margin-top: 1rem;
+                gap: 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            .login-container {
+                padding: 1rem;
+            }
+
+            .background-content h1 {
+                font-size: 1.5rem !important;
+            }
+
+            .feature-item {
+                padding: 0.5rem;
+            }
+
+            .login-header h1 {
+                font-size: 1.75rem;
+            }
+
+            .login-header p {
+                font-size: 0.9rem;
+            }
+
+            .form-control {
+                padding: 0.5rem 0.75rem;
+            }
+        }
+
+        /* Add orientation specific styles */
+        @media (max-height: 600px) and (orientation: landscape) {
+            .page-layout {
+                height: auto;
+                min-height: 100vh;
+                padding: 1rem;
+            }
+
+            .features-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+
+            .background-content h1 {
+                font-size: 1.8rem;
+            }
+        }
+
+        /* Maintain aspect ratio for logo */
+        .login-header img {
+            max-width: 70px;
+            height: auto;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
