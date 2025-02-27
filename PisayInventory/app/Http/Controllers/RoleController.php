@@ -11,21 +11,9 @@ use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        $userRole = auth()->user()->role;
-        $permissions = RolePolicy::whereHas('role', function($query) use ($userRole) {
-            $query->where('RoleName', $userRole);
-        })->whereIn('Module', ['Inventory', 'Roles'])->get();
-
-        \Log::info('User Permissions Check:', [
-            'userRole' => $userRole,
-            'permissions' => $permissions,
-            'modules' => $permissions->pluck('Module'),
-            'canDelete' => $permissions->pluck('CanDelete')
-        ]);
-
-        return $permissions->where('Module', 'Inventory')->first();
+        return parent::getUserPermissions('Roles');
     }
 
     public function index()

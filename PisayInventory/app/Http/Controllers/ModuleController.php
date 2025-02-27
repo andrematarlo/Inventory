@@ -7,30 +7,50 @@ use App\Models\RolePolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class ModuleController extends Controller
 {
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        $userRole = auth()->user()->role;
-        return RolePolicy::whereHas('role', function($query) use ($userRole) {
-            $query->where('RoleName', $userRole);
-        })->where('Module', 'Modules')->first();
+        try {
+            if (!Auth::check()) {
+                return (object)[
+                    'CanAdd' => false,
+                    'CanEdit' => false,
+                    'CanDelete' => false,
+                    'CanView' => false
+                ];
+            }
+
+            return parent::getUserPermissions('Modules');
+
+        } catch (\Exception $e) {
+            Log::error('Error getting permissions: ' . $e->getMessage());
+            return (object)[
+                'CanAdd' => false,
+                'CanEdit' => false,
+                'CanDelete' => false,
+                'CanView' => false
+            ];
+        }
     }
 
     public function index()
     {
         try {
-            $userPermissions = $this->getUserPermissions();
-            $modules = Module::orderBy('ModuleName')->get();
+            if (!Auth::check()) {
+                return redirect()->route('login');
+            }
 
-            return view('modules.index', [
-                'modules' => $modules,
-                'userPermissions' => $userPermissions
-            ]);
+            $modules = Module::orderBy('ModuleName')->get();
+            $userPermissions = $this->getUserPermissions();
+
+            return view('modules.index', compact('modules', 'userPermissions'));
 
         } catch (\Exception $e) {
-            \Log::error('Error loading modules: ' . $e->getMessage());
+            Log::error('Error loading modules: ' . $e->getMessage());
             return back()->with('error', 'Error loading modules: ' . $e->getMessage());
         }
     }

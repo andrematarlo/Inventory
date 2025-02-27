@@ -20,41 +20,9 @@ class PurchaseController extends Controller
         $this->middleware('auth');
     }
 
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        try {
-            // Debug: I-print nato ang user role
-            \Log::info('User Role:', ['role' => Auth::user()->role]);
-            
-            $userRole = Auth::user()->role;
-            $permissions = RolePolicy::whereHas('role', function($query) use ($userRole) {
-                $query->where('RoleName', $userRole);
-            })->where('Module', 'Purchasing Management')->first();
-
-            // Debug: I-print nato ang nakuha nga permissions
-            \Log::info('Permissions found:', ['permissions' => $permissions]);
-
-            // If no permissions found, return default permissions
-            if (!$permissions) {
-                \Log::warning('No permissions found for role: ' . $userRole);
-                return (object)[
-                    'CanAdd' => false,
-                    'CanEdit' => false,
-                    'CanDelete' => false,
-                    'CanView' => true
-                ];
-            }
-
-            return $permissions;
-        } catch (\Exception $e) {
-            \Log::error('Error getting user permissions: ' . $e->getMessage());
-            return (object)[
-                'CanAdd' => false,
-                'CanEdit' => false,
-                'CanDelete' => false,
-                'CanView' => true
-            ];
-        }
+        return parent::getUserPermissions('Purchasing Management');
     }
 
     public function index()

@@ -1,12 +1,14 @@
 <?php
 
 namespace App\Http\Controllers;
+
+use App\Models\UnitOfMeasure;
+use App\Models\RolePolicy;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Request;
-use App\Models\RolePolicy;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Unit;
 use App\Models\Item;
 
 class UnitController extends Controller
@@ -17,21 +19,18 @@ class UnitController extends Controller
     public function index()
     {
         $userPermissions = $this->getUserPermissions();
-
-        // Check if user has View permission
+        
         if (!$userPermissions || !$userPermissions->CanView) {
             return redirect()->back()->with('error', 'You do not have permission to view units.');
         }
 
-        $units = Unit::with(['createdBy', 'modifiedBy'])
-            ->where('IsDeleted', 0)
+        $units = UnitOfMeasure::where('IsDeleted', false)
             ->orderBy('UnitName')
-            ->paginate(10);
+            ->get();
 
-        $trashedUnits = Unit::with(['createdBy', 'modifiedBy', 'deletedBy'])
-            ->where('IsDeleted', 1)
+        $trashedUnits = UnitOfMeasure::where('IsDeleted', true)
             ->orderBy('UnitName')
-            ->paginate(10);
+            ->get();
 
         return view('units.index', compact('units', 'trashedUnits', 'userPermissions'));
     }
@@ -58,11 +57,11 @@ class UnitController extends Controller
             ]);
 
             // Find the last UnitOfMeasureId
-            $lastUnit = Unit::orderBy('UnitOfMeasureId', 'desc')->first();
+            $lastUnit = UnitOfMeasure::orderBy('UnitOfMeasureId', 'desc')->first();
             $nextId = $lastUnit ? $lastUnit->UnitOfMeasureId + 1 : 1;
 
             // Create new unit
-            Unit::create([
+            UnitOfMeasure::create([
                 'UnitOfMeasureId' => $nextId,
                 'UnitName' => $request->UnitName,
                 'CreatedById' => Auth::id(),
@@ -109,7 +108,7 @@ class UnitController extends Controller
             DB::beginTransaction();
 
             // Find the unit
-            $unit = Unit::where('UnitOfMeasureId', $id)->first();
+            $unit = UnitOfMeasure::where('UnitOfMeasureId', $id)->first();
             if (!$unit) {
                 throw new \Exception('Unit not found');
             }
@@ -156,7 +155,7 @@ class UnitController extends Controller
             DB::beginTransaction();
 
             // Find the unit
-            $unit = Unit::where('UnitOfMeasureId', $id)->first();
+            $unit = UnitOfMeasure::where('UnitOfMeasureId', $id)->first();
             if (!$unit) {
                 throw new \Exception('Unit not found');
             }
@@ -204,7 +203,7 @@ class UnitController extends Controller
             DB::beginTransaction();
 
             // Find the unit
-            $unit = Unit::where('UnitOfMeasureId', $id)
+            $unit = UnitOfMeasure::where('UnitOfMeasureId', $id)
                 ->where('IsDeleted', true)
                 ->first();
 
@@ -244,11 +243,8 @@ class UnitController extends Controller
         }
     }
 
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        $userRole = auth()->user()->role;
-        return RolePolicy::whereHas('role', function($query) use ($userRole) {
-            $query->where('RoleName', $userRole);
-        })->where('Module', 'Units')->first();
+        return parent::getUserPermissions('Units');
     }
 }

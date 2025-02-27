@@ -295,11 +295,8 @@ class SupplierController extends Controller
         }
     }
 
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        $userRole = Auth::user()->role;
-        return RolePolicy::whereHas('role', function($query) use ($userRole) {
-            $query->where('RoleName', $userRole);
-        })->where('Module', 'Suppliers')->first();
+        return parent::getUserPermissions('Suppliers');
     }
 }

@@ -111,7 +111,59 @@ $(document).ready(function() {
         placeholder: 'Search items',
         allowClear: true,
         closeOnSelect: false,
-        tags: false
+        tags: false,
+        templateResult: formatOption,
+        templateSelection: formatSelection
+    }).on('select2:select', function(e) {
+        // Hide the selected option from dropdown
+        var selectedId = e.params.data.id;
+        var option = $(this).children('[value=' + selectedId + ']');
+        option.prop('disabled', true);
+        $(this).select2('destroy');
+        $(this).select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            dropdownParent: $('#addSupplierModal'),
+            placeholder: 'Search items',
+            allowClear: true,
+            closeOnSelect: false,
+            tags: false,
+            templateResult: formatOption,
+            templateSelection: formatSelection
+        });
+    }).on('select2:unselect', function(e) {
+        // Show the unselected option in dropdown
+        var unselectedId = e.params.data.id;
+        var option = $(this).children('[value=' + unselectedId + ']');
+        option.prop('disabled', false);
+        $(this).select2('destroy');
+        $(this).select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            dropdownParent: $('#addSupplierModal'),
+            placeholder: 'Search items',
+            allowClear: true,
+            closeOnSelect: false,
+            tags: false,
+            templateResult: formatOption,
+            templateSelection: formatSelection
+        });
+    });
+
+    function formatOption(item) {
+        if (!item.id) return item.text;
+        return $(`<span><i class="bi bi-box"></i> ${item.text}</span>`);
+    }
+
+    function formatSelection(item) {
+        if (!item.id) return item.text;
+        return item.text;
+    }
+
+    // Clear selection when modal is closed
+    $('#addSupplierModal').on('hidden.bs.modal', function() {
+        $('.select2-multiple').val(null).trigger('change');
+        $('.select2-multiple option').prop('disabled', false);
     });
 });
 </script>

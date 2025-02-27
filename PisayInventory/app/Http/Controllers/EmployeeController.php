@@ -18,20 +18,9 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class EmployeeController extends Controller
 {
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        $userRole = Auth::user()->role;
-        
-        $permissions = RolePolicy::whereHas('role', function($query) use ($userRole) {
-            $query->where('RoleName', $userRole);
-        })->where('Module', 'Employee Management')->first();
-        
-        Log::info('User Permissions:', [
-            'role' => $userRole,
-            'permissions' => $permissions
-        ]);
-        
-        return $permissions;
+        return parent::getUserPermissions('Employee Management');
     }
 
     public function index()

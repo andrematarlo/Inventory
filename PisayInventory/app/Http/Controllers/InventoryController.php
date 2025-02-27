@@ -21,19 +21,43 @@ class InventoryController extends Controller
      */
     public function index()
     {
-        $inventories = Inventory::with(['item.classification', 'created_by_user', 'modified_by_user', 'deleted_by_user'])
-            ->where('IsDeleted', 0)
+        try {
+            // Check if user is authenticated
+            if (!Auth::check()) {
+                return redirect()->route('login');
+            }
+
+            $inventories = Inventory::with([
+                'item',
+                'item.classification',
+                'created_by_user',
+                'modified_by_user',
+                'deleted_by_user'
+            ])
+            ->where('IsDeleted', false)
             ->orderBy('DateCreated', 'desc')
             ->paginate(10);
 
-        $trashedInventories = Inventory::with(['item.classification', 'created_by_user', 'modified_by_user', 'deleted_by_user'])
-            ->where('IsDeleted', 1)
+            $trashedInventories = Inventory::with([
+                'item',
+                'item.classification',
+                'created_by_user',
+                'modified_by_user',
+                'deleted_by_user'
+            ])
+            ->where('IsDeleted', true)
             ->orderBy('DateDeleted', 'desc')
             ->paginate(10);
 
-        $userPermissions = auth()->user()->permissions;
+            // Get user permissions
+            $userPermissions = $this->getUserPermissions();
 
-        return view('inventory.index', compact('inventories', 'trashedInventories', 'userPermissions'));
+            return view('inventory.index', compact('inventories', 'trashedInventories', 'userPermissions'));
+
+        } catch (\Exception $e) {
+            Log::error('Error loading inventory: ' . $e->getMessage());
+            return back()->with('error', 'Error loading inventory: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -90,7 +114,7 @@ class InventoryController extends Controller
                 $item->StocksAvailable -= $quantity;
             }
 
-            \Log::info('Saving with data:', [
+            Log::info('Saving with data:', [
                 'type' => $request->type,
                 'quantity' => $quantity,
                 'old_stock' => $item->getOriginal('StocksAvailable'),
@@ -125,7 +149,7 @@ class InventoryController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error in store:', [
+            Log::error('Error in store:', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -224,7 +248,7 @@ class InventoryController extends Controller
 
             $inventory = Inventory::findOrFail($id);
             $inventory->IsDeleted = true;
-            $inventory->DeletedById = auth()->id();
+            $inventory->DeletedById = Auth::id();
             $inventory->DateDeleted = now();
             $inventory->save();
 
@@ -232,7 +256,7 @@ class InventoryController extends Controller
                 ->with('success', 'Inventory record deleted successfully');
 
         } catch (\Exception $e) {
-            \Log::error('Error deleting inventory: ' . $e->getMessage());
+            Log::error('Error deleting inventory: ' . $e->getMessage());
             return back()->with('error', 'Error deleting inventory: ' . $e->getMessage());
         }
     }
@@ -265,11 +289,28 @@ class InventoryController extends Controller
         }
     }
 
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        $userRole = auth()->user()->role;
-        return RolePolicy::whereHas('role', function($query) use ($userRole) {
-            $query->where('RoleName', $userRole);
-        })->where('Module', 'Inventory')->first();
+        try {
+            if (!Auth::check()) {
+                return (object)[
+                    'CanAdd' => false,
+                    'CanEdit' => false,
+                    'CanDelete' => false,
+                    'CanView' => false
+                ];
+            }
+
+            return parent::getUserPermissions('Inventory');
+
+        } catch (\Exception $e) {
+            Log::error('Error getting permissions: ' . $e->getMessage());
+            return (object)[
+                'CanAdd' => false,
+                'CanEdit' => false,
+                'CanDelete' => false,
+                'CanView' => false
+            ];
+        }
     }
 }
