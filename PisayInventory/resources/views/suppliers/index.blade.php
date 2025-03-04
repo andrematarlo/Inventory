@@ -11,6 +11,9 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
+<!-- Add SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
 <style>
     /* Custom styles for suppliers table */
     .suppliers-table {
@@ -443,7 +446,10 @@
                                         <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-danger">
+                                            <button type="button" 
+                                                    class="btn btn-danger delete-supplier"
+                                                    data-supplier-name="{{ $supplier->CompanyName }}"
+                                                    data-items-supplied="@foreach($supplier->items as $item)<li>{{ $item->ItemName }}</li>@endforeach">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
@@ -511,7 +517,9 @@
                                 <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
                                       method="POST">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm btn-success">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-success restore-supplier"
+                                            data-supplier-name="{{ $supplier->CompanyName }}">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </button>
                                 </form>
@@ -570,6 +578,9 @@
 
 <!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- Add SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(document).ready(function() {
@@ -706,6 +717,61 @@
                 if (e.key === 'Escape') {
                     e.preventDefault();
                     return false;
+                }
+            });
+        });
+
+        // Add delete confirmation handler
+        $('.delete-supplier').click(function(e) {
+            e.preventDefault();
+            const form = $(this).closest('form');
+            const supplierName = $(this).data('supplier-name');
+            const itemsSupplied = $(this).data('items-supplied');
+
+            let itemsList = '';
+            if (itemsSupplied) {
+                itemsList = '<div class="alert alert-warning mt-3">' +
+                           '<h6 class="alert-heading">This supplier is linked to the following items:</h6>' +
+                           '<ul class="mb-0">' + itemsSupplied + '</ul></div>';
+            }
+
+            Swal.fire({
+                title: 'Delete Supplier?',
+                html: `Are you sure you want to delete supplier: <strong>${supplierName}</strong>?${itemsList}` +
+                      '<p class="text-danger mt-3"><small>This action can be undone later.</small></p>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+
+        // Add restore confirmation handler
+        $('.restore-supplier').click(function(e) {
+            e.preventDefault();
+            const form = $(this).closest('form');
+            const supplierName = $(this).data('supplier-name');
+
+            Swal.fire({
+                title: 'Restore Supplier?',
+                html: `Are you sure you want to restore supplier: <strong>${supplierName}</strong>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754', // Bootstrap success color
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, restore it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
                 }
             });
         });
