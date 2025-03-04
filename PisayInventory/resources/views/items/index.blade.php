@@ -621,7 +621,7 @@
                                 message += '<div style="text-align: left; margin-left: 20px;">'; // Add div for left alignment with indent
                                 response.import_result.skipped.forEach(skip => {
                                     message += `Row ${skip.row}: ${skip.itemName}` + 
-                                            (skip.description ? ` Description: ${skip.description}` : '') + 
+                                            (skip.description ? ` -- Description: ${skip.description}` : '') + 
                                             '<br>';
                                 });
                                 message += '</div>';
