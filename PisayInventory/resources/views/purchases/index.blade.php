@@ -93,10 +93,10 @@
                                     {{-- Temporary debugging --}}
                                     <!-- @php dump($userPermissions->CanDelete); @endphp -->
                                     
-                                    @if($userPermissions && $userPermissions->CanDelete == true)
+                                    @if($userPermissions && $userPermissions->CanDelete)
                                         <button type="button" 
                                                 class="btn btn-sm btn-danger" 
-                                                onclick="deletePurchase({{ $po->PurchaseOrderID }})"
+                                                onclick="deletePurchase('{{ $po->PurchaseOrderID }}')"
                                                 title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -163,10 +163,10 @@
                                     {{-- Temporary debugging --}}
                                     <!-- @php dump($userPermissions->CanDelete); @endphp -->
                                     
-                                    @if($userPermissions && $userPermissions->CanDelete == true)
+                                    @if($userPermissions && $userPermissions->CanDelete)
                                         <button type="button" 
                                                 class="btn btn-sm btn-danger" 
-                                                onclick="deletePurchase({{ $po->PurchaseOrderID }})"
+                                                onclick="deletePurchase('{{ $po->PurchaseOrderID }}')"
                                                 title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -232,7 +232,7 @@
                                     </a>
                                     <button type="button" 
                                             class="btn btn-sm btn-success" 
-                                            onclick="restorePurchase({{ $po->PurchaseOrderID }})"
+                                            onclick="restorePurchase('{{ $po->PurchaseOrderID }}')"
                                             title="Restore">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </button>
@@ -412,6 +412,10 @@ function restorePurchase(id) {
             });
         }
     });
+}
+
+function checkPermissions() {
+    return userPermissions && userPermissions.CanDelete;
 }
 </script>
 @endsection 

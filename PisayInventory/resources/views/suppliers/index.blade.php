@@ -11,6 +11,9 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
+<!-- Add SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
 <style>
     /* Custom styles for suppliers table */
     .suppliers-table {
@@ -272,16 +275,16 @@
     }
     
     .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
-        background-color: #0d6efd;
-        color: #fff;
-        border: none;
+        background-color: #f8f9fa;
+        color: #212529;
+        border: 1px solid #dee2e6;
         padding: 2px 8px;
         margin: 2px;
         border-radius: 3px;
     }
     
     .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
-        color: #fff;
+        color: red;
         margin-right: 5px;
     }
     
@@ -297,6 +300,61 @@
         border-color: #86b7fe;
         box-shadow: none;
     }
+
+    /* Style for highlighted/selected option in dropdown */
+    .select2-results__option--selected,
+    .select2-results__option--highlighted {
+        background-color: #6c757d !important; /* Gray background */
+        color: white !important;
+    }
+
+    /* Style for when hovering over an option */
+    .select2-results__option--selectable:hover {
+        background-color: #6c757d !important;
+        color: white !important;
+    }
+
+    /* Selected option in the dropdown */
+    .select2-results__option[aria-selected="true"] {
+        background-color: #6c757d !important;
+        color: white !important;
+    }
+
+    /* Select2 Custom Styles */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 2px 8px;
+        margin: 2px;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: #dc3545 !important; /* Red color */
+        margin-right: 5px;
+        padding: 0 4px;
+        border-right: 1px solid #dee2e6;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+        background-color: #dc3545 !important;
+        color: white !important;
+    }
+
+    .select2-container--default .select2-selection--multiple {
+        border: 1px solid #ced4da;
+        min-height: 38px;
+        padding: 2px;
+    }
+
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color:gray;
+        color: white;
+    }
+
+    .select2-container--default .select2-search--inline .select2-search__field {
+        margin-top: 3px;
+    }
 </style>
 @endsection
 
@@ -306,7 +364,7 @@
         <h2>Suppliers Management</h2>
         @if($userPermissions && $userPermissions->CanAdd)
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-            <i class="bi bi-plus-lg"></i> New Supplier
+            <i class="bi bi-plus-lg"></i> Add Supplier
         </button>
         @endif
     </div>
@@ -354,7 +412,9 @@
                 <table class="table table-hover" id="suppliersTable">
                     <thead>
                         <tr>
+                            @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                             <th>Actions</th>
+                            @endif
                             <th>Company Name</th>
                             <th>Contact Person</th>
                             <th>Telephone</th>
@@ -371,26 +431,32 @@
                     <tbody>
                         @forelse($activeSuppliers as $supplier)
                             <tr>
+                                @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                 <td>
-                                    <div class="d-flex gap-1">
+                                    <div class="btn-group">
                                         @if($userPermissions->CanEdit)
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-primary" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
+                                        <button type="button" 
+                                                class="btn btn-primary" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
                                         @endif
                                         @if($userPermissions->CanDelete)
+                                        <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
                                             <button type="button" 
-                                                    class="btn btn-sm btn-danger" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#deleteSupplierModal{{ $supplier->SupplierID }}">
+                                                    class="btn btn-danger delete-supplier"
+                                                    data-supplier-name="{{ $supplier->CompanyName }}"
+                                                    data-items-supplied="@foreach($supplier->items as $item)<li>{{ $item->ItemName }}</li>@endforeach">
                                                 <i class="bi bi-trash"></i>
                                             </button>
+                                        </form>
                                         @endif
                                     </div>
                                 </td>
+                                @endif
                                 <td>{{ $supplier->CompanyName }}</td>
                                 <td>{{ $supplier->ContactPerson }}</td>
                                 <td>{{ $supplier->TelephoneNumber }}</td>
@@ -451,7 +517,9 @@
                                 <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
                                       method="POST">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm btn-success">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-success restore-supplier"
+                                            data-supplier-name="{{ $supplier->CompanyName }}">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </button>
                                 </form>
@@ -510,6 +578,9 @@
 
 <!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- Add SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(document).ready(function() {
@@ -646,6 +717,61 @@
                 if (e.key === 'Escape') {
                     e.preventDefault();
                     return false;
+                }
+            });
+        });
+
+        // Add delete confirmation handler
+        $('.delete-supplier').click(function(e) {
+            e.preventDefault();
+            const form = $(this).closest('form');
+            const supplierName = $(this).data('supplier-name');
+            const itemsSupplied = $(this).data('items-supplied');
+
+            let itemsList = '';
+            if (itemsSupplied) {
+                itemsList = '<div class="alert alert-warning mt-3">' +
+                           '<h6 class="alert-heading">This supplier is linked to the following items:</h6>' +
+                           '<ul class="mb-0">' + itemsSupplied + '</ul></div>';
+            }
+
+            Swal.fire({
+                title: 'Delete Supplier?',
+                html: `Are you sure you want to delete supplier: <strong>${supplierName}</strong>?${itemsList}` +
+                      '<p class="text-danger mt-3"><small>This action can be undone later.</small></p>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+
+        // Add restore confirmation handler
+        $('.restore-supplier').click(function(e) {
+            e.preventDefault();
+            const form = $(this).closest('form');
+            const supplierName = $(this).data('supplier-name');
+
+            Swal.fire({
+                title: 'Restore Supplier?',
+                html: `Are you sure you want to restore supplier: <strong>${supplierName}</strong>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754', // Bootstrap success color
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, restore it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
                 }
             });
         });

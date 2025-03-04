@@ -12,12 +12,29 @@ use Illuminate\Support\Facades\Log;
 
 class ClassificationController extends Controller
 {
-    private function getUserPermissions()
+    public function getUserPermissions($module = null)
     {
-        $userRole = auth()->user()->role;
-        return RolePolicy::whereHas('role', function($query) use ($userRole) {
-            $query->where('RoleName', $userRole);
-        })->where('Module', 'Classifications')->first();
+        try {
+            if (!Auth::check()) {
+                return (object)[
+                    'CanAdd' => false,
+                    'CanEdit' => false,
+                    'CanDelete' => false,
+                    'CanView' => false
+                ];
+            }
+
+            return parent::getUserPermissions('Classifications');
+
+        } catch (\Exception $e) {
+            Log::error('Error getting permissions: ' . $e->getMessage());
+            return (object)[
+                'CanAdd' => false,
+                'CanEdit' => false,
+                'CanDelete' => false,
+                'CanView' => false
+            ];
+        }
     }
 
     /**

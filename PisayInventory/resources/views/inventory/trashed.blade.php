@@ -2,6 +2,10 @@
 
 @section('title', 'Deleted Inventory Records')
 
+@section('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+@endsection
+
 @section('content')
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -45,13 +49,12 @@
                             <td>{{ $inventory->DateDeleted ? date('Y-m-d H:i', strtotime($inventory->DateDeleted)) : 'N/A' }}</td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <form action="{{ route('inventory.restore', $inventory->InventoryId) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('PUT')
-                                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Are you sure you want to restore this record?');">
-                                            <i class="bi bi-arrow-counterclockwise"></i> Restore
-                                        </button>
-                                    </form>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-success restore-inventory"
+                                            data-inventory-id="{{ $inventory->InventoryId }}"
+                                            data-item-name="{{ $inventory->item->ItemName }}">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Restore
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -68,4 +71,42 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    $('.restore-inventory').click(function(e) {
+        e.preventDefault();
+        const inventoryId = $(this).data('inventory-id');
+        const itemName = $(this).data('item-name');
+
+        Swal.fire({
+            title: 'Restore Inventory Record?',
+            html: `Are you sure you want to restore the inventory record for: <strong>${itemName}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, restore it!',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/inventory/${inventoryId}/restore`;
+                form.innerHTML = `
+                    @csrf
+                    @method('PUT')
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    });
+});
+</script>
 @endsection

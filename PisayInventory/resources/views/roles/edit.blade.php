@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Role')
+
 @section('content')
 <div class="container">
     <div class="row mb-4">
@@ -18,6 +20,9 @@
     <div class="row">
         <div class="col-md-8">
             <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Edit Role</h5>
+                </div>
                 <div class="card-body">
                     <form action="{{ route('roles.update', $role->RoleId) }}" method="POST">
                         @csrf
@@ -66,7 +71,7 @@
                             @enderror
                         </div>
 
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex justify-content-end gap-2">
                             <a href="{{ route('roles.index') }}" class="btn btn-secondary">Cancel</a>
                             <button type="submit" class="btn btn-primary">Update Role</button>
                         </div>
