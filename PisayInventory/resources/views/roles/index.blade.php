@@ -76,7 +76,7 @@
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm">
                                             @if($userPermissions->CanEdit)
-                                            <a href="{{ url('/inventory/roles/' . $role->RoleId . '/edit') }}" 
+                                            <a href="{{ route('roles.edit', ['id' => $role->RoleId]) }}" 
                                                class="btn btn-primary">
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
@@ -262,8 +262,7 @@ $(document).ready(function() {
 
         Swal.fire({
             title: 'Delete Role?',
-            html: `Are you sure you want to delete role: <strong>${roleName}</strong>?<br>
-                  <p class="text-danger mt-3"><small>This action can be undone later.</small></p>`,
+            html: `Are you sure you want to delete role: <strong>${roleName}</strong>?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',
@@ -275,7 +274,7 @@ $(document).ready(function() {
             if (result.isConfirmed) {
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ url('/inventory/roles') }}/" + roleId;
+                form.action = `/inventory/roles/${roleId}`;
                 form.innerHTML = `
                     @csrf
                     @method('DELETE')
@@ -306,7 +305,7 @@ $(document).ready(function() {
             if (result.isConfirmed) {
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ url('/inventory/roles') }}/" + roleId + "/restore";
+                form.action = `/inventory/roles/${roleId}/restore`;
                 form.innerHTML = `
                     @csrf
                 `;

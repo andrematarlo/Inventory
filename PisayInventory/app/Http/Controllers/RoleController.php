@@ -95,7 +95,7 @@ class RoleController extends Controller
         \Log::info('Edit Permissions: ', ['canEdit' => $userPermissions ? $userPermissions->CanEdit : false]);
         
         if (!$userPermissions || !$userPermissions->CanEdit) {
-            return redirect()->back()->with('error', 'You do not have permission to edit employees.');
+            return redirect()->back()->with('error', 'You do not have permission to edit roles.');
         }
         
         $role = Role::with('policies')->findOrFail($id);
@@ -110,7 +110,7 @@ class RoleController extends Controller
         \Log::info('Update Permissions: ', ['canEdit' => $userPermissions ? $userPermissions->CanEdit : false]);
         
         if (!$userPermissions || !$userPermissions->CanEdit) {
-            return redirect()->back()->with('error', 'You do not have permission to update employees.');
+            return redirect()->back()->with('error', 'You do not have permission to update roles.');
         }
         
         $role = Role::findOrFail($id);

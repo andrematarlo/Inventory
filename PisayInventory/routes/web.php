@@ -16,6 +16,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ReceivingController;
 use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\RolesController;
 
 // Default route to inventory
 Route::get('/', function () {
@@ -94,10 +95,16 @@ Route::middleware('auth')->group(function () {
 
 
         // Role Management
-        Route::resource('roles', RoleController::class, ['except' => ['show']]);
+        Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::get('/roles/create', [RoleController::class, 'create'])->name('roles.create');
+        Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
+        Route::get('/roles/{id}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+        Route::put('/roles/{id}', [RoleController::class, 'update'])->name('roles.update');
+        Route::delete('/roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        Route::post('/roles/{id}/restore', [RoleController::class, 'restore'])->name('roles.restore');
+
         Route::get('roles/policies', [RoleController::class, 'policies'])->name('roles.policies');
         Route::put('roles/policies/{id}', [RoleController::class, 'updatePolicy'])->name('roles.policies.update');
-        Route::post('roles/{id}/restore', [RoleController::class, 'restore'])->name('roles.restore');
 
         // Purchases Management
         Route::resource('purchases', PurchaseController::class);

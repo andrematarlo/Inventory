@@ -300,8 +300,6 @@
                         @method('DELETE')
                     `;
                     document.body.appendChild(form);
-
-                    // Submit form directly instead of using fetch
                     form.submit();
                 }
             });
@@ -481,17 +479,6 @@ document.addEventListener('DOMContentLoaded', function() {
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 @endpush
-
-<!-- Add success message display if exists in session -->
-@if(session('success'))
-    Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: '{{ session('success') }}',
-        timer: 3000,
-        showConfirmButton: false
-    });
-@endif
 
 <!-- Add error message display if exists in session -->
 @if(session('error'))
