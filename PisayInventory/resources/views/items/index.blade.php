@@ -37,6 +37,8 @@
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
+
+
     <!-- Active Items Section -->
     <div id="activeItems">
         <div class="card mb-4">
@@ -569,19 +571,25 @@
                 });
             });
 
-            // Handle form submission
+            // Replace your existing import form submission handler with this:
             $('#importForm').on('submit', function(e) {
                 e.preventDefault();
                 
                 // Check if file is selected
                 if (!$('#excel_file').val()) {
-                    alert('Please select an Excel file');
+                    Toast.fire({
+                        icon: 'error',
+                        title: 'Please select an Excel file'
+                    });
                     return;
                 }
 
                 // Check if required field (Name) is mapped
                 if (!$('select[name="column_mapping[ItemName]"]').val()) {
-                    alert('Please map the Name field');
+                    Toast.fire({
+                        icon: 'error',
+                        title: 'Please map the Name field'
+                    });
                     return;
                 }
 
@@ -592,18 +600,50 @@
                 const formData = new FormData(this);
                 
                 $.ajax({
-                    url: "{{ route('items.import') }}",
+                    url: $(this).attr('action'),
                     type: 'POST',
                     data: formData,
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        alert('Import successful!');
-                        window.location.reload();
+                        $('#importExcelModal').modal('hide');
+                        
+                        let message = '';
+                        if (response.import_result) {
+                            const successCount = parseInt(response.import_result.message.match(/\d+/)[0]);
+                            const skippedCount = response.import_result.skipped ? response.import_result.skipped.length : 0;
+                            
+                            message += 'Successfully imported ' + successCount + ' ' + (successCount === 1 ? 'item' : 'items') + '.' + ' ';
+                            
+                            if (skippedCount > 0) {
+                                message += '<br>Skipped ' + skippedCount + ' ' + (skippedCount === 1 ? 'item' : 'items') + ' ' + '(already exist in the system)' + ':<br><br>';
+                                
+                                message += '<div style="text-align: left; margin-left: 20px;">'; // Add div for left alignment with indent
+                                response.import_result.skipped.forEach(skip => {
+                                    message += `Row ${skip.row}: ${skip.itemName}` + 
+                                            (skip.description ? ` Description: ${skip.description}` : '') + 
+                                            '<br>';
+                                });
+                                message += '</div>';
+                            }
+                        }
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Import Successful!',
+                            html: message,
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#198754' // Bootstrap's btn-success color
+                        }).then(() => {
+                            window.location.reload();
+                        });
                     },
                     error: function(xhr) {
                         const errorMessage = xhr.responseJSON?.error || 'An error occurred during import';
-                        alert('Import failed: ' + errorMessage);
+                        Toast.fire({
+                            icon: 'error',
+                            title: errorMessage
+                        });
                         importBtn.prop('disabled', false).text('Import Data');
                     }
                 });

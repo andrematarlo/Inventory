@@ -40,6 +40,13 @@ class Item extends Model
         return $query->where('IsDeleted', true);
     }
 
+    public function scopeCheckDuplicate($query, $itemName, $description)
+    {
+        return $query->where('ItemName', $itemName)
+                    ->where('Description', $description)
+                    ->where('IsDeleted', false);
+    }
+
     // Relationships
     public function classification()
     {
