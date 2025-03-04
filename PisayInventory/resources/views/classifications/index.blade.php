@@ -172,6 +172,53 @@
     @endforeach
 @endif
 
+<!-- Delete Modal -->
+<div class="modal fade" 
+     id="deleteClassificationModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Classification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this classification?</p>
+                <p class="text-danger mt-3"><small>This action can be undone later.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restore Modal -->
+<div class="modal fade" 
+     id="restoreClassificationModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Restore Classification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to restore this classification?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmRestoreBtn">Restore</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -250,40 +297,94 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize view
     toggleRecords(true);
 
-    // Add SweetAlert2 delete confirmation
-    window.confirmDelete = function(id) {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Create and submit form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `/inventory/classifications/${id}`;
-                
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = '{{ csrf_token() }}';
-                form.appendChild(csrfToken);
-                
-                const methodField = document.createElement('input');
-                methodField.type = 'hidden';
-                methodField.name = '_method';
-                methodField.value = 'DELETE';
-                form.appendChild(methodField);
-                
-                document.body.appendChild(form);
-                form.submit();
+    // Initialize all modals with static backdrop
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        const bsModal = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        // Prevent modal from closing when clicking outside
+        $(modal).on('mousedown', function(e) {
+            if ($(e.target).is('.modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
             }
         });
+    });
+
+    // Add SweetAlert2 delete confirmation
+    window.confirmDelete = function(id) {
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteClassificationModal'));
+        
+        // Update modal content with classification ID
+        document.getElementById('confirmDeleteBtn').setAttribute('data-id', id);
+        
+        // Show the modal
+        deleteModal.show();
     }
+
+    // Handle delete confirmation
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/inventory/classifications/${id}`;
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        form.appendChild(csrfToken);
+        
+        const methodField = document.createElement('input');
+        methodField.type = 'hidden';
+        methodField.name = '_method';
+        methodField.value = 'DELETE';
+        form.appendChild(methodField);
+        
+        document.body.appendChild(form);
+        form.submit();
+    });
+
+    // Handle restore button click
+    const restoreButtons = document.querySelectorAll('.btn-success');
+    restoreButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const form = this.closest('form');
+            const restoreModal = new bootstrap.Modal(document.getElementById('restoreClassificationModal'));
+            
+            // Store the form for later use
+            document.getElementById('confirmRestoreBtn').setAttribute('data-form', form.outerHTML);
+            
+            // Show the modal
+            restoreModal.show();
+        });
+    });
+
+    // Handle restore confirmation
+    document.getElementById('confirmRestoreBtn').addEventListener('click', function() {
+        const formHTML = this.getAttribute('data-form');
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = formHTML;
+        const form = tempDiv.firstChild;
+        document.body.appendChild(form);
+        
+        // Submit the form
+        form.submit().then(() => {
+            // Show success notification
+            Swal.fire({
+                title: 'Success!',
+                text: 'Classification has been restored successfully.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        });
+    });
 });
 
 function updatePerPage(value) {

@@ -66,12 +66,18 @@
 
 
     <!-- Inventory Report Modal -->
-    <div class="modal fade" id="inventoryReportModal" tabindex="-1">
+    <div class="modal fade" 
+         id="inventoryReportModal" 
+         data-bs-backdrop="static" 
+         data-bs-keyboard="false" 
+         tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Generate Inventory Report</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-seam"></i> Generate Inventory Report
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="{{ route('reports.inventory') }}" method="GET">
                     <div class="modal-body">
@@ -95,8 +101,12 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-file-earmark-text"></i> Generate Report
+                        </button>
                     </div>
                 </form>
             </div>
@@ -104,12 +114,18 @@
     </div>
 
     <!-- Sales Report Modal -->
-    <div class="modal fade" id="salesReportModal" tabindex="-1">
+    <div class="modal fade" 
+         id="salesReportModal" 
+         data-bs-backdrop="static" 
+         data-bs-keyboard="false" 
+         tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Generate Sales Report</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-graph-up"></i> Generate Sales Report
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="{{ route('reports.sales') }}" method="GET">
                     <div class="modal-body">
@@ -123,8 +139,12 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-file-earmark-text"></i> Generate Report
+                        </button>
                     </div>
                 </form>
             </div>
@@ -132,20 +152,32 @@
     </div>
 
     <!-- Low Stock Report Modal -->
-    <div class="modal fade" id="lowStockReportModal" tabindex="-1">
+    <div class="modal fade" 
+         id="lowStockReportModal" 
+         data-bs-backdrop="static" 
+         data-bs-keyboard="false" 
+         tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Generate Low Stock Report</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i> Generate Low Stock Report
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="{{ route('reports.low-stock') }}" method="GET">
                     <div class="modal-body">
-                        <p>This report will show all items with stock levels below the minimum threshold.</p>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-info-circle"></i> This report will show all items with stock levels below the minimum threshold.
+                        </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-file-earmark-text"></i> Generate Report
+                        </button>
                     </div>
                 </form>
             </div>
@@ -229,12 +261,53 @@
             page-break-before: always;
         }
     }
+
+    /* Modal Styles */
+    .modal-header.bg-primary,
+    .modal-header.bg-success,
+    .modal-header.bg-danger {
+        color: white;
+    }
+
+    .btn-close-white {
+        filter: brightness(0) invert(1);
+    }
+
+    .modal .alert {
+        margin-bottom: 0;
+    }
+
+    .modal-footer {
+        border-top: 1px solid #dee2e6;
+    }
+
+    .modal .btn i {
+        margin-right: 5px;
+    }
 </style>
 @endpush
 
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all modals with static backdrop
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        const bsModal = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        // Prevent modal from closing when clicking outside
+        $(modal).on('mousedown', function(e) {
+            if ($(e.target).is('.modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+    });
+
     // Print functionality
     window.printReport = function() {
         // Remove unnecessary elements

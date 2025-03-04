@@ -565,7 +565,53 @@
     @endforeach
 @endif  
 
-@include('suppliers.partials.delete-modal')
+<!-- Delete Modal Template -->
+<div class="modal fade" 
+     id="deleteSupplierModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Supplier</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this supplier?</p>
+                <div id="supplierItemsList"></div>
+                <p class="text-danger mt-3"><small>This action can be undone later.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restore Modal Template -->
+<div class="modal fade" 
+     id="restoreSupplierModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Restore Supplier</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to restore this supplier?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmRestoreBtn">Restore</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -721,59 +767,87 @@
             });
         });
 
-        // Add delete confirmation handler
+        // Initialize all modals with static backdrop
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            const bsModal = new bootstrap.Modal(modal, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            // Prevent modal from closing when clicking outside
+            $(modal).on('mousedown', function(e) {
+                if ($(e.target).is('.modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+        });
+
+        // Delete confirmation handler
         $('.delete-supplier').click(function(e) {
             e.preventDefault();
             const form = $(this).closest('form');
             const supplierName = $(this).data('supplier-name');
             const itemsSupplied = $(this).data('items-supplied');
 
-            let itemsList = '';
+            // Update modal content
+            $('#deleteSupplierModal .modal-body p:first').html(
+                `Are you sure you want to delete supplier: <strong>${supplierName}</strong>?`
+            );
+            
             if (itemsSupplied) {
-                itemsList = '<div class="alert alert-warning mt-3">' +
-                           '<h6 class="alert-heading">This supplier is linked to the following items:</h6>' +
-                           '<ul class="mb-0">' + itemsSupplied + '</ul></div>';
+                $('#supplierItemsList').html(
+                    '<div class="alert alert-warning mt-3">' +
+                    '<h6 class="alert-heading">This supplier is linked to the following items:</h6>' +
+                    '<ul class="mb-0">' + itemsSupplied + '</ul></div>'
+                );
+            } else {
+                $('#supplierItemsList').empty();
             }
-
-            Swal.fire({
-                title: 'Delete Supplier?',
-                html: `Are you sure you want to delete supplier: <strong>${supplierName}</strong>?${itemsList}` +
-                      '<p class="text-danger mt-3"><small>This action can be undone later.</small></p>',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit();
-                }
-            });
+            
+            // Store the form for use in confirmation
+            $('#confirmDeleteBtn').data('form', form);
+            
+            // Show the modal
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteSupplierModal'));
+            deleteModal.show();
         });
 
-        // Add restore confirmation handler
+        // Handle delete confirmation
+        $('#confirmDeleteBtn').click(function() {
+            const form = $(this).data('form');
+            if (form) {
+                form.submit();
+            }
+        });
+
+        // Restore confirmation handler
         $('.restore-supplier').click(function(e) {
             e.preventDefault();
             const form = $(this).closest('form');
             const supplierName = $(this).data('supplier-name');
+            
+            // Update modal content
+            $('#restoreSupplierModal .modal-body p').html(
+                `Are you sure you want to restore supplier: <strong>${supplierName}</strong>?`
+            );
+            
+            // Store the form for use in confirmation
+            $('#confirmRestoreBtn').data('form', form);
+            
+            // Show the modal
+            const restoreModal = new bootstrap.Modal(document.getElementById('restoreSupplierModal'));
+            restoreModal.show();
+        });
 
-            Swal.fire({
-                title: 'Restore Supplier?',
-                html: `Are you sure you want to restore supplier: <strong>${supplierName}</strong>?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#198754', // Bootstrap success color
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, restore it!',
-                cancelButtonText: 'Cancel',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit();
-                }
-            });
+        // Handle restore confirmation
+        $('#confirmRestoreBtn').click(function() {
+            const form = $(this).data('form');
+            if (form) {
+                form.submit();
+            }
         });
     });
 </script>

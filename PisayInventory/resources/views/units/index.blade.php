@@ -224,9 +224,9 @@
     </div>
 </div>
 
-<!-- Delete Unit Modal -->
+<!-- Delete Modal Template -->
 <div class="modal fade" 
-     id="deleteUnitModal{{ $unit->UnitOfMeasureId }}" 
+     id="deleteUnitModal" 
      data-bs-backdrop="static" 
      data-bs-keyboard="false" 
      tabindex="-1">
@@ -236,17 +236,46 @@
                 <h5 class="modal-title">Delete Unit</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('units.destroy', ['id' => $unit->UnitOfMeasureId]) }}" method="POST">
-                @csrf
-                @method('DELETE')
-                <div class="modal-body">
-                    <p>Are you sure you want to delete this unit: <strong>{{ $unit->UnitName }}</strong>?</p>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this unit?</p>
+                <p class="text-danger mt-3"><small>This action can be undone later.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restore Modal Template -->
+<div class="modal fade" 
+     id="restoreUnitModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-arrow-counterclockwise"></i> Restore Unit
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Are you sure you want to restore this unit?</p>
+                <div id="unitToRestore" class="alert alert-success mt-3">
+                    <i class="bi bi-info-circle"></i> This unit will be restored and available in the active records.
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </div>
-            </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-success" id="confirmRestoreBtn">
+                    <i class="bi bi-arrow-counterclockwise"></i> Confirm Restore
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -274,65 +303,100 @@
             });
         }
 
+        // Initialize all modals with static backdrop
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            const bsModal = new bootstrap.Modal(modal, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            // Prevent modal from closing when clicking outside
+            $(modal).on('mousedown', function(e) {
+                if ($(e.target).is('.modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+        });
+
         // Delete confirmation handler
         $('.delete-unit').click(function(e) {
             e.preventDefault();
             const unitId = $(this).data('unit-id');
             const unitName = $(this).data('unit-name');
 
-            Swal.fire({
-                title: 'Delete Unit?',
-                html: `Are you sure you want to delete unit: <strong>${unitName}</strong>?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = `/inventory/units/${unitId}`;
-                    form.innerHTML = `
-                        @csrf
-                        @method('DELETE')
-                    `;
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
+            // Update modal content
+            $('#deleteUnitModal .modal-body p:first').html(
+                `Are you sure you want to delete unit: <strong>${unitName}</strong>?`
+            );
+            
+            // Store the ID for use in confirmation
+            $('#confirmDeleteBtn').data('unit-id', unitId);
+            
+            // Show the modal
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteUnitModal'));
+            deleteModal.show();
+        });
+
+        // Handle delete confirmation
+        $('#confirmDeleteBtn').click(function() {
+            const unitId = $(this).data('unit-id');
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/inventory/units/${unitId}`;
+            form.innerHTML = `
+                @csrf
+                @method('DELETE')
+            `;
+            document.body.appendChild(form);
+            form.submit();
         });
 
         // Restore confirmation handler
-        $('.restore-unit').click(function(e) {
+        $('.btn-success').click(function(e) {
             e.preventDefault();
-            const unitId = $(this).data('unit-id');
-            const unitName = $(this).data('unit-name');
+            const form = $(this).closest('form');
+            const unitName = $(this).closest('tr').find('td:nth-child(2)').text().trim();
+            
+            // Update modal content with unit name and confirmation message
+            $('#restoreUnitModal .modal-body p').html(
+                `Are you sure you want to restore unit: <strong>${unitName}</strong>?`
+            );
+            $('#unitToRestore').html(
+                `<i class="bi bi-info-circle"></i> Unit <strong>${unitName}</strong> will be restored and moved to active records.`
+            );
+            
+            // Store the form for use in confirmation
+            $('#confirmRestoreBtn').data('form', form);
+            
+            // Show the modal
+            const restoreModal = new bootstrap.Modal(document.getElementById('restoreUnitModal'));
+            restoreModal.show();
+        });
 
-            Swal.fire({
-                title: 'Restore Unit?',
-                html: `Are you sure you want to restore unit: <strong>${unitName}</strong>?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#198754',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, restore it!',
-                cancelButtonText: 'Cancel',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = `/inventory/units/${unitId}/restore`;
-                    form.innerHTML = `
-                        @csrf
-                    `;
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
+        // Handle restore confirmation
+        $('#confirmRestoreBtn').click(function() {
+            const form = $(this).data('form');
+            if (form) {
+                // Hide the modal before submitting
+                $('#restoreUnitModal').modal('hide');
+                
+                // Submit the form
+                form.submit();
+
+                // Show success notification
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Unit has been restored successfully.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            }
         });
     });
 </script>
@@ -409,15 +473,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize view
     toggleRecords(true);
-
-    // Initialize all modals with static backdrop
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        const bsModal = new bootstrap.Modal(modal, {
-            backdrop: 'static',
-            keyboard: false
-        });
-    });
 });
 </script>
 @endsection
@@ -467,6 +522,36 @@ document.addEventListener('DOMContentLoaded', function() {
     .input-group .form-control:focus {
         border-right: none;
         box-shadow: none;
+    }
+
+    /* Add styles for restore modal */
+    #restoreUnitModal .modal-header {
+        background-color: #198754;
+        color: white;
+    }
+
+    #restoreUnitModal .btn-close-white {
+        filter: brightness(0) invert(1);
+    }
+
+    #restoreUnitModal .alert-success {
+        background-color: #f8f9fa;
+        border-color: #198754;
+        color: #0f5132;
+    }
+
+    #restoreUnitModal .modal-footer {
+        border-top: 1px solid #dee2e6;
+    }
+
+    #restoreUnitModal .btn-success {
+        background-color: #198754;
+        border-color: #198754;
+    }
+
+    #restoreUnitModal .btn-success:hover {
+        background-color: #157347;
+        border-color: #146c43;
     }
 </style>
 @endsection
