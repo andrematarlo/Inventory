@@ -60,7 +60,7 @@
                         </thead>
                         <tbody>
                             @forelse($units as $unit)
-                            <tr>
+                            <tr data-unit-id="{{ $unit->UnitOfMeasureId }}">
                                 @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                 <td>
                                     <div class="btn-group">
@@ -70,13 +70,11 @@
                                         </button>
                                         @endif
                                         @if($userPermissions->CanDelete)
-                                        <form action="{{ route('units.destroy', $unit->UnitOfMeasureId) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this unit?')">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" 
+                                                class="btn btn-danger" 
+                                                onclick="confirmDelete('{{ $unit->UnitOfMeasureId }}')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                         @endif
                                     </div>
                                 </td>
@@ -348,6 +346,125 @@
                 ]
             });
         }
+
+        // Add SweetAlert2 delete confirmation
+        window.confirmDelete = function(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This unit will be moved to deleted records. You can restore it later.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Deleting...',
+                        html: 'Please wait...',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Create and submit form
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `/inventory/units/${id}`;
+                    
+                    const csrfToken = document.createElement('input');
+                    csrfToken.type = 'hidden';
+                    csrfToken.name = '_token';
+                    csrfToken.value = '{{ csrf_token() }}';
+                    form.appendChild(csrfToken);
+                    
+                    const methodField = document.createElement('input');
+                    methodField.type = 'hidden';
+                    methodField.name = '_method';
+                    methodField.value = 'DELETE';
+                    form.appendChild(methodField);
+
+                    // Handle the form submission with fetch
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Find the row to be moved
+                            const row = document.querySelector(`tr[data-unit-id="${id}"]`);
+                            if (row) {
+                                // Remove the row from active table
+                                row.remove();
+                                
+                                // Create new row for deleted table
+                                const deletedTableBody = document.querySelector('#deletedUnits table tbody');
+                                const newRow = document.createElement('tr');
+                                newRow.innerHTML = `
+                                    <td>
+                                        @if($userPermissions->CanEdit)
+                                        <form action="/inventory/units/${id}/restore" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-success" title="Restore">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+                                        @endif
+                                    </td>
+                                    <td>${data.unit.UnitName}</td>
+                                    <td>${data.unit.deleted_by || 'N/A'}</td>
+                                    <td>${data.unit.deleted_at || 'N/A'}</td>
+                                `;
+                                
+                                // Add the new row to deleted table
+                                deletedTableBody.insertBefore(newRow, deletedTableBody.firstChild);
+
+                                // Check if active table is empty
+                                const activeTableBody = document.querySelector('#activeUnits table tbody');
+                                if (activeTableBody.querySelectorAll('tr').length === 0) {
+                                    activeTableBody.innerHTML = `
+                                        <tr>
+                                            <td colspan="6" class="text-center">No units found</td>
+                                        </tr>
+                                    `;
+                                }
+
+                                // Remove "No deleted units found" message if it exists
+                                const noDeletedMessage = deletedTableBody.querySelector('tr td[colspan]');
+                                if (noDeletedMessage) {
+                                    noDeletedMessage.parentElement.remove();
+                                }
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted!',
+                                    text: data.message || 'Unit has been moved to deleted records.',
+                                    showConfirmButton: true
+                                });
+                            }
+                        } else {
+                            throw new Error(data.message || 'Error deleting unit');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: error.message || 'Something went wrong while deleting the unit.',
+                        });
+                    });
+                }
+            });
+        }
     });
 </script>
 
@@ -483,4 +600,33 @@ document.addEventListener('DOMContentLoaded', function() {
         box-shadow: none;
     }
 </style>
-@endsection 
+@endsection
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@endpush
+
+<!-- Add success message display if exists in session -->
+@if(session('success'))
+    Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: '{{ session('success') }}',
+        timer: 3000,
+        showConfirmButton: false
+    });
+@endif
+
+<!-- Add error message display if exists in session -->
+@if(session('error'))
+    Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: '{{ session('error') }}',
+        showConfirmButton: true
+    });
+@endif 
