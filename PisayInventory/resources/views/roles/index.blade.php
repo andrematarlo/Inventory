@@ -82,17 +82,12 @@
                                             </a>
                                             @endif
                                             @if($userPermissions->CanDelete)
-                                            <form action="{{ route('roles.destroy', $role->RoleId) }}" 
-                                                  method="POST" 
-                                                  class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" 
-                                                        class="btn btn-danger"
-                                                        onclick="return confirm('Are you sure you want to delete this role?')">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" 
+                                                    class="btn btn-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteModal{{ $role->RoleId }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                             @endif
                                         </div>
                                     </td>
@@ -154,8 +149,66 @@
 
 <!-- Add Role Modal -->
 @if($userPermissions && $userPermissions->CanAdd && !request('show_deleted'))
-    @include('roles.partials.add-modal')
+<div class="modal fade" 
+     id="addRoleModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="addRoleModalLabel" 
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addRoleModalLabel">Add New Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('roles.store') }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="RoleName" class="form-label">Role Name</label>
+                        <input type="text" class="form-control" id="RoleName" name="RoleName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Description" class="form-label">Description</label>
+                        <textarea class="form-control" id="Description" name="Description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endif
+
+@foreach($roles as $role)
+<div class="modal fade" 
+     id="deleteModal{{ $role->RoleId }}" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="mb-4">
+                    <i class="bi bi-exclamation-circle text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="mb-3">Are you sure?</h4>
+                <p class="mb-4">You won't be able to revert this!</p>
+                <form action="{{ route('roles.destroy', $role->RoleId) }}" method="POST" class="d-inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Yes, delete it!</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
 
 @endsection
 
@@ -173,6 +226,63 @@
                 }
             });
         }
+
+        const addRoleModal = document.getElementById('addRoleModal');
+        if (addRoleModal) {
+            $(addRoleModal).on('click mousedown', function(e) {
+                if ($(e.target).hasClass('modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+
+            $(addRoleModal).on('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        // Initialize delete modals
+        const deleteModals = document.querySelectorAll('[id^="deleteModal"]');
+        deleteModals.forEach(modal => {
+            // Prevent closing when clicking outside
+            $(modal).on('click mousedown', function(e) {
+                if ($(e.target).hasClass('modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+
+            // Prevent Esc key from closing the modal
+            $(modal).on('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
     });
 </script>
+@endsection
+
+@section('additional_styles')
+<style>
+    .modal-dialog-centered {
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 1rem);
+    }
+
+    .bi-exclamation-circle {
+        color: #ffc107;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+</style>
 @endsection

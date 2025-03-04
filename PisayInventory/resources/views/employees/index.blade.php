@@ -234,6 +234,21 @@
         width: 100% !important;
         min-width: 1200px; /* Add a minimum width to prevent squishing */
 }
+
+    /* Add these styles for the delete modal */
+    .modal-dialog-centered {
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 1rem);
+    }
+
+    .bi-exclamation-circle {
+        color: #ffc107;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
 </style>
 @endsection
 
@@ -303,16 +318,12 @@
 
                                             {{-- Only show delete button if user has delete permission --}}
                                             @if($userPermissions && $userPermissions->CanDelete)
-                                                <form action="{{ route('employees.destroy', $employee->EmployeeID) }}" 
-                                                      method="POST" 
-                                                      class="d-inline"
-                                                      onsubmit="return confirm('Are you sure you want to delete this employee?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-danger">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </form>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-danger" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#deleteModal{{ $employee->EmployeeID }}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             @endif
                                         </div>
                                     </td>
@@ -405,8 +416,14 @@
 </div>
 
 <!-- Standalone Import Modal -->
-<div class="modal" id="standaloneImportModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" 
+     id="standaloneImportModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     role="dialog" 
+     aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Import Employees</h5>
@@ -460,7 +477,13 @@
 </div>
 
 <!-- Add Employee Modal -->
-<div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="addEmployeeModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="addEmployeeModalLabel" 
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -503,6 +526,32 @@
         </div>
     </div>
 </div>
+
+@foreach($activeEmployees as $employee)
+<div class="modal fade" 
+     id="deleteModal{{ $employee->EmployeeID }}" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="mb-4">
+                    <i class="bi bi-exclamation-circle text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="mb-3">Are you sure?</h4>
+                <p class="mb-4">You won't be able to revert this!</p>
+                <form action="{{ route('employees.destroy', $employee->EmployeeID) }}" method="POST" class="d-inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Yes, delete it!</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
 @endsection
 
 @section('scripts')
@@ -707,6 +756,48 @@
                 });
             });
         }
+
+        // Initialize modals with static backdrop
+        const importModal = document.getElementById('standaloneImportModal');
+        const addModal = document.getElementById('addEmployeeModal');
+
+        if (importModal) {
+            // Prevent closing when clicking outside
+            $(importModal).on('click mousedown', function(e) {
+                if ($(e.target).hasClass('modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+
+            // Prevent Esc key from closing the modal
+            $(importModal).on('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        if (addModal) {
+            // Prevent closing when clicking outside
+            $(addModal).on('click mousedown', function(e) {
+                if ($(e.target).hasClass('modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+
+            // Prevent Esc key from closing the modal
+            $(addModal).on('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
     });
 })();
 
@@ -838,6 +929,30 @@ const columnMappings = {
     'Role': ['role', 'roles', 'position', 'designation']
 };
 
+document.addEventListener('DOMContentLoaded', function() {
+    // Add this to your existing script
+    const deleteModals = document.querySelectorAll('[id^="deleteModal"]');
+    deleteModals.forEach(modal => {
+        // Prevent closing when clicking outside
+        $(modal).on('click mousedown', function(e) {
+            if ($(e.target).hasClass('modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+
+        // Prevent Esc key from closing the modal
+        $(modal).on('keydown', function(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                return false;
+            }
+        });
+    });
+
+    // Rest of your existing script...
+});
 
 </script>
 @endsection
