@@ -263,6 +263,9 @@
                     <i class="bi bi-archive"></i> <span id="buttonText">Show Deleted</span>
                 </button>
                 @if($userPermissions && $userPermissions->CanAdd)
+                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#exportModal">
+                        <i class="bi bi-download"></i> Export Employees
+                    </button>
                     <button type="button" class="btn btn-success" id="openExcelImportBtn">
                         <i class="bi bi-upload"></i> Import Employees
                     </button>
@@ -472,6 +475,69 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModalLabel">Export Employees</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('employees.export') }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Format</label>
+                        <select name="format" class="form-select" required>
+                            <option value="xlsx">Excel (XLSX)</option>
+                            <option value="csv">CSV</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Select Records to Export</label>
+                        <select name="employees_status" class="form-select" required>
+                            <option value="active">Active Employees Only</option>
+                            <option value="deleted">Deleted Employees Only</option>
+                            <option value="all">All Employees</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Select Fields to Export</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="FirstName" checked>
+                            <label class="form-check-label">First Name</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="LastName" checked>
+                            <label class="form-check-label">Last Name</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="Email" checked>
+                            <label class="form-check-label">Email</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="Gender" checked>
+                            <label class="form-check-label">Gender</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="Role" checked>
+                            <label class="form-check-label">Role</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="Address" checked>
+                            <label class="form-check-label">Address</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Export</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

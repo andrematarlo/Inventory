@@ -92,6 +92,7 @@ Route::middleware('auth')->group(function () {
         Route::post('employees/{employeeId}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
         Route::post('/employees/preview-columns', [EmployeeController::class, 'previewColumns'])->name('employees.preview-columns');
         Route::post('/employees/import', [EmployeeController::class, 'import'])->name('employees.import');
+        Route::post('/employees/export', [EmployeeController::class, 'export'])->name('employees.export');
 
 
         // Role Management
