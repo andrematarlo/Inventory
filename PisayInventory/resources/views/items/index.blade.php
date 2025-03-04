@@ -4,19 +4,23 @@
 
 @section('content')
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Items Management</h2>
-        <div>
-            @if($userPermissions && $userPermissions->CanAdd)
-                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importExcelModal">
-                    <i class="bi bi-upload"></i> Import Items
-                </button>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                    <i class="bi bi-plus-lg"></i> New Item
-                </button>
-            @endif
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Items Management</h2>
+    <div>
+        @if($userPermissions && $userPermissions->CanAdd)
+            <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                <i class="bi bi-upload"></i> Import Items
+            </button>
+            <!-- Add Export Button -->
+            <button class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#exportModal">
+                <i class="bi bi-download"></i> Export Items
+            </button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                <i class="bi bi-plus-lg"></i> New Item
+            </button>
+        @endif
     </div>
+</div>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="btn-group" role="group">
@@ -375,6 +379,70 @@
         </div>
     </div>
 </div>
+
+<!-- Add Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModalLabel">Export Items</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('items.export') }}" method="POST">
+            @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Fields to Export</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="ItemName" checked>
+                            <label class="form-check-label">Item Name</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="Description">
+                            <label class="form-check-label">Description</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="Classification">
+                            <label class="form-check-label">Classification</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="Unit">
+                            <label class="form-check-label">Unit</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="StocksAvailable">
+                            <label class="form-check-label">Stocks Available</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields[]" value="ReorderPoint">
+                            <label class="form-check-label">Reorder Point</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Export Format</label>
+                        <select class="form-select" name="format">
+                            <option value="xlsx">Excel (.xlsx)</option>
+                            <option value="csv">CSV (.csv)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Items to Export</label>
+                        <select class="form-select" name="items_status">
+                            <option value="active">Active Items Only</option>
+                            <option value="deleted">Deleted Items Only</option>
+                            <option value="all">All Items</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Export</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
     @endif
 
 @if($userPermissions && $userPermissions->CanEdit)

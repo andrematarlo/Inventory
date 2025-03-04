@@ -51,7 +51,7 @@ Route::middleware('auth')->group(function () {
         Route::post('items/{id}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
         Route::post('/items/preview-columns', [ItemController::class, 'previewColumns'])->name('items.preview-columns');
         Route::post('/items/import', [ItemController::class, 'import'])->name('items.import');
-        
+        Route::post('/items/export', [ItemController::class, 'export'])->name('items.export');        
 
         // Inventory Management
         Route::resource('inventory', InventoryController::class);
