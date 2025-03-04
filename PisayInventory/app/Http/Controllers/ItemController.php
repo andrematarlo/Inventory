@@ -16,6 +16,7 @@ use App\Models\RolePolicy;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ItemsImport;
+use App\Exports\ItemsExport;
 
 class ItemController extends Controller
 {
@@ -141,6 +142,35 @@ class ItemController extends Controller
             'column_mapping' => $request->column_mapping ?? null
         ]);
         return redirect()->back()->with('error', $e->getMessage());
+    }
+}
+
+public function export(Request $request)
+{
+    try {
+        $request->validate([
+            'fields' => 'required|array',
+            'fields.*' => 'required|string|in:ItemName,Description,Classification,Unit,StocksAvailable,ReorderPoint',
+            'format' => 'required|in:xlsx,csv',
+            'items_status' => 'required|in:active,deleted,all'
+        ]);
+
+        // Add this for debugging
+        Log::info('Export request:', [
+            'fields' => $request->fields,
+            'format' => $request->format,
+            'items_status' => $request->items_status
+        ]);
+
+        $fileName = 'items_' . date('Y-m-d_His') . '.' . $request->format;
+        
+        return Excel::download(
+            new ItemsExport($request->fields, $request->items_status),
+            $fileName
+        );
+    } catch (\Exception $e) {
+        Log::error('Error exporting items: ' . $e->getMessage());
+        return back()->with('error', 'Error exporting items: ' . $e->getMessage());
     }
 }
 

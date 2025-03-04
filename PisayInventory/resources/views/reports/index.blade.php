@@ -3,77 +3,67 @@
 @section('title', 'Reports')
 
 @section('content')
-<div class="container">
-    <div class="mb-4">
-        <h2>Reports</h2>
-        <p class="text-muted">Generate and view various inventory reports</p>
+<div class="container py-4">
+    <!-- Header Section -->
+    <div class="rounded-3 mb-5" id="reports-header">
+        <h2 class="mt-4 reports-title">Reports</h2>
+        <p class="text-muted lead mb-0">Generate and view various inventory reports</p>
     </div>
 
-    <!-- Report Types -->
+    <!-- Report Types with enhanced cards -->
     <div class="row g-4">
-        <!-- Inventory Report -->
+    <!-- Inventory Report -->
         <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100" data-bs-toggle="modal" data-bs-target="#inventoryReportModal">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-box-seam text-primary me-2"></i>
-                        Inventory Report
-                    </h5>
-                    <p class="card-text">View comprehensive inventory status and stock levels</p>
+            <div class="card report-card h-100 border-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#inventoryReportModal">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="card-title mb-3">Inventory Report</h5>
+                            <p class="card-text text-muted">View comprehensive inventory status and stock levels</p>
+                        </div>
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                            <i class="bi bi-box-seam text-primary fs-4"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Sales Report -->
         <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100" data-bs-toggle="modal" data-bs-target="#salesReportModal">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-graph-up text-success me-2"></i>
-                        Sales Analysis Report
-                    </h5>
-                    <p class="card-text">Comprehensive sales performance and trends</p>
+            <div class="card report-card h-100 border-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#salesReportModal">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="card-title mb-3">Sales Analysis</h5>
+                            <p class="card-text text-muted">View sales performance and trends</p>
+                        </div>
+                        <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                            <i class="bi bi-graph-up text-success fs-4"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Low Stock Report -->
         <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100" data-bs-toggle="modal" data-bs-target="#lowStockReportModal">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-exclamation-triangle text-danger me-2"></i>
-                        Low Stock Report
-                    </h5>
-                    <p class="card-text">Identify items that need restocking</p>
+            <div class="card report-card h-100 border-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#lowStockReportModal">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="card-title mb-3">Low Stock Alert</h5>
+                            <p class="card-text text-muted">Identify items that need restocking</p>
+                        </div>
+                        <div class="rounded-circle bg-danger bg-opacity-10 p-3">
+                            <i class="bi bi-exclamation-triangle text-danger fs-4"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Generated Reports Section -->
-    <div class="mt-5">
-        <h3 class="mb-4">Recent Reports</h3>
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Report Type</th>
-                                <th>Generated Date</th>
-                                <th>Date Range</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Add your recent reports here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Inventory Report Modal -->
     <div class="modal fade" id="inventoryReportModal" tabindex="-1">
@@ -165,16 +155,32 @@
 
 @push('styles')
 <style>
-    .report-card {
-        cursor: pointer;
-        transition: transform 0.2s;
-    }
+            /* More specific selector using ID and class combination */
+            #reports-header h2.reports-title {
+                color: #2d3748 !important;
+                font-weight: 600 !important;
+                margin-bottom: 1.5rem !important;
+            }
 
-    .report-card:hover {
-        transform: translateY(-5px);
-    }
+            /* Make cards clickable with direct selector */
+            div[data-bs-toggle="modal"].card.report-card {
+                cursor: pointer !important;
+            }
 
-    /* Print styles */
+
+            .card.report-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+            }
+
+            .card.report-card .bi {
+                transition: transform 0.3s ease;
+            }
+
+            .card.report-card:hover .bi {
+                transform: scale(1.1);
+            }
+            /* Print styles */
     @media print {
         .no-print {
             display: none !important;

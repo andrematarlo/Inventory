@@ -1,4 +1,13 @@
 @extends('reports.layout')
+<style>
+    .table {
+        background-color: white !important;
+        
+    }
+    .report-section {
+        background-color: white !important;
+    }
+</style>
 
 @section('report-title', 'Inventory Report')
 
