@@ -40,9 +40,10 @@
 
 @push('styles')
 <style>
+
     /* General layout styles */
     .report-container {
-        background-color: white;
+        background-color: white !important;
         border-radius: 10px;
         padding: 2rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -55,31 +56,19 @@
 
     /* Print styles */
     @media print {
-    /* Force a solid white background for the entire page */
-    html, body {
-        background: white !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
 
-        /* Hide everything except the print-only content */
-        body * {
+                /* Hide screen-only content when printing */
+                .screen-only {
             display: none !important;
-            
         }
-        * {
-            background: none !important;
-            box-shadow: none !important;
-        }
+
+
+
 
         .print-only {
+            display: block !important;
             background: white !important;
             color: black !important;
-        }
-
-        .print-only {
-            position: relative;
-            width: 100%;
             padding: 2rem;
         }
 

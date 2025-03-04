@@ -158,7 +158,7 @@
 
 @section('content')
 <div class="container-fluid px-4">
-<div class="row">
+    <div class="row">
         <div class="col-12 text-end mt-3">
             <span class="welcome-message">Welcome back, {{ Auth::user()->Username }}</span>
         </div>
