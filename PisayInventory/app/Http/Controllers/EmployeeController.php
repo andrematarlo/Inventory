@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Imports\EmployeesImport;
+use App\Exports\EmployeesExport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -176,6 +177,26 @@ class EmployeeController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    public function export(Request $request)
+{
+    try {
+        $request->validate([
+            'format' => 'required|in:xlsx,csv',
+            'fields' => 'required|array|min:1',
+            'fields.*' => 'required|in:FirstName,LastName,Email,Gender,Role,Address',
+            'employees_status' => 'required|in:active,deleted,all'
+        ]);
+
+        $export = new EmployeesExport($request->fields, $request->employees_status);
+        $filename = 'employees_' . date('Y-m-d_His') . '.' . $request->format;
+
+        return Excel::download($export, $filename);
+    } catch (\Exception $e) {
+        Log::error('Error exporting employees: ' . $e->getMessage());
+        return back()->with('error', 'Error exporting employees: ' . $e->getMessage());
+    }
+}
 
     public function create()
     {
