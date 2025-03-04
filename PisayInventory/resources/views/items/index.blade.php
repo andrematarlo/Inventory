@@ -611,28 +611,30 @@
             $('#activeRecordsBtn').removeClass('active');
         });
 
-        // Check for success/error messages
+        // Success/Error messages with Toast
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+
         @if(Session::has('success'))
-            Swal.fire({
-                title: 'Success!',
-                text: "{{ Session::get('success') }}",
+            Toast.fire({
                 icon: 'success',
-                timer: 3000,
-                timerProgressBar: true,
-                showConfirmButton: false
+                title: @json(Session::get('success'))
             });
         @endif
 
         @if(Session::has('error'))
-            Swal.fire({
-                title: 'Error!',
-                text: "{{ Session::get('error') }}",
+            Toast.fire({
                 icon: 'error',
-                confirmButtonColor: '#dc3545'
+                title: @json(Session::get('error'))
             });
         @endif
 
-        // Update the delete confirmation handler
+        // Delete confirmation handler
         $('.delete-item').click(function(e) {
             e.preventDefault();
             const itemId = $(this).data('item-id');
@@ -658,7 +660,7 @@
                 if (result.isConfirmed) {
                     const form = document.createElement('form');
                     form.method = 'POST';
-                    form.action = "{{ route('items.destroy', ':id') }}".replace(':id', itemId);
+                    form.action = "{{ url('/inventory/items') }}/" + itemId;
                     form.innerHTML = `
                         @csrf
                         @method('DELETE')
@@ -669,7 +671,7 @@
             });
         });
 
-        // Update the restore confirmation handler
+        // Restore confirmation handler
         $('.restore-item').click(function(e) {
             e.preventDefault();
             const itemId = $(this).data('item-id');
@@ -689,7 +691,7 @@
                 if (result.isConfirmed) {
                     const form = document.createElement('form');
                     form.method = 'POST';
-                    form.action = "{{ url('inventory/items') }}/" + itemId + "/restore";
+                    form.action = "{{ url('/inventory/items') }}/" + itemId + "/restore";
                     form.innerHTML = `
                         @csrf
                     `;
@@ -702,173 +704,7 @@
 </script>
 @endsection
 
-@section('additional_styles')
-<style>
-    .btn-blue {
-        background-color: #0d6efd;
-        color: white;
-    }
-    
-    .btn-blue:hover {
-        background-color: #0b5ed7;
-        color: white;
-    }
-
-    /* Custom pagination styles */
-    .pagination {
-        margin: 0;
-    }
-    
-    .pagination .page-link {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        line-height: 1.5;
-        border-radius: 0.2rem;
-    }
-
-    .pagination .page-link i {
-        font-size: 10px;
-    }
-
-    .pagination .page-item.active .page-link {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-    }
-
-    .pagination .page-item.disabled .page-link {
-        color: #6c757d;
-        pointer-events: none;
-        background-color: #fff;
-        border-color: #dee2e6;
-    }
-
-    .btn-outline-secondary {
-        color: #6c757d;
-        border-color: #6c757d;
-    }
-
-    .btn-outline-secondary:hover {
-        background-color: #6c757d;
-        border-color: #6c757d;
-        color: white;
-    }
-
-    .btn-primary {
-        background-color: #3498db;
-        border-color: #3498db;
-    }
-
-    .btn-primary:hover {
-        background-color: #2980b9;
-        border-color: #2980b9;
-    }
-
-    .btn-group .btn {
-        border-radius: 0;
-    }
-    
-    .btn-group .btn:first-child {
-        border-top-left-radius: 4px;
-        border-bottom-left-radius: 4px;
-    }
-    
-    .btn-group .btn:last-child {
-        border-top-right-radius: 4px;
-        border-bottom-right-radius: 4px;
-    }
-
-    .btn-group .btn.active {
-        opacity: 1;
-    }
-
-    .btn-group .btn:not(.active) {
-        opacity: 0.8;
-    }
-
-    .btn-group .btn:hover:not(.active) {
-        opacity: 0.9;
-    }
-    .modal-lg {
-        max-width: 900px;
-    }
-
-    .table-sm td, .table-sm th {
-        padding: 0.5rem;
-    }
-
-    .form-select-sm {
-        padding-top: 0.25rem;
-        padding-bottom: 0.25rem;
-        padding-left: 0.5rem;
-        font-size: 0.875rem;
-    }
-
-    /* Restore button icon style */
-    .btn-success i {
-        font-size: 14px !important;
-    }
-
-    .btn-success {
-        padding: 0.25rem 0.5rem;
-    }
-
-    /* Override Laravel pagination styling */
-    .custom-pagination svg {
-        width: 12px !important;
-        height: 12px !important;
-    }
-
-    .custom-pagination nav {
-        display: flex;
-        justify-content: center;
-    }
-
-    .custom-pagination .shadow-sm {
-        box-shadow: none !important;
-    }
-
-    .custom-pagination .relative {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-    }
-
-    .custom-pagination .relative, 
-    .custom-pagination button {
-        padding: 0.25rem 0.5rem !important;
-        font-size: 0.875rem !important;
-        line-height: 1.5 !important;
-        height: auto !important;
-        min-width: auto !important;
-    }
-
-    /* Add these styles for the search input */
-    .input-group .form-control {
-        border-right: 0;
-        height: 38px;
-        font-size: 14px;
-    }
-
-    .input-group .btn-outline-secondary {
-        border-left: 0;
-        background-color: white;
-        border-color: #ced4da;
-    }
-
-    .input-group .btn-outline-secondary:hover {
-        background-color: #f8f9fa;
-    }
-
-    .input-group .form-control:focus {
-        border-color: #ced4da;
-        box-shadow: none;
-    }
-
-    .input-group .form-control:focus + .btn-outline-secondary {
-        border-color: #ced4da;
-    }
-</style>
-
-<!-- Add SweetAlert2 CSS -->
+@section('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 @endsection
