@@ -113,7 +113,11 @@
                                             </button>
                                             @endif
                                             @if($userPermissions && $userPermissions->CanDelete)
-                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteItemModal{{ $item->ItemId }}">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger delete-item"
+                                                    data-item-id="{{ $item->ItemId }}"
+                                                    data-item-name="{{ $item->ItemName }}"
+                                                    data-stocks="{{ $item->StocksAvailable }}">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                             @endif
@@ -211,14 +215,12 @@
                             @forelse($deletedItems as $item)
                                 <tr>
                                     <td>
-                                        <form action="{{ route('items.restore', $item->ItemId) }}" 
-                                              method="POST" 
-                                              class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-arrow-counterclockwise" style="font-size: 14px;"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-success restore-item"
+                                                data-item-id="{{ $item->ItemId }}"
+                                                data-item-name="{{ $item->ItemName }}">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
                                     </td>
                                     <td>
                                         @if($item->ImagePath)
@@ -608,6 +610,94 @@
             $(this).addClass('active');
             $('#activeRecordsBtn').removeClass('active');
         });
+
+        // Check for success/error messages
+        @if(Session::has('success'))
+            Swal.fire({
+                title: 'Success!',
+                text: "{{ Session::get('success') }}",
+                icon: 'success',
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false
+            });
+        @endif
+
+        @if(Session::has('error'))
+            Swal.fire({
+                title: 'Error!',
+                text: "{{ Session::get('error') }}",
+                icon: 'error',
+                confirmButtonColor: '#dc3545'
+            });
+        @endif
+
+        // Update the delete confirmation handler
+        $('.delete-item').click(function(e) {
+            e.preventDefault();
+            const itemId = $(this).data('item-id');
+            const itemName = $(this).data('item-name');
+            const stocksAvailable = $(this).data('stocks');
+
+            Swal.fire({
+                title: 'Delete Item?',
+                html: `Are you sure you want to delete item: <strong>${itemName}</strong>?<br>
+                      <div class="alert alert-warning mt-3">
+                          <i class="bi bi-exclamation-triangle me-2"></i>
+                          Current stock: ${stocksAvailable}
+                      </div>
+                      <p class="text-danger mt-3"><small>This action can be undone later.</small></p>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = "{{ route('items.destroy', ':id') }}".replace(':id', itemId);
+                    form.innerHTML = `
+                        @csrf
+                        @method('DELETE')
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+
+        // Update the restore confirmation handler
+        $('.restore-item').click(function(e) {
+            e.preventDefault();
+            const itemId = $(this).data('item-id');
+            const itemName = $(this).data('item-name');
+
+            Swal.fire({
+                title: 'Restore Item?',
+                html: `Are you sure you want to restore item: <strong>${itemName}</strong>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, restore it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = "{{ url('inventory/items') }}/" + itemId + "/restore";
+                    form.innerHTML = `
+                        @csrf
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
     });
 </script>
 @endsection
@@ -778,4 +868,7 @@
         border-color: #ced4da;
     }
 </style>
+
+<!-- Add SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 @endsection
