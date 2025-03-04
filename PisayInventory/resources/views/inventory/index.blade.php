@@ -19,8 +19,12 @@
         </button>
     </div>
 
-    <!-- Add Generate Report Modal -->
-    <div class="modal fade" id="generateReportModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <!-- Generate Report Modal -->
+    <div class="modal fade" 
+         id="generateReportModal" 
+         data-bs-backdrop="static" 
+         data-bs-keyboard="false" 
+         tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -443,6 +447,54 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Modal Template -->
+<div class="modal fade" 
+     id="deleteInventoryModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Inventory Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this inventory record?</p>
+                <p class="text-danger mt-3"><small>This action can be undone later.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restore Modal Template -->
+<div class="modal fade" 
+     id="restoreInventoryModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Restore Inventory Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to restore this inventory record?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmRestoreBtn">Restore</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endforeach
 
 {{-- Make sure the delete modal is also wrapped with permission check --}}
@@ -507,105 +559,124 @@ $(document).ready(function() {
     // Initialize - show active records by default
     activeRecordsCard.show();
     deletedRecordsCard.hide();
-    activeRecordsBtn.addClass('active');
+    activeRecordsBtn.addClass('btn-primary').removeClass('btn-outline-primary');
+    deletedRecordsBtn.addClass('btn-outline-danger').removeClass('btn-danger');
 
     // Toggle between active and deleted records
     activeRecordsBtn.click(function() {
         activeRecordsCard.show();
         deletedRecordsCard.hide();
-        activeRecordsBtn.removeClass('btn-outline-primary').addClass('btn-primary active');
-        deletedRecordsBtn.removeClass('btn-danger active').addClass('btn-outline-danger');
+        activeRecordsBtn.removeClass('btn-outline-primary').addClass('btn-primary');
+        deletedRecordsBtn.removeClass('btn-danger').addClass('btn-outline-danger');
     });
 
     deletedRecordsBtn.click(function() {
         activeRecordsCard.hide();
         deletedRecordsCard.show();
-        deletedRecordsBtn.removeClass('btn-outline-danger').addClass('btn-danger active');
-        activeRecordsBtn.removeClass('btn-primary active').addClass('btn-outline-primary');
+        deletedRecordsBtn.removeClass('btn-outline-danger').addClass('btn-danger');
+        activeRecordsBtn.removeClass('btn-primary').addClass('btn-outline-primary');
     });
 
-    // Add delete confirmation handler
+    // Initialize all modals with static backdrop
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        const bsModal = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        // Prevent modal from closing when clicking outside
+        $(modal).on('mousedown', function(e) {
+            if ($(e.target).is('.modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+    });
+
+    // Delete confirmation handler
     $('.delete-inventory').click(function(e) {
         e.preventDefault();
         const inventoryId = $(this).data('inventory-id');
         const itemName = $(this).data('item-name');
-
-        Swal.fire({
-            title: 'Delete Inventory Record?',
-            html: `Are you sure you want to delete the inventory record for: <strong>${itemName}</strong>?<br>
-                  <p class="text-danger mt-3"><small>This action can be undone later.</small></p>`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, delete it!',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Create and submit the form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = "{{ route('inventory.index') }}/" + inventoryId;
-                form.innerHTML = `
-                    @csrf
-                    @method('DELETE')
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
+        
+        // Update modal content
+        $('#deleteInventoryModal .modal-body p:first').html(
+            `Are you sure you want to delete the inventory record for: <strong>${itemName}</strong>?`
+        );
+        
+        // Store the ID for use in confirmation
+        $('#confirmDeleteBtn').attr('data-inventory-id', inventoryId);
+        
+        // Show the modal
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteInventoryModal'));
+        deleteModal.show();
     });
 
-    // Add restore confirmation handler
+    // Handle delete confirmation
+    $('#confirmDeleteBtn').click(function() {
+        const inventoryId = $(this).attr('data-inventory-id');
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('inventory.index') }}/" + inventoryId;
+        form.innerHTML = `
+            @csrf
+            @method('DELETE')
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    });
+
+    // Restore confirmation handler
     $('.restore-inventory').click(function(e) {
         e.preventDefault();
         const inventoryId = $(this).data('inventory-id');
         const itemName = $(this).data('item-name');
-
-        Swal.fire({
-            title: 'Restore Inventory Record?',
-            html: `Are you sure you want to restore the inventory record for: <strong>${itemName}</strong>?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#198754', // Bootstrap success color
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, restore it!',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Create and submit the form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = "{{ route('inventory.index') }}/" + inventoryId + "/restore";
-                form.innerHTML = `
-                    @csrf
-                    @method('PUT')
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
+        
+        // Update modal content
+        $('#restoreInventoryModal .modal-body p').html(
+            `Are you sure you want to restore the inventory record for: <strong>${itemName}</strong>?`
+        );
+        
+        // Store the ID for use in confirmation
+        $('#confirmRestoreBtn').attr('data-inventory-id', inventoryId);
+        
+        // Show the modal
+        const restoreModal = new bootstrap.Modal(document.getElementById('restoreInventoryModal'));
+        restoreModal.show();
     });
 
-    // Check for success/error messages from the session
+    // Handle restore confirmation
+    $('#confirmRestoreBtn').click(function() {
+        const inventoryId = $(this).attr('data-inventory-id');
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('inventory.index') }}/" + inventoryId + "/restore";
+        form.innerHTML = `
+            @csrf
+            @method('PUT')
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    });
+
+    // Success message handling
     @if(Session::has('success'))
         Swal.fire({
+            icon: 'success',
             title: 'Success!',
             text: "{{ Session::get('success') }}",
-            icon: 'success',
-            timer: 3000,
-            timerProgressBar: true,
-            showConfirmButton: false
+            showConfirmButton: false,
+            timer: 1500
         });
     @endif
 
     @if(Session::has('error'))
         Swal.fire({
+            icon: 'error',
             title: 'Error!',
             text: "{{ Session::get('error') }}",
-            icon: 'error',
             confirmButtonColor: '#dc3545'
         });
     @endif

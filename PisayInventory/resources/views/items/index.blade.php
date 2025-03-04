@@ -381,7 +381,13 @@
 </div>
 
 <!-- Add Export Modal -->
-<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="exportModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="exportModalLabel" 
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -768,11 +774,57 @@
                 }
             });
         });
+
+        // Initialize export modal with static backdrop
+        const exportModal = document.getElementById('exportModal');
+        if (exportModal) {
+            const bsModal = new bootstrap.Modal(exportModal, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            // Prevent modal from closing when clicking outside
+            $(exportModal).on('mousedown', function(e) {
+                if ($(e.target).is('.modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+        }
     });
 </script>
 @endsection
 
 @section('styles')
+<style>
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    #itemsTable, #deletedItemsTable {
+        min-width: 100%;
+        width: auto;
+    }
+    
+    .dataTables_wrapper {
+        overflow-x: auto;
+    }
+
+    .btn-blue {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    .btn-blue:hover {
+        background-color: #0b5ed7;
+        color: white;
+    }
+
+    .btn-blue .bi-pencil {
+        color: #fff;
+    }
+</style>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 @endsection

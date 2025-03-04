@@ -264,6 +264,29 @@
     </div>
 </div>
 
+<!-- Delete Purchase Modal -->
+<div class="modal fade" 
+     id="deletePurchaseModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Purchase Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this purchase order?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -337,43 +360,42 @@ $(document).ready(function() {
 });
 
 function deletePurchase(id) {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            $.ajax({
-                url: `/inventory/purchases/${id}`,
-                type: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.success) {
-                        Swal.fire({
-                            title: 'Deleted!',
-                            text: 'Purchase order has been deleted.',
-                            icon: 'success'
-                        }).then(() => {
-                            window.location.reload();
-                        });
-                    } else {
-                        Swal.fire('Error!', response.message || 'Failed to delete purchase order.', 'error');
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Delete error:', xhr);
-                    Swal.fire('Error!', 'Failed to delete purchase order.', 'error');
-                }
-            });
+    const deleteModal = new bootstrap.Modal(document.getElementById('deletePurchaseModal'), {
+        backdrop: 'static',
+        keyboard: false
+    });
+    
+    // Store the ID for use in confirmation
+    document.getElementById('confirmDeleteBtn').setAttribute('data-purchase-id', id);
+    
+    // Show the modal
+    deleteModal.show();
+}
+
+// Add event listener for delete confirmation
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    const id = this.getAttribute('data-purchase-id');
+    
+    $.ajax({
+        url: `/inventory/purchases/${id}`,
+        type: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response.success) {
+                bootstrap.Modal.getInstance(document.getElementById('deletePurchaseModal')).hide();
+                window.location.reload();
+            } else {
+                alert(response.message || 'Failed to delete purchase order.');
+            }
+        },
+        error: function(xhr) {
+            console.error('Delete error:', xhr);
+            alert('Failed to delete purchase order.');
         }
     });
-}
+});
 
 function restorePurchase(id) {
     Swal.fire({
