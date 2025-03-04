@@ -5,13 +5,8 @@
 @section('content')
 
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Inventory Management</h2>
-        @if($userPermissions && $userPermissions->CanAdd)
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addInventoryModal">
-            <i class="bi bi-plus-lg"></i> Add Inventory
-        </button>
-        @endif
+    <div class="mb-4">
+        <h2>Inventory Management</h2>
     </div>
 
     <div class="d-flex gap-2 mb-3">
@@ -19,6 +14,55 @@
         <button type="button" class="btn btn-outline-danger" id="deletedRecords">
             <i class="bi bi-trash"></i> Show Deleted Records
         </button>
+        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+            <i class="bi bi-file-earmark-text"></i> Generate Report
+        </button>
+    </div>
+
+    <!-- Add Generate Report Modal -->
+    <div class="modal fade" id="generateReportModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Generate Inventory Report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ route('reports.inventory') }}" method="GET">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Report Type</label>
+                            <select name="report_type" class="form-select">
+                                <option value="all">All Movements</option>
+                                <option value="in">Stock In Only</option>
+                                <option value="out">Stock Out Only</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" 
+                                   class="form-control" 
+                                   name="start_date" 
+                                   required 
+                                   value="{{ now()->subDays(30)->format('Y-m-d') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">End Date</label>
+                            <input type="date" 
+                                   class="form-control" 
+                                   name="end_date" 
+                                   required
+                                   value="{{ now()->format('Y-m-d') }}">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-file-earmark-text"></i> Generate Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Active Records Card -->
@@ -420,11 +464,6 @@
     </div>
 </div>
 @endforeach
-
-<!-- Add Inventory Modal - Only include if not Inventory Staff -->
-@if($userPermissions && $userPermissions->CanAdd)
-    <!-- ... Add Inventory Modal code ... -->
-@endif
 
 {{-- Make sure the delete modal is also wrapped with permission check --}}
 @if($userPermissions && $userPermissions->CanDelete)
