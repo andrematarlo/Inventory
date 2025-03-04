@@ -76,16 +76,16 @@
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm">
                                             @if($userPermissions->CanEdit)
-                                            <a href="{{ route('roles.edit', $role->RoleId) }}" 
+                                            <a href="{{ url('/inventory/roles/' . $role->RoleId . '/edit') }}" 
                                                class="btn btn-primary">
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
                                             @endif
                                             @if($userPermissions->CanDelete)
                                             <button type="button" 
-                                                    class="btn btn-danger" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#deleteModal{{ $role->RoleId }}">
+                                                    class="btn btn-danger delete-role"
+                                                    data-role-id="{{ $role->RoleId }}"
+                                                    data-role-name="{{ $role->RoleName }}">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                             @endif
@@ -115,12 +115,14 @@
                                 <tr>
                                     @if($userPermissions && $userPermissions->CanEdit)
                                     <td class="text-center">
-                                        <form action="{{ route('roles.restore', $role->RoleId) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-arrow-counterclockwise"></i>
-                                            </button>
-                                        </form>
+                                        @if($userPermissions->CanEdit)
+                                        <button type="button" 
+                                                class="btn btn-sm btn-success restore-role"
+                                                data-role-id="{{ $role->RoleId }}"
+                                                data-role-name="{{ $role->RoleName }}">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                        @endif
                                     </td>
                                     @endif
                                     <td>{{ $role->RoleName }}</td>
@@ -184,12 +186,9 @@
 </div>
 @endif
 
+<!-- Delete Modal -->
 @foreach($roles as $role)
-<div class="modal fade" 
-     id="deleteModal{{ $role->RoleId }}" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
-     tabindex="-1">
+<div class="modal fade" id="deleteModal{{ $role->RoleId }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-body text-center p-4">
@@ -213,59 +212,110 @@
 @endsection
 
 @section('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-    $(document).ready(function() {
-        if (!$.fn.DataTable.isDataTable('#rolesTable')) {
-            $('#rolesTable').DataTable({
-                pageLength: 10,
-                responsive: true,
-                dom: '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center"ip>',
-                language: {
-                    search: "Search:",
-                    searchPlaceholder: "Search roles..."
-                }
-            });
-        }
+$(document).ready(function() {
+    // Initialize DataTable
+    if (!$.fn.DataTable.isDataTable('#rolesTable')) {
+        $('#rolesTable').DataTable({
+            pageLength: 10,
+            responsive: true,
+            dom: '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center"ip>',
+            language: {
+                search: "Search:",
+                searchPlaceholder: "Search roles..."
+            }
+        });
+    }
 
-        const addRoleModal = document.getElementById('addRoleModal');
-        if (addRoleModal) {
-            $(addRoleModal).on('click mousedown', function(e) {
-                if ($(e.target).hasClass('modal')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-            });
+    // Success/Error messages
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+    });
 
-            $(addRoleModal).on('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    return false;
-                }
-            });
-        }
+    @if(Session::has('success'))
+        Toast.fire({
+            icon: 'success',
+            title: @json(Session::get('success'))
+        });
+    @endif
 
-        // Initialize delete modals
-        const deleteModals = document.querySelectorAll('[id^="deleteModal"]');
-        deleteModals.forEach(modal => {
-            // Prevent closing when clicking outside
-            $(modal).on('click mousedown', function(e) {
-                if ($(e.target).hasClass('modal')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-            });
+    @if(Session::has('error'))
+        Toast.fire({
+            icon: 'error',
+            title: @json(Session::get('error'))
+        });
+    @endif
 
-            // Prevent Esc key from closing the modal
-            $(modal).on('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    return false;
-                }
-            });
+    // Delete confirmation handler
+    $('.delete-role').click(function(e) {
+        e.preventDefault();
+        const roleId = $(this).data('role-id');
+        const roleName = $(this).data('role-name');
+
+        Swal.fire({
+            title: 'Delete Role?',
+            html: `Are you sure you want to delete role: <strong>${roleName}</strong>?<br>
+                  <p class="text-danger mt-3"><small>This action can be undone later.</small></p>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ url('/inventory/roles') }}/" + roleId;
+                form.innerHTML = `
+                    @csrf
+                    @method('DELETE')
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
         });
     });
+
+    // Restore confirmation handler
+    $('.restore-role').click(function(e) {
+        e.preventDefault();
+        const roleId = $(this).data('role-id');
+        const roleName = $(this).data('role-name');
+
+        Swal.fire({
+            title: 'Restore Role?',
+            html: `Are you sure you want to restore role: <strong>${roleName}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, restore it!',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ url('/inventory/roles') }}/" + roleId + "/restore";
+                form.innerHTML = `
+                    @csrf
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    });
+});
 </script>
 @endsection
 
@@ -285,4 +335,9 @@
         padding: 2rem;
     }
 </style>
+@endsection
+
+@section('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 @endsection

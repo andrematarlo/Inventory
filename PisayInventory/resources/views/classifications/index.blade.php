@@ -66,13 +66,11 @@
                                     </button>
                                     @endif
                                     @if($userPermissions->CanDelete)
-                                    <form action="{{ route('classifications.destroy', $classification->ClassificationId) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this classification?')">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button" 
+                                            class="btn btn-danger" 
+                                            onclick="confirmDelete('{{ $classification->ClassificationId }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                     @endif
                                 </div>
                             </td>
@@ -251,6 +249,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize view
     toggleRecords(true);
+
+    // Add SweetAlert2 delete confirmation
+    window.confirmDelete = function(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Create and submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/inventory/classifications/${id}`;
+                
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                form.appendChild(csrfToken);
+                
+                const methodField = document.createElement('input');
+                methodField.type = 'hidden';
+                methodField.name = '_method';
+                methodField.value = 'DELETE';
+                form.appendChild(methodField);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
 });
 
 function updatePerPage(value) {
@@ -260,3 +293,11 @@ function updatePerPage(value) {
 }
 </script>
 @endsection
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@endpush
