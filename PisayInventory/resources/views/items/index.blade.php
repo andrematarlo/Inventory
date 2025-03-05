@@ -382,7 +382,7 @@
     </div>
 </div>
 
-<!-- Add Export Modal -->
+<!-- Export Modal -->
 <div class="modal fade" 
      id="exportModal" 
      data-bs-backdrop="static" 
@@ -396,7 +396,7 @@
                 <h5 class="modal-title" id="exportModalLabel">Export Items</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('items.export') }}" method="POST">
+            <form action="{{ route('items.export') }}" method="POST" id="exportForm">
             @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -444,7 +444,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Export</button>
+                    <button type="submit" class="btn btn-primary" id="exportBtn">
+                        <i class="bi bi-download"></i> Export
+                    </button>
                 </div>
             </form>
         </div>
@@ -830,6 +832,12 @@
                     e.stopPropagation();
                     return false;
                 }
+            });
+
+            // Handle export form submission
+            $('#exportForm').on('submit', function() {
+                // Close the modal
+                $('#exportModal').modal('hide');
             });
         }
     });
