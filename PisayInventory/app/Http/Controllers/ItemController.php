@@ -100,24 +100,13 @@ class ItemController extends Controller
 }
 
 
-    public function import(Request $request)
+public function import(Request $request)
 {
     try {
         $request->validate([
             'excel_file' => 'required|mimes:xlsx,xls',
             'column_mapping' => 'required|array',
-            'column_mapping.ItemName' => 'required|string',  // Changed this line
-        ]);
-
-        // Add debug logging
-        Log::info('Import Request Data:', [
-            'column_mapping' => $request->column_mapping,
-            'default_values' => [
-                'classification' => $request->default_classification,
-                'unit' => $request->default_unit,
-                'stocks' => $request->default_stocks,
-                'reorder_point' => $request->default_reorder_point
-            ]
+            'column_mapping.ItemName' => 'required|string',
         ]);
 
         DB::beginTransaction();
@@ -133,15 +122,31 @@ class ItemController extends Controller
 
         Excel::import($import, $request->file('excel_file'));
         
+        $skippedRows = $import->getSkippedRows();
+        $successCount = $import->getSuccessCount(); // Add this method to your ItemsImport class
+                
         DB::commit();
-        return redirect()->route('items.index')->with('success', 'Items imported successfully!');
+
+        // Prepare the response message
+        $message = "Successfully imported {$successCount} items.";
+        
+        if (!empty($skippedRows)) {
+            $message .= "\n\nSkipped " . count($skippedRows) . " duplicate items.";
+        }
+
+        return response()->json([
+            'success' => true,
+            'import_result' => [
+                'message' => $message,
+                'skipped' => $skippedRows
+            ]
+        ]);
+
     } catch (\Exception $e) {
         DB::rollBack();
-        Log::error('Error importing items:', [
-            'error' => $e->getMessage(),
-            'column_mapping' => $request->column_mapping ?? null
-        ]);
-        return redirect()->back()->with('error', $e->getMessage());
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 422);
     }
 }
 
@@ -185,6 +190,12 @@ public function export(Request $request)
     {
         try {
             DB::beginTransaction();
+
+                    // Check for duplicates first
+        $duplicate = Item::checkDuplicate($request->ItemName, $request->Description)->first();
+        if ($duplicate) {
+            throw new \Exception('An item with the same name and description already exists.');
+        }
 
             $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
                 ->where('IsDeleted', false)
@@ -260,6 +271,14 @@ public function export(Request $request)
                 'id_type' => gettype($id),
                 'request_data' => $request->all()
             ]);
+
+                    // Check for duplicates, excluding the current item
+        $duplicate = Item::checkDuplicate($request->ItemName, $request->Description)
+        ->where('ItemId', '!=', $id)
+        ->first();
+    if ($duplicate) {
+        throw new \Exception('An item with the same name and description already exists.');
+    }
 
             // Clean and validate the ID
             $cleanId = is_numeric($id) ? $id : null;

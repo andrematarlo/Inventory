@@ -37,6 +37,8 @@
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
+
+
     <!-- Active Items Section -->
     <div id="activeItems">
         <div class="card mb-4">
@@ -380,7 +382,7 @@
     </div>
 </div>
 
-<!-- Add Export Modal -->
+<!-- Export Modal -->
 <div class="modal fade" 
      id="exportModal" 
      data-bs-backdrop="static" 
@@ -394,7 +396,7 @@
                 <h5 class="modal-title" id="exportModalLabel">Export Items</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('items.export') }}" method="POST">
+            <form action="{{ route('items.export') }}" method="POST" id="exportForm">
             @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -442,7 +444,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Export</button>
+                    <button type="submit" class="btn btn-primary" id="exportBtn">
+                        <i class="bi bi-download"></i> Export
+                    </button>
                 </div>
             </form>
         </div>
@@ -459,7 +463,30 @@
 
 @if($userPermissions && $userPermissions->CanDelete)
     @foreach($activeItems as $item)
-        @include('items.partials.delete-modal', ['item' => $item])
+        <!-- Delete Modal -->
+        <div class="modal fade" 
+             id="deleteModal{{ $item->ItemId }}"
+             data-bs-backdrop="static"
+             data-bs-keyboard="false"
+             tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-4">
+                        <div class="mb-4">
+                            <i class="bi bi-exclamation-circle text-warning" style="font-size: 3rem;"></i>
+                        </div>
+                        <h4 class="mb-3">Are you sure?</h4>
+                        <p class="mb-4">You won't be able to revert this!</p>
+                        <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
+                            @csrf
+                            @method('DELETE')
+                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">Yes, delete it!</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endforeach
 @endif
 @endsection
@@ -569,19 +596,25 @@
                 });
             });
 
-            // Handle form submission
+            // Replace your existing import form submission handler with this:
             $('#importForm').on('submit', function(e) {
                 e.preventDefault();
                 
                 // Check if file is selected
                 if (!$('#excel_file').val()) {
-                    alert('Please select an Excel file');
+                    Toast.fire({
+                        icon: 'error',
+                        title: 'Please select an Excel file'
+                    });
                     return;
                 }
 
                 // Check if required field (Name) is mapped
                 if (!$('select[name="column_mapping[ItemName]"]').val()) {
-                    alert('Please map the Name field');
+                    Toast.fire({
+                        icon: 'error',
+                        title: 'Please map the Name field'
+                    });
                     return;
                 }
 
@@ -592,18 +625,50 @@
                 const formData = new FormData(this);
                 
                 $.ajax({
-                    url: "{{ route('items.import') }}",
+                    url: $(this).attr('action'),
                     type: 'POST',
                     data: formData,
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        alert('Import successful!');
-                        window.location.reload();
+                        $('#importExcelModal').modal('hide');
+                        
+                        let message = '';
+                        if (response.import_result) {
+                            const successCount = parseInt(response.import_result.message.match(/\d+/)[0]);
+                            const skippedCount = response.import_result.skipped ? response.import_result.skipped.length : 0;
+                            
+                            message += 'Successfully imported ' + successCount + ' ' + (successCount === 1 ? 'item' : 'items') + '.' + ' ';
+                            
+                            if (skippedCount > 0) {
+                                message += '<br>Skipped ' + skippedCount + ' ' + (skippedCount === 1 ? 'item' : 'items') + ' ' + '(already exist in the system)' + ':<br><br>';
+                                
+                                message += '<div style="text-align: left; margin-left: 20px;">'; // Add div for left alignment with indent
+                                response.import_result.skipped.forEach(skip => {
+                                    message += `Row ${skip.row}: ${skip.itemName}` + 
+                                            (skip.description ? ` -- Description: ${skip.description}` : '') + 
+                                            '<br>';
+                                });
+                                message += '</div>';
+                            }
+                        }
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Import Successful!',
+                            html: message,
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#198754' // Bootstrap's btn-success color
+                        }).then(() => {
+                            window.location.reload();
+                        });
                     },
                     error: function(xhr) {
                         const errorMessage = xhr.responseJSON?.error || 'An error occurred during import';
-                        alert('Import failed: ' + errorMessage);
+                        Toast.fire({
+                            icon: 'error',
+                            title: errorMessage
+                        });
                         importBtn.prop('disabled', false).text('Import Data');
                     }
                 });
@@ -708,6 +773,24 @@
             });
         @endif
 
+        // Initialize delete modals with static backdrop
+        const deleteModals = document.querySelectorAll('[id^="deleteModal"]');
+        deleteModals.forEach(modal => {
+            const bsModal = new bootstrap.Modal(modal, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            // Prevent modal from closing when clicking outside
+            $(modal).on('mousedown', function(e) {
+                if ($(e.target).is('.modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+        });
+
         // Delete confirmation handler
         $('.delete-item').click(function(e) {
             e.preventDefault();
@@ -715,34 +798,8 @@
             const itemName = $(this).data('item-name');
             const stocksAvailable = $(this).data('stocks');
 
-            Swal.fire({
-                title: 'Delete Item?',
-                html: `Are you sure you want to delete item: <strong>${itemName}</strong>?<br>
-                      <div class="alert alert-warning mt-3">
-                          <i class="bi bi-exclamation-triangle me-2"></i>
-                          Current stock: ${stocksAvailable}
-                      </div>
-                      <p class="text-danger mt-3"><small>This action can be undone later.</small></p>`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = "{{ url('/inventory/items') }}/" + itemId;
-                    form.innerHTML = `
-                        @csrf
-                        @method('DELETE')
-                    `;
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
+            // Show the static delete modal instead of SweetAlert
+            $(`#deleteModal${itemId}`).modal('show');
         });
 
         // Restore confirmation handler
@@ -790,6 +847,12 @@
                     e.stopPropagation();
                     return false;
                 }
+            });
+
+            // Handle export form submission
+            $('#exportForm').on('submit', function() {
+                // Close the modal
+                $('#exportModal').modal('hide');
             });
         }
     });

@@ -3,12 +3,13 @@
 namespace App\Imports;
 
 use App\Models\Item;
-use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
-class ItemsImport implements ToModel, WithHeadingRow, WithValidation
+class ItemsImport implements ToCollection, WithHeadingRow, WithValidation
 {
     private $columnMapping;
     private $defaultClassification;
@@ -16,6 +17,8 @@ class ItemsImport implements ToModel, WithHeadingRow, WithValidation
     private $defaultStocks;
     private $defaultReorderPoint;
     private $createdById;
+    private $successCount = 0;
+    private $skippedRows = [];
 
     public function __construct($columnMapping, $defaultClassification, $defaultUnit, $defaultStocks, $defaultReorderPoint, $createdById)
     {
@@ -25,6 +28,66 @@ class ItemsImport implements ToModel, WithHeadingRow, WithValidation
         $this->defaultStocks = $defaultStocks;
         $this->defaultReorderPoint = $defaultReorderPoint;
         $this->createdById = $createdById;
+    }
+
+    public function collection(Collection $rows)
+    {
+        foreach ($rows as $index => $row) {
+            try {
+                $itemName = $row[$this->columnMapping['ItemName']] ?? null;
+                $description = $row[$this->columnMapping['Description']] ?? '';
+
+                // Check for duplicate
+                $duplicate = Item::checkDuplicate($itemName, $description)->first();
+
+                if ($duplicate) {
+                    // Store skipped row information
+                    $this->skippedRows[] = [
+                        'row' => $index + 2, // +2 because of 0-based index and header row
+                        'itemName' => $itemName,
+                        'description' => $description
+                    ];
+                    continue; // Skip this row
+                }
+
+                // Your existing item creation logic
+                $classificationId = $this->getClassificationId($row);
+                $unitId = $this->getUnitId($row);
+
+                Item::create([
+                    'ItemName' => $itemName,
+                    'Description' => $description,
+                    'ClassificationId' => $classificationId,
+                    'UnitOfMeasureId' => $unitId,
+                    'StocksAvailable' => (int)$this->getValue($row, 'StocksAvailable', $this->defaultStocks),
+                    'ReorderPoint' => (int)$this->getValue($row, 'ReorderPoint', $this->defaultReorderPoint),
+                    'CreatedById' => $this->createdById,
+                    'DateCreated' => now(),
+                    'IsDeleted' => false
+                ]);
+
+                $this->successCount++; // Increment the counter for successful imports
+
+            } catch (\Exception $e) {
+                Log::error('Row processing error:', [
+                    'row' => $index + 2,
+                    'error' => $e->getMessage(),
+                    'data' => $row
+                ]);
+                throw $e;
+            }
+        }
+    }
+        // Add this method to get the success count
+        public function getSuccessCount()
+        {
+            return $this->successCount;
+        }
+
+    // Add this method to get the report of skipped items
+    public function getSkippedRows()
+    {
+        return $this->skippedRows;
     }
 
     public function model(array $row)

@@ -277,7 +277,7 @@
         </div>
 
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <!-- Success alert removed as requested -->
     @endif
 
     @if(session('error'))
@@ -387,14 +387,11 @@
                             @forelse($deletedEmployees as $employee)
                                 <tr>
                                     <td class="text-center">
-                                        <form action="{{ route('employees.restore', ['employeeId' => $employee->EmployeeID]) }}" 
-                                              method="POST" 
-                                              class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-arrow-counterclockwise"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-success restore-employee" 
+                                               data-employee-id="{{ $employee->EmployeeID }}"
+                                               data-employee-name="{{ $employee->FirstName }} {{ $employee->LastName }}">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
                                     </td>
                                     <td>{{ $employee->FirstName }} {{ $employee->LastName }}</td>
                                     <td>{{ $employee->userAccount ? $employee->userAccount->Username : 'N/A' }}</td>
@@ -480,14 +477,20 @@
 </div>
 
 <!-- Export Modal -->
-<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="exportModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="exportModalLabel" 
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="exportModalLabel">Export Employees</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('employees.export') }}" method="POST">
+            <form action="{{ route('employees.export') }}" method="POST" id="exportForm">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1018,6 +1021,70 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Rest of your existing script...
+});
+
+// Add restore confirmation handler
+$('.restore-employee').click(function(e) {
+    e.preventDefault();
+    
+    const employeeId = $(this).data('employee-id');
+    const employeeName = $(this).data('employee-name');
+    
+    Swal.fire({
+        title: 'Restore Employee?',
+        html: `Are you sure you want to restore employee: <strong>${employeeName}</strong>?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, restore it!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Create and submit the form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/inventory/employees/${employeeId}/restore`;
+            
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken;
+            
+            form.appendChild(csrfInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+});
+
+$(document).ready(function() {
+    // Initialize export modal with static backdrop
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) {
+        const bsModal = new bootstrap.Modal(exportModal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        // Prevent modal from closing when clicking outside
+        $(exportModal).on('mousedown', function(e) {
+            if ($(e.target).is('.modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+
+        // Handle export form submission
+        $('#exportForm').on('submit', function() {
+            // Close the modal
+            $('#exportModal').modal('hide');
+        });
+    }
+
+    // ... rest of your existing code ...
 });
 
 </script>
