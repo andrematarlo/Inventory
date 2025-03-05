@@ -178,6 +178,35 @@
         font-size: 0.875rem;
     }
 
+    /* Hide any unwanted buttons in the actions column */
+    .actions-column .btn-success:not(.restore-supplier) {
+        display: none !important;
+    }
+    
+    /* Only show edit and delete buttons */
+    .actions-column .btn-group > *:not(.btn-primary):not(.btn-danger):not(form) {
+        display: none !important;
+    }
+    
+    /* Make sure there are no extra elements before the edit button */
+    .actions-column .d-flex > *:first-child:not(.btn-primary):not(form) {
+        display: none !important;
+    }
+
+    /* Remove the DataTables responsive plus sign control */
+    td.actions-column.dtr-control::before {
+        display: none !important;
+        content: none !important;
+        background: transparent !important;
+    }
+    
+    /* Alternative approach to remove the control altogether */
+    table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control::before,
+    table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control::before {
+        display: none !important;
+        content: none !important;
+    }
+
     /* Table container */
     .table-responsive {
         margin: 0;
@@ -364,7 +393,7 @@
         <h2>Suppliers Management</h2>
         @if($userPermissions && $userPermissions->CanAdd)
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-            <i class="bi bi-plus-lg"></i> Add Supplier
+            Add Supplier
         </button>
         @endif
     </div>
@@ -433,7 +462,7 @@
                             <tr>
                                 @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                 <td>
-                                    <div class="btn-group">
+                                    <div class="d-flex gap-2">
                                         @if($userPermissions->CanEdit)
                                         <button type="button" 
                                                 class="btn btn-primary" 
@@ -443,7 +472,7 @@
                                         </button>
                                         @endif
                                         @if($userPermissions->CanDelete)
-                                        <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST">
+                                        <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="button" 
@@ -635,7 +664,9 @@
         // Initialize DataTables
         const activeTable = $('#suppliersTable').DataTable({
             pageLength: 10,
-            responsive: true,
+            responsive: {
+                details: false  // Disable the details display functionality
+            },
             dom: '<"datatable-header"<"dataTables_length"l><"dataTables_filter"f>>' +
                  't' +
                  '<"datatable-footer"<"dataTables_info"i><"dataTables_paginate"p>>',
@@ -644,7 +675,10 @@
                 searchPlaceholder: "Search suppliers..."
             },
             columnDefs: [
-                { className: "actions-column", targets: 0, width: "100px", orderable: false },
+                { className: "actions-column", targets: 0, width: "100px", orderable: false, createdCell: function(td, cellData, rowData, row, col) {
+                    // Ensure no additional buttons are added to the actions column
+                    $(td).find('.btn-group').addClass('only-edit-delete');
+                }},
                 { className: "name-column", targets: 1 },
                 { className: "contact-person-column", targets: 2 },
                 { className: "contact-number-column", targets: 3 },
@@ -659,7 +693,7 @@
         const deletedTable = $('#deletedSuppliersTable').DataTable({
             pageLength: 10,
             responsive: {
-                details: false
+                details: false  // Disable the details display functionality
             },
             language: {
                 search: "Search:",
