@@ -477,14 +477,20 @@
 </div>
 
 <!-- Export Modal -->
-<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="exportModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="exportModalLabel" 
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="exportModalLabel">Export Employees</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('employees.export') }}" method="POST">
+            <form action="{{ route('employees.export') }}" method="POST" id="exportForm">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1051,6 +1057,34 @@ $('.restore-employee').click(function(e) {
             form.submit();
         }
     });
+});
+
+$(document).ready(function() {
+    // Initialize export modal with static backdrop
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) {
+        const bsModal = new bootstrap.Modal(exportModal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        // Prevent modal from closing when clicking outside
+        $(exportModal).on('mousedown', function(e) {
+            if ($(e.target).is('.modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+
+        // Handle export form submission
+        $('#exportForm').on('submit', function() {
+            // Close the modal
+            $('#exportModal').modal('hide');
+        });
+    }
+
+    // ... rest of your existing code ...
 });
 
 </script>

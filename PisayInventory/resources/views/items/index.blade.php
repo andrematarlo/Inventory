@@ -463,7 +463,30 @@
 
 @if($userPermissions && $userPermissions->CanDelete)
     @foreach($activeItems as $item)
-        @include('items.partials.delete-modal', ['item' => $item])
+        <!-- Delete Modal -->
+        <div class="modal fade" 
+             id="deleteModal{{ $item->ItemId }}"
+             data-bs-backdrop="static"
+             data-bs-keyboard="false"
+             tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-4">
+                        <div class="mb-4">
+                            <i class="bi bi-exclamation-circle text-warning" style="font-size: 3rem;"></i>
+                        </div>
+                        <h4 class="mb-3">Are you sure?</h4>
+                        <p class="mb-4">You won't be able to revert this!</p>
+                        <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
+                            @csrf
+                            @method('DELETE')
+                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">Yes, delete it!</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endforeach
 @endif
 @endsection
@@ -750,6 +773,24 @@
             });
         @endif
 
+        // Initialize delete modals with static backdrop
+        const deleteModals = document.querySelectorAll('[id^="deleteModal"]');
+        deleteModals.forEach(modal => {
+            const bsModal = new bootstrap.Modal(modal, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            // Prevent modal from closing when clicking outside
+            $(modal).on('mousedown', function(e) {
+                if ($(e.target).is('.modal')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+        });
+
         // Delete confirmation handler
         $('.delete-item').click(function(e) {
             e.preventDefault();
@@ -757,34 +798,8 @@
             const itemName = $(this).data('item-name');
             const stocksAvailable = $(this).data('stocks');
 
-            Swal.fire({
-                title: 'Delete Item?',
-                html: `Are you sure you want to delete item: <strong>${itemName}</strong>?<br>
-                      <div class="alert alert-warning mt-3">
-                          <i class="bi bi-exclamation-triangle me-2"></i>
-                          Current stock: ${stocksAvailable}
-                      </div>
-                      <p class="text-danger mt-3"><small>This action can be undone later.</small></p>`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = "{{ url('/inventory/items') }}/" + itemId;
-                    form.innerHTML = `
-                        @csrf
-                        @method('DELETE')
-                    `;
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
+            // Show the static delete modal instead of SweetAlert
+            $(`#deleteModal${itemId}`).modal('show');
         });
 
         // Restore confirmation handler
