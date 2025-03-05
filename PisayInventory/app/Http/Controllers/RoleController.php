@@ -1,20 +1,30 @@
 <?php
 
 namespace App\Http\Controllers;
-
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Role;
 use App\Models\RolePolicy;
-use App\Models\Module;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
 
 class RoleController extends Controller
 {
     public function getUserPermissions($module = null)
     {
         return parent::getUserPermissions('Roles');
+    }
+
+    public function checkModuleAccess($moduleName)
+    {
+        $userPermissions = parent::getUserPermissions($moduleName);
+        
+        if (!$userPermissions || !$userPermissions->CanView) {
+            abort(403, 'You do not have permission to access this module.');
+        }
+        
+        return $userPermissions;
     }
 
     public function index()
@@ -133,10 +143,10 @@ class RoleController extends Controller
                 $policy = RolePolicy::find($policyId);
                 if ($policy) {
                     $policy->update([
-                        'CanView' => isset($permissions['view']) && $permissions['view'] == 1,
-                        'CanAdd' => isset($permissions['add']) && $permissions['add'] == 1,
-                        'CanEdit' => isset($permissions['edit']) && $permissions['edit'] == 1,
-                        'CanDelete' => isset($permissions['delete']) && $permissions['delete'] == 1,
+                        'CanView' => isset($permissions['view']),
+                        'CanAdd' => isset($permissions['add']),
+                        'CanEdit' => isset($permissions['edit']),
+                        'CanDelete' => isset($permissions['delete']),
                         'DateModified' => now(),
                         'ModifiedById' => Auth::id()
                     ]);
@@ -256,10 +266,7 @@ class RoleController extends Controller
                 }
             }
 
-            return view('roles.policies', [
-                'policies' => collect($allPolicies),
-                'userPermissions' => $userPermissions
-            ]);
+            return view('roles.policies', ['policies' => collect($allPolicies)]);
         } catch (\Exception $e) {
             \Log::error('Policy loading failed: ' . $e->getMessage());
             return redirect()->back()
@@ -275,41 +282,18 @@ class RoleController extends Controller
             return redirect()->back()->with('error', 'You do not have permission to update role policies.');
         }
 
-        try {
-            $policy = RolePolicy::findOrFail($id);
-            
-            // Direct hard-coded update for testing
-            if ($request->has('view')) {
-                // Direct SQL update
-                $success = DB::statement("
-                    UPDATE role_policies 
-                    SET 
-                        CanView = ?, 
-                        CanAdd = ?, 
-                        CanEdit = ?, 
-                        CanDelete = ?,
-                        DateModified = NOW()
-                    WHERE RolePolicyId = ?
-                ", [
-                    $request->input('view') == 1 ? 1 : 0,
-                    $request->input('add') == 1 ? 1 : 0,
-                    $request->input('edit') == 1 ? 1 : 0,
-                    $request->input('delete') == 1 ? 1 : 0,
-                    $id
-                ]);
-                
-                if ($success) {
-                    return redirect()->route('roles.policies')
-                        ->with('success', 'Role policy updated successfully');
-                }
-            }
-            
-            return redirect()->route('roles.policies')
-                ->with('error', 'Failed to update role policy. No changes were made.');
-                
-        } catch (\Exception $e) {
-            return redirect()->route('roles.policies')
-                ->with('error', 'An error occurred: ' . $e->getMessage());
-        }
+        $policy = RolePolicy::findOrFail($id);
+        
+        $policy->update([
+            'CanView' => isset($request->permissions['view']),
+            'CanAdd' => isset($request->permissions['add']),
+            'CanEdit' => isset($request->permissions['edit']),
+            'CanDelete' => isset($request->permissions['delete']),
+            'DateModified' => now(),
+            'ModifiedById' => Auth::id()
+        ]);
+
+        return redirect()->route('roles.policies')
+            ->with('success', 'Role policy updated successfully');
     }
 } 
