@@ -120,7 +120,7 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
-                            <th class="text-center">Actions</th>
+                            <th>Actions</th>
                             <th>Name</th>
                             <th>Deleted By</th>
                             <th>Date Deleted</th>
@@ -129,15 +129,16 @@
                     <tbody>
                         @forelse($trashedClassifications as $classification)
                         <tr>
-                            <td class="text-center">
-                                {{-- Show restore button only if not Inventory Manager or Inventory Staff --}}
-                                @if(auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff')
-                                <form action="{{ route('classifications.restore', $classification->ClassificationId) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-success">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </button>
-                                </form>
+                            <td>
+                                @if($userPermissions && $userPermissions->CanDelete)
+                                <div class="btn-group btn-group-sm">
+                                    <form action="{{ route('classifications.restore', $classification->ClassificationId) }}" method="POST">
+                                        @csrf
+                                        <button type="button" class="btn btn-sm btn-success restore-btn">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Restore
+                                        </button>
+                                    </form>
+                                </div>
                                 @endif
                             </td>
                             <td>{{ $classification->ClassificationName }}</td>
@@ -196,20 +197,19 @@
     </div>
 </div>
 
-<!-- Restore Modal -->
-<div class="modal fade" 
-     id="restoreClassificationModal" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
-     tabindex="-1">
+<!-- Restore Confirmation Modal -->
+<div class="modal fade" id="restoreClassificationModal" tabindex="-1" aria-labelledby="restoreClassificationModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Restore Classification</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="restoreClassificationModalLabel">
+                    <i class="bi bi-arrow-counterclockwise"></i> Restore Classification
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to restore this classification?</p>
+                <p class="text-success mt-3"><small>This classification will be available in active records again.</small></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -350,7 +350,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle restore button click
-    const restoreButtons = document.querySelectorAll('.btn-success');
+    const restoreButtons = document.querySelectorAll('.restore-btn');
+    
     restoreButtons.forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
@@ -372,17 +373,19 @@ document.addEventListener('DOMContentLoaded', function() {
         tempDiv.innerHTML = formHTML;
         const form = tempDiv.firstChild;
         document.body.appendChild(form);
+        form.submit();
         
-        // Submit the form
-        form.submit().then(() => {
-            // Show success notification
-            Swal.fire({
-                title: 'Success!',
-                text: 'Classification has been restored successfully.',
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('restoreClassificationModal'));
+        modal.hide();
+        
+        // Show success message
+        Swal.fire({
+            icon: 'success',
+            title: 'Restored!',
+            text: 'Classification has been restored successfully.',
+            showConfirmButton: false,
+            timer: 1500
         });
     });
 });
