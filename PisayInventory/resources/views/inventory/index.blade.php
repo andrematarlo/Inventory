@@ -137,8 +137,8 @@
                         <tr>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    {{-- Show Stock Out button for everyone --}}
-                                    @if(!$inventory->IsDeleted)
+                                    {{-- Show Stock Out button only for users with Edit permission --}}
+                                    @if($userPermissions && $userPermissions->CanEdit)
                                         <button type="button" 
                                                 class="btn btn-sm btn-blue" 
                                                 data-bs-toggle="modal" 
@@ -147,8 +147,10 @@
                                             <i class="bi bi-box-arrow-right me-1"></i>
                                             Stock Out
                                         </button>
-                                        {{-- Show Delete button for admin or users with delete permission --}}
-                                        @if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanDelete))
+                                    @endif
+                                    
+                                    {{-- Show Delete button only for users with Delete permission --}}
+                                    @if($userPermissions && $userPermissions->CanDelete)
                                         <button type="button" 
                                                 class="btn btn-danger delete-inventory"
                                                 data-inventory-id="{{ $inventory->InventoryId }}"
@@ -156,18 +158,6 @@
                                             <i class="bi bi-trash me-1"></i>
                                             Delete
                                         </button>
-                                        @endif
-                                    @else
-                                        {{-- Show Restore button for admin or non-inventory staff --}}
-                                        @if(auth()->user()->role === 'Admin' || (auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff'))
-                                        <button type="button" 
-                                                class="btn btn-success restore-inventory"
-                                                data-inventory-id="{{ $inventory->InventoryId }}"
-                                                data-item-name="{{ $inventory->item->ItemName }}">
-                                            <i class="bi bi-arrow-counterclockwise me-1"></i>
-                                            Restore
-                                        </button>
-                                        @endif
                                     @endif
                                 </div>
                             </td>
@@ -269,29 +259,8 @@
                         <tr>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    {{-- Show Stock Out button for everyone --}}
-                                    @if(!$inventory->IsDeleted)
-                                        <button type="button" 
-                                                class="btn btn-sm btn-blue" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#stockOutModal{{ $inventory->InventoryId }}"
-                                                title="Stock Out">
-                                            <i class="bi bi-box-arrow-right me-1"></i>
-                                            Stock Out
-                                        </button>
-                                        {{-- Show Delete button for admin or users with delete permission --}}
-                                        @if(auth()->user()->role === 'Admin' || ($userPermissions && $userPermissions->CanDelete))
-                                        <button type="button" 
-                                                class="btn btn-danger delete-inventory"
-                                                data-inventory-id="{{ $inventory->InventoryId }}"
-                                                data-item-name="{{ $inventory->item->ItemName }}">
-                                            <i class="bi bi-trash me-1"></i>
-                                            Delete
-                                        </button>
-                                        @endif
-                                    @else
-                                        {{-- Show Restore button for admin or non-inventory staff --}}
-                                        @if(auth()->user()->role === 'Admin' || (auth()->user()->role !== 'Inventory Manager' && auth()->user()->role !== 'Inventory Staff'))
+                                    {{-- Show Restore button only for users with Edit permission --}}
+                                    @if($userPermissions && $userPermissions->CanEdit)
                                         <button type="button" 
                                                 class="btn btn-success restore-inventory"
                                                 data-inventory-id="{{ $inventory->InventoryId }}"
@@ -299,7 +268,6 @@
                                             <i class="bi bi-arrow-counterclockwise me-1"></i>
                                             Restore
                                         </button>
-                                        @endif
                                     @endif
                                 </div>
                             </td>
@@ -408,6 +376,7 @@
     </div>
 </div>
 
+@if($userPermissions && $userPermissions->CanEdit)
 <div class="modal fade" id="stockOutModal{{ $inventory->InventoryId }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -440,15 +409,18 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-warning">
-                        <i class="bi bi-box-arrow-right"></i> Stock Out
+                        <i class="bi bi-box-arrow-right me-1"></i>
+                        Submit Stock Out
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+@endif
 
 <!-- Delete Modal Template -->
+@if($userPermissions && $userPermissions->CanDelete)
 <div class="modal fade" 
      id="deleteInventoryModal" 
      data-bs-backdrop="static" 
@@ -471,8 +443,10 @@
         </div>
     </div>
 </div>
+@endif
 
 <!-- Restore Modal Template -->
+@if($userPermissions && $userPermissions->CanEdit)
 <div class="modal fade" 
      id="restoreInventoryModal" 
      data-bs-backdrop="static" 
@@ -494,6 +468,7 @@
         </div>
     </div>
 </div>
+@endif
 
 @endforeach
 
@@ -505,6 +480,7 @@
         </div>
     @endforeach
 @endif
+
 @endsection
 
 @section('scripts')
@@ -521,78 +497,47 @@
 <!-- Add SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-{{-- Handle Session Messages --}}
 <script>
-    // Check for success message
-    const successMessage = '{{ Session::get('success') }}';
-    const errorMessage = '{{ Session::get('error') }}';
+// Store session messages in variables
+const successMessage = "{{ Session::has('success') ? Session::get('success') : '' }}";
+const errorMessage = "{{ Session::has('error') ? Session::get('error') : '' }}";
 
-    if (successMessage) {
-        Swal.fire({
-            title: 'Success!',
-            text: successMessage,
-            icon: 'success',
-            timer: 3000,
-            timerProgressBar: true,
-            showConfirmButton: false
-        });
-    }
-
-    if (errorMessage) {
-        Swal.fire({
-            title: 'Error!',
-            text: errorMessage,
-            icon: 'error',
-            confirmButtonColor: '#dc3545'
-        });
-    }
-</script>
-
-<script>
 $(document).ready(function() {
-    // Get the elements
-    const activeRecordsBtn = $('#activeRecords');
-    const deletedRecordsBtn = $('#deletedRecords');
-    const activeRecordsCard = $('#activeRecordsCard');
-    const deletedRecordsCard = $('#deletedRecordsCard');
+    // Initialize DataTable for inventory
+    $('#inventoryTable').DataTable({
+        responsive: true,
+        order: [[7, 'desc']] // Order by date created by default
+    });
 
-    // Initialize - show active records by default
-    activeRecordsCard.show();
-    deletedRecordsCard.hide();
-    activeRecordsBtn.addClass('btn-primary').removeClass('btn-outline-primary');
-    deletedRecordsBtn.addClass('btn-outline-danger').removeClass('btn-danger');
+    // Initialize deleted records table if it exists
+    if ($('#deletedInventoryTable').length) {
+        $('#deletedInventoryTable').DataTable({
+            responsive: true,
+            order: [[11, 'desc']] // Order by date deleted
+        });
+    }
 
     // Toggle between active and deleted records
+    const activeRecordsBtn = $('#activeRecords');
+    const deletedRecordsBtn = $('#deletedRecords');
+    const activeTable = $('#inventoryTableWrapper');
+    const deletedTable = $('#deletedInventoryTableWrapper');
+
+    // Hide deleted records by default
+    deletedTable.hide();
+
     activeRecordsBtn.click(function() {
-        activeRecordsCard.show();
-        deletedRecordsCard.hide();
+        activeTable.show();
+        deletedTable.hide();
         activeRecordsBtn.removeClass('btn-outline-primary').addClass('btn-primary');
         deletedRecordsBtn.removeClass('btn-danger').addClass('btn-outline-danger');
     });
 
     deletedRecordsBtn.click(function() {
-        activeRecordsCard.hide();
-        deletedRecordsCard.show();
-        deletedRecordsBtn.removeClass('btn-outline-danger').addClass('btn-danger');
+        activeTable.hide();
+        deletedTable.show();
         activeRecordsBtn.removeClass('btn-primary').addClass('btn-outline-primary');
-    });
-
-    // Initialize all modals with static backdrop
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        const bsModal = new bootstrap.Modal(modal, {
-            backdrop: 'static',
-            keyboard: false
-        });
-
-        // Prevent modal from closing when clicking outside
-        $(modal).on('mousedown', function(e) {
-            if ($(e.target).is('.modal')) {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            }
-        });
+        deletedRecordsBtn.removeClass('btn-outline-danger').addClass('btn-danger');
     });
 
     // Delete confirmation handler
@@ -628,58 +573,53 @@ $(document).ready(function() {
         form.submit();
     });
 
-    // Restore confirmation handler
+    // Restore inventory handler
     $('.restore-inventory').click(function(e) {
         e.preventDefault();
+        
         const inventoryId = $(this).data('inventory-id');
         const itemName = $(this).data('item-name');
         
-        // Update modal content
-        $('#restoreInventoryModal .modal-body p').html(
-            `Are you sure you want to restore the inventory record for: <strong>${itemName}</strong>?`
-        );
-        
-        // Store the ID for use in confirmation
-        $('#confirmRestoreBtn').attr('data-inventory-id', inventoryId);
-        
-        // Show the modal
-        const restoreModal = new bootstrap.Modal(document.getElementById('restoreInventoryModal'));
-        restoreModal.show();
+        // Confirm restore
+        Swal.fire({
+            title: 'Restore Inventory?',
+            html: `Are you sure you want to restore the inventory record for: <strong>${itemName}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, restore it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Create and submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ route('inventory.index') }}/" + inventoryId + "/restore";
+                form.innerHTML = `@csrf`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
     });
-
-    // Handle restore confirmation
-    $('#confirmRestoreBtn').click(function() {
-        const inventoryId = $(this).attr('data-inventory-id');
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = "{{ route('inventory.index') }}/" + inventoryId + "/restore";
-        form.innerHTML = `
-            @csrf
-            @method('PUT')
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    });
-
-    // Success message handling
-    @if(Session::has('success'))
+    
+    // Display success/error messages if they exist
+    if (successMessage) {
         Swal.fire({
             icon: 'success',
             title: 'Success!',
-            text: "{{ Session::get('success') }}",
-            showConfirmButton: false,
-            timer: 1500
+            text: successMessage,
+            confirmButtonColor: '#28a745'
         });
-    @endif
-
-    @if(Session::has('error'))
+    }
+    
+    if (errorMessage) {
         Swal.fire({
             icon: 'error',
             title: 'Error!',
-            text: "{{ Session::get('error') }}",
+            text: errorMessage,
             confirmButtonColor: '#dc3545'
         });
-    @endif
+    }
 });
 </script>
 @endsection

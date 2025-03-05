@@ -42,12 +42,14 @@
                                 </td>
                                 <td>
                                     <div class="action-buttons">
+                                        @if(isset($userPermissions) && $userPermissions->CanEdit)
                                         <button type="button" 
                                                 class="btn btn-sm btn-primary" 
                                                 onclick="openPolicyModal('{{ $policy->RolePolicyId }}')"
                                                 title="Edit">
                                             <i class="bi bi-pencil"></i>  Edit
                                         </button>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -64,6 +66,7 @@
 </div>
 
 <!-- Edit Policy Modals -->
+@if(isset($userPermissions) && $userPermissions->CanEdit)
 @foreach($policies as $policy)
     <div class="modal fade" id="editPolicyModal{{ $policy->RolePolicyId }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -75,34 +78,51 @@
                 <form action="{{ route('roles.policies.update', $policy->RolePolicyId) }}" method="POST">
                     @csrf
                     @method('PUT')
+                    <input type="hidden" name="policy_id" value="{{ $policy->RolePolicyId }}">
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label d-block">Permissions</label>
+                            
+                            <!-- VIEW PERMISSION -->
                             <div class="form-check form-check-inline">
+                                <input type="hidden" name="view" value="0">
                                 <input type="checkbox" class="form-check-input" 
                                        id="canView{{ $policy->RolePolicyId }}" 
-                                       name="permissions[view]" 
+                                       name="view" 
+                                       value="1"
                                        {{ $policy->CanView ? 'checked' : '' }}>
                                 <label class="form-check-label" for="canView{{ $policy->RolePolicyId }}">View</label>
                             </div>
+                            
+                            <!-- ADD PERMISSION -->
                             <div class="form-check form-check-inline">
+                                <input type="hidden" name="add" value="0">
                                 <input type="checkbox" class="form-check-input" 
                                        id="canAdd{{ $policy->RolePolicyId }}" 
-                                       name="permissions[add]" 
+                                       name="add" 
+                                       value="1"
                                        {{ $policy->CanAdd ? 'checked' : '' }}>
                                 <label class="form-check-label" for="canAdd{{ $policy->RolePolicyId }}">Add</label>
                             </div>
+                            
+                            <!-- EDIT PERMISSION -->
                             <div class="form-check form-check-inline">
+                                <input type="hidden" name="edit" value="0">
                                 <input type="checkbox" class="form-check-input" 
                                        id="canEdit{{ $policy->RolePolicyId }}" 
-                                       name="permissions[edit]" 
+                                       name="edit" 
+                                       value="1"
                                        {{ $policy->CanEdit ? 'checked' : '' }}>
                                 <label class="form-check-label" for="canEdit{{ $policy->RolePolicyId }}">Edit</label>
                             </div>
+                            
+                            <!-- DELETE PERMISSION -->
                             <div class="form-check form-check-inline">
+                                <input type="hidden" name="delete" value="0">
                                 <input type="checkbox" class="form-check-input" 
                                        id="canDelete{{ $policy->RolePolicyId }}" 
-                                       name="permissions[delete]" 
+                                       name="delete" 
+                                       value="1"
                                        {{ $policy->CanDelete ? 'checked' : '' }}>
                                 <label class="form-check-label" for="canDelete{{ $policy->RolePolicyId }}">Delete</label>
                             </div>
@@ -117,6 +137,7 @@
         </div>
     </div>
 @endforeach
+@endif
 @endsection
 
 @section('scripts')
@@ -137,9 +158,38 @@
     });
 
     function openPolicyModal(policyId) {
-        var modalId = '#editPolicyModal' + policyId;
-        var modal = new bootstrap.Modal(document.querySelector(modalId));
-        modal.show();
+        // Check if user has edit permission (handled server-side)
+        // If the button is visible, user has permission
+        try {
+            var modalId = '#editPolicyModal' + policyId;
+            var modalElement = document.querySelector(modalId);
+            
+            if (!modalElement) {
+                console.error('Modal not found:', modalId);
+                alert('Error: Could not find the edit modal. Please refresh the page and try again.');
+                return;
+            }
+            
+            var modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        } catch (error) {
+            console.error('Error opening modal:', error);
+            alert('An error occurred while opening the modal. Please try again.');
+        }
     }
 </script>
+
+@if(!isset($userPermissions) || !$userPermissions->CanEdit)
+<script>
+    // Override the openPolicyModal function for users without permission
+    function openPolicyModal(policyId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Access Denied',
+            text: 'You do not have permission to edit role policies.'
+        });
+    }
+</script>
+@endif
+
 @endsection 

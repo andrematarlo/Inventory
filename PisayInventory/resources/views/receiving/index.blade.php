@@ -49,6 +49,7 @@
         <h2>Receiving Management</h2>
     </div>
 
+    @if($userPermissions->CanView)
     <div class="mb-4">
         <button type="button" class="btn btn-primary" id="activeRecordsBtn">Active Records</button>
         <button type="button" class="btn btn-warning" id="pendingRecordsBtn">Pending Records</button>
@@ -62,8 +63,10 @@
             <i class="bi bi-archive"></i> Show Deleted Records
         </button>
     </div>
+    @endif
 
     <div class="card">
+        @if($userPermissions->CanView)
         <!-- Active Receiving Records Section -->
         <div id="activeReceiving" class="card-body">
             <div class="table-responsive">
@@ -87,17 +90,22 @@
                         <tr>
                             <td>
                                 <div class="btn-group" role="group">
+                                    @if($userPermissions->CanView)
                                     <a href="{{ route('receiving.show', $record->ReceivingID) }}" 
-                                       class="btn btn-sm btn-blue" 
+                                       class="btn btn-sm btn-primary" 
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    @endif
+                                    
+                                    @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
                                             onclick="deleteReceivingRecord('{{ $record->ReceivingID }}')"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
+                                    @endif
                                 </div>
                             </td>
                             <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
@@ -147,16 +155,21 @@
                         <tr>
                             <td>
                                 <div class="btn-group" role="group">
+                                    @if($userPermissions->CanEdit)
                                     <a href="{{ route('receiving.create', ['po_id' => $record->PurchaseOrderID]) }}" 
                                        class="btn btn-sm btn-success" 
                                        title="Create Receiving">
                                         <i class="bi bi-plus-circle"></i>
                                     </a>
+                                    @endif
+                                    
+                                    @if($userPermissions->CanView)
                                     <a href="{{ route('purchases.show', $record->PurchaseOrderID) }}" 
-                                       class="btn btn-sm btn-blue" 
+                                       class="btn btn-sm btn-primary" 
                                        title="View PO">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    @endif
                                 </div>
                             </td>
                             <td>{{ $record->PONumber }}</td>
@@ -209,16 +222,21 @@
                         <tr>
                             <td>
                                 <div class="btn-group" role="group">
+                                    @if($userPermissions->CanEdit)
                                     <a href="{{ route('receiving.create', ['po_id' => $record->purchaseOrder->PurchaseOrderID]) }}" 
                                        class="btn btn-sm btn-success" 
                                        title="Continue Receiving">
-                                        <i class="bi bi-plus-circle"></i> Continue
+                                        <i class="bi bi-arrow-repeat"></i>
                                     </a>
+                                    @endif
+                                    
+                                    @if($userPermissions->CanView)
                                     <a href="{{ route('receiving.show', $record->ReceivingID) }}" 
-                                       class="btn btn-sm btn-blue" 
+                                       class="btn btn-sm btn-primary" 
                                        title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    @endif
                                 </div>
                             </td>
                             <td>{{ $record->purchaseOrder->PONumber }}</td>
@@ -269,11 +287,13 @@
                         @forelse($deletedRecords as $record)
                         <tr>
                             <td>
+                                @if($userPermissions->CanEdit)
                                 <button type="button" class="btn btn-sm btn-success" 
                                         onclick="restoreReceivingRecord('{{ $record->ReceivingID }}')"
                                         title="Restore">
                                     <i class="bi bi-arrow-counterclockwise"></i>
                                 </button>
+                                @endif
                             </td>
                             <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
                             <td>{{ $record->purchaseOrder->supplier->CompanyName ?? 'N/A' }}</td>
@@ -300,6 +320,14 @@
                 </table>
             </div>
         </div>
+        @else
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle-fill"></i> 
+                You do not have permission to view receiving records.
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 
@@ -320,7 +348,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                @if($userPermissions->CanDelete)
                 <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                @endif
             </div>
         </div>
     </div>

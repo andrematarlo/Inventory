@@ -387,11 +387,13 @@
                             @forelse($deletedEmployees as $employee)
                                 <tr>
                                     <td class="text-center">
+                                        @if($userPermissions && $userPermissions->CanEdit)
                                         <button type="button" class="btn btn-sm btn-success restore-employee" 
                                                data-employee-id="{{ $employee->EmployeeID }}"
                                                data-employee-name="{{ $employee->FirstName }} {{ $employee->LastName }}">
                                             <i class="bi bi-arrow-counterclockwise"></i>
                                         </button>
+                                        @endif
                                     </td>
                                     <td>{{ $employee->FirstName }} {{ $employee->LastName }}</td>
                                     <td>{{ $employee->userAccount ? $employee->userAccount->Username : 'N/A' }}</td>
@@ -436,7 +438,9 @@
                         <label for="excelFileInput" class="form-label">Select Excel File</label>
                         <input type="file" class="form-control" id="excelFileInput" accept=".xlsx, .xls">
                     </div>
+                    @if($userPermissions && $userPermissions->CanAdd)
                     <button type="button" id="readExcelBtn" class="btn btn-primary">Preview Columns</button>
+                    @endif
                 </div>
                 
                 <!-- Step 2: Column Mapping -->
@@ -467,7 +471,9 @@
                             <label for="roleColumn" class="form-label">Role</label>
                             <select id="roleColumn" name="column_mapping[Role]" class="form-select" required></select>
                         </div>
+                        @if($userPermissions && $userPermissions->CanAdd)
                         <button type="submit" class="btn btn-success">Import Data</button>
+                        @endif
                         <button type="button" class="btn btn-secondary" id="backToStep1Btn">Back</button>
                     </form>
                 </div>
@@ -538,7 +544,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    @if($userPermissions && $userPermissions->CanAdd)
                     <button type="submit" class="btn btn-primary">Export</button>
+                    @endif
                 </div>
             </form>
         </div>
@@ -614,7 +622,9 @@
                     @csrf
                     @method('DELETE')
                     <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                    @if($userPermissions && $userPermissions->CanDelete)
                     <button type="submit" class="btn btn-danger">Yes, delete it!</button>
+                    @endif
                 </form>
             </div>
         </div>

@@ -51,8 +51,11 @@ class InventoryController extends Controller
 
             // Get user permissions
             $userPermissions = $this->getUserPermissions();
+            
+            // Initialize empty policies collection to prevent undefined variable error
+            $policies = collect([]);
 
-            return view('inventory.index', compact('inventories', 'trashedInventories', 'userPermissions'));
+            return view('inventory.index', compact('inventories', 'trashedInventories', 'userPermissions', 'policies'));
 
         } catch (\Exception $e) {
             Log::error('Error loading inventory: ' . $e->getMessage());
