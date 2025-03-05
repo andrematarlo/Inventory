@@ -55,33 +55,41 @@
                                         <td>{{ $policy->Module }}</td>
                                         <td class="text-center">
                                             <div class="form-check d-flex justify-content-center">
+                                                <input type="hidden" name="policies[{{ $policy->RolePolicyId }}][view]" value="0">
                                                 <input type="checkbox" 
                                                        class="form-check-input" 
                                                        name="policies[{{ $policy->RolePolicyId }}][view]" 
+                                                       value="1"
                                                        {{ $policy->CanView ? 'checked' : '' }}>
                                             </div>
                                         </td>
                                         <td class="text-center">
                                             <div class="form-check d-flex justify-content-center">
+                                                <input type="hidden" name="policies[{{ $policy->RolePolicyId }}][add]" value="0">
                                                 <input type="checkbox" 
                                                        class="form-check-input" 
                                                        name="policies[{{ $policy->RolePolicyId }}][add]" 
+                                                       value="1"
                                                        {{ $policy->CanAdd ? 'checked' : '' }}>
                                             </div>
                                         </td>
                                         <td class="text-center">
                                             <div class="form-check d-flex justify-content-center">
+                                                <input type="hidden" name="policies[{{ $policy->RolePolicyId }}][edit]" value="0">
                                                 <input type="checkbox" 
                                                        class="form-check-input" 
                                                        name="policies[{{ $policy->RolePolicyId }}][edit]" 
+                                                       value="1"
                                                        {{ $policy->CanEdit ? 'checked' : '' }}>
                                             </div>
                                         </td>
                                         <td class="text-center">
                                             <div class="form-check d-flex justify-content-center">
+                                                <input type="hidden" name="policies[{{ $policy->RolePolicyId }}][delete]" value="0">
                                                 <input type="checkbox" 
                                                        class="form-check-input" 
                                                        name="policies[{{ $policy->RolePolicyId }}][delete]" 
+                                                       value="1"
                                                        {{ $policy->CanDelete ? 'checked' : '' }}>
                                             </div>
                                         </td>

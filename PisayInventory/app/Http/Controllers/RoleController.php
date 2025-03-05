@@ -133,10 +133,10 @@ class RoleController extends Controller
                 $policy = RolePolicy::find($policyId);
                 if ($policy) {
                     $policy->update([
-                        'CanView' => isset($permissions['view']),
-                        'CanAdd' => isset($permissions['add']),
-                        'CanEdit' => isset($permissions['edit']),
-                        'CanDelete' => isset($permissions['delete']),
+                        'CanView' => isset($permissions['view']) && $permissions['view'] == 1,
+                        'CanAdd' => isset($permissions['add']) && $permissions['add'] == 1,
+                        'CanEdit' => isset($permissions['edit']) && $permissions['edit'] == 1,
+                        'CanDelete' => isset($permissions['delete']) && $permissions['delete'] == 1,
                         'DateModified' => now(),
                         'ModifiedById' => Auth::id()
                     ]);
