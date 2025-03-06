@@ -27,12 +27,6 @@ class EmployeeController extends Controller
     public function index()
     {
         try {
-            $userPermissions = $this->getUserPermissions();
-            
-            if (!$userPermissions || !$userPermissions->CanView) {
-                return redirect()->back()->with('error', 'You do not have permission to view employees.');
-            }
-
             $activeEmployees = Employee::with(['createdBy', 'roles'])
                 ->where('IsDeleted', false)
                 ->orderBy('LastName')
@@ -46,11 +40,19 @@ class EmployeeController extends Controller
             // Get roles for the import modal
             $roles = Role::where('IsDeleted', false)->get();
 
+            // Add default permissions
+            $userPermissions = (object)[
+                'CanView' => true,
+                'CanAdd' => true,
+                'CanEdit' => true,
+                'CanDelete' => true
+            ];
+
             return view('employees.index', [
                 'activeEmployees' => $activeEmployees,
                 'deletedEmployees' => $deletedEmployees,
-                'userPermissions' => $userPermissions,
-                'roles' => $roles
+                'roles' => $roles,
+                'userPermissions' => $userPermissions
             ]);
 
         } catch (\Exception $e) {
@@ -62,15 +64,6 @@ class EmployeeController extends Controller
     public function import(Request $request)
     {
         try {
-            // First check permissions
-            $userPermissions = $this->getUserPermissions();
-            if (!$userPermissions || !$userPermissions->CanAdd) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'You do not have permission to import employees.'
-                ], 403);
-            }
-
             // Validate request
             $request->validate([
                 'file' => 'required|mimes:xlsx,xls',
@@ -179,24 +172,24 @@ class EmployeeController extends Controller
     }
 
     public function export(Request $request)
-{
-    try {
-        $request->validate([
-            'format' => 'required|in:xlsx,csv',
-            'fields' => 'required|array|min:1',
-            'fields.*' => 'required|in:FirstName,LastName,Email,Gender,Role,Address',
-            'employees_status' => 'required|in:active,deleted,all'
-        ]);
+    {
+        try {
+            $request->validate([
+                'format' => 'required|in:xlsx,csv',
+                'fields' => 'required|array|min:1',
+                'fields.*' => 'required|in:FirstName,LastName,Email,Gender,Role,Address',
+                'employees_status' => 'required|in:active,deleted,all'
+            ]);
 
-        $export = new EmployeesExport($request->fields, $request->employees_status);
-        $filename = 'employees_' . date('Y-m-d_His') . '.' . $request->format;
+            $export = new EmployeesExport($request->fields, $request->employees_status);
+            $filename = 'employees_' . date('Y-m-d_His') . '.' . $request->format;
 
-        return Excel::download($export, $filename);
-    } catch (\Exception $e) {
-        Log::error('Error exporting employees: ' . $e->getMessage());
-        return back()->with('error', 'Error exporting employees: ' . $e->getMessage());
+            return Excel::download($export, $filename);
+        } catch (\Exception $e) {
+            Log::error('Error exporting employees: ' . $e->getMessage());
+            return back()->with('error', 'Error exporting employees: ' . $e->getMessage());
+        }
     }
-}
 
     public function create()
     {

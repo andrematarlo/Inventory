@@ -17,6 +17,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ReceivingController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\RolesController;
+use App\Http\Controllers\StudentsController;
 
 // Default route to inventory
 Route::get('/', function () {
@@ -43,6 +44,12 @@ Route::middleware('auth')->group(function () {
 
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Students Management
+        Route::get('students/trash', [StudentsController::class, 'trash'])->name('students.trash');
+        Route::post('students/{id}/restore', [StudentsController::class, 'restore'])->name('students.restore');
+        Route::delete('students/{id}/force-delete', [StudentsController::class, 'forceDelete'])->name('students.force-delete');
+        Route::resource('students', StudentsController::class);
 
         // Items Management
         Route::resource('items', ItemController::class);

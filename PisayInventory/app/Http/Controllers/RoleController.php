@@ -34,7 +34,11 @@ class RoleController extends Controller
         
         // Check if user has View permission
         if (!$userPermissions || !$userPermissions->CanView) {
-            return redirect()->back()->with('error', 'You do not have permission to view roles.');
+            return redirect()->route('dashboard')->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Access Denied',
+                'message' => 'You do not have permission to view roles.'
+            ]);
         }
 
         $roles = Role::where('IsDeleted', false)
@@ -77,7 +81,7 @@ class RoleController extends Controller
                 DB::table('role_policies')->insert([
                     'RoleId' => $roleId,
                     'ModuleId' => $module->ModuleId,
-                    'Module' => $module->ModuleName,  // Use ModuleName from modules table
+                    'Module' => $module->ModuleName,
                     'CanView' => true,
                     'CanAdd' => true,
                     'CanEdit' => true,
@@ -88,13 +92,18 @@ class RoleController extends Controller
                 ]);
             }
 
-            return redirect()->route('roles.index')
-                ->with('success', 'Role created successfully with all modules assigned');
+            return redirect()->route('roles.index')->with('sweet_alert', [
+                'type' => 'success',
+                'title' => 'Success',
+                'message' => 'Role created successfully with all modules assigned'
+            ]);
         } catch (\Exception $e) {
             \Log::error('Role creation failed: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'Failed to create role: ' . $e->getMessage())
-                ->withInput();
+            return redirect()->back()->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Error',
+                'message' => 'Failed to create role: ' . $e->getMessage()
+            ])->withInput();
         }
     }
 
@@ -102,11 +111,12 @@ class RoleController extends Controller
     {
         $userPermissions = $this->getUserPermissions();
         
-        // Debug line
-        \Log::info('Edit Permissions: ', ['canEdit' => $userPermissions ? $userPermissions->CanEdit : false]);
-        
         if (!$userPermissions || !$userPermissions->CanEdit) {
-            return redirect()->back()->with('error', 'You do not have permission to edit roles.');
+            return redirect()->back()->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Access Denied',
+                'message' => 'You do not have permission to edit roles.'
+            ]);
         }
         
         $role = Role::with('policies')->findOrFail($id);
@@ -117,11 +127,12 @@ class RoleController extends Controller
     {
         $userPermissions = $this->getUserPermissions();
         
-        // Debug line
-        \Log::info('Update Permissions: ', ['canEdit' => $userPermissions ? $userPermissions->CanEdit : false]);
-        
         if (!$userPermissions || !$userPermissions->CanEdit) {
-            return redirect()->back()->with('error', 'You do not have permission to update roles.');
+            return redirect()->back()->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Access Denied',
+                'message' => 'You do not have permission to update roles.'
+            ]);
         }
         
         $role = Role::findOrFail($id);
@@ -137,16 +148,16 @@ class RoleController extends Controller
         $role->ModifiedById = Auth::id();
         $role->save();
 
-        // Update policies with null check
+        // Update policies
         if (!empty($request->policies) && is_array($request->policies)) {
             foreach ($request->policies as $policyId => $permissions) {
                 $policy = RolePolicy::find($policyId);
                 if ($policy) {
                     $policy->update([
-                        'CanView' => isset($permissions['view']),
-                        'CanAdd' => isset($permissions['add']),
-                        'CanEdit' => isset($permissions['edit']),
-                        'CanDelete' => isset($permissions['delete']),
+                        'CanView' => isset($permissions['view']) && $permissions['view'] == "1",
+                        'CanAdd' => isset($permissions['add']) && $permissions['add'] == "1",
+                        'CanEdit' => isset($permissions['edit']) && $permissions['edit'] == "1",
+                        'CanDelete' => isset($permissions['delete']) && $permissions['delete'] == "1",
                         'DateModified' => now(),
                         'ModifiedById' => Auth::id()
                     ]);
@@ -154,7 +165,11 @@ class RoleController extends Controller
             }
         }
 
-        return redirect()->route('roles.index')->with('success', 'Role updated successfully');
+        return redirect()->route('roles.index')->with('sweet_alert', [
+            'type' => 'success',
+            'title' => 'Success',
+            'message' => 'Role updated successfully'
+        ]);
     }
 
     public function destroy($id)
@@ -166,8 +181,11 @@ class RoleController extends Controller
         $role->DeletedById = Auth::id();
         $role->save();
 
-        return redirect()->route('roles.index')
-            ->with('success', 'Role deleted successfully');
+        return redirect()->route('roles.index')->with('sweet_alert', [
+            'type' => 'success',
+            'title' => 'Success',
+            'message' => 'Role deleted successfully'
+        ]);
     }
 
     public function restore($id)
@@ -187,12 +205,19 @@ class RoleController extends Controller
             ]);
 
             DB::commit();
-            return redirect()->route('roles.index')
-                ->with('success', 'Role restored successfully');
+            return redirect()->route('roles.index')->with('sweet_alert', [
+                'type' => 'success',
+                'title' => 'Success',
+                'message' => 'Role restored successfully'
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Role restore failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to restore role: ' . $e->getMessage());
+            return back()->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Error',
+                'message' => 'Failed to restore role: ' . $e->getMessage()
+            ]);
         }
     }
 
@@ -201,7 +226,11 @@ class RoleController extends Controller
         // Add permission checking
         $userPermissions = $this->getUserPermissions();
         if (!$userPermissions || !$userPermissions->CanView) {
-            return redirect()->back()->with('error', 'You do not have permission to view role policies.');
+            return redirect()->route('dashboard')->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Access Denied',
+                'message' => 'You do not have permission to view role policies.'
+            ]);
         }
 
         try {
@@ -266,20 +295,29 @@ class RoleController extends Controller
                 }
             }
 
-            return view('roles.policies', ['policies' => collect($allPolicies)]);
+            return view('roles.policies', [
+                'policies' => collect($allPolicies),
+                'userPermissions' => $userPermissions
+            ]);
         } catch (\Exception $e) {
             \Log::error('Policy loading failed: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'Failed to load role policies: ' . $e->getMessage());
+            return redirect()->back()->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Error',
+                'message' => 'Failed to load role policies: ' . $e->getMessage()
+            ]);
         }
     }
 
     public function updatePolicy(Request $request, $id)
     {
-        // Add permission checking
         $userPermissions = $this->getUserPermissions();
         if (!$userPermissions || !$userPermissions->CanEdit) {
-            return redirect()->back()->with('error', 'You do not have permission to update role policies.');
+            return redirect()->back()->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Access Denied',
+                'message' => 'You do not have permission to update role policies.'
+            ]);
         }
 
         $policy = RolePolicy::findOrFail($id);
@@ -293,7 +331,10 @@ class RoleController extends Controller
             'ModifiedById' => Auth::id()
         ]);
 
-        return redirect()->route('roles.policies')
-            ->with('success', 'Role policy updated successfully');
+        return redirect()->route('roles.policies')->with('sweet_alert', [
+            'type' => 'success',
+            'title' => 'Success',
+            'message' => 'Role policy updated successfully'
+        ]);
     }
 } 
