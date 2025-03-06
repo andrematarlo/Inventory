@@ -48,8 +48,8 @@
                             <td>
                                 <div class="btn-group" role="group">
                                     @if($userPermissions->CanEdit)
-                                    <a href="{{ route('students.edit', $student->id) }}" class="btn btn-sm btn-blue" title="Edit">
-                                        <i class="bi bi-pencil"></i>
+                                    <a href="{{ route('students.edit', $student->id) }}" class="btn btn-sm btn-primary" title="Edit">
+                                        <i class="bi bi-pencil" style="color: white;"></i>
                                     </a>
                                     @endif
                                     @if($userPermissions->CanDelete)
@@ -244,6 +244,48 @@
     </div>
 </div>
 @endif
+
+<!-- Edit Student Modal -->
+<div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editStudentModalLabel">Edit Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ route('students.update', 'student_id') }}" method="POST" id="editStudentForm">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" id="editStudentId" name="student_id">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="editFirstName" name="first_name" placeholder="First Name" required>
+                                <label for="editFirstName">First Name</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="editLastName" name="last_name" placeholder="Last Name" required>
+                                <label for="editLastName">Last Name</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editEmail" name="email">
+                    </div>
+                    <!-- Add other fields as necessary -->
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveChangesBtn">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @endsection
 
@@ -443,6 +485,42 @@
                 },
                 complete: function() {
                     submitBtn.prop('disabled', false).text('Import Students');
+                }
+            });
+        });
+
+        // Populate the modal with student data
+        $('#editStudentModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget); // Button that triggered the modal
+            var studentId = button.data('id');
+            var firstName = button.data('first-name');
+            var lastName = button.data('last-name');
+            var email = button.data('email');
+
+            // Update the modal's content
+            var modal = $(this);
+            modal.find('#editStudentId').val(studentId);
+            modal.find('#editFirstName').val(firstName);
+            modal.find('#editLastName').val(lastName);
+            modal.find('#editEmail').val(email);
+        });
+
+        // Handle form submission
+        $('#saveChangesBtn').on('click', function () {
+            var form = $('#editStudentForm');
+            var actionUrl = "{{ url('inventory/students') }}/" + $('#editStudentId').val();
+
+            $.ajax({
+                url: actionUrl,
+                type: 'POST',
+                data: form.serialize(),
+                success: function (response) {
+                    // Handle success (e.g., reload the page or update the table)
+                    location.reload(); // Reload the page to see the changes
+                },
+                error: function (xhr) {
+                    // Handle error
+                    console.error(xhr.responseText);
                 }
             });
         });

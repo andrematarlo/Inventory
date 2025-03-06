@@ -4,18 +4,15 @@
 
 @section('content')
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Edit Student</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{{ route('students.index') }}">Students</a></li>
-        <li class="breadcrumb-item active">Edit Student</li>
-    </ol>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mt-4">Edit Student</h1>
+        <a href="{{ route('students.index') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
 
     <div class="card mb-4">
-        <div class="card-header">
-            <i class="fas fa-user-edit me-1"></i>
-            Edit Student Information
-        </div>
+        
         <div class="card-body">
             <form action="{{ route('students.update', $student->id) }}" method="POST">
                 @csrf
@@ -148,7 +145,7 @@
 
                 <div class="mt-4 mb-0">
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-block">Update Student</button>
+                        <button type="submit" class="btn btn-primary">Update Student</button>
                     </div>
                 </div>
             </form>
