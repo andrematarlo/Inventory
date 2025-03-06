@@ -83,15 +83,15 @@
 <!-- Delete Modals -->
 @if($userPermissions && $userPermissions->CanDelete)
 @foreach($students as $student)
-<div class="modal fade" id="deleteModal{{ $student->id }}" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="deleteModal{{ $student->id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Delete Student</h5>
+                <h5 class="modal-title" id="deleteModalLabel">Delete Student</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the student "{{ $student->first_name }} {{ $student->last_name }}"?</p>
+                Are you sure you want to delete this student?
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
