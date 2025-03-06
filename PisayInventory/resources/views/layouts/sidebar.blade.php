@@ -1,4 +1,4 @@
-<div class="sidebar bg-dark text-white">
+<div class="sidebar text-white">
     <div class="sidebar-header border-bottom border-secondary py-3 d-flex justify-content-between align-items-center">
         <button class="btn btn-link text-white ms-2 p-0 border-0 sidebar-toggle" id="sidebarToggle">
             <i class="bi bi-list fs-4 expand-icon"></i>
@@ -60,27 +60,27 @@
         @endif
         @if($hasHRAccess)
         <li class="nav-item dropdown">
-            <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-people"></i>
                 <span>Employee Management</span>
             </a>
             <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
-                <li>
-                    <a class="dropdown-item" href="{{ route('employees.index') }}">
-                        <i class="bi bi-person"></i> Employees
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item" href="{{ route('roles.index') }}">
-                        <i class="bi bi-person-badge"></i> Roles
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item" href="{{ route('roles.policies') }}">
-                        <i class="bi bi-shield-check"></i> Role Policies
-                    </a>
-                </li>
-            </ul>
+    <li>
+        <a class="dropdown-item {{ request()->routeIs('employees.index') ? 'active' : '' }}" href="{{ route('employees.index') }}">
+            <i class="bi bi-person"></i> Employees
+        </a>
+    </li>
+    <li>
+        <a class="dropdown-item {{ request()->routeIs('roles.index') ? 'active' : '' }}" href="{{ route('roles.index') }}">
+            <i class="bi bi-person-badge"></i> Roles
+        </a>
+    </li>
+    <li>
+        <a class="dropdown-item {{ request()->routeIs('roles.policies') ? 'active' : '' }}" href="{{ route('roles.policies') }}">
+            <i class="bi bi-shield-check"></i> Role Policies
+        </a>
+    </li>
+</ul>
         </li>
         @endif
         @if($hasPurchasingAccess)
@@ -181,6 +181,7 @@
 
 <style>
 .sidebar {
+    background-color: #2D2D2D  !important;
     min-height: 100vh;
     width: 320px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
@@ -263,13 +264,14 @@
 }
 
 /* Active state styles */
-.sidebar .nav-link.active,
-.sidebar .dropdown-item.active,
-.sidebar .nav-link.dropdown-toggle.active {
-    background-color: #198754 !important;
-    font-weight: 500;
-    color: white !important;  
-}
+    .sidebar .nav-link.active,
+    .sidebar .dropdown-item.active,
+    .sidebar .nav-link.dropdown-toggle.active {
+        background-color:rgb(73, 77, 87) !important;
+        font-weight: 500;
+        border-left: 4px solid #ffffff;
+        color: white !important;  
+    }
 
 /* Dropdown specific styles */
 .sidebar .dropdown-menu {
@@ -479,8 +481,19 @@
 /* Active state for dropdown items */
 .sidebar .dropdown-item.active,
 .sidebar .dropdown-item:active {
-    background-color: #198754 !important;
+    background-color: #495057 !important;
+    font-weight: 500;
+    border-left: 4px solid #ffffff;
     color: white !important;
+}
+
+/* Add padding-left to compensate for the border */
+.sidebar .dropdown-item {
+    padding-left: calc(1rem - 4px) !important;
+}
+
+.sidebar .dropdown-item.active {
+    padding-left: 1rem !important;
 }
 
 /* Collapsed state dropdown */
@@ -547,6 +560,31 @@
     padding: 0.75rem !important;
     margin-left: 0;
 }
+/* Scrollbar styling */
+.sidebar::-webkit-scrollbar {
+    width: 6px;  /* Make scrollbar thinner */
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);  /* Slightly lighter than sidebar */
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2) !important;  /* Light gray thumb */
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3) !important;  /* Lighter on hover */
+}
+
+/* For Firefox */
+.sidebar {
+    scrollbar-width: thin;  /* "auto" or "thin" */
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.1);  /* thumb track */
+}
 </style>
 
 <script>
@@ -555,30 +593,48 @@ function confirmLogout() {
     return confirm('Are you sure you want to logout?');
 }
 
-/* Script rani para sa dropdown */
+/* Script for dropdown */
 document.addEventListener('DOMContentLoaded', function() {
     const dropdownToggle = document.querySelector('#employeeDropdown');
     const parentLi = dropdownToggle.closest('.nav-item');
+    const dropdownMenu = parentLi.querySelector('.dropdown-menu');
+
+    // Check if we should open the dropdown on page load
+    const shouldOpenDropdown = localStorage.getItem('employeeDropdownOpen') === 'true' || 
+                             window.location.pathname.includes('/employees') ||
+                             window.location.pathname.includes('/roles');
     
-    // Function to handle dropdown behavior
-    function handleDropdown(e) {
+    if (shouldOpenDropdown && !document.querySelector('.sidebar').classList.contains('collapsed')) {
+        parentLi.classList.add('show');
+        dropdownToggle.setAttribute('aria-expanded', 'true');
+    }
+
+    dropdownToggle.addEventListener('click', function(e) {
         const sidebar = document.querySelector('.sidebar');
         e.preventDefault();
         e.stopPropagation();
        
         if (sidebar.classList.contains('collapsed')) {
-            const dropdownMenu = parentLi.querySelector('.dropdown-menu');
             dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
         } else {
             parentLi.classList.toggle('show');
             dropdownToggle.setAttribute('aria-expanded', 
                 parentLi.classList.contains('show') ? 'true' : 'false'
             );
+            // Save state to localStorage
+            localStorage.setItem('employeeDropdownOpen', parentLi.classList.contains('show'));
         }
-    }
-    
-    // Add click handler
-    dropdownToggle.addEventListener('click', handleDropdown);
+    });
+
+    // Add click handler for dropdown items to prevent closing
+    dropdownMenu.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent event bubbling
+        if (!document.querySelector('.sidebar').classList.contains('collapsed')) {
+            parentLi.classList.add('show'); // Keep dropdown open
+            dropdownToggle.setAttribute('aria-expanded', 'true');
+            localStorage.setItem('employeeDropdownOpen', 'true');
+        }
+    });
 
     // Handle hover for collapsed state
     parentLi.addEventListener('mouseenter', function() {
@@ -601,9 +657,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
+        const sidebar = document.querySelector('.sidebar');
         if (!parentLi.contains(e.target) && !sidebar.classList.contains('collapsed')) {
             parentLi.classList.remove('show');
             dropdownToggle.setAttribute('aria-expanded', 'false');
+            localStorage.setItem('employeeDropdownOpen', 'false');
         }
     });
 });

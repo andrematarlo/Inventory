@@ -185,7 +185,7 @@
     </div>
 </div>
 
-@push('styles')
+@section('styles')
 <style>
             /* More specific selector using ID and class combination */
             #reports-header h2.reports-title {
@@ -285,7 +285,7 @@
         margin-right: 5px;
     }
 </style>
-@endpush
+@endsection
 
 @push('scripts')
 <script>

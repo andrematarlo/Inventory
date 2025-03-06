@@ -4,17 +4,12 @@
 
 @section('content')
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Add New Student</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{{ route('students.index') }}">Students</a></li>
-        <li class="breadcrumb-item active">Add New Student</li>
-    </ol>
-
     <div class="card mb-4">
         <div class="card-header">
-            <i class="fas fa-user-plus me-1"></i>
-            Student Information
+            <h4 class="mb-0">
+                <i class="fas fa-user-plus me-1"></i>
+                Add New Student
+            </h4>
         </div>
         <div class="card-body">
             <form action="{{ route('students.store') }}" method="POST">
@@ -162,9 +157,10 @@
                     </div>
                 </div>
 
-                <div class="mt-4 mb-0">
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-block">Create Student</button>
+                <div class="row mb-3">
+                    <div class="col-md-12 text-end">
+                        <a href="{{ route('students.index') }}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Create Student</button>
                     </div>
                 </div>
             </form>
