@@ -6,6 +6,11 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Role Policies</h2>
+        @if(isset($userPermissions) && $userPermissions->CanAdd)
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPolicyModal">
+                <i class="bi bi-plus-circle me-2"></i>Create Policy
+            </button>
+        @endif
     </div>
 
     <div class="card">
@@ -65,6 +70,68 @@
     </div>
 </div>
 
+<!-- Create Policy Modal -->
+@if(isset($userPermissions) && $userPermissions->CanAdd)
+<div class="modal fade" id="createPolicyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Policy</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('roles.policies.create') }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="RoleId" class="form-label">Role</label>
+                        <select class="form-select" id="RoleId" name="RoleId" required>
+                            <option value="">Select Role</option>
+                            @foreach(DB::table('roles')->where('IsDeleted', false)->get() as $role)
+                                <option value="{{ $role->RoleId }}">{{ $role->RoleName }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Module" class="form-label">Module</label>
+                        <select class="form-select" id="Module" name="Module" required>
+                            <option value="">Select Module</option>
+                            @foreach(DB::table('modules')->get() as $module)
+                                <option value="{{ $module->ModuleName }}">{{ $module->ModuleName }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Permissions</label>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="CanView" name="CanView" value="1">
+                            <label class="form-check-label" for="CanView">Can View</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="CanAdd" name="CanAdd" value="1">
+                            <label class="form-check-label" for="CanAdd">Can Add</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="CanEdit" name="CanEdit" value="1">
+                            <label class="form-check-label" for="CanEdit">Can Edit</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="CanDelete" name="CanDelete" value="1">
+                            <label class="form-check-label" for="CanDelete">Can Delete</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Policy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
 <!-- Edit Policy Modals -->
 @if(isset($userPermissions) && $userPermissions->CanEdit)
 @foreach($policies as $policy)
@@ -81,56 +148,32 @@
                     <input type="hidden" name="policy_id" value="{{ $policy->RolePolicyId }}">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label d-block">Permissions</label>
-                            
-                            <!-- VIEW PERMISSION -->
-                            <div class="form-check form-check-inline">
-                                <input type="hidden" name="view" value="0">
-                                <input type="checkbox" class="form-check-input" 
-                                       id="canView{{ $policy->RolePolicyId }}" 
-                                       name="view" 
-                                       value="1"
-                                       {{ $policy->CanView ? 'checked' : '' }}>
-                                <label class="form-check-label" for="canView{{ $policy->RolePolicyId }}">View</label>
+                            <label class="form-label">Permissions</label>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="view{{ $policy->RolePolicyId }}" 
+                                       name="permissions[view]" {{ $policy->CanView ? 'checked' : '' }}>
+                                <label class="form-check-label" for="view{{ $policy->RolePolicyId }}">Can View</label>
                             </div>
-                            
-                            <!-- ADD PERMISSION -->
-                            <div class="form-check form-check-inline">
-                                <input type="hidden" name="add" value="0">
-                                <input type="checkbox" class="form-check-input" 
-                                       id="canAdd{{ $policy->RolePolicyId }}" 
-                                       name="add" 
-                                       value="1"
-                                       {{ $policy->CanAdd ? 'checked' : '' }}>
-                                <label class="form-check-label" for="canAdd{{ $policy->RolePolicyId }}">Add</label>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="add{{ $policy->RolePolicyId }}" 
+                                       name="permissions[add]" {{ $policy->CanAdd ? 'checked' : '' }}>
+                                <label class="form-check-label" for="add{{ $policy->RolePolicyId }}">Can Add</label>
                             </div>
-                            
-                            <!-- EDIT PERMISSION -->
-                            <div class="form-check form-check-inline">
-                                <input type="hidden" name="edit" value="0">
-                                <input type="checkbox" class="form-check-input" 
-                                       id="canEdit{{ $policy->RolePolicyId }}" 
-                                       name="edit" 
-                                       value="1"
-                                       {{ $policy->CanEdit ? 'checked' : '' }}>
-                                <label class="form-check-label" for="canEdit{{ $policy->RolePolicyId }}">Edit</label>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="edit{{ $policy->RolePolicyId }}" 
+                                       name="permissions[edit]" {{ $policy->CanEdit ? 'checked' : '' }}>
+                                <label class="form-check-label" for="edit{{ $policy->RolePolicyId }}">Can Edit</label>
                             </div>
-                            
-                            <!-- DELETE PERMISSION -->
-                            <div class="form-check form-check-inline">
-                                <input type="hidden" name="delete" value="0">
-                                <input type="checkbox" class="form-check-input" 
-                                       id="canDelete{{ $policy->RolePolicyId }}" 
-                                       name="delete" 
-                                       value="1"
-                                       {{ $policy->CanDelete ? 'checked' : '' }}>
-                                <label class="form-check-label" for="canDelete{{ $policy->RolePolicyId }}">Delete</label>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="delete{{ $policy->RolePolicyId }}" 
+                                       name="permissions[delete]" {{ $policy->CanDelete ? 'checked' : '' }}>
+                                <label class="form-check-label" for="delete{{ $policy->RolePolicyId }}">Can Delete</label>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="submit" class="btn btn-primary">Update Policy</button>
                     </div>
                 </form>
             </div>
@@ -138,6 +181,7 @@
     </div>
 @endforeach
 @endif
+
 @endsection
 
 @section('scripts')
@@ -158,24 +202,7 @@
     });
 
     function openPolicyModal(policyId) {
-        // Check if user has edit permission (handled server-side)
-        // If the button is visible, user has permission
-        try {
-            var modalId = '#editPolicyModal' + policyId;
-            var modalElement = document.querySelector(modalId);
-            
-            if (!modalElement) {
-                console.error('Modal not found:', modalId);
-                alert('Error: Could not find the edit modal. Please refresh the page and try again.');
-                return;
-            }
-            
-            var modal = new bootstrap.Modal(modalElement);
-            modal.show();
-        } catch (error) {
-            console.error('Error opening modal:', error);
-            alert('An error occurred while opening the modal. Please try again.');
-        }
+        $('#editPolicyModal' + policyId).modal('show');
     }
 </script>
 

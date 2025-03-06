@@ -269,22 +269,49 @@
 
         <!-- Bootstrap Bundle with Popper -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Select2 -->
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <!-- SweetAlert2 -->
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
-
-        @if(session('sweet_alert'))
+        
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({
-                    title: "{{ session('sweet_alert.title') }}",
-                    text: "{{ session('sweet_alert.message') }}",
-                    icon: "{{ session('sweet_alert.type') }}",
-                    confirmButtonText: 'OK'
-                });
-            });
-        </script>
-        @endif
+            $(document).ready(function() {
+                // Get the sidebar element
+                const sidebarElement = document.querySelector('.sidebar');
+                const sidebarToggle = document.querySelector('#sidebarToggle');
+                const expandIcon = document.querySelector('.expand-icon');
+                const collapseIcon = document.querySelector('.collapse-icon');
 
-        @yield('scripts')
+                if (sidebarToggle) {
+                    sidebarToggle.addEventListener('click', function() {
+                        if (sidebarElement) {
+                            sidebarElement.classList.toggle('collapsed');
+                            
+                            // Toggle icons
+                            if (expandIcon && collapseIcon) {
+                                if (sidebarElement.classList.contains('collapsed')) {
+                                    expandIcon.style.display = 'none';
+                                    collapseIcon.style.display = 'block';
+                                } else {
+                                    expandIcon.style.display = 'block';
+                                    collapseIcon.style.display = 'none';
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Initialize Select2
+                if ($.fn.select2) {
+                    $('.select2').select2();
+                }
+            });
+
+            // Logout confirmation
+            function confirmLogout() {
+                return confirm('Are you sure you want to logout?');
+            }
+        </script>
+        @stack('scripts')
     </body>
 </html>

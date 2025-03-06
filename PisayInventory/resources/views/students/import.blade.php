@@ -5,8 +5,11 @@
 @section('content')
 <div class="container-fluid px-4">
     <div class="card">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h4 class="mb-0">Import Students</h4>
+            <a href="{{ route('students.index') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Students
+            </a>
         </div>
         <div class="card-body">
             <div class="row">
@@ -22,7 +25,7 @@
                         </ol>
                     </div>
 
-                    <form id="importForm" enctype="multipart/form-data">
+                    <form id="importForm" action="{{ route('students.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <div class="mb-4">
                             <label for="file" class="form-label">Excel File</label>
@@ -31,121 +34,47 @@
 
                         <div id="mappingSection" style="display: none;">
                             <h5 class="mb-3">Column Mapping</h5>
-                            <div class="table-responsive">
+                            <div class="table-responsive mb-4">
                                 <table class="table table-bordered">
                                     <thead>
                                         <tr>
-                                            <th>Field</th>
                                             <th>Excel Column</th>
+                                            <th>Map to Field</th>
+                                            <th>Required</th>
                                             <th>Preview</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Student ID <span class="text-danger">*</span></td>
-                                            <td>
-                                                <select name="column_mapping[student_id]" class="form-select mapping-select" required>
-                                                    <option value="">Select Column</option>
-                                                </select>
-                                            </td>
-                                            <td class="preview-cell"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>First Name <span class="text-danger">*</span></td>
-                                            <td>
-                                                <select name="column_mapping[first_name]" class="form-select mapping-select" required>
-                                                    <option value="">Select Column</option>
-                                                </select>
-                                            </td>
-                                            <td class="preview-cell"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Last Name <span class="text-danger">*</span></td>
-                                            <td>
-                                                <select name="column_mapping[last_name]" class="form-select mapping-select" required>
-                                                    <option value="">Select Column</option>
-                                                </select>
-                                            </td>
-                                            <td class="preview-cell"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Middle Name</td>
-                                            <td>
-                                                <select name="column_mapping[middle_name]" class="form-select mapping-select">
-                                                    <option value="">Select Column</option>
-                                                </select>
-                                            </td>
-                                            <td class="preview-cell"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Email</td>
-                                            <td>
-                                                <select name="column_mapping[email]" class="form-select mapping-select">
-                                                    <option value="">Select Column</option>
-                                                </select>
-                                            </td>
-                                            <td class="preview-cell"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Contact Number</td>
-                                            <td>
-                                                <select name="column_mapping[contact_number]" class="form-select mapping-select">
-                                                    <option value="">Select Column</option>
-                                                </select>
-                                            </td>
-                                            <td class="preview-cell"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Gender</td>
-                                            <td>
-                                                <select name="column_mapping[gender]" class="form-select mapping-select">
-                                                    <option value="">Select Column</option>
-                                                </select>
-                                            </td>
-                                            <td class="preview-cell"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Grade Level</td>
-                                            <td>
-                                                <select name="column_mapping[grade_level]" class="form-select mapping-select">
-                                                    <option value="">Select Column</option>
-                                                </select>
-                                            </td>
-                                            <td class="preview-cell"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Section</td>
-                                            <td>
-                                                <select name="column_mapping[section]" class="form-select mapping-select">
-                                                    <option value="">Select Column</option>
-                                                </select>
-                                            </td>
-                                            <td class="preview-cell"></td>
-                                        </tr>
+                                    <tbody id="mappingTable">
+                                        <!-- Will be populated by JavaScript -->
                                     </tbody>
                                 </table>
                             </div>
 
-                            <div class="preview-section mt-4" style="display: none;">
+                            <div id="previewSection" class="mb-4" style="display: none;">
                                 <h5>Data Preview</h5>
                                 <div class="table-responsive">
-                                    <table class="table table-sm table-bordered" id="previewTable">
-                                        <thead>
-                                            <tr></tr>
+                                    <table class="table table-bordered table-sm">
+                                        <thead id="previewHeader">
+                                            <!-- Will be populated by JavaScript -->
                                         </thead>
-                                        <tbody></tbody>
+                                        <tbody id="previewBody">
+                                            <!-- Will be populated by JavaScript -->
+                                        </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mt-4">
-                            <button type="button" class="btn btn-secondary me-2" onclick="window.history.back()">
-                                <i class="bi bi-arrow-left me-1"></i> Back
-                            </button>
-                            <button type="submit" class="btn btn-primary" id="importButton" style="display: none;">
-                                <i class="bi bi-upload me-1"></i> Import Students
-                            </button>
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+                            <div>
+                                <button type="button" id="previewBtn" class="btn btn-info me-2" style="display: none;">
+                                    Preview Data
+                                </button>
+                                <button type="submit" id="importBtn" class="btn btn-primary" style="display: none;">
+                                    Import Students
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -157,189 +86,274 @@
 
 @section('scripts')
 <script>
-$(document).ready(function() {
-    let previewData = [];
-    let headers = [];
+const availableFields = {
+    'student_id': { label: 'Student ID', required: true },
+    'first_name': { label: 'First Name', required: true },
+    'last_name': { label: 'Last Name', required: true },
+    'middle_name': { label: 'Middle Name', required: false },
+    'email': { label: 'Email', required: false },
+    'contact_number': { label: 'Contact Number', required: false },
+    'gender': { label: 'Gender', required: false },
+    'grade_level': { label: 'Grade Level', required: false },
+    'section': { label: 'Section', required: false }
+};
 
-    $('#file').change(function() {
-        const file = this.files[0];
-        if (file) {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+let excelData = null;
 
+document.getElementById('file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('_token', '{{ csrf_token() }}');
+
+    // Show loading state
+    Swal.fire({
+        title: 'Reading file...',
+        html: 'Please wait while we process your file.',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // Send file for preview
+    fetch('{{ route("students.preview-columns") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            excelData = data;
+            showMapping(data.headers, data.preview_data);
+            Swal.close();
+        } else {
+            throw new Error(data.message || 'Error processing file');
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to process the file. Please try again.'
+        });
+    });
+});
+
+function showMapping(headers, previewData) {
+    const mappingTable = document.getElementById('mappingTable');
+    mappingTable.innerHTML = '';
+
+    headers.forEach((header, index) => {
+        const row = document.createElement('tr');
+        
+        // Excel Column
+        const excelCol = document.createElement('td');
+        excelCol.textContent = header;
+        row.appendChild(excelCol);
+
+        // Field Mapping
+        const mappingCol = document.createElement('td');
+        const select = document.createElement('select');
+        select.className = 'form-select';
+        select.name = `column_mapping[${index}]`;
+        
+        // Add empty option
+        select.innerHTML = '<option value="">-- Select Field --</option>';
+        
+        // Add options for each available field
+        Object.entries(availableFields).forEach(([value, field]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = field.label;
+            // Try to auto-match columns
+            if (header.toLowerCase().includes(value.toLowerCase())) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        
+        mappingCol.appendChild(select);
+        row.appendChild(mappingCol);
+
+        // Required Field
+        const requiredCol = document.createElement('td');
+        requiredCol.className = 'text-center';
+        requiredCol.innerHTML = '<i class="bi bi-x text-muted"></i>';
+        row.appendChild(requiredCol);
+
+        // Preview Data
+        const previewCol = document.createElement('td');
+        previewCol.textContent = previewData[0] ? previewData[0][index] || '' : '';
+        row.appendChild(previewCol);
+
+        mappingTable.appendChild(row);
+    });
+
+    // Show mapping section and buttons
+    document.getElementById('mappingSection').style.display = 'block';
+    document.getElementById('previewBtn').style.display = 'inline-block';
+    document.getElementById('importBtn').style.display = 'inline-block';
+
+    // Update required indicators when mapping changes
+    const selects = document.querySelectorAll('select[name^="column_mapping"]');
+    selects.forEach(select => {
+        select.addEventListener('change', updateRequiredIndicators);
+    });
+    updateRequiredIndicators();
+}
+
+function updateRequiredIndicators() {
+    const selects = document.querySelectorAll('select[name^="column_mapping"]');
+    selects.forEach(select => {
+        const row = select.closest('tr');
+        const requiredCol = row.querySelector('td:nth-child(3)');
+        const selectedField = select.value;
+        
+        if (selectedField && availableFields[selectedField]) {
+            requiredCol.innerHTML = availableFields[selectedField].required ? 
+                '<i class="bi bi-check-circle-fill text-success"></i>' :
+                '<i class="bi bi-dash text-muted"></i>';
+        } else {
+            requiredCol.innerHTML = '<i class="bi bi-x text-muted"></i>';
+        }
+    });
+}
+
+document.getElementById('importForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    // Validate required fields
+    const mappings = {};
+    let hasAllRequired = true;
+    const selects = document.querySelectorAll('select[name^="column_mapping"]');
+    
+    selects.forEach(select => {
+        if (select.value) {
+            mappings[select.value] = true;
+        }
+    });
+
+    // Check if all required fields are mapped
+    Object.entries(availableFields).forEach(([field, info]) => {
+        if (info.required && !mappings[field]) {
+            hasAllRequired = false;
+        }
+    });
+
+    if (!hasAllRequired) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Missing Required Fields',
+            text: 'Please map all required fields (Student ID, First Name, Last Name) before importing.'
+        });
+        return;
+    }
+
+    // Show confirmation dialog
+    Swal.fire({
+        title: 'Confirm Import',
+        text: 'Are you sure you want to import these students?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, import',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
             // Show loading state
             Swal.fire({
-                title: 'Reading File',
-                text: 'Please wait while we process your file...',
+                title: 'Importing...',
+                html: 'Please wait while we import the students.',
                 allowOutsideClick: false,
-                allowEscapeKey: false,
-                allowEnterKey: false,
-                showConfirmButton: false,
                 didOpen: () => {
                     Swal.showLoading();
                 }
             });
 
-            $.ajax({
-                url: '{{ route("students.preview-columns") }}',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    Swal.close();
-                    
-                    if (response.success) {
-                        headers = response.data.headers;
-                        previewData = response.data.preview_data;
-
-                        // Populate column mapping dropdowns
-                        $('.mapping-select').each(function() {
-                            const select = $(this);
-                            select.find('option:not(:first)').remove();
-                            
-                            headers.forEach((header, index) => {
-                                select.append($('<option>', {
-                                    value: String.fromCharCode(65 + index), // Convert to A, B, C, etc.
-                                    text: header
-                                }));
-                            });
-                        });
-
-                        // Show mapping section and import button
-                        $('#mappingSection').slideDown();
-                        $('#importButton').show();
-
-                        // Update preview table
-                        updatePreviewTable();
-                    } else if (response.sweet_alert) {
-                        Swal.fire({
-                            icon: response.sweet_alert.type,
-                            title: response.sweet_alert.title,
-                            text: response.sweet_alert.message
-                        });
-                    }
-                },
-                error: function(xhr) {
+            // Submit the form
+            const formData = new FormData(this);
+            fetch(this.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to process the file. Please try again.'
-                    });
-                }
-            });
-        }
-    });
-
-    // Handle column mapping changes
-    $('.mapping-select').change(function() {
-        updatePreviewTable();
-    });
-
-    // Handle form submission
-    $('#importForm').submit(function(e) {
-        e.preventDefault();
-
-        // Show confirmation dialog
-        Swal.fire({
-            title: 'Confirm Import',
-            text: 'Are you sure you want to import these students?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, import',
-            cancelButtonText: 'No, cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const formData = new FormData(this);
-
-                // Show loading state
-                Swal.fire({
-                    title: 'Importing Students',
-                    text: 'Please wait while we import the data...',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    allowEnterKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                $.ajax({
-                    url: '{{ route("students.import") }}',
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        if (response.sweet_alert) {
-                            Swal.fire({
-                                icon: response.sweet_alert.type,
-                                title: response.sweet_alert.title,
-                                text: response.sweet_alert.message,
-                                showConfirmButton: true
-                            }).then((result) => {
-                                if (response.success) {
-                                    window.location.href = '{{ route("students.index") }}';
-                                }
-                            });
+                        icon: data.sweet_alert.type,
+                        title: data.sweet_alert.title,
+                        text: data.sweet_alert.message,
+                        showCancelButton: true,
+                        confirmButtonText: 'View Students',
+                        cancelButtonText: 'Import More'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = '{{ route("students.index") }}';
+                        } else {
+                            window.location.reload();
                         }
-                    },
-                    error: function(xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Import Failed',
-                            text: 'An error occurred while importing students. Please try again.'
-                        });
-                    }
+                    });
+                } else {
+                    throw new Error(data.sweet_alert.message || 'Import failed');
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Import Failed',
+                    text: error.message || 'Failed to import students. Please try again.'
                 });
-            }
-        });
+            });
+        }
+    });
+});
+
+document.getElementById('previewBtn').addEventListener('click', function() {
+    if (!excelData || !excelData.preview_data) return;
+
+    const previewSection = document.getElementById('previewSection');
+    const previewHeader = document.getElementById('previewHeader');
+    const previewBody = document.getElementById('previewBody');
+    
+    // Clear previous preview
+    previewHeader.innerHTML = '';
+    previewBody.innerHTML = '';
+
+    // Get current mappings
+    const mappings = {};
+    const selects = document.querySelectorAll('select[name^="column_mapping"]');
+    selects.forEach((select, index) => {
+        if (select.value) {
+            mappings[index] = {
+                field: select.value,
+                label: availableFields[select.value].label
+            };
+        }
     });
 
-    function updatePreviewTable() {
-        const previewSection = $('.preview-section');
-        const previewTable = $('#previewTable');
-        
-        // Clear existing preview
-        previewTable.find('thead tr').empty();
-        previewTable.find('tbody').empty();
+    // Create header row
+    const headerRow = document.createElement('tr');
+    Object.values(mappings).forEach(mapping => {
+        const th = document.createElement('th');
+        th.textContent = mapping.label;
+        headerRow.appendChild(th);
+    });
+    previewHeader.appendChild(headerRow);
 
-        // Get selected columns
-        const selectedColumns = {};
-        $('.mapping-select').each(function() {
-            const field = $(this).attr('name').match(/\[(.*?)\]/)[1];
-            const column = $(this).val();
-            if (column) {
-                selectedColumns[field] = headers[column.charCodeAt(0) - 65];
-            }
+    // Create data rows
+    excelData.preview_data.forEach(row => {
+        const dataRow = document.createElement('tr');
+        Object.entries(mappings).forEach(([index, mapping]) => {
+            const td = document.createElement('td');
+            td.textContent = row[index] || '';
+            dataRow.appendChild(td);
         });
+        previewBody.appendChild(dataRow);
+    });
 
-        // If no columns selected, hide preview
-        if (Object.keys(selectedColumns).length === 0) {
-            previewSection.hide();
-            return;
-        }
-
-        // Show preview section
-        previewSection.show();
-
-        // Add headers
-        Object.values(selectedColumns).forEach(header => {
-            previewTable.find('thead tr').append($('<th>', { text: header }));
-        });
-
-        // Add preview data
-        previewData.forEach(row => {
-            const tr = $('<tr>');
-            Object.keys(selectedColumns).forEach(field => {
-                const columnIndex = headers.indexOf(selectedColumns[field]);
-                tr.append($('<td>', { text: row[columnIndex] || '' }));
-            });
-            previewTable.find('tbody').append(tr);
-        });
-    }
+    previewSection.style.display = 'block';
 });
 </script>
 @endsection 

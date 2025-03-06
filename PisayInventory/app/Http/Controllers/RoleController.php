@@ -1,13 +1,13 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Role;
 use App\Models\RolePolicy;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-
 
 class RoleController extends Controller
 {
@@ -248,59 +248,84 @@ class RoleController extends Controller
             // For each role and module combination, get or create policy
             foreach ($roles as $role) {
                 foreach ($modules as $module) {
-                    // Check if policy exists
-                    $policy = DB::table('role_policies as rp')
+                    // Check if policy exists using both RoleId and ModuleId
+                    $policy = DB::table('role_policies')
                         ->where('RoleId', $role->RoleId)
-                        ->where('ModuleId', $module->ModuleId)
+                        ->where('Module', $module->ModuleName)
                         ->where('IsDeleted', false)
                         ->first();
 
                     // If no policy exists, create a default one
                     if (!$policy) {
-                        $policyId = DB::table('role_policies')->insertGetId([
-                            'RoleId' => $role->RoleId,
-                            'ModuleId' => $module->ModuleId,
-                            'Module' => $module->ModuleName,
-                            'CanView' => true,
-                            'CanAdd' => true,
-                            'CanEdit' => true,
-                            'CanDelete' => true,
-                            'DateCreated' => now(),
-                            'CreatedById' => auth()->id(),
-                            'IsDeleted' => false
-                        ]);
+                        // Begin transaction to prevent race conditions
+                        DB::beginTransaction();
+                        try {
+                            // Check again within transaction to prevent duplicates
+                            $policy = DB::table('role_policies')
+                                ->where('RoleId', $role->RoleId)
+                                ->where('Module', $module->ModuleName)
+                                ->where('IsDeleted', false)
+                                ->lockForUpdate()
+                                ->first();
 
-                        $policy = DB::table('role_policies')
-                            ->where('RolePolicyId', $policyId)
-                            ->first();
+                            if (!$policy) {
+                                $policyId = DB::table('role_policies')->insertGetId([
+                                    'RoleId' => $role->RoleId,
+                                    'ModuleId' => $module->ModuleId,
+                                    'Module' => $module->ModuleName,
+                                    'CanView' => true,
+                                    'CanAdd' => true,
+                                    'CanEdit' => true,
+                                    'CanDelete' => true,
+                                    'DateCreated' => now(),
+                                    'CreatedById' => Auth::id(),
+                                    'IsDeleted' => false
+                                ]);
+
+                                $policy = DB::table('role_policies')
+                                    ->where('RolePolicyId', $policyId)
+                                    ->first();
+                            }
+                            DB::commit();
+                        } catch (\Exception $e) {
+                            DB::rollBack();
+                            throw $e;
+                        }
                     }
 
                     // Create policy object with nested role
-                    $policyObj = (object)[
-                        'RolePolicyId' => $policy->RolePolicyId,
-                        'RoleId' => $role->RoleId,
-                        'ModuleId' => $module->ModuleId,
-                        'Module' => $module->ModuleName,
-                        'CanView' => $policy->CanView ?? true,
-                        'CanAdd' => $policy->CanAdd ?? true,
-                        'CanEdit' => $policy->CanEdit ?? true,
-                        'CanDelete' => $policy->CanDelete ?? true,
-                        'role' => (object)[
+                    if ($policy) {
+                        $policyObj = (object)[
+                            'RolePolicyId' => $policy->RolePolicyId,
                             'RoleId' => $role->RoleId,
-                            'RoleName' => $role->RoleName
-                        ]
-                    ];
+                            'ModuleId' => $module->ModuleId,
+                            'Module' => $module->ModuleName,
+                            'CanView' => $policy->CanView ?? true,
+                            'CanAdd' => $policy->CanAdd ?? true,
+                            'CanEdit' => $policy->CanEdit ?? true,
+                            'CanDelete' => $policy->CanDelete ?? true,
+                            'role' => (object)[
+                                'RoleId' => $role->RoleId,
+                                'RoleName' => $role->RoleName
+                            ]
+                        ];
 
-                    $allPolicies[] = $policyObj;
+                        $allPolicies[] = $policyObj;
+                    }
                 }
             }
 
+            // Remove any duplicate policies
+            $uniquePolicies = collect($allPolicies)->unique(function ($policy) {
+                return $policy->RoleId . '-' . $policy->Module;
+            })->values();
+
             return view('roles.policies', [
-                'policies' => collect($allPolicies),
+                'policies' => $uniquePolicies,
                 'userPermissions' => $userPermissions
             ]);
         } catch (\Exception $e) {
-            \Log::error('Policy loading failed: ' . $e->getMessage());
+            Log::error('Policy loading failed: ' . $e->getMessage());
             return redirect()->back()->with('sweet_alert', [
                 'type' => 'error',
                 'title' => 'Error',
@@ -336,5 +361,83 @@ class RoleController extends Controller
             'title' => 'Success',
             'message' => 'Role policy updated successfully'
         ]);
+    }
+
+    public function createPolicy(Request $request)
+    {
+        // Check permissions
+        $userPermissions = $this->getUserPermissions();
+        if (!$userPermissions || !$userPermissions->CanAdd) {
+            return redirect()->back()->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Access Denied',
+                'message' => 'You do not have permission to create role policies.'
+            ]);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Check if policy already exists
+            $existingPolicy = RolePolicy::where('RoleId', $request->RoleId)
+                ->where('Module', $request->Module)
+                ->where('IsDeleted', false)
+                ->first();
+
+            if ($existingPolicy) {
+                return redirect()->back()->with('sweet_alert', [
+                    'type' => 'error',
+                    'title' => 'Error',
+                    'message' => 'A policy for this role and module already exists.'
+                ]);
+            }
+
+            // Get the module ID
+            $module = DB::table('modules')
+                ->where('ModuleName', $request->Module)
+                ->first();
+
+            if (!$module) {
+                // Create the module if it doesn't exist
+                $moduleId = DB::table('modules')->insertGetId([
+                    'ModuleName' => $request->Module,
+                    'CreatedAt' => now(),
+                    'UpdatedAt' => now()
+                ]);
+            } else {
+                $moduleId = $module->ModuleId;
+            }
+
+            // Create new policy
+            $policy = new RolePolicy();
+            $policy->RoleId = $request->RoleId;
+            $policy->Module = $request->Module;
+            $policy->ModuleId = $moduleId;
+            $policy->CanView = $request->has('CanView');
+            $policy->CanAdd = $request->has('CanAdd');
+            $policy->CanEdit = $request->has('CanEdit');
+            $policy->CanDelete = $request->has('CanDelete');
+            $policy->DateCreated = now();
+            $policy->CreatedById = Auth::id();
+            $policy->IsDeleted = false;
+            $policy->save();
+
+            DB::commit();
+
+            return redirect()->route('roles.policies')->with('sweet_alert', [
+                'type' => 'success',
+                'title' => 'Success',
+                'message' => 'Role policy created successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Policy creation failed: ' . $e->getMessage());
+            return redirect()->back()->with('sweet_alert', [
+                'type' => 'error',
+                'title' => 'Error',
+                'message' => 'Failed to create policy: ' . $e->getMessage()
+            ])->withInput();
+        }
     }
 } 

@@ -18,6 +18,20 @@ use App\Http\Controllers\ReceivingController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\RolesController;
 use App\Http\Controllers\StudentsController;
+use App\Http\Controllers\LaboratoryController;
+use App\Http\Controllers\EquipmentController;
+use App\Http\Controllers\LaboratoryReservationController;
+use App\Http\Controllers\EquipmentBorrowingController;
+
+// Add this at the top of your routes to debug
+Route::get('/debug/routes', function() {
+    $routes = Route::getRoutes();
+    foreach ($routes as $route) {
+        if (str_contains($route->uri(), 'borrowings')) {
+            dump($route->uri() . ' - ' . $route->getName());
+        }
+    }
+});
 
 // Default route to inventory
 Route::get('/', function () {
@@ -136,5 +150,51 @@ Route::middleware('auth')->group(function () {
 
         // Module Management
         Route::resource('modules', ModuleController::class);
+    });
+});
+
+// Role Policy routes
+Route::post('/roles/policies/create', [RoleController::class, 'createPolicy'])->name('roles.policies.create');
+
+// Laboratory Management Routes
+Route::middleware(['web', 'auth'])->group(function () {
+    // Laboratories
+    Route::get('/laboratories', [LaboratoryController::class, 'index'])->name('laboratories.index');
+    Route::get('/laboratories/create', [LaboratoryController::class, 'create'])->name('laboratories.create');
+    Route::post('/laboratories', [LaboratoryController::class, 'store'])->name('laboratories.store');
+    Route::get('/laboratories/{id}', [LaboratoryController::class, 'show'])->name('laboratories.show');
+    Route::get('/laboratories/{id}/edit', [LaboratoryController::class, 'edit'])->name('laboratories.edit');
+    Route::put('/laboratories/{id}', [LaboratoryController::class, 'update'])->name('laboratories.update');
+    Route::delete('/laboratories/{id}', [LaboratoryController::class, 'destroy'])->name('laboratories.destroy');
+    Route::put('laboratories/{laboratory}/restore', [LaboratoryController::class, 'restore'])->name('laboratories.restore');
+
+    // Equipment Borrowing routes should come BEFORE the resource route
+    Route::prefix('equipment')->name('equipment.')->group(function () {
+        Route::get('/borrowings', [EquipmentBorrowingController::class, 'index'])->name('borrowings');
+        Route::get('/borrowings/create', [EquipmentBorrowingController::class, 'create'])->name('borrowings.create');
+        Route::post('/borrowings', [EquipmentBorrowingController::class, 'store'])->name('borrowings.store');
+        Route::get('/borrowings/{borrowing}', [EquipmentBorrowingController::class, 'show'])->name('borrowings.show');
+        Route::get('/borrowings/{borrowing}/edit', [EquipmentBorrowingController::class, 'edit'])->name('borrowings.edit');
+        Route::put('/borrowings/{borrowing}', [EquipmentBorrowingController::class, 'update'])->name('borrowings.update');
+        Route::delete('/borrowings/{borrowing}', [EquipmentBorrowingController::class, 'destroy'])->name('borrowings.destroy');
+        Route::post('/borrowings/{borrowing}/return', [EquipmentBorrowingController::class, 'return'])->name('borrowings.return');
+        Route::post('/borrowings/{borrowing}/restore', [EquipmentBorrowingController::class, 'restore'])->name('borrowings.restore');
+    });
+
+    // Equipment resource route should come AFTER the borrowings routes
+    Route::resource('equipment', EquipmentController::class);
+
+    // Laboratory Reservations
+    Route::prefix('laboratory')->name('laboratory.')->group(function () {
+        Route::get('/reservations', [LaboratoryReservationController::class, 'index'])->name('reservations');
+        Route::get('/reservations/create', [LaboratoryReservationController::class, 'create'])->name('reservations.create');
+        Route::post('/reservations', [LaboratoryReservationController::class, 'store'])->name('reservations.store');
+        Route::get('/reservations/{reservation}', [LaboratoryReservationController::class, 'show'])->name('reservations.show');
+        Route::get('/reservations/{reservation}/edit', [LaboratoryReservationController::class, 'edit'])->name('reservations.edit');
+        Route::put('/reservations/{reservation}', [LaboratoryReservationController::class, 'update'])->name('reservations.update');
+        Route::delete('/reservations/{reservation}', [LaboratoryReservationController::class, 'destroy'])->name('reservations.destroy');
+        Route::post('/reservations/{reservation}/restore', [LaboratoryReservationController::class, 'restore'])->name('reservations.restore');
+        Route::post('/reservations/{reservation}/approve', [LaboratoryReservationController::class, 'approve'])->name('reservations.approve');
+        Route::post('/reservations/{reservation}/reject', [LaboratoryReservationController::class, 'reject'])->name('reservations.reject');
     });
 });

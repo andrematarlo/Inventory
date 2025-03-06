@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Equipment;
 
 class Laboratory extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * The table associated with the model.
@@ -22,14 +23,28 @@ class Laboratory extends Model
      *
      * @var string
      */
-    protected $primaryKey = 'LabID';
+    protected $primaryKey = 'laboratory_id';
+
+    /**
+     * The "type" of the primary key ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
 
     /**
      * Indicates if the model should be timestamped.
      *
      * @var bool
      */
-    public $timestamps = true;
+    public $timestamps = false;
 
     /**
      * The attributes that are mass assignable.
@@ -37,14 +52,42 @@ class Laboratory extends Model
      * @var array
      */
     protected $fillable = [
-        'LabName',
-        'LabNumber',
-        'Building',
-        'Floor',
-        'Capacity',
-        'Description',
-        'Status',
-        'EquipmentCount'
+        'laboratory_id',
+        'laboratory_name',
+        'description',
+        'location',
+        'capacity',
+        'status',
+        'created_by',
+        'updated_by',
+        'deleted_by',
+        'RestoredById',
+        'DateRestored',
+        'IsDeleted'
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'capacity' => 'integer',
+        'IsDeleted' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+        'DateRestored' => 'datetime'
+    ];
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'status' => 'Available',
+        'IsDeleted' => false
     ];
 
     /**
@@ -52,7 +95,55 @@ class Laboratory extends Model
      */
     public function equipment()
     {
-        return $this->hasMany(Equipment::class, 'LabID', 'LabID');
+        return $this->hasMany(Equipment::class, 'laboratory_id', 'laboratory_id');
+    }
+
+    /**
+     * Get the reservations for the laboratory.
+     */
+    public function reservations()
+    {
+        return $this->hasMany(LaboratoryReservation::class, 'laboratory_id', 'laboratory_id');
+    }
+
+    /**
+     * Get the active reservations for the laboratory.
+     */
+    public function activeReservations()
+    {
+        return $this->reservations()->where('status', 'Active');
+    }
+
+    /**
+     * Get the user who created the laboratory.
+     */
+    public function created_by_user()
+    {
+        return $this->belongsTo(User::class, 'created_by', 'id');
+    }
+
+    /**
+     * Get the user who modified the laboratory.
+     */
+    public function updated_by_user()
+    {
+        return $this->belongsTo(User::class, 'updated_by', 'id');
+    }
+
+    /**
+     * Get the user who deleted the laboratory.
+     */
+    public function deleted_by_user()
+    {
+        return $this->belongsTo(User::class, 'deleted_by', 'id');
+    }
+
+    /**
+     * Get the user who restored the laboratory.
+     */
+    public function restored_by_user()
+    {
+        return $this->belongsTo(User::class, 'RestoredById', 'id');
     }
 
     /**
@@ -63,7 +154,7 @@ class Laboratory extends Model
      */
     public function scopeActive($query)
     {
-        return $query->where('Status', 'Active');
+        return $query->where('status', 'Active');
     }
 
     /**
@@ -74,7 +165,7 @@ class Laboratory extends Model
      */
     public function scopeInactive($query)
     {
-        return $query->where('Status', 'Inactive');
+        return $query->where('status', 'Inactive');
     }
 
     /**
@@ -85,7 +176,7 @@ class Laboratory extends Model
      */
     public function scopeUnderMaintenance($query)
     {
-        return $query->where('Status', 'Under Maintenance');
+        return $query->where('status', 'Under Maintenance');
     }
 
     /**
@@ -95,6 +186,6 @@ class Laboratory extends Model
      */
     public function getFullLocationAttribute()
     {
-        return "{$this->Building}, Floor {$this->Floor}, Room {$this->LabNumber}";
+        return "{$this->location}";
     }
 } 
