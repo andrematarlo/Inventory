@@ -13,166 +13,204 @@ use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\SkipsOnError;
 use Maatwebsite\Excel\Concerns\SkipsOnFailure;
 use Maatwebsite\Excel\Validators\Failure;
-use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, SkipsEmptyRows, SkipsOnError, SkipsOnFailure
 {
-    protected $request;
-    protected $rowCount = 0;
     protected $columnMapping;
-    protected $defaultValues;
     protected $createdById;
+    protected $rowCount = 0;
     protected $skippedRows = [];
     protected $successCount = 0;
 
-    /**
-     * Create a new import instance.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return void
-     */
-    public function __construct(Request $request, $createdById)
+    public function __construct(array $columnMapping, $createdById)
     {
-        $this->request = $request;
-        $this->columnMapping = $request->input('column_mapping', []);
-        $this->defaultValues = [
-            'middle_name' => $request->input('default_middle_name'),
-            'gender' => $request->input('default_gender'),
-            'email' => $request->input('default_email'),
-            'grade_level' => $request->input('default_grade_level'),
-            'section' => $request->input('default_section'),
-        ];
+        $this->columnMapping = $columnMapping;
         $this->createdById = $createdById;
     }
 
-    /**
-     * @param Collection $rows
-     */
     public function collection(Collection $rows)
     {
-        foreach ($rows as $row) {
+        Log::info('Starting import process with rows:', ['row_count' => count($rows)]);
+
+        foreach ($rows as $index => $row) {
             try {
-                // Skip empty rows
-                if (empty($this->getValue($row, 'student_id')) || 
-                    empty($this->getValue($row, 'first_name')) || 
-                    empty($this->getValue($row, 'last_name'))) {
+                // Convert row keys to snake_case for consistent mapping
+                $rowData = collect($row)->mapWithKeys(function ($value, $key) {
+                    return [str_replace(' ', '_', strtolower($key)) => $value];
+                })->toArray();
+
+                Log::info('Processing row:', ['row_data' => $rowData]);
+
+                // Map the data according to column mapping
+                $studentData = [
+                    'student_id' => $rowData['student_number'] ?? null,
+                    'first_name' => $rowData['first_name'] ?? null,
+                    'last_name' => $rowData['last_name'] ?? null,
+                    'middle_name' => $rowData['middle_name'] ?? null,
+                    'email' => $rowData['email'] ?? null,
+                    'contact_number' => (string)($rowData['contact_number'] ?? ''),
+                    'grade_level' => (string)($rowData['grade_level'] ?? ''),
+                    'section' => $rowData['section'] ?? null,
+                    'address' => $rowData['address'] ?? null,
+                ];
+
+                // Handle date_of_birth with multiple formats
+if (isset($rowData['birthdate']) && !empty($rowData['birthdate'])) {
+    try {
+        $value = $rowData['birthdate'];
+        $date = null;
+
+        // Check if the value is a number (Excel date)
+        if (is_numeric($value)) {
+            // Convert Excel date number to PHP DateTime
+            $date = Carbon::createFromDate(1899, 12, 30)->addDays($value);
+            Log::info('Parsed Excel numeric date:', [
+                'original' => $value,
+                'parsed' => $date->format('Y-m-d')
+            ]);
+        } else {
+            // Try different string date formats
+            $dateFormats = [
+                'm/d/Y',    // 11/01/2001
+                'd/m/Y',    // 01/11/2001
+                'Y-m-d',    // 2001-11-01
+                'd-m-Y',    // 01-11-2001
+                'Y/m/d',    // 2001/11/01
+                'm-d-Y',    // 11-01-2001
+                'M d Y',    // Nov 01 2001
+                'd M Y',    // 01 Nov 2001
+            ];
+
+            foreach ($dateFormats as $format) {
+                try {
+                    $date = Carbon::createFromFormat($format, $value);
+                    if ($date !== false) {
+                        Log::info('Parsed string date:', [
+                            'original' => $value,
+                            'format' => $format,
+                            'parsed' => $date->format('Y-m-d')
+                        ]);
+                        break;
+                    }
+                } catch (\Exception $e) {
                     continue;
                 }
+            }
+        }
 
-                // Check if student already exists
-                $existingStudent = Student::where('student_id', $this->getValue($row, 'student_id'))->first();
-                
-                if ($existingStudent) {
-                    // Update existing student
-                    $existingStudent->first_name = $this->getValue($row, 'first_name');
-                    $existingStudent->last_name = $this->getValue($row, 'last_name');
-                    $existingStudent->middle_name = $this->getValue($row, 'middle_name');
-                    $existingStudent->gender = $this->getValue($row, 'gender');
-                    $existingStudent->email = $this->getValue($row, 'email');
-                    $existingStudent->grade_level = $this->getValue($row, 'grade_level');
-                    $existingStudent->section = $this->getValue($row, 'section');
-                    $existingStudent->save();
-                } else {
-                    // Create new student
-                    Student::create([
-                        'student_id' => $this->getValue($row, 'student_id'),
-                        'first_name' => $this->getValue($row, 'first_name'),
-                        'last_name' => $this->getValue($row, 'last_name'),
-                        'middle_name' => $this->getValue($row, 'middle_name'),
-                        'gender' => $this->getValue($row, 'gender'),
-                        'email' => $this->getValue($row, 'email'),
-                        'grade_level' => $this->getValue($row, 'grade_level'),
-                        'section' => $this->getValue($row, 'section'),
-                        'status' => 'Active',
-                        'created_at' => now(),
-                        'created_by' => $this->createdById
-                    ]);
+        if ($date) {
+            $studentData['date_of_birth'] = $date->format('Y-m-d');
+            Log::info('Final date value:', ['date_of_birth' => $studentData['date_of_birth']]);
+        } else {
+            Log::warning('Could not parse date:', ['value' => $value]);
+        }
+    } catch (\Exception $e) {
+        Log::warning('Failed to parse date:', [
+            'value' => $rowData['birthdate'],
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+                // Handle gender with flexible formats
+                if (isset($rowData['gender'])) {
+                    $gender = strtoupper(trim($rowData['gender']));
+                    if ($gender === 'M' || str_starts_with($gender, 'MALE')) {
+                        $studentData['gender'] = 'Male';
+                    } elseif ($gender === 'F' || str_starts_with($gender, 'FEMALE')) {
+                        $studentData['gender'] = 'Female';
+                    } else {
+                        Log::warning('Unknown gender format:', ['value' => $rowData['gender']]);
+                    }
                 }
 
-                $this->rowCount++;
-                $this->successCount++;
+                // Add metadata
+                $studentData['created_by'] = $this->createdById;
+                $studentData['status'] = 'Active';
+
+                Log::info('Mapped student data:', ['data' => $studentData]);
+
+                // Validate required fields
+                if (empty($studentData['student_id']) || 
+                    empty($studentData['first_name']) || 
+                    empty($studentData['last_name'])) {
+                    throw new \Exception('Missing required fields');
+                }
+
+                // Check for existing student
+                $existingStudent = Student::where('student_id', $studentData['student_id'])->first();
+
+                DB::beginTransaction();
+                try {
+                    if ($existingStudent) {
+                        $existingStudent->update($studentData);
+                        Log::info('Updated existing student:', ['student_id' => $studentData['student_id']]);
+                    } else {
+                        Student::create($studentData);
+                        Log::info('Created new student:', ['student_id' => $studentData['student_id']]);
+                    }
+                    DB::commit();
+                    $this->successCount++;
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    throw $e;
+                }
 
             } catch (\Exception $e) {
-                Log::error('Error importing student row:', [
-                    'error' => $e->getMessage(),
-                    'row' => $row,
-                    'creator_id' => $this->createdById
+                Log::error('Error processing row:', [
+                    'row_number' => $index + 2,
+                    'error' => $e->getMessage()
                 ]);
                 
                 $this->skippedRows[] = [
-                    'student_id' => $this->getValue($row, 'student_id', 'Unknown'),
-                    'reason' => 'Error: ' . $e->getMessage()
+                    'row' => $index + 2,
+                    'reason' => $e->getMessage()
                 ];
             }
-        }
-    }
-
-    /**
-     * Get a value from the row based on the column mapping or default value.
-     *
-     * @param  mixed  $row
-     * @param  string  $field
-     * @return mixed
-     */
-    protected function getValue($row, $field, $default = '')
-    {
-        // If there's a column mapping for this field and the value exists in the row
-        if (isset($this->columnMapping[$field]) && !empty($this->columnMapping[$field])) {
-            $columnName = $this->columnMapping[$field];
-            if (isset($row[$columnName]) && !empty($row[$columnName])) {
-                return $row[$columnName];
-            }
+            
+            $this->rowCount++;
         }
 
-        // Otherwise, use the default value if available
-        if (isset($this->defaultValues[$field]) && !empty($this->defaultValues[$field])) {
-            return $this->defaultValues[$field];
-        }
-
-        return $default;
+        Log::info('Import completed:', [
+            'total_rows' => $this->rowCount,
+            'successful_imports' => $this->successCount,
+            'skipped_rows' => count($this->skippedRows)
+        ]);
     }
 
     public function rules(): array
     {
-        // The validation should use the mapped column names from the Excel file
-        $mappedColumns = array_values($this->columnMapping);
-        
-        $rules = [];
-        foreach ($mappedColumns as $excelColumn) {
-            if ($excelColumn === $this->columnMapping['student_id']) {
-                $rules[$excelColumn] = 'required|string|max:50';
-            } elseif ($excelColumn === $this->columnMapping['first_name']) {
-                $rules[$excelColumn] = 'required|string|max:255';
-            } elseif ($excelColumn === $this->columnMapping['last_name']) {
-                $rules[$excelColumn] = 'required|string|max:255';
-            }
-        }
-        
-        return $rules;
-    }
-
-    public function customValidationMessages()
-    {
-        // Use the mapped column name in the error message
-        $studentIdColumn = $this->columnMapping['student_id'] ?? '';
-        $firstNameColumn = $this->columnMapping['first_name'] ?? '';
-        $lastNameColumn = $this->columnMapping['last_name'] ?? '';
-        
         return [
-            $studentIdColumn.'.required' => 'The student ID is required.',
-            $firstNameColumn.'.required' => 'The first name is required.',
-            $lastNameColumn.'.required' => 'The last name is required.',
+            'student_number' => 'required',
+            'first_name' => 'required',
+            'last_name' => 'required',
+            'email' => 'nullable|email',
+            'contact_number' => 'nullable',
+            'gender' => 'nullable', // Removed strict validation
+            'birthdate' => 'nullable',
+            'address' => 'nullable',
+            'grade_level' => 'nullable',
+            'section' => 'nullable'
         ];
     }
 
     public function onError(\Throwable $e)
     {
-        Log::error('Excel import error: ' . $e->getMessage());
+        Log::error('Import error:', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
     }
 
     public function onFailure(Failure ...$failures)
     {
         foreach ($failures as $failure) {
+            Log::warning('Row validation failure:', [
+                'row' => $failure->row(),
+                'errors' => $failure->errors()
+            ]);
+            
             $this->skippedRows[] = [
                 'row' => $failure->row(),
                 'reason' => implode(', ', $failure->errors())
@@ -180,10 +218,6 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
         }
     }
 
-    public function getSkippedRows()
-    {
-        return $this->skippedRows;
-    }
 
     public function getRowCount()
     {
@@ -194,4 +228,9 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
     {
         return $this->successCount;
     }
-} 
+
+    public function getSkippedRows()
+    {
+        return $this->skippedRows;
+    }
+}
