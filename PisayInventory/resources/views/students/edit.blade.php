@@ -17,16 +17,16 @@
             Edit Student Information
         </div>
         <div class="card-body">
-            <form action="{{ route('students.update', $student->StudentID) }}" method="POST">
+            <form action="{{ route('students.update', $student->id) }}" method="POST">
                 @csrf
                 @method('PUT')
 
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control @error('StudentNumber') is-invalid @enderror" id="StudentNumber" name="StudentNumber" placeholder="Student Number" value="{{ old('StudentNumber', $student->StudentNumber) }}" required>
-                            <label for="StudentNumber">Student Number</label>
-                            @error('StudentNumber')
+                            <input type="text" class="form-control @error('student_id') is-invalid @enderror" id="student_id" name="student_id" placeholder="Student ID" value="{{ old('student_id', $student->student_id) }}" required>
+                            <label for="student_id">Student ID</label>
+                            @error('student_id')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -36,27 +36,27 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control @error('FirstName') is-invalid @enderror" id="FirstName" name="FirstName" placeholder="First Name" value="{{ old('FirstName', $student->FirstName) }}" required>
-                            <label for="FirstName">First Name</label>
-                            @error('FirstName')
+                            <input type="text" class="form-control @error('first_name') is-invalid @enderror" id="first_name" name="first_name" placeholder="First Name" value="{{ old('first_name', $student->first_name) }}" required>
+                            <label for="first_name">First Name</label>
+                            @error('first_name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control @error('MiddleName') is-invalid @enderror" id="MiddleName" name="MiddleName" placeholder="Middle Name" value="{{ old('MiddleName', $student->MiddleName) }}">
-                            <label for="MiddleName">Middle Name</label>
-                            @error('MiddleName')
+                            <input type="text" class="form-control @error('middle_name') is-invalid @enderror" id="middle_name" name="middle_name" placeholder="Middle Name" value="{{ old('middle_name', $student->middle_name) }}">
+                            <label for="middle_name">Middle Name</label>
+                            @error('middle_name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control @error('LastName') is-invalid @enderror" id="LastName" name="LastName" placeholder="Last Name" value="{{ old('LastName', $student->LastName) }}" required>
-                            <label for="LastName">Last Name</label>
-                            @error('LastName')
+                            <input type="text" class="form-control @error('last_name') is-invalid @enderror" id="last_name" name="last_name" placeholder="Last Name" value="{{ old('last_name', $student->last_name) }}" required>
+                            <label for="last_name">Last Name</label>
+                            @error('last_name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -66,22 +66,23 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="form-floating mb-3">
-                            <select class="form-select @error('Gender') is-invalid @enderror" id="Gender" name="Gender" required>
+                            <select class="form-select @error('gender') is-invalid @enderror" id="gender" name="gender" required>
                                 <option value="" disabled>Select Gender</option>
-                                <option value="Male" {{ (old('Gender', $student->Gender) == 'Male') ? 'selected' : '' }}>Male</option>
-                                <option value="Female" {{ (old('Gender', $student->Gender) == 'Female') ? 'selected' : '' }}>Female</option>
+                                <option value="Male" {{ (old('gender', $student->gender) == 'Male') ? 'selected' : '' }}>Male</option>
+                                <option value="Female" {{ (old('gender', $student->gender) == 'Female') ? 'selected' : '' }}>Female</option>
+                                <option value="Other" {{ (old('gender', $student->gender) == 'Other') ? 'selected' : '' }}>Other</option>
                             </select>
-                            <label for="Gender">Gender</label>
-                            @error('Gender')
+                            <label for="gender">Gender</label>
+                            @error('gender')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating mb-3">
-                            <input type="tel" class="form-control @error('ContactNumber') is-invalid @enderror" id="ContactNumber" name="ContactNumber" placeholder="Contact Number" value="{{ old('ContactNumber', $student->ContactNumber) }}">
-                            <label for="ContactNumber">Contact Number</label>
-                            @error('ContactNumber')
+                            <input type="tel" class="form-control @error('contact_number') is-invalid @enderror" id="contact_number" name="contact_number" placeholder="Contact Number" value="{{ old('contact_number', $student->contact_number) }}">
+                            <label for="contact_number">Contact Number</label>
+                            @error('contact_number')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -91,9 +92,9 @@
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <div class="form-floating mb-3">
-                            <input type="email" class="form-control @error('Email') is-invalid @enderror" id="Email" name="Email" placeholder="Email Address" value="{{ old('Email', $student->Email) }}">
-                            <label for="Email">Email Address</label>
-                            @error('Email')
+                            <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" placeholder="Email Address" value="{{ old('email', $student->email) }}">
+                            <label for="email">Email Address</label>
+                            @error('email')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -103,26 +104,26 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="form-floating mb-3">
-                            <select class="form-select @error('YearLevel') is-invalid @enderror" id="YearLevel" name="YearLevel" required>
+                            <select class="form-select @error('grade_level') is-invalid @enderror" id="grade_level" name="grade_level" required>
                                 <option value="" disabled>Select Year Level</option>
-                                <option value="Grade 7" {{ (old('YearLevel', $student->YearLevel) == 'Grade 7') ? 'selected' : '' }}>Grade 7</option>
-                                <option value="Grade 8" {{ (old('YearLevel', $student->YearLevel) == 'Grade 8') ? 'selected' : '' }}>Grade 8</option>
-                                <option value="Grade 9" {{ (old('YearLevel', $student->YearLevel) == 'Grade 9') ? 'selected' : '' }}>Grade 9</option>
-                                <option value="Grade 10" {{ (old('YearLevel', $student->YearLevel) == 'Grade 10') ? 'selected' : '' }}>Grade 10</option>
-                                <option value="Grade 11" {{ (old('YearLevel', $student->YearLevel) == 'Grade 11') ? 'selected' : '' }}>Grade 11</option>
-                                <option value="Grade 12" {{ (old('YearLevel', $student->YearLevel) == 'Grade 12') ? 'selected' : '' }}>Grade 12</option>
+                                <option value="Grade 7" {{ (old('grade_level', $student->grade_level) == 'Grade 7') ? 'selected' : '' }}>Grade 7</option>
+                                <option value="Grade 8" {{ (old('grade_level', $student->grade_level) == 'Grade 8') ? 'selected' : '' }}>Grade 8</option>
+                                <option value="Grade 9" {{ (old('grade_level', $student->grade_level) == 'Grade 9') ? 'selected' : '' }}>Grade 9</option>
+                                <option value="Grade 10" {{ (old('grade_level', $student->grade_level) == 'Grade 10') ? 'selected' : '' }}>Grade 10</option>
+                                <option value="Grade 11" {{ (old('grade_level', $student->grade_level) == 'Grade 11') ? 'selected' : '' }}>Grade 11</option>
+                                <option value="Grade 12" {{ (old('grade_level', $student->grade_level) == 'Grade 12') ? 'selected' : '' }}>Grade 12</option>
                             </select>
-                            <label for="YearLevel">Year Level</label>
-                            @error('YearLevel')
+                            <label for="grade_level">Year Level</label>
+                            @error('grade_level')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control @error('Section') is-invalid @enderror" id="Section" name="Section" placeholder="Section" value="{{ old('Section', $student->Section) }}" required>
-                            <label for="Section">Section</label>
-                            @error('Section')
+                            <input type="text" class="form-control @error('section') is-invalid @enderror" id="section" name="section" placeholder="Section" value="{{ old('section', $student->section) }}" required>
+                            <label for="section">Section</label>
+                            @error('section')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -132,13 +133,13 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="form-floating mb-3">
-                            <select class="form-select @error('Status') is-invalid @enderror" id="Status" name="Status" required>
+                            <select class="form-select @error('status') is-invalid @enderror" id="status" name="status" required>
                                 <option value="" disabled>Select Status</option>
-                                <option value="Active" {{ (old('Status', $student->Status) == 'Active') ? 'selected' : '' }}>Active</option>
-                                <option value="Inactive" {{ (old('Status', $student->Status) == 'Inactive') ? 'selected' : '' }}>Inactive</option>
+                                <option value="Active" {{ (old('status', $student->status) == 'Active') ? 'selected' : '' }}>Active</option>
+                                <option value="Inactive" {{ (old('status', $student->status) == 'Inactive') ? 'selected' : '' }}>Inactive</option>
                             </select>
-                            <label for="Status">Status</label>
-                            @error('Status')
+                            <label for="status">Status</label>
+                            @error('status')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>

@@ -4,8 +4,8 @@
 
 @section('content')
 <div class="container-fluid px-4">
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Items Management</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Items Management</h2>
     <div>
         @if($userPermissions && $userPermissions->CanAdd)
             <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importExcelModal">
@@ -15,21 +15,21 @@
             <button class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#exportModal">
                 <i class="bi bi-download"></i> Export Items
             </button>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                <i class="bi bi-plus-lg"></i> New Item
-            </button>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+            <i class="bi bi-plus-lg"></i> New Item
+        </button>
         @endif
     </div>
-</div>
+    </div>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="btn-group" role="group">
-            <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
-                Active Records
-            </button>
-            <button class="btn btn-danger" type="button" id="showDeletedBtn">
-                <i class="bi bi-archive"></i> Show Deleted Records
-            </button>
+        <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
+            Active Records
+        </button>
+        <button class="btn btn-danger" type="button" id="showDeletedBtn">
+            <i class="bi bi-archive"></i> Show Deleted Records
+        </button>
         </div>
     </div>
 
@@ -66,25 +66,25 @@
                                         <i class="bi bi-chevron-left small"></i>
                                     </a>
                                 </li>
-                            @endif
-
-                            @for($i = 1; $i <= $activeItems->lastPage(); $i++)
+                        @endif
+                        
+                        @for($i = 1; $i <= $activeItems->lastPage(); $i++)
                                 <li class="page-item {{ $activeItems->currentPage() == $i ? 'active' : '' }}">
                                     <a class="page-link" href="{{ $activeItems->url($i) }}">{{ $i }}</a>
                                 </li>
-                            @endfor
+                        @endfor
 
-                            @if($activeItems->hasMorePages())
+                        @if($activeItems->hasMorePages())
                                 <li class="page-item">
                                     <a class="page-link" href="{{ $activeItems->nextPageUrl() }}">
                                         <i class="bi bi-chevron-right small"></i>
-                                    </a>
+                            </a>
                                 </li>
                             @else
                                 <li class="page-item disabled">
                                     <span class="page-link"><i class="bi bi-chevron-right small"></i></span>
                                 </li>
-                            @endif
+                        @endif
                         </ul>
                     </nav>
                 </div>
@@ -225,8 +225,8 @@
                                                 class="btn btn-sm btn-success restore-item"
                                                 data-item-id="{{ $item->ItemId }}"
                                                 data-item-name="{{ $item->ItemName }}">
-                                            <i class="bi bi-arrow-counterclockwise"></i>
-                                        </button>
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
                                     </td>
                                     <td>
                                         @if($item->ImagePath)
@@ -260,7 +260,7 @@
 </div>
 
 @if($userPermissions && $userPermissions->CanAdd)
-        @include('items.partials.add-modal')
+    @include('items.partials.add-modal')
 
         <!-- Import Excel Modal -->
 <div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
@@ -453,7 +453,7 @@
     </div>
 </div>
 
-    @endif
+@endif
 
 @if($userPermissions && $userPermissions->CanEdit)
     @foreach($activeItems as $item)
