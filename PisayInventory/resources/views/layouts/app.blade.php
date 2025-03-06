@@ -247,100 +247,44 @@
         @include('layouts.sidebar')
         
         <div class="main-content">
-    <div class="content-wrapper">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show main-alert" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="content-wrapper">
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show main-alert" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        {{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                @yield('content')
             </div>
-        @endif
+        </div>
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-circle me-2"></i>
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
-        @yield('content')
-    </div>
-</div>
-
-        <!-- Scripts at the bottom -->
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Initialize sidebar functionality
-                const sidebarElement = document.querySelector('.sidebar');
-                const mainContent = document.querySelector('.main-content');
-                
-                if (sidebarElement && mainContent) {
-                    window.sidebar = {
-                        element: sidebarElement,
-                        mainContent: mainContent,
-                        toggle: function() {
-                            if (this.element) {
-                                this.element.classList.toggle('collapsed');
-                                if (this.element.classList.contains('collapsed')) {
-                                    this.mainContent.style.marginLeft = '70px';
-                                } else {
-                                    this.mainContent.style.marginLeft = '320px';
-                                }
-                            }
-                        }
-                    };
-                }
-
-                // Initialize tooltips and other Bootstrap components
-                if (typeof bootstrap !== 'undefined') {
-                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                    tooltipTriggerList.map(function (tooltipTriggerEl) {
-                        return new bootstrap.Tooltip(tooltipTriggerEl);
-                    });
-                }
-            });
-        </script>
-
+        <!-- Bootstrap Bundle with Popper -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-        
-        <script>
-            function confirmLogout() {
-                return confirm('Are you sure you want to logout?');
-            }
-        </script>
-
-        @yield('scripts')
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
-        <script src="{{ asset('js/sweet-alerts.js') }}"></script>
 
-        <!-- Flash message handling -->
+        @if(session('sweet_alert'))
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Handle success messages
-                @if(session('success'))
-                    showSuccess("{{ session('success') }}");
-                @endif
-
-                // Handle error messages
-                @if(session('error'))
-                    showError("{{ session('error') }}");
-                @endif
-
-                // Handle validation errors
-                @if($errors->any())
-                    showValidationErrors({!! json_encode($errors->all()) !!});
-                @endif
-
-                // Initialize delete buttons
-                document.querySelectorAll('[data-delete-form]').forEach(button => {
-                    button.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const form = document.querySelector(this.dataset.deleteForm);
-                        confirmDelete(() => form.submit());
-                    });
+                Swal.fire({
+                    title: "{{ session('sweet_alert.title') }}",
+                    text: "{{ session('sweet_alert.message') }}",
+                    icon: "{{ session('sweet_alert.type') }}",
+                    confirmButtonText: 'OK'
                 });
             });
         </script>
+        @endif
+
+        @yield('scripts')
     </body>
 </html>

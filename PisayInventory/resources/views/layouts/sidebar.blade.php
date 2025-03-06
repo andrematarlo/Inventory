@@ -21,6 +21,7 @@
             $purchasingPermissions = $controller->getUserPermissions('Purchasing Management');
             $receivingPermissions = $controller->getUserPermissions('Receiving Management'); 
             $inventoryPermissions = $controller->getUserPermissions('Inventory');
+            $studentPermissions = $controller->getUserPermissions('Student Management');
         }
         
         // Check permissions for each module
@@ -29,6 +30,7 @@
         $hasPurchasingAccess = $purchasingPermissions && $purchasingPermissions->CanView;
         $hasReceivingAccess = $receivingPermissions && $receivingPermissions->CanView;
         $hasInventoryAccess = $inventoryPermissions && $inventoryPermissions->CanView;
+        $hasStudentAccess = $studentPermissions && $studentPermissions->CanView || $isAdmin;
     @endphp
 
     <ul class="nav flex-column py-2">
@@ -38,6 +40,14 @@
                 <span>Dashboard</span>
             </a>
         </li>
+        @if($hasStudentAccess)
+        <li class="nav-item">
+            <a href="{{ route('students.index') }}" class="nav-link text-white {{ request()->routeIs('students.*') ? 'active bg-primary' : '' }}">
+                <i class="bi bi-mortarboard"></i>
+                <span>Students</span>
+            </a>
+        </li>
+        @endif
         @if($isAdmin)
         <li class="nav-item">
             <a class="nav-link {{ request()->routeIs('modules.*') ? 'active' : '' }}" href="{{ route('modules.index') }}">
