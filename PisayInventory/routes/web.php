@@ -50,6 +50,10 @@ Route::middleware('auth')->group(function () {
         Route::post('students/{id}/restore', [StudentsController::class, 'restore'])->name('students.restore');
         Route::delete('students/{id}/force-delete', [StudentsController::class, 'forceDelete'])->name('students.force-delete');
         Route::resource('students', StudentsController::class);
+        Route::get('/students/import', [StudentsController::class, 'showImport'])->name('students.import');
+        Route::post('/students/preview-columns', [StudentsController::class, 'previewColumns'])->name('students.preview-columns');
+        Route::post('/students/process-import', [StudentsController::class, 'processImport'])->name('students.process-import');
+        
 
         // Items Management
         Route::resource('items', ItemController::class);

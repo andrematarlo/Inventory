@@ -109,6 +109,7 @@
 
 <!-- Import Modal -->
 @if($userPermissions && $userPermissions->CanAdd)
+<!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -119,16 +120,18 @@
             <div class="modal-body">
                 <!-- Step 1: File Selection -->
                 <div id="importStep1">
-                    <div class="mb-3">
-                        <label for="excelFileInput" class="form-label">Select Excel File</label>
-                        <input type="file" class="form-control" id="excelFileInput" accept=".xlsx, .xls">
-                    </div>
-                    <button type="button" id="readExcelBtn" class="btn btn-primary">Preview Columns</button>
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="excelFileInput" class="form-label">Select Excel File</label>
+                            <input type="file" class="form-control" id="excelFileInput" accept=".xlsx, .xls">
+                        </div>
+                        <button type="button" id="readExcelBtn" class="btn btn-primary">Preview Columns</button>
+                    </form>
                 </div>
                 
                 <!-- Step 2: Column Mapping -->
                 <div id="importStep2" style="display: none;">
-                    <h5>Map Excel Columns to Student Fields</h5>
                     <form id="importForm">
                         @csrf
                         <div class="table-responsive">
@@ -193,10 +196,33 @@
                                             </select>
                                         </td>
                                         <td>
-                                            <select name="default_gender" class="form-select form-select-sm">
+                                            <select name="default_gender" class="form-control form-control-sm">
+                                                <option value="">Select Default</option>
                                                 <option value="Male">Male</option>
                                                 <option value="Female">Female</option>
                                             </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Date of Birth</td>
+                                        <td>
+                                            <select name="column_mapping[date_of_birth]" class="form-select form-select-sm">
+                                                <option value="">Select Column</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="date" name="default_date_of_birth" class="form-control form-control-sm" placeholder="Optional">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Address</td>
+                                        <td>
+                                            <select name="column_mapping[address]" class="form-select form-select-sm">
+                                                <option value="">Select Column</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="default_address" class="form-control form-control-sm" placeholder="Optional">
                                         </td>
                                     </tr>
                                     <tr>
@@ -211,14 +237,31 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>Year Level</td>
+                                        <td>Contact Number</td>
+                                        <td>
+                                            <select name="column_mapping[contact_number]" class="form-select form-select-sm">
+                                                <option value="">Select Column</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="default_contact_number" class="form-control form-control-sm" placeholder="Optional">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Grade Level</td>
                                         <td>
                                             <select name="column_mapping[grade_level]" class="form-select form-select-sm">
                                                 <option value="">Select Column</option>
                                             </select>
                                         </td>
                                         <td>
-                                            <input type="text" name="default_year" class="form-control form-control-sm" placeholder="Optional">
+                                            <select name="default_grade_level" class="form-control form-control-sm">
+                                                <option value="">Select Default</option>
+                                                <option value="7">Grade 7</option>
+                                                <option value="8">Grade 8</option>
+                                                <option value="9">Grade 9</option>
+                                                <option value="10">Grade 10</option>
+                                            </select>
                                         </td>
                                     </tr>
                                     <tr>
@@ -289,204 +332,231 @@
 
 @endsection
 
-@section('additional_scripts')
+@section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-    $(document).ready(function() {
-        // Initialize DataTables
-        $('#studentsTable').DataTable({
-            responsive: true,
-            order: [[1, 'asc']],
-            language: {
-                emptyTable: "No students found"
-            }
+$(document).ready(function() {
+    // Initialize DataTables
+    $('#studentsTable').DataTable({
+        responsive: true,
+        order: [[1, 'asc']],
+        language: {
+            emptyTable: "No students found"
+        }
+    });
+
+    // Handle file selection and preview
+    // Update the readExcelBtn click handler to include the new fields in auto-mapping
+$('#readExcelBtn').on('click', function(e) {
+    e.preventDefault();
+    console.log('Button clicked');
+    
+    var fileInput = document.getElementById('excelFileInput');
+    var file = fileInput.files[0];
+    
+    if (!file) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No File Selected',
+            text: 'Please select an Excel file first'
         });
+        return;
+    }
 
-        // Handle file selection and preview
-        $('#readExcelBtn').on('click', function() {
-            var fileInput = document.getElementById('excelFileInput');
-            var file = fileInput.files[0];
+    var formData = new FormData();
+    formData.append('excel_file', file);
+
+    $.ajax({
+        url: "/inventory/students/preview-columns",
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            console.log('Raw server response:', response);
             
-            if (!file) {
-                alert('Please select an Excel file first');
-                return;
-            }
+            if (response.success && response.data && response.data.headers) {
+                console.log('Headers found:', response.data.headers);
+                
+                // Define common column name mappings
+                const commonMappings = {
+                    'student_id': ['student id', 'student number', 'id number', 'learner reference number', 'lrn'],
+                    'first_name': ['first name', 'firstname', 'given name'],
+                    'last_name': ['last name', 'lastname', 'surname', 'family name'],
+                    'middle_name': ['middle name', 'middlename'],
+                    'email': ['email', 'email address', 'e-mail'],
+                    'contact_number': ['contact', 'contact number', 'phone', 'mobile', 'telephone'],
+                    'gender': ['gender', 'sex'],
+                    'date_of_birth': ['birth date', 'birthdate', 'date of birth', 'dob'],
+                    'address': ['address', 'residence', 'location'],
+                    'grade_level': ['grade', 'grade level', 'year level', 'level'],
+                    'section': ['section', 'class', 'block']
+                };
 
-            // Show loading state
-            var $btn = $(this);
-            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Loading...');
-
-            var formData = new FormData();
-            formData.append('excel_file', file);
-            
-            // Get CSRF token
-            var token = $('meta[name="csrf-token"]').attr('content');
-            if (!token) {
-                console.error('CSRF token not found');
-                alert('Error: CSRF token not found. Please refresh the page and try again.');
-                $btn.prop('disabled', false).text('Preview Columns');
-                return;
-            }
-
-            console.log('Sending preview request with CSRF token:', token);
-            console.log('File being sent:', file);
-            
-            // Send request to preview columns
-            $.ajax({
-                url: "/inventory/students/preview-columns",
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: {
-                    'X-CSRF-TOKEN': token
-                },
-                success: function(response) {
-                    console.log('Preview response:', response);
-                    if (!response.columns || !Array.isArray(response.columns)) {
-                        console.error('Invalid response format:', response);
-                        alert('Error: Invalid response format from server');
-                        return;
-                    }
-
-                    // Reset all dropdowns first
-                    $('select[name^="column_mapping"]').each(function() {
-                        var select = $(this);
-                        select.find('option:not(:first)').remove();
+                // Populate all select elements
+                $('select[name^="column_mapping"]').each(function() {
+                    var select = $(this);
+                    var fieldName = select.attr('name').match(/\[(.*?)\]/)[1];
+                    
+                    // Clear existing options except the first one
+                    select.find('option:not(:first)').remove();
+                    
+                    // Add new options
+                    response.data.headers.forEach(function(header) {
+                        select.append(new Option(header, header));
                         
-                        // Add the columns to all dropdowns
-                        response.columns.forEach(function(column) {
-                            select.append(new Option(column, column));
-                        });
-
-                        // Try to auto-match based on field name
-                        var fieldName = select.attr('name').match(/\[([^\]]+)\]/)[1].toLowerCase();
-                        var matchingColumn = response.columns.find(function(column) {
-                            return column.toLowerCase().includes(fieldName.toLowerCase());
-                        });
-
-                        if (matchingColumn) {
-                            select.val(matchingColumn);
+                        // Auto-select if header matches common mappings
+                        if (commonMappings[fieldName]) {
+                            const matchesMapping = commonMappings[fieldName].some(mapping => 
+                                header.toLowerCase().includes(mapping.toLowerCase())
+                            );
+                            if (matchesMapping) {
+                                select.val(header);
+                            }
                         }
                     });
-
-                    // Show mapping form
-                    $('#importStep1').hide();
-                    $('#importStep2').show();
-                },
-                error: function(xhr, status, error) {
-                    console.error('Preview error:', {
-                        status: status,
-                        error: error,
-                        response: xhr.responseText,
-                        headers: xhr.getAllResponseHeaders()
-                    });
-                    
-                    var errorMessage;
-                    try {
-                        var response = JSON.parse(xhr.responseText);
-                        errorMessage = response.error || response.message || 'Unknown error occurred';
-                    } catch (e) {
-                        errorMessage = 'Failed to preview columns. Please try again.';
-                    }
-                    
-                    alert('Preview failed: ' + errorMessage);
-                },
-                complete: function() {
-                    // Reset button state
-                    $btn.prop('disabled', false).text('Preview Columns');
-                }
-            });
-        });
-
-        // Handle back button
-        $('#backToStep1Btn').on('click', function() {
-            $('#importStep2').hide();
-            $('#importStep1').show();
-        });
-
-        // Handle form submission
-        $('#importForm').on('submit', function(e) {
-            e.preventDefault();
-            
-            // Validate required fields
-            var requiredFields = ['student_id', 'first_name', 'last_name'];
-            var missingFields = [];
-            
-            requiredFields.forEach(function(field) {
-                if (!$('select[name="column_mapping[' + field + ']"]').val()) {
-                    missingFields.push(field);
-                }
-            });
-            
-            if (missingFields.length > 0) {
-                alert('Please map the following required fields: ' + missingFields.join(', '));
-                return;
+                });
+                
+                $('#importStep1').hide();
+                $('#importStep2').show();
+            } else {
+                console.error('Invalid response structure:', response);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Preview Failed',
+                    text: 'Invalid response format from server'
+                });
             }
-
-            var formData = new FormData();
-            formData.append('file', $('#excelFileInput')[0].files[0]);
-            
-            // Add mappings
-            $('select[name^="column_mapping"]').each(function() {
-                if ($(this).val()) {
-                    formData.append($(this).attr('name'), $(this).val());
-                }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', {
+                status: status,
+                error: error,
+                response: xhr.responseText
             });
-            
-            // Add defaults
-            $('[name^="default_"]').each(function() {
-                if ($(this).val()) {
-                    formData.append($(this).attr('name'), $(this).val());
-                }
+            Swal.fire({
+                icon: 'error',
+                title: 'Preview Failed',
+                text: 'Failed to preview columns: ' + error
             });
+        }
+    });
+});
 
-            console.log('Sending import request with data:', {
-                file: $('#excelFileInput')[0].files[0],
-                mappings: Object.fromEntries(formData.entries())
+    // Handle back button
+    $('#backToStep1Btn').on('click', function() {
+        $('#importStep2').hide();
+        $('#importStep1').show();
+    });
+
+    // Handle form submission
+    $('#importForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate required fields
+        var requiredFields = ['student_id', 'first_name', 'last_name'];
+        var missingFields = [];
+        
+        requiredFields.forEach(function(field) {
+            if (!$('select[name="column_mapping[' + field + ']"]').val()) {
+                missingFields.push(field);
+            }
+        });
+        
+        if (missingFields.length > 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Required Fields Missing',
+                text: 'Please map the following required fields: ' + missingFields.join(', ')
             });
+            return;
+        }
 
-            // Show loading state
-            var submitBtn = $(this).find('button[type="submit"]');
-            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Importing...');
-
-            // Send import request
-            $.ajax({
-                url: "/inventory/students/process-import",
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    console.log('Import response:', response);
-                    if (response.success) {
-                        alert(response.message);
-                        location.reload();
-                    } else {
-                        console.error('Import failed:', response);
-                        alert('Import failed: ' + (response.error || 'Unknown error occurred'));
+        // Show confirmation dialog
+        Swal.fire({
+            title: 'Confirm Import',
+            text: 'Are you sure you want to proceed with the import?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, import',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                var formData = new FormData();
+                formData.append('excel_file', $('#excelFileInput')[0].files[0]);
+                
+                // Add mappings
+                $('select[name^="column_mapping"]').each(function() {
+                    if ($(this).val()) {
+                        formData.append($(this).attr('name'), $(this).val());
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Import error:', {
-                        status: status,
-                        error: error,
-                        response: xhr.responseText,
-                        headers: xhr.getAllResponseHeaders()
-                    });
-                    try {
-                        var response = JSON.parse(xhr.responseText);
-                        alert('Import failed: ' + (response.error || response.message || 'Unknown error occurred'));
-                    } catch (e) {
-                        alert('Import failed: ' + error);
+                });
+                
+                // Add defaults
+                $('[name^="default_"]').each(function() {
+                    if ($(this).val()) {
+                        formData.append($(this).attr('name'), $(this).val());
                     }
-                },
-                complete: function() {
-                    submitBtn.prop('disabled', false).text('Import Students');
-                }
-            });
+                });
+
+                // Show loading state
+                Swal.fire({
+                    title: 'Importing...',
+                    text: 'Please wait while we process your file',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Send import request
+                $.ajax({
+                    url: "/inventory/students/process-import",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Import Successful',
+                                text: response.message
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Import Failed',
+                                text: response.error || 'Unknown error occurred'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        let errorMessage = 'An error occurred during import';
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            errorMessage = response.error || response.message || errorMessage;
+                        } catch (e) {
+                            errorMessage = error || errorMessage;
+                        }
+                        
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Import Failed',
+                            text: errorMessage
+                        });
+                    }
+                });
+            }
         });
 
         // Populate the modal with student data
@@ -525,5 +595,6 @@
             });
         });
     });
+});
 </script>
 @endsection 
