@@ -7,16 +7,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Illuminate\Support\Facades\Validator;
 
 
 class StudentsController extends Controller
 {
     /**
-<<<<<<< HEAD
-=======
      * Display a listing of the students.
      *
-
      */
     public function index()
     {
@@ -199,18 +197,11 @@ class StudentsController extends Controller
     }
 
     /**
->>>>>>> da497faeed4a7f3999f503b3e6f75edd32cd33b6
      * Show the form for importing students.
      *
      */
     public function showImport()
     {
-        // Check if user has permission to add students
-        $userPermissions = $this->getUserPermissions('Students');
-        if (!$userPermissions || !$userPermissions->CanAdd) {
-            return redirect()->route('students.index')->with('error', 'You do not have permission to import students.');
-        }
-
         return view('students.import');
     }
 
@@ -221,233 +212,98 @@ class StudentsController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function previewColumns(Request $request)
-<<<<<<< HEAD
     {
-        // Check if user has permission to add students
-        $userPermissions = $this->getUserPermissions('Students');
-        if (!$userPermissions || !$userPermissions->CanAdd) {
-            return redirect()->route('students.index')->with('error', 'You do not have permission to import students.');
-        }
+        try {
+            if (!$request->hasFile('file')) {
+                return back()->with('error', 'Please upload a file');
+            }
 
-=======
-{
-    try {
->>>>>>> da497faeed4a7f3999f503b3e6f75edd32cd33b6
-        $request->validate([
-            'excel_file' => 'required|mimes:xlsx,xls',
-        ]);
-
-        // Use getRealPath() instead of storing the file
-        $path = $request->file('excel_file')->getRealPath();
-        $spreadsheet = IOFactory::load($path);
-        $worksheet = $spreadsheet->getActiveSheet();
-        $columns = [];
-
-        // Get the first row (headers)
-        foreach ($worksheet->getRowIterator(1, 1) as $row) {
-            $cellIterator = $row->getCellIterator();
-            $cellIterator->setIterateOnlyExistingCells(false);
-
-            foreach ($cellIterator as $cell) {
-                $colName = trim($cell->getValue());
-                if (!empty($colName)) {
-                    // Clean the column name
-                    $colName = str_replace(['_', '-'], ' ', $colName);
-                    $colName = trim($colName);
-                    $columns[] = $colName;
+            $file = $request->file('file');
+            $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+            $spreadsheet = $reader->load($file);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $headers = [];
+            
+            // Get headers from first row
+            foreach ($worksheet->getRowIterator(1, 1) as $row) {
+                $cellIterator = $row->getCellIterator();
+                $cellIterator->setIterateOnlyExistingCells(false);
+                foreach ($cellIterator as $cell) {
+                    if ($cell->getValue()) {
+                        $headers[] = $cell->getValue();
+                    }
                 }
             }
-<<<<<<< HEAD
-            
-            // Get preview data (first 5 rows)
-            $rowCount = min($worksheet->getHighestRow(), 6);
-            for ($rowIndex = 2; $rowIndex <= $rowCount; $rowIndex++) {
+
+            // Get first few rows of data for preview
+            $previewData = [];
+            foreach ($worksheet->getRowIterator(2, 6) as $row) {
                 $rowData = [];
-                foreach ($worksheet->getRowIterator($rowIndex, $rowIndex) as $row) {
-                    $cellIterator = $row->getCellIterator();
-                    $cellIterator->setIterateOnlyExistingCells(false);
-                    foreach ($cellIterator as $cell) {
-                        $rowData[] = $cell->getValue();
-                    }
+                $cellIterator = $row->getCellIterator();
+                $cellIterator->setIterateOnlyExistingCells(false);
+                foreach ($cellIterator as $cell) {
+                    $rowData[] = $cell->getValue();
                 }
                 if (array_filter($rowData)) {
                     $previewData[] = $rowData;
                 }
             }
 
-            return redirect()->back()
-                ->with('headers', $headers)
-                ->with('preview_data', $previewData)
-                ->with('file_path', $path);
-
+            return view('students.preview-columns', compact('headers', 'previewData'));
         } catch (\Exception $e) {
-            Log::error('Excel preview error: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'Error reading Excel file. Please make sure it\'s a valid Excel file.');
-=======
->>>>>>> da497faeed4a7f3999f503b3e6f75edd32cd33b6
+            return back()->with('error', 'Error reading file: ' . $e->getMessage());
         }
-
-        Log::info('Excel columns found:', ['columns' => $columns]);
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'headers' => $columns
-            ]
-        ]);
-        
-    } catch (\Exception $e) {
-        Log::error('Error previewing Excel columns: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'sweet_alert' => [
-                'type' => 'error',
-                'title' => 'Error',
-                'message' => 'Error reading Excel file: ' . $e->getMessage()
-            ]
-        ]);
     }
-}
+
     /**
      * Import students from Excel file.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-<<<<<<< HEAD
-    public function import(Request $request)
-    {
-        // Check if user has permission to add students
-        $userPermissions = $this->getUserPermissions('Students');
-        if (!$userPermissions || !$userPermissions->CanAdd) {
-            return redirect()->route('students.index')->with('error', 'You do not have permission to import students.');
-        }
-
-        $request->validate([
-            'file_path' => 'required|string',
-            'column_mapping' => 'required|array',
-            'column_mapping.*' => 'nullable|string',
-        ]);
-
-=======
     public function processImport(Request $request)
-{
-    try {
-        // Validate request
-        $request->validate([
-            'excel_file' => 'required|mimes:xlsx,xls',
-            'column_mapping' => 'required|array'
-        ]);
-
-        DB::beginTransaction();
-
->>>>>>> da497faeed4a7f3999f503b3e6f75edd32cd33b6
+    {
         try {
-            $import = new StudentsImport(
-                $request->column_mapping,
-                Auth::id()
-            );
+            $validated = $request->validate([
+                'file' => 'required|file|mimes:xlsx,xls',
+                'column_mapping' => 'required|array'
+            ]);
 
-<<<<<<< HEAD
-            $filePath = storage_path('app/' . $request->file_path);
-            $spreadsheet = IOFactory::load($filePath);
+            $file = $request->file('file');
+            $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+            $spreadsheet = $reader->load($file);
             $worksheet = $spreadsheet->getActiveSheet();
-            $columnMapping = $request->column_mapping;
-            $successCount = 0;
-            $errorRows = [];
+            
+            DB::beginTransaction();
 
-            // Process each row
-            $highestRow = $worksheet->getHighestRow();
-            for ($rowIndex = 2; $rowIndex <= $highestRow; $rowIndex++) {
-                try {
-                    $rowData = [];
-                    foreach ($columnMapping as $columnIndex => $field) {
-                        if (!empty($field)) {
-                            $cellValue = $worksheet->getCellByColumnAndRow($columnIndex + 1, $rowIndex)->getValue();
-                            $rowData[$field] = $cellValue;
+            foreach ($worksheet->getRowIterator(2) as $row) {
+                $rowData = [];
+                $cellIterator = $row->getCellIterator();
+                $cellIterator->setIterateOnlyExistingCells(false);
+                
+                foreach ($cellIterator as $cell) {
+                    $rowData[] = $cell->getValue();
+                }
+
+                if (array_filter($rowData)) {
+                    $studentData = [];
+                    foreach ($request->column_mapping as $field => $columnIndex) {
+                        if ($columnIndex !== '') {
+                            $studentData[$field] = $rowData[$columnIndex] ?? null;
                         }
                     }
 
-                    // Skip empty rows
-                    if (empty(array_filter($rowData))) {
-                        continue;
-                    }
-
-                    // Validate required fields
-                    if (empty($rowData['StudentNumber']) || empty($rowData['FirstName']) || empty($rowData['LastName'])) {
-                        $errorRows[] = "Row {$rowIndex}: Missing required fields (Student Number, First Name, or Last Name)";
-                        continue;
-                    }
-
-                    // Check for duplicate student number
-                    if (Student::where('StudentNumber', $rowData['StudentNumber'])->exists()) {
-                        $errorRows[] = "Row {$rowIndex}: Duplicate Student Number ({$rowData['StudentNumber']})";
-                        continue;
-                    }
-
-                    // Create student
-                    $student = new Student($rowData);
-                    $student->Status = 'Active';
-                    $student->save();
-                    $successCount++;
-
-                } catch (\Exception $e) {
-                    $errorRows[] = "Row {$rowIndex}: " . $e->getMessage();
+                    Student::create($studentData);
                 }
             }
 
             DB::commit();
-
-            // Clean up temporary file
-            if (file_exists($filePath)) {
-                unlink($filePath);
-            }
-
-            $message = "{$successCount} students imported successfully.";
-            if (!empty($errorRows)) {
-                $message .= " However, there were some errors:";
-                return redirect()->route('students.index')
-                    ->with('success', $message)
-                    ->with('import_errors', $errorRows);
-            }
-
-            return redirect()->route('students.index')->with('success', $message);
-
+            return redirect()->route('students.index')->with('success', 'Students imported successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Student import error: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'Error importing students. Please try again.');
-=======
-            Excel::import($import, $request->file('excel_file'));
-
-            DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => 'Students imported successfully.'
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
->>>>>>> da497faeed4a7f3999f503b3e6f75edd32cd33b6
+            return back()->with('error', 'Error importing students: ' . $e->getMessage());
         }
-
-    } catch (\Exception $e) {
-        Log::error('Error importing students:', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'error' => 'Error importing students: ' . $e->getMessage()
-        ], 500);
     }
-<<<<<<< HEAD
-=======
-}
 
     /**
      * Get the permissions for a specific module for the authenticated user.
@@ -504,5 +360,4 @@ class StudentsController extends Controller
 
         return redirect()->route('students.trash')->with('success', 'Student permanently deleted successfully.');
     }
->>>>>>> da497faeed4a7f3999f503b3e6f75edd32cd33b6
 } 

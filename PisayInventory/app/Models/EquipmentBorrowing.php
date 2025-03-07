@@ -32,17 +32,17 @@ class EquipmentBorrowing extends Model
         'updated_by',
         'deleted_by',
         'RestoredById',
-        'DateRestored'
+        'IsDeleted'
     ];
 
     protected $dates = [
         'borrow_date',
         'expected_return_date',
         'actual_return_date',
-        'DateRestored',
         'created_at',
         'updated_at',
-        'deleted_at'
+        'deleted_at',
+        'DateRestored'
     ];
 
     protected $casts = [
@@ -59,22 +59,22 @@ class EquipmentBorrowing extends Model
         return $this->belongsTo(UserAccount::class, 'borrower_id', 'UserAccountID');
     }
 
-    public function creator()
+    public function createdBy()
     {
         return $this->belongsTo(UserAccount::class, 'created_by', 'UserAccountID');
     }
 
-    public function modifier()
+    public function updatedBy()
     {
         return $this->belongsTo(UserAccount::class, 'updated_by', 'UserAccountID');
     }
 
-    public function deleter()
+    public function deletedBy()
     {
         return $this->belongsTo(UserAccount::class, 'deleted_by', 'UserAccountID');
     }
 
-    public function restorer()
+    public function restoredBy()
     {
         return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
     }

@@ -18,15 +18,20 @@ class Equipment extends Model
     protected $fillable = [
         'equipment_id',
         'equipment_name',
+        'laboratory_id',
+        'description',
         'serial_number',
         'model_number',
-        'description',
-        'status',
         'condition',
-        'remarks',
+        'status',
+        'acquisition_date',
+        'last_maintenance_date',
+        'next_maintenance_date',
         'created_by',
         'updated_by',
         'deleted_by',
+        'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 

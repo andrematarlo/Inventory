@@ -25,50 +25,60 @@ class EquipmentBorrowingController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        Log::info('Accessing equipment borrowings index');
-        
-        $userPermissions = $this->getUserPermissions('Equipment Borrowings');
-        if (!$userPermissions || !$userPermissions->CanView) {
-            return redirect()->route('dashboard')
-                ->with('error', 'You do not have permission to view equipment borrowings.');
-        }
-
         try {
+            $userPermissions = $this->getUserPermissions('Equipment');
+            if (!$userPermissions || !$userPermissions->CanView) {
+                return redirect()->route('dashboard')
+                    ->with('error', 'You do not have permission to view equipment borrowings.');
+            }
+
             // Get available equipment for the create form
             $equipment = Equipment::where('status', 'Available')
-                ->where('IsDeleted', false)  // Only get non-deleted equipment
+                ->where('IsDeleted', false)
                 ->orderBy('equipment_name')
                 ->get();
 
-            // Get active and deleted borrowings
-            $activeBorrowings = EquipmentBorrowing::with([
+            // Build the query
+            $query = EquipmentBorrowing::with([
                 'equipment',
-                'borrower.employee',
-                'creator.employee',
-                'modifier.employee'
-            ])
-            ->where('IsDeleted', false)
-            ->orderBy('created_at', 'desc')
-            ->paginate(25);
+                'borrower',
+                'createdBy',
+                'updatedBy',
+                'deletedBy',
+                'restoredBy'
+            ]);
 
-            $deletedBorrowings = EquipmentBorrowing::with([
-                'equipment',
-                'borrower.employee',
-                'deleter.employee',
-                'restorer.employee'
-            ])
-            ->where('IsDeleted', true)
-            ->orderBy('deleted_at', 'desc')
-            ->paginate(25);
+            // Handle search
+            if ($request->has('search')) {
+                $search = $request->get('search');
+                $query->where(function($q) use ($search) {
+                    $q->where('borrowing_id', 'like', "%{$search}%")
+                      ->orWhere('purpose', 'like', "%{$search}%")
+                      ->orWhereHas('equipment', function($q) use ($search) {
+                          $q->where('equipment_name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('borrower', function($q) use ($search) {
+                          $q->where('FullName', 'like', "%{$search}%");
+                      });
+                });
+            }
 
-            return view('equipment.borrowings.index', compact(
-                'equipment',
-                'activeBorrowings',
-                'deletedBorrowings',
-                'userPermissions'
-            ));
+            // Handle trashed records
+            if ($request->has('trashed')) {
+                $query->withTrashed();
+            }
+
+            // Get per page value
+            $perPage = $request->get('per_page', 10);
+
+            // Get paginated results
+            $borrowings = $query->orderBy('created_at', 'desc')
+                               ->paginate($perPage)
+                               ->appends($request->query());
+
+            return view('equipment.borrowings.index', compact('borrowings', 'equipment', 'userPermissions'));
 
         } catch (\Exception $e) {
             Log::error('Error loading equipment borrowings: ' . $e->getMessage());
@@ -204,27 +214,28 @@ class EquipmentBorrowingController extends Controller
      */
     public function edit($id)
     {
-        // Check if user has permission to edit borrowings
-        $userPermissions = $this->getUserPermissions('Laboratory Management');
-        if (!$userPermissions || !$userPermissions->CanEdit) {
-            return redirect()->route('equipment.borrowings')
-                ->with('error', 'You do not have permission to edit borrowings.');
-        }
+        try {
+            $userPermissions = $this->getUserPermissions('Equipment');
+            if (!$userPermissions || !$userPermissions->CanEdit) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to edit borrowings.'
+                ], 403);
+            }
 
-        $borrowing = EquipmentBorrowing::findOrFail($id);
-        
-        // Only allow editing active borrowings
-        if (!$borrowing->canBeReturned()) {
-            return redirect()->route('equipment.borrowings')
-                ->with('error', 'Only active borrowings can be edited.');
+            $borrowing = EquipmentBorrowing::findOrFail($id);
+            
+            return response()->json([
+                'success' => true,
+                'data' => $borrowing
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error loading borrowing details: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading borrowing details'
+            ], 500);
         }
-
-        $equipment = Equipment::where('status', 'Available')
-            ->orWhere('equipment_id', $borrowing->equipment_id)
-            ->orderBy('equipment_name')
-            ->get();
-        
-        return view('equipment.borrowings.edit', compact('borrowing', 'equipment', 'userPermissions'));
     }
 
     /**
@@ -286,46 +297,71 @@ class EquipmentBorrowingController extends Controller
     }
 
     /**
-     * Process equipment return.
+     * Return the borrowed equipment.
      *
+     * @param  string  $id
      * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\EquipmentBorrowing  $borrowing
      * @return \Illuminate\Http\Response
      */
-    public function return(Request $request, EquipmentBorrowing $borrowing)
+    public function return($id, Request $request)
     {
         try {
+            $userPermissions = $this->getUserPermissions('Equipment');
+            if (!$userPermissions || !$userPermissions->CanEdit) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to return equipment.'
+                ], 403);
+            }
+
+            $validated = $request->validate([
+                'condition_on_return' => 'required|string|in:Good,Fair,Poor,Damaged',
+                'remarks' => 'nullable|string'
+            ]);
+
+            $borrowing = EquipmentBorrowing::findOrFail($id);
+
             if ($borrowing->actual_return_date) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Equipment is already returned.'
+                    'message' => 'This equipment has already been returned.'
                 ], 422);
             }
 
             DB::beginTransaction();
+            try {
+                // Update borrowing record
+                $borrowing->update([
+                    'actual_return_date' => now(),
+                    'condition_on_return' => $validated['condition_on_return'],
+                    'remarks' => $validated['remarks'],
+                    'status' => 'Returned',
+                    'updated_by' => Auth::id()
+                ]);
 
-            $borrowing->update([
-                'actual_return_date' => now(),
-                'status' => 'Returned',
-                'updated_by' => Auth::user()->UserAccountID
-            ]);
+                // Update equipment status
+                $equipment = Equipment::findOrFail($borrowing->equipment_id);
+                $equipment->update([
+                    'status' => $validated['condition_on_return'] === 'Damaged' ? 'Damaged' : 'Available',
+                    'condition' => $validated['condition_on_return']
+                ]);
 
-            // Update equipment status
-            Equipment::where('equipment_id', $borrowing->equipment_id)
-                ->update(['status' => 'Available']);
+                DB::commit();
 
-            DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Equipment returned successfully.'
+                ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Equipment returned successfully.'
-            ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Error returning equipment: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error returning equipment: ' . $e->getMessage()
+                'message' => 'Error returning equipment'
             ], 500);
         }
     }
@@ -339,77 +375,113 @@ class EquipmentBorrowingController extends Controller
     public function destroy($id)
     {
         try {
-            $borrowing = EquipmentBorrowing::findOrFail($id);
-            
-            if ($borrowing->actual_return_date) {
+            $userPermissions = $this->getUserPermissions('Equipment');
+            if (!$userPermissions || !$userPermissions->CanDelete) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cannot delete a returned borrowing.'
+                    'message' => 'You do not have permission to delete borrowings.'
+                ], 403);
+            }
+
+            $borrowing = EquipmentBorrowing::findOrFail($id);
+
+            // Check if the borrowing can be deleted
+            if ($borrowing->actual_return_date === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete an active borrowing. Please return the equipment first.'
                 ], 422);
             }
 
             DB::beginTransaction();
-            
-            // Update equipment status back to Available
-            Equipment::where('equipment_id', $borrowing->equipment_id)
-                ->update(['status' => 'Available']);
-            
-            $borrowing->update([
-                'deleted_by' => Auth::user()->UserAccountID,
-                'status' => 'Deleted'
-            ]);
-            
-            $borrowing->delete();
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Borrowing record deleted successfully.'
-            ]);
+            try {
+                $borrowing->update([
+                    'IsDeleted' => true,
+                    'deleted_by' => Auth::id()
+                ]);
+                
+                $borrowing->delete();
+                
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Borrowing deleted successfully'
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Error deleting borrowing: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error deleting borrowing: ' . $e->getMessage()
+                'message' => 'Error deleting borrowing'
             ], 500);
         }
     }
 
+    /**
+     * Restore the specified borrowing.
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\Response
+     */
     public function restore($id)
     {
         try {
-            $borrowing = EquipmentBorrowing::withTrashed()->findOrFail($id);
-            
-            DB::beginTransaction();
-            
-            $borrowing->update([
-                'restored_by' => Auth::user()->UserAccountID,
-                'restored_at' => now(),
-                'status' => $borrowing->actual_return_date ? 'Returned' : 'Active'
-            ]);
-            
-            $borrowing->restore();
-            
-            // Update equipment status to Borrowed if the borrowing wasn't returned
-            if (!$borrowing->actual_return_date) {
-                Equipment::where('equipment_id', $borrowing->equipment_id)
-                    ->update(['status' => 'Borrowed']);
+            $userPermissions = $this->getUserPermissions('Equipment');
+            if (!$userPermissions || !$userPermissions->CanEdit) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to restore borrowings.'
+                ], 403);
             }
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Borrowing record restored successfully.'
-            ]);
+
+            $borrowing = EquipmentBorrowing::withTrashed()->findOrFail($id);
+
+            if (!$borrowing->trashed()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This borrowing is not deleted.'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+            try {
+                // Update borrowing record
+                $borrowing->update([
+                    'IsDeleted' => false,
+                    'RestoredById' => Auth::id(),
+                    'DateRestored' => now(),
+                    'status' => $borrowing->actual_return_date ? 'Returned' : 'Active'
+                ]);
+
+                // Restore the soft deleted record
+                $borrowing->restore();
+
+                // Update equipment status if borrowing is still active
+                if (!$borrowing->actual_return_date) {
+                    $equipment = Equipment::findOrFail($borrowing->equipment_id);
+                    $equipment->update(['status' => 'In Use']);
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Borrowing restored successfully'
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Error restoring borrowing: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error restoring borrowing: ' . $e->getMessage()
+                'message' => 'Error restoring borrowing'
             ], 500);
         }
     }

@@ -31,10 +31,13 @@ class EquipmentController extends Controller
                     ->with('error', 'You do not have permission to view equipment.');
             }
 
-            // Get all equipment with their relationships
-            $equipment = Equipment::with(['laboratory'])
-                ->orderBy('equipment_name')
-                ->get();
+            // Get all equipment including soft-deleted ones with laboratory relationship
+            $equipment = Equipment::with(['laboratory' => function($query) {
+                $query->withTrashed(); // Include soft-deleted laboratories if needed
+            }])
+            ->withTrashed()
+            ->orderBy('equipment_name')
+            ->get();
 
             // Get laboratories for the create/edit forms
             $laboratories = Laboratory::orderBy('laboratory_name')->get();
@@ -77,43 +80,48 @@ class EquipmentController extends Controller
      */
     public function store(Request $request)
     {
-        $userPermissions = $this->getUserPermissions();
-        if (!$userPermissions->CanAdd) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-        }
-
-        $validated = $request->validate([
-            'equipment_id' => 'required|string|max:50|unique:equipment,equipment_id',
-            'equipment_name' => 'required|string|max:100',
-            'description' => 'nullable|string',
-            'laboratory_id' => 'required|string|exists:laboratories,laboratory_id',
-            'serial_number' => 'nullable|string|max:50',
-            'model_number' => 'nullable|string|max:50',
-            'condition' => 'required|string|max:50',
-            'status' => 'required|in:Available,In Use,Under Maintenance',
-            'acquisition_date' => 'nullable|date',
-            'last_maintenance_date' => 'nullable|date',
-            'next_maintenance_date' => 'nullable|date|after:last_maintenance_date'
-        ]);
-
         try {
-            DB::beginTransaction();
+            $userPermissions = $this->getUserPermissions('Equipment');
+            if (!$userPermissions || !$userPermissions->CanAdd) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'You do not have permission to add equipment.'
+                ], 403);
+            }
 
-            $validated['created_by'] = Auth::id();
-            $equipment = Equipment::create($validated);
+            // Generate unique equipment ID
+            $equipmentId = 'EQ' . date('Ymd') . str_pad(mt_rand(1, 999), 3, '0', STR_PAD_LEFT);
 
-            DB::commit();
+            // Create new equipment
+            $equipment = Equipment::create([
+                'equipment_id' => $equipmentId,
+                'equipment_name' => $request->equipment_name,
+                'laboratory_id' => $request->laboratory_id ?: null,
+                'description' => $request->description,
+                'serial_number' => $request->serial_number,
+                'model_number' => $request->model_number,
+                'condition' => $request->condition,
+                'status' => $request->status,
+                'acquisition_date' => $request->acquisition_date ?: null,
+                'last_maintenance_date' => $request->last_maintenance_date ?: null,
+                'next_maintenance_date' => $request->next_maintenance_date ?: null,
+                'created_by' => Auth::id(),
+                'created_at' => now(),
+                'updated_at' => now(),
+                'IsDeleted' => false
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Equipment created successfully',
                 'data' => $equipment
             ]);
+
         } catch (\Exception $e) {
-            DB::rollBack();
+            Log::error('Error creating equipment: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create equipment: ' . $e->getMessage()
+                'message' => 'Error creating equipment: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -215,8 +223,18 @@ class EquipmentController extends Controller
     public function destroy($id)
     {
         try {
+            // Check permissions
+            $userPermissions = $this->getUserPermissions('Equipment');
+            if (!$userPermissions || !$userPermissions->CanDelete) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to delete equipment.'
+                ], 403);
+            }
+
             $equipment = Equipment::findOrFail($id);
             
+            // Check if equipment is currently borrowed
             if ($equipment->borrowings()->where('actual_return_date', null)->exists()) {
                 return response()->json([
                     'success' => false,
@@ -224,12 +242,30 @@ class EquipmentController extends Controller
                 ], 422);
             }
 
-            $equipment->delete();
+            DB::beginTransaction();
+            try {
+                // Update the equipment record
+                $equipment->update([
+                    'IsDeleted' => true,
+                    'deleted_by' => Auth::id(),
+                    'deleted_at' => now()
+                ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Equipment deleted successfully.'
-            ]);
+                // Perform the soft delete
+                $equipment->delete();
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Equipment deleted successfully.'
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
         } catch (\Exception $e) {
             Log::error('Error deleting equipment: ' . $e->getMessage());
             return response()->json([
@@ -239,16 +275,55 @@ class EquipmentController extends Controller
         }
     }
 
+    /**
+     * Restore the specified equipment.
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\Response
+     */
     public function restore($id)
     {
         try {
-            $equipment = Equipment::withTrashed()->findOrFail($id);
-            $equipment->restore();
+            $userPermissions = $this->getUserPermissions('Equipment');
+            if (!$userPermissions || !$userPermissions->CanEdit) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to restore equipment.'
+                ], 403);
+            }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Equipment restored successfully.'
-            ]);
+            $equipment = Equipment::withTrashed()->findOrFail($id);
+            
+            if (!$equipment->trashed()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Equipment is not deleted.'
+                ]);
+            }
+
+            DB::beginTransaction();
+            try {
+                // Update restoration details
+                $equipment->update([
+                    'IsDeleted' => false,
+                    'RestoredById' => Auth::id(),
+                    'DateRestored' => now(),
+                    'deleted_at' => null  // Explicitly set deleted_at to null
+                ]);
+                
+                // Restore the soft deleted record
+                $equipment->restore();
+                
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Equipment restored successfully'
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
         } catch (\Exception $e) {
             Log::error('Error restoring equipment: ' . $e->getMessage());
             return response()->json([

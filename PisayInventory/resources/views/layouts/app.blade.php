@@ -27,8 +27,8 @@
             }
 
             body {
-                background-color:rgba(214, 255, 236, 0.09);
-                background-image: url('{{ asset('images/pshsbackground.jpg') }}');
+                background-color: rgba(214, 255, 236, 0.09);
+                background-image: url("{{ asset('images/pshsbackground.jpg') }}");
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
