@@ -27,8 +27,8 @@
             }
 
             body {
-                background-color: rgba(214, 255, 236, 0.09);
-                background-image: url("{{ asset('images/pshsbackground.jpg') }}");
+                background-color:rgba(214, 255, 236, 0.09);
+                background-image: url('{{ asset('images/pshsbackground.jpg') }}');
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -270,49 +270,22 @@
         <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
         <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">!-- Bootstrap Bundle with Popper -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-        <!-- Select2 -->
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-        <!-- SweetAlert2 -->
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
-        
+
+        @if(session('sweet_alert'))
         <script>
-            $(document).ready(function() {
-                // Get the sidebar element
-                const sidebarElement = document.querySelector('.sidebar');
-                const sidebarToggle = document.querySelector('#sidebarToggle');
-                const expandIcon = document.querySelector('.expand-icon');
-                const collapseIcon = document.querySelector('.collapse-icon');
-
-                if (sidebarToggle) {
-                    sidebarToggle.addEventListener('click', function() {
-                        if (sidebarElement) {
-                            sidebarElement.classList.toggle('collapsed');
-                            
-                            // Toggle icons
-                            if (expandIcon && collapseIcon) {
-                                if (sidebarElement.classList.contains('collapsed')) {
-                                    expandIcon.style.display = 'none';
-                                    collapseIcon.style.display = 'block';
-                                } else {
-                                    expandIcon.style.display = 'block';
-                                    collapseIcon.style.display = 'none';
-                                }
-                            }
-                        }
-                    });
-                }
-
-                // Initialize Select2
-                if ($.fn.select2) {
-                    $('.select2').select2();
-                }
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    title: "{{ session('sweet_alert.title') }}",
+                    text: "{{ session('sweet_alert.message') }}",
+                    icon: "{{ session('sweet_alert.type') }}",
+                    confirmButtonText: 'OK'
+                });
             });
-
-            // Logout confirmation
-            function confirmLogout() {
-                return confirm('Are you sure you want to logout?');
-            }
         </script>
-        @stack('scripts')
+        @endif
+
+        @yield('scripts')
     </body>
 </html>
