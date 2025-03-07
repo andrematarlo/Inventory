@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Item;
 use App\Models\Inventory;
@@ -10,38 +11,45 @@ use App\Models\Role;
 
 class UserAccount extends Authenticatable
 {
-    use Notifiable;
+    use HasFactory, Notifiable;
 
-    protected $table = 'useraccount';
     protected $primaryKey = 'UserAccountID';
+    protected $table = 'useraccount';
     public $timestamps = false;
     public $incrementing = true;
 
     protected $fillable = [
-        'UserAccountID',
         'Username',
         'Password',
-        'role',
-        'CreatedById',
-        'DateCreated',
-        'ModifiedById',
-        'DateModified',
-        'DeletedById',
-        'DateDeleted',
+        'Email',
+        'EmployeeID',
+        'RoleID',
+        'IsActive',
+        'LastLogin',
+        'CreatedByID',
+        'ModifiedByID',
+        'DeletedByID',
         'RestoredById',
+        'DateCreated',
+        'DateModified',
+        'DateDeleted',
         'DateRestored',
         'IsDeleted'
     ];
 
     protected $hidden = [
         'Password',
+        'remember_token',
     ];
 
     protected $casts = [
+        'IsActive' => 'boolean',
         'IsDeleted' => 'boolean',
+        'LastLogin' => 'datetime',
         'DateCreated' => 'datetime',
         'DateModified' => 'datetime',
         'DateDeleted' => 'datetime',
+        'DateRestored' => 'datetime'
     ];
 
     // Accessor for Username
@@ -66,6 +74,11 @@ class UserAccount extends Authenticatable
         return $this->hasMany(Item::class, 'DeletedById', 'UserAccountID');
     }
 
+    public function restored_items()
+    {
+        return $this->hasMany(Item::class, 'RestoredById', 'UserAccountID');
+    }
+
     public function created_inventories()
     {
         return $this->hasMany(Inventory::class, 'CreatedById', 'UserAccountID');
@@ -80,32 +93,73 @@ class UserAccount extends Authenticatable
     {
         return $this->hasMany(Inventory::class, 'DeletedById', 'UserAccountID');
     }
-    public function restored_items()
-    {
-    return $this->hasMany(Item::class, 'RestoredById', 'UserAccountID');
-    }
 
     public function restored_inventories()
     {
-    return $this->hasMany(Inventory::class, 'RestoredById', 'UserAccountID');
+        return $this->hasMany(Inventory::class, 'RestoredById', 'UserAccountID');
     }
 
+    /**
+     * Get the employee associated with the user account.
+     */
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class, 'EmployeeID', 'EmployeeID');
+    }
+
+    /**
+     * Get the role associated with the user account.
+     */
     public function role()
     {
-        return $this->belongsTo(Role::class, 'RoleId', 'RoleId');
+        return $this->belongsTo(Role::class, 'RoleID', 'RoleID');
+    }
+
+    /**
+     * Get the user who created this account.
+     */
+    public function createdBy()
+    {
+        return $this->belongsTo(UserAccount::class, 'CreatedByID', 'UserAccountID');
+    }
+
+    /**
+     * Get the user who last modified this account.
+     */
+    public function modifiedBy()
+    {
+        return $this->belongsTo(UserAccount::class, 'ModifiedByID', 'UserAccountID');
+    }
+
+    /**
+     * Get the user who deleted this account.
+     */
+    public function deletedBy()
+    {
+        return $this->belongsTo(UserAccount::class, 'DeletedByID', 'UserAccountID');
+    }
+
+    /**
+     * Get the user who restored this account.
+     */
+    public function restoredBy()
+    {
+        return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
+    }
+
+    // Scope for active records
+    public function scopeActive($query)
+    {
+        return $query->where('IsDeleted', false);
+    }
+
+    // Scope for deleted records
+    public function scopeDeleted($query)
+    {
+        return $query->where('IsDeleted', true);
     }
 
     // Authentication methods
-    public function getAuthIdentifierName()
-    {
-        return $this->primaryKey;
-    }
-
-    public function getAuthIdentifier()
-    {
-        return $this->{$this->primaryKey};
-    }
-
     public function getAuthPassword()
     {
         return $this->Password;

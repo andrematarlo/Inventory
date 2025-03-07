@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Employee extends Model
 {
+    use HasFactory;
+
     protected $table = 'employee';
     protected $primaryKey = 'EmployeeID';
     public $timestamps = false;
@@ -44,7 +47,7 @@ class Employee extends Model
     // Define relationships
     public function userAccount()
     {
-        return $this->belongsTo(User::class, 'UserAccountID', 'UserAccountID')
+        return $this->belongsTo(UserAccount::class, 'UserAccountID', 'UserAccountID')
             ->withDefault([
                 'Username' => 'N/A',
                 'role' => 'No Role'
@@ -53,9 +56,7 @@ class Employee extends Model
 
     public function roles()
     {
-        return $this->belongsToMany(Role::class, 'employee_roles', 'EmployeeId', 'RoleId')
-                    ->where('roles.IsDeleted', false)
-                    ->where('employee_roles.IsDeleted', false);
+        return $this->belongsToMany(Role::class, 'employee_roles', 'EmployeeId', 'RoleId');
     }
 
     public function createdBy()
@@ -69,16 +70,8 @@ class Employee extends Model
 
     public function modifiedBy()
     {
-        \Log::info('ModifiedBy Relationship Debug:', [
-            'employee_id' => $this->EmployeeID,
-            'modified_by_id' => $this->ModifiedByID,
-            'all_attributes' => $this->attributes
-        ]);
-
         return $this->belongsTo(Employee::class, 'ModifiedByID', 'EmployeeID')
-            ->select(['EmployeeID', 'FirstName', 'LastName'])
             ->withDefault([
-                'EmployeeID' => null,
                 'FirstName' => 'System',
                 'LastName' => 'User'
             ]);
@@ -208,5 +201,41 @@ class Employee extends Model
         }
         
         return $mergedPermissions;
+    }
+
+    /**
+     * Get the user who created this employee.
+     */
+    public function creator()
+    {
+        return $this->belongsTo(UserAccount::class, 'created_by', 'UserAccountID');
+    }
+
+    /**
+     * Get the user who last modified this employee.
+     */
+    public function modifier()
+    {
+        return $this->belongsTo(UserAccount::class, 'updated_by', 'UserAccountID');
+    }
+
+    /**
+     * Get the user who deleted this employee.
+     */
+    public function deleter()
+    {
+        return $this->belongsTo(UserAccount::class, 'deleted_by', 'UserAccountID');
+    }
+
+    // Scope for active records
+    public function scopeActive($query)
+    {
+        return $query->where('IsDeleted', false);
+    }
+
+    // Scope for deleted records
+    public function scopeDeleted($query)
+    {
+        return $query->where('IsDeleted', true);
     }
 } 

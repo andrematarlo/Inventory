@@ -21,7 +21,8 @@
             $purchasingPermissions = $controller->getUserPermissions('Purchasing Management');
             $receivingPermissions = $controller->getUserPermissions('Receiving Management'); 
             $inventoryPermissions = $controller->getUserPermissions('Inventory');
-            $studentPermissions = $controller->getUserPermissions('Student Management');
+            $studentPermissions = $controller->getUserPermissions('Students');
+            $laboratoryPermissions = $controller->getUserPermissions('Laboratory Management');
         }
         
         // Check permissions for each module
@@ -31,6 +32,7 @@
         $hasReceivingAccess = $receivingPermissions && $receivingPermissions->CanView;
         $hasInventoryAccess = $inventoryPermissions && $inventoryPermissions->CanView;
         $hasStudentAccess = $studentPermissions && $studentPermissions->CanView || $isAdmin;
+        $hasLaboratoryAccess = $laboratoryPermissions && $laboratoryPermissions->CanView || $isAdmin;
     @endphp
 
     <ul class="nav flex-column py-2">
@@ -133,6 +135,36 @@
                 <i class="bi bi-file-earmark-text"></i>
                 <span>Reports</span>
             </a>
+        </li>
+        @endif
+        @if($hasLaboratoryAccess)
+        <li class="nav-item dropdown">
+            <a href="#" class="nav-link dropdown-toggle" id="laboratoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-building"></i>
+                <span>Laboratory Management</span>
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="laboratoryDropdown">
+                <li>
+                    <a class="dropdown-item" href="{{ route('laboratories.index') }}">
+                        <i class="bi bi-building"></i> Laboratories
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ route('equipment.index') }}">
+                        <i class="bi bi-tools"></i> Equipment
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ route('laboratory.reservations') }}">
+                        <i class="bi bi-calendar-check"></i> Reservations
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ route('equipment.borrowings') }}">
+                        <i class="bi bi-box-arrow-right"></i> Equipment Borrowing
+                    </a>
+                </li>
+            </ul>
         </li>
         @endif
         <li class="nav-item mt-auto">
