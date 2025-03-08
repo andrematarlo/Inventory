@@ -106,18 +106,75 @@
 </div>
 
 <!-- Create Modal -->
-<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg"> <!-- Changed from modal-lg to modal-xl -->
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Create Reservation</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header text-center d-block border-bottom-0">
+                <div class="mt-3 mb-4 text-center"> <!-- Increased margin-bottom -->
+                    <h5 class="fw-bold mb-2">PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h5> <!-- Added margin-bottom -->
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <label class="form-label mb-0">CAMPUS:</label>
+                        <input type="text" class="form-control form-control-sm w-auto" name="campus" required>
+                    </div>
+                </div>
+                <h5 class="modal-title mb-3">LABORATORY RESERVATION FORM</h5> <!-- Added margin-bottom -->
+                <button type="button" class="btn-close position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body px-5"> <!-- Added horizontal padding -->
                 <form id="createForm">
                     @csrf
                     <div class="mb-3">
-                        <label for="laboratory_id" class="form-label">Laboratory</label>
+                        <div class="d-flex justify-content-end gap-4"> <!-- Aligned to right with gap -->
+                            <div class="d-flex align-items-center gap-2 mb-4"> <!-- Inline layout -->
+                                <label for="control_no" class="form-label mb-0">Control No.:</label>
+                                <input type="text" class="form-control form-control-sm w-auto" style="width: 85px !important;" id="control_no" name="control_no" readonly>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mb-4"> <!-- Inline layout -->
+                                <label for="school_year" class="form-label mb-0">SY:</label>
+                                <input type="text" class="form-control form-control-sm w-auto" style="width: 100px !important;" id="school_year" name="school_year" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="grade_section" class="form-label">Grade Level and Section</label>
+                            <input type="text" class="form-control" id="grade_section" name="grade_section" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="num_students" class="form-label">Number of Students</label>
+                            <input type="number" class="form-control" id="num_students" name="num_students" min="1" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="subject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="subject" name="subject" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="teacher_in_charge" class="form-label">Teacher In-Charge</label>
+                            <input type="text" class="form-control" id="teacher_in_charge" name="teacher_in_charge" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="reservation_date" class="form-label">Date/Inclusive Dates</label>
+                            <input type="date" class="form-control" id="reservation_date" name="reservation_date" 
+                                   min="{{ date('Y-m-d', strtotime('+1 day')) }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="start_time" class="form-label">Start Time</label>
+                            <input type="time" class="form-control" id="start_time" name="start_time" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_time" class="form-label">End Time</label>
+                            <input type="time" class="form-control" id="end_time" name="end_time" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="laboratory_id" class="form-label">Preferred Lab Room</label>
                         <select name="laboratory_id" id="laboratory_id" class="form-control" required>
                             <option value="">Select Laboratory</option>
                             @foreach($laboratories as $lab)
@@ -126,64 +183,58 @@
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="reservation_date" class="form-label">Reservation Date</label>
-                        <input type="date" 
-                               class="form-control" 
-                               id="reservation_date" 
-                               name="reservation_date"
-                               min="{{ date('Y-m-d', strtotime('+1 day')) }}"
-                               required>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="requested_by" class="form-label">Requested by</label>
+                            <div class="d-flex flex-column">
+                                <input type="text" class="form-control" id="requested_by" name="requested_by" required>
+                                <small class="text-muted text-center mt-1">Teacher/Student</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="date_requested" class="form-label">Date Requested</label>
+                            <input type="date" class="form-control" id="date_requested" name="date_requested" 
+                                   value="{{ date('Y-m-d') }}" required>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="start_time" class="form-label">Start Time</label>
-                        <input type="time" 
-                               class="form-control" 
-                               id="start_time" 
-                               name="start_time"
-                               required>
+                        <label class="form-label">If user of the lab is a group, list down the names of students.</label>
+                        <div id="group_members">
+                            @for($i = 1; $i <= 5; $i++)
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text">{{ $i }}.</span>
+                                    <input type="text" class="form-control" name="group_members[]">
+                                </div>
+                            @endfor
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="end_time" class="form-label">End Time</label>
-                        <input type="time" 
-                               class="form-control" 
-                               id="end_time" 
-                               name="end_time"
-                               required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="purpose" class="form-label">Purpose</label>
-                        <textarea class="form-control" 
-                                 id="purpose" 
-                                 name="purpose" 
-                                 rows="3" 
-                                 required></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="num_students" class="form-label">Number of Students</label>
-                        <input type="number" 
-                               class="form-control" 
-                               id="num_students" 
-                               name="num_students"
-                               min="1">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="remarks" class="form-label">Remarks</label>
-                        <textarea class="form-control" 
-                                 id="remarks" 
-                                 name="remarks" 
-                                 rows="3"></textarea>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="endorsed_by" class="form-label">Endorsed by</label>
+                            <div class="d-flex flex-column">
+                                <input type="text" class="form-control" id="endorsed_by" name="endorsed_by">
+                                <small class="text-muted text-center mt-1">Subject Teacher/Unit Head</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="approved_by" class="form-label">Approved by</label>
+                            <div class="d-flex flex-column">
+                                <input type="text" class="form-control" id="approved_by" name="approved_by">
+                                <small class="text-muted text-center mt-1">SRS/SRA</small>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="saveCreate">Create Reservation</button>
+            <div class="modal-footer flex-column px-5">
+                <div class="d-flex w-100 justify-content-end"> <!-- Changed to end alignment -->
+                    <button type="button" class="btn btn-primary" id="saveCreate">Submit Reservation</button>
+                </div>
+                <div class="w-100 text-start">
+                    <small class="text-muted">PSHS-00-F-CID-05-Ver02-Rev1-10/18/20</small>
+                </div>
             </div>
         </div>
     </div>
@@ -221,6 +272,41 @@
     .form-select {
         min-width: 70px;
     }
+    #createModal .modal-header {
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 0;
+    }
+    
+    #createModal .modal-title {
+        width: 100%;
+        text-align: center;
+    }
+    
+    #createModal .form-control-sm {
+        height: 30px;
+        padding: 0.25rem 0.5rem;
+    }
+    #createModal .modal-content {
+        padding: 1rem;
+    }
+
+    #createModal .form-label {
+        margin-bottom: 0.25rem;
+    }
+
+    #createModal small.text-muted {
+        font-size: 0.8rem;
+    }
+    #createModal .modal-body,
+    #createModal .modal-footer {
+        padding-left: 3rem !important;  /* Increased padding */
+        padding-right: 3rem !important; /* Increased padding */
+    }
+        /* Adjust close button position */
+        #createModal .btn-close {
+        padding: 1rem;
+    }
+
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 @endpush
