@@ -30,7 +30,13 @@
     @endif
 
     <!-- Add Laboratory Modal -->
-    <div class="modal fade" id="addLaboratoryModal" tabindex="-1" role="dialog" aria-labelledby="addLaboratoryModalLabel" aria-hidden="true">
+    <div class="modal fade" 
+     id="addLaboratoryModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="addLaboratoryModalLabel" 
+     aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -240,7 +246,13 @@
 
 
 <!-- Edit Laboratory Modal -->
-<div class="modal fade" id="editLaboratoryModal" tabindex="-1" aria-labelledby="editLaboratoryModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="editLaboratoryModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="editLaboratoryModalLabel" 
+     aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -325,7 +337,13 @@
 </div>
 
 <!-- Delete Laboratory Modal -->
-<div class="modal fade" id="deleteLaboratoryModal" tabindex="-1" aria-labelledby="deleteLaboratoryModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="deleteLaboratoryModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="deleteLaboratoryModalLabel" 
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -348,7 +366,13 @@
 </div>
 
 <!-- Restore Laboratory Modal -->
-<div class="modal fade" id="restoreLaboratoryModal" tabindex="-1" aria-labelledby="restoreLaboratoryModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="restoreLaboratoryModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="restoreLaboratoryModalLabel" 
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -479,7 +503,18 @@
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!'
+                confirmButtonText: 'Yes, delete it!',
+                allowOutsideClick: () => {
+        const popup = Swal.getPopup()
+        popup.classList.remove('swal2-show')
+        popup.classList.add('swal2-shake')
+        setTimeout(() => {
+            popup.classList.remove('swal2-shake')
+            popup.classList.add('swal2-show')
+        }, 100)
+        return false
+    },
+    allowEscapeKey: false
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
