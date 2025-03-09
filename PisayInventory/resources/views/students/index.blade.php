@@ -524,22 +524,41 @@ $('#readExcelBtn').on('click', function(e) {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
                     success: function(response) {
-                        if (response.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Import Successful',
-                                text: response.message
-                            }).then(() => {
-                                location.reload();
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Import Failed',
-                                text: response.error || 'Unknown error occurred'
-                            });
-                        }
-                    },
+    if (response.success) {
+        Swal.fire({
+            icon: 'success',
+            title: response.title,
+            text: response.message,
+            showCancelButton: response.showDetailsButton,
+            cancelButtonText: 'See Skipped Records',
+            confirmButtonText: 'OK',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.dismiss === Swal.DismissReason.cancel) {
+                // Show details modal
+                showSkippedRecordsModal(response.details);
+            } else {
+                location.reload();
+            }
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: response.title,
+            text: response.message,
+            showCancelButton: response.showDetailsButton,
+            cancelButtonText: 'See Skipped Records',
+            confirmButtonText: 'OK',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.dismiss === Swal.DismissReason.cancel && response.details) {
+                showSkippedRecordsModal(response.details);
+            }
+        });
+    }
+},
                     error: function(xhr, status, error) {
                         let errorMessage = 'An error occurred during import';
                         try {
@@ -596,5 +615,47 @@ $('#readExcelBtn').on('click', function(e) {
         });
     });
 });
+
+function showSkippedRecordsModal(details) {
+    let duplicateRows = details.duplicates;
+    let content = `
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Row</th>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    duplicateRows.forEach(row => {
+        content += `
+            <tr>
+                <td>${row.row}</td>
+                <td>${row.student_id}</td>
+                <td>${row.name}</td>
+                <td><span class="badge bg-warning">Already Exists</span></td>
+            </tr>
+        `;
+    });
+
+    content += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    Swal.fire({
+        title: 'Skipped Records',
+        html: content,
+        width: '800px',
+        confirmButtonText: 'Close',
+        confirmButtonColor: '#6c757d'
+    });
+}
 </script>
 @endsection 

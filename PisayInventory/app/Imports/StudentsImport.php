@@ -22,6 +22,7 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
     protected $rowCount = 0;
     protected $skippedRows = [];
     protected $successCount = 0;
+    protected $duplicateRows = []; // New property for tracking duplicates
 
     public function __construct(array $columnMapping, $createdById)
     {
@@ -56,62 +57,62 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
                 ];
 
                 // Handle date_of_birth with multiple formats
-if (isset($rowData['birthdate']) && !empty($rowData['birthdate'])) {
-    try {
-        $value = $rowData['birthdate'];
-        $date = null;
+                if (isset($rowData['birthdate']) && !empty($rowData['birthdate'])) {
+                    try {
+                        $value = $rowData['birthdate'];
+                        $date = null;
 
-        // Check if the value is a number (Excel date)
-        if (is_numeric($value)) {
-            // Convert Excel date number to PHP DateTime
-            $date = Carbon::createFromDate(1899, 12, 30)->addDays($value);
-            Log::info('Parsed Excel numeric date:', [
-                'original' => $value,
-                'parsed' => $date->format('Y-m-d')
-            ]);
-        } else {
-            // Try different string date formats
-            $dateFormats = [
-                'm/d/Y',    // 11/01/2001
-                'd/m/Y',    // 01/11/2001
-                'Y-m-d',    // 2001-11-01
-                'd-m-Y',    // 01-11-2001
-                'Y/m/d',    // 2001/11/01
-                'm-d-Y',    // 11-01-2001
-                'M d Y',    // Nov 01 2001
-                'd M Y',    // 01 Nov 2001
-            ];
+                        // Check if the value is a number (Excel date)
+                        if (is_numeric($value)) {
+                            // Convert Excel date number to PHP DateTime
+                            $date = Carbon::createFromDate(1899, 12, 30)->addDays($value);
+                            Log::info('Parsed Excel numeric date:', [
+                                'original' => $value,
+                                'parsed' => $date->format('Y-m-d')
+                            ]);
+                        } else {
+                            // Try different string date formats
+                            $dateFormats = [
+                                'm/d/Y',    // 11/01/2001
+                                'd/m/Y',    // 01/11/2001
+                                'Y-m-d',    // 2001-11-01
+                                'd-m-Y',    // 01-11-2001
+                                'Y/m/d',    // 2001/11/01
+                                'm-d-Y',    // 11-01-2001
+                                'M d Y',    // Nov 01 2001
+                                'd M Y',    // 01 Nov 2001
+                            ];
 
-            foreach ($dateFormats as $format) {
-                try {
-                    $date = Carbon::createFromFormat($format, $value);
-                    if ($date !== false) {
-                        Log::info('Parsed string date:', [
-                            'original' => $value,
-                            'format' => $format,
-                            'parsed' => $date->format('Y-m-d')
+                            foreach ($dateFormats as $format) {
+                                try {
+                                    $date = Carbon::createFromFormat($format, $value);
+                                    if ($date !== false) {
+                                        Log::info('Parsed string date:', [
+                                            'original' => $value,
+                                            'format' => $format,
+                                            'parsed' => $date->format('Y-m-d')
+                                        ]);
+                                        break;
+                                    }
+                                } catch (\Exception $e) {
+                                    continue;
+                                }
+                            }
+                        }
+
+                        if ($date) {
+                            $studentData['date_of_birth'] = $date->format('Y-m-d');
+                            Log::info('Final date value:', ['date_of_birth' => $studentData['date_of_birth']]);
+                        } else {
+                            Log::warning('Could not parse date:', ['value' => $value]);
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to parse date:', [
+                            'value' => $rowData['birthdate'],
+                            'error' => $e->getMessage()
                         ]);
-                        break;
                     }
-                } catch (\Exception $e) {
-                    continue;
                 }
-            }
-        }
-
-        if ($date) {
-            $studentData['date_of_birth'] = $date->format('Y-m-d');
-            Log::info('Final date value:', ['date_of_birth' => $studentData['date_of_birth']]);
-        } else {
-            Log::warning('Could not parse date:', ['value' => $value]);
-        }
-    } catch (\Exception $e) {
-        Log::warning('Failed to parse date:', [
-            'value' => $rowData['birthdate'],
-            'error' => $e->getMessage()
-        ]);
-    }
-}
 
                 // Handle gender with flexible formats
                 if (isset($rowData['gender'])) {
@@ -141,20 +142,20 @@ if (isset($rowData['birthdate']) && !empty($rowData['birthdate'])) {
                 // Check for existing student
                 $existingStudent = Student::where('student_id', $studentData['student_id'])->first();
 
-                DB::beginTransaction();
-                try {
-                    if ($existingStudent) {
-                        $existingStudent->update($studentData);
-                        Log::info('Updated existing student:', ['student_id' => $studentData['student_id']]);
-                    } else {
-                        Student::create($studentData);
-                        Log::info('Created new student:', ['student_id' => $studentData['student_id']]);
-                    }
-                    DB::commit();
+                if ($existingStudent) {
+                    // Track duplicate record
+                    $this->duplicateRows[] = [
+                        'row' => $index + 2,
+                        'student_id' => $studentData['student_id'],
+                        'name' => $studentData['first_name'] . ' ' . $studentData['last_name']
+                    ];
+                    Log::info('Duplicate student found:', ['student_id' => $studentData['student_id']]);
+                    continue; // Skip this record
+                } else {
+                    // Create new student
+                    Student::create($studentData);
+                    Log::info('Created new student:', ['student_id' => $studentData['student_id']]);
                     $this->successCount++;
-                } catch (\Exception $e) {
-                    DB::rollBack();
-                    throw $e;
                 }
 
             } catch (\Exception $e) {
@@ -175,7 +176,8 @@ if (isset($rowData['birthdate']) && !empty($rowData['birthdate'])) {
         Log::info('Import completed:', [
             'total_rows' => $this->rowCount,
             'successful_imports' => $this->successCount,
-            'skipped_rows' => count($this->skippedRows)
+            'skipped_rows' => count($this->skippedRows),
+            'duplicate_rows' => count($this->duplicateRows)
         ]);
     }
 
@@ -187,7 +189,7 @@ if (isset($rowData['birthdate']) && !empty($rowData['birthdate'])) {
             'last_name' => 'required',
             'email' => 'nullable|email',
             'contact_number' => 'nullable',
-            'gender' => 'nullable', // Removed strict validation
+            'gender' => 'nullable',
             'birthdate' => 'nullable',
             'address' => 'nullable',
             'grade_level' => 'nullable',
@@ -218,7 +220,6 @@ if (isset($rowData['birthdate']) && !empty($rowData['birthdate'])) {
         }
     }
 
-
     public function getRowCount()
     {
         return $this->rowCount;
@@ -232,5 +233,10 @@ if (isset($rowData['birthdate']) && !empty($rowData['birthdate'])) {
     public function getSkippedRows()
     {
         return $this->skippedRows;
+    }
+
+    public function getDuplicateRows()
+    {
+        return $this->duplicateRows;
     }
 }

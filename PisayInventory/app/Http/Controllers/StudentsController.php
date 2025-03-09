@@ -286,7 +286,6 @@ class StudentsController extends Controller
     public function processImport(Request $request)
 {
     try {
-        // Validate request
         $request->validate([
             'excel_file' => 'required|mimes:xlsx,xls',
             'column_mapping' => 'required|array'
@@ -303,9 +302,32 @@ class StudentsController extends Controller
             Excel::import($import, $request->file('excel_file'));
 
             DB::commit();
+
+            $successCount = $import->getSuccessCount();
+            $duplicateCount = count($import->getDuplicateRows());
+
+            if ($successCount === 0 && $duplicateCount > 0) {
+                return response()->json([
+                    'success' => false,
+                    'title' => 'Import Failed',
+                    'message' => "No new records were imported. All {$duplicateCount} records already exist in the system.",
+                    'showDetailsButton' => true,
+                    'details' => [
+                        'imported' => $successCount,
+                        'duplicates' => $import->getDuplicateRows()
+                    ]
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Students imported successfully.'
+                'title' => 'Import Successful',
+                'message' => "Import completed. {$successCount} records imported successfully. {$duplicateCount} duplicate records were skipped.",
+                'showDetailsButton' => $duplicateCount > 0,
+                'details' => [
+                    'imported' => $successCount,
+                    'duplicates' => $import->getDuplicateRows()
+                ]
             ]);
 
         } catch (\Exception $e) {
@@ -314,14 +336,15 @@ class StudentsController extends Controller
         }
 
     } catch (\Exception $e) {
-        Log::error('Error importing students:', [
+        Log::error('Import error:', [
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
         ]);
 
         return response()->json([
             'success' => false,
-            'error' => 'Error importing students: ' . $e->getMessage()
+            'title' => 'Import Failed',
+            'message' => 'Error importing students: ' . $e->getMessage()
         ], 500);
     }
 }
