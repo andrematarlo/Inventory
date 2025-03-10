@@ -11,24 +11,6 @@
         @endif
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    @endif
-
     <!-- Add Laboratory Modal -->
     <div class="modal fade" 
      id="addLaboratoryModal" 
@@ -54,11 +36,8 @@
                                        class="form-control @error('laboratory_id') is-invalid @enderror" 
                                        id="laboratory_id" 
                                        name="laboratory_id" 
-                                       value="{{ old('laboratory_id') }}" 
                                        required>
-                                @error('laboratory_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                <div class="invalid-feedback" id="laboratory_id_error"></div>
                             </div>
 
                             <div class="col-md-6">
@@ -67,11 +46,8 @@
                                        class="form-control @error('laboratory_name') is-invalid @enderror" 
                                        id="laboratory_name" 
                                        name="laboratory_name" 
-                                       value="{{ old('laboratory_name') }}" 
                                        required>
-                                @error('laboratory_name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                <div class="invalid-feedback" id="laboratory_name_error"></div>
                             </div>
                         </div>
 
@@ -680,6 +656,58 @@
             $("#editLaboratoryForm").trigger('reset');
             $(".is-invalid").removeClass('is-invalid');
             $(".invalid-feedback").remove();
+        });
+
+        // Handle Add Laboratory Form Submission
+        $('#addLaboratoryForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            // Reset any previous error states
+            $('.is-invalid').removeClass('is-invalid');
+            $('.invalid-feedback').empty();
+            
+            const formData = new FormData(this);
+            
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    // Close the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addLaboratoryModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Laboratory created successfully.',
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        // Validation errors
+                        const errors = xhr.responseJSON.errors;
+                        Object.keys(errors).forEach(field => {
+                            const input = $(`#${field}`);
+                            const feedback = $(`#${field}_error`);
+                            input.addClass('is-invalid');
+                            feedback.text(errors[field][0]);
+                        });
+                    } else {
+                        // Other errors
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'An error occurred while creating the laboratory.',
+                            icon: 'error'
+                        });
+                    }
+                }
+            });
         });
     });
 </script>

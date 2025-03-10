@@ -9,7 +9,7 @@
         <div class="col text-end">
             @if($userPermissions->CanAdd)
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-                    Add Reservation
+                    <i class="bi bi-plus"></i> Add Reservation
                 </button>
             @endif
         </div>

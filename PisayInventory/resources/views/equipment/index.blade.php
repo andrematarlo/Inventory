@@ -6,7 +6,7 @@
         <h1 class="h3 mb-0 text-gray-800">Equipment</h1>
         @if($userPermissions->CanAdd)
         <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="addEquipmentBtn">
-            <i class="fas fa-plus fa-sm text-white-50"></i> Add Equipment
+            <i class="bi bi-plus"></i> Add Equipment
         </button>
         @endif
     </div>
@@ -14,18 +14,14 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             {{ session('error') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
@@ -179,7 +175,13 @@
 </div>
 
 <!-- Create Equipment Modal -->
-<div class="modal fade" id="createEquipmentModal" tabindex="-1" aria-labelledby="createEquipmentModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="createEquipmentModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="createEquipmentModalLabel" 
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
