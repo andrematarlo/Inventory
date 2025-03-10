@@ -6,7 +6,7 @@
         <h1 class="h3 mb-0 text-gray-800">Laboratories</h1>
         @if($userPermissions->CanAdd)
         <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addLaboratoryModal">
-            <i class="fas fa-plus fa-sm text-white-50"></i> Add Laboratory
+            <i class="bi bi-plus"></i> Add Laboratory
         </button>
         @endif
     </div>
@@ -505,20 +505,20 @@
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Yes, delete it!',
                 allowOutsideClick: () => {
-        const popup = Swal.getPopup()
-        popup.classList.remove('swal2-show')
-        popup.classList.add('swal2-shake')
-        setTimeout(() => {
-            popup.classList.remove('swal2-shake')
-            popup.classList.add('swal2-show')
-        }, 100)
-        return false
-    },
-    allowEscapeKey: false
+                    const popup = Swal.getPopup()
+                    popup.classList.remove('swal2-show')
+                    popup.classList.add('swal2-shake')
+                    setTimeout(() => {
+                        popup.classList.remove('swal2-shake')
+                        popup.classList.add('swal2-show')
+                    }, 100)
+                    return false
+                },
+                allowEscapeKey: false
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: `/laboratories/${laboratoryId}`,
+                        url: `/inventory/laboratories/${laboratoryId}`,
                         type: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -635,7 +635,7 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: `/laboratories/${laboratoryId}/restore`,
+                        url: `/inventory/laboratories/${laboratoryId}/restore`,
                         type: 'PUT',
                         data: {
                             _token: '{{ csrf_token() }}'
