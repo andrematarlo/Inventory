@@ -446,11 +446,8 @@ class EmployeeController extends Controller
             }
 
             // Find the employee
-            $employee = Employee::where('EmployeeID', $id)->first();
-            if (!$employee) {
-                throw new \Exception('Employee not found');
-            }
-
+            $employee = Employee::findOrFail($id);
+            
             // Validate basic fields
             $validationRules = [
                 'FirstName' => 'required|string|max:100',
@@ -482,73 +479,52 @@ class EmployeeController extends Controller
 
             $request->validate($validationRules, $messages);
 
+            // Start transaction
             DB::beginTransaction();
+            
+            try {
+                // Update employee details
+                $employee->FirstName = $request->FirstName;
+                $employee->LastName = $request->LastName;
+                $employee->Email = $request->Email;
+                $employee->Gender = $request->Gender;
+                $employee->Address = $request->Address;
+                $employee->save();
 
-            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
-                ->where('IsDeleted', false)
-                ->firstOrFail();
-
-            // Get role names for UserAccount
-            $roleNames = Role::whereIn('RoleId', $request->roles)
-                ->pluck('RoleName')
-                ->implode(', ');
-
-            // Update employee details
-            $employee->update([
-                'FirstName' => $request->FirstName,
-                'LastName' => $request->LastName,
-                'Email' => $request->Email,
-                'Gender' => $request->Gender,
-                'Address' => $request->Address,
-                'ModifiedByID' => $currentEmployee->EmployeeID,
-                'DateModified' => now()
-            ]);
-
-            // Handle roles update
-            DB::table('employee_roles')
-                ->where('EmployeeId', $id)
-                ->where('IsDeleted', false)
-                ->update([
-                    'IsDeleted' => true,
-                    'DeletedById' => $currentEmployee->EmployeeID,
-                    'DateDeleted' => now(),
-                    'ModifiedById' => $currentEmployee->EmployeeID,
-                    'DateModified' => now()
-                ]);
-
-            foreach ($request->roles as $roleId) {
-                DB::table('employee_roles')->insert([
-                    'EmployeeId' => $id,
-                    'RoleId' => $roleId,
-                    'IsDeleted' => false,
-                    'DateCreated' => now(),
-                    'CreatedById' => $currentEmployee->EmployeeID
-                ]);
-            }
-
-            // Update user account if it exists
-            if ($employee->userAccount) {
-                $updateData = [
-                    'Username' => $request->Username,
-                    'role' => $roleNames,
-                    'ModifiedByID' => $currentEmployee->EmployeeID,
-                    'DateModified' => now()
-                ];
-
-                // Add password to update data if provided
-                if ($request->filled('Password')) {
-                    $updateData['Password'] = Hash::make($request->Password);
+                // Update user account
+                if ($employee->userAccount) {
+                    $userAccount = UserAccount::find($employee->userAccount->UserAccountID);
+                    if ($userAccount) {
+                        $userAccount->Username = $request->Username;
+                        
+                        // Update password only if provided
+                        if ($request->filled('Password')) {
+                            $userAccount->Password = Hash::make($request->Password);
+                        }
+                        
+                        $userAccount->save();
+                    }
                 }
 
-                $employee->userAccount->update($updateData);
+                // Sync roles - this will add new roles and remove unchecked ones
+                if ($request->has('roles')) {
+                    $employee->roles()->sync($request->roles);
+                } else {
+                    // If no roles were selected, remove all roles
+                    $employee->roles()->detach();
+                }
+
+                DB::commit();
+                
+                return redirect()->route('employees.index')
+                    ->with('success', 'Employee updated successfully.');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return redirect()->back()
+                    ->with('error', 'Error updating employee: ' . $e->getMessage())
+                    ->withInput();
             }
-
-            DB::commit();
-            return redirect()->route('employees.index')
-                ->with('success', 'Employee updated successfully');
-
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Error updating employee:', [
                 'id' => $id,
                 'error' => $e->getMessage(),
