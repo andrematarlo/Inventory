@@ -6,12 +6,12 @@
         <h1 class="h3 mb-0 text-gray-800">Laboratory Details</h1>
         <div>
             @if($userPermissions->CanEdit)
-            <a href="{{ route('laboratories.edit', $laboratory->laboratory_id) }}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-                <i class="fas fa-edit fa-sm text-white-50"></i> Edit Laboratory
+            <a href="{{ url('/inventory/laboratories/' . $laboratory->laboratory_id . '/edit') }}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <i class="bi bi-pencil-fill"></i> Edit Laboratory
             </a>
             @endif
-            <a href="{{ route('laboratories.index') }}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
-                <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to List
+            <a href="{{ route('laboratories.index') }}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm ms-2">
+                <i class="bi bi-arrow-left"></i> Back to List
             </a>
         </div>
     </div>
@@ -44,7 +44,7 @@
                             <tr>
                                 <th>Status</th>
                                 <td>
-                                    <span class="badge badge-{{ $laboratory->status === 'Available' ? 'success' : ($laboratory->status === 'Occupied' ? 'warning' : 'danger') }}">
+                                    <span class="badge rounded-pill bg-{{ $laboratory->status === 'Available' ? 'success' : ($laboratory->status === 'Occupied' ? 'warning' : 'danger') }}">
                                         {{ $laboratory->status }}
                                     </span>
                                 </td>
@@ -81,7 +81,7 @@
                                     <td>{{ $equipment->equipment_id }}</td>
                                     <td>{{ $equipment->equipment_name }}</td>
                                     <td>
-                                        <span class="badge badge-{{ $equipment->status === 'Available' ? 'success' : ($equipment->status === 'In Use' ? 'warning' : 'danger') }}">
+                                        <span class="badge rounded-pill bg-{{ $equipment->status === 'Available' ? 'success' : ($equipment->status === 'In Use' ? 'warning' : 'danger') }}">
                                             {{ $equipment->status }}
                                         </span>
                                     </td>
@@ -129,7 +129,7 @@
                                     <td>{{ $reservation->start_time }} - {{ $reservation->end_time }}</td>
                                     <td>{{ Str::limit($reservation->purpose, 30) }}</td>
                                     <td>
-                                        <span class="badge badge-{{ $reservation->status === 'Active' ? 'success' : 'secondary' }}">
+                                        <span class="badge rounded-pill bg-{{ $reservation->status === 'Active' ? 'success' : 'secondary' }}">
                                             {{ $reservation->status }}
                                         </span>
                                     </td>
@@ -179,5 +179,9 @@
         });
     });
 </script>
+@endpush
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 @endpush
 @endsection 

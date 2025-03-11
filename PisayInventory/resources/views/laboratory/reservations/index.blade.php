@@ -39,8 +39,8 @@
                         <option value="100">100</option>
                     </select>
                     entries
-                </div>
-                <div class="search-box">
+                    </div>
+                    <div class="search-box">
                     <input type="text" class="form-control" id="searchInput" placeholder="Search...">
                 </div>
             </div>
@@ -113,7 +113,7 @@
     font-weight: bold;
 }
 
-.btn-group {
+    .btn-group {
     gap: 10px;
 }
 
@@ -130,12 +130,12 @@
 }
 
 .action-btn {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     border-radius: 4px;
     margin: 0 2px;
 }
@@ -412,4 +412,4 @@ $(document).ready(function() {
     }
 });
 </script>
-@endpush
+@endpush 
