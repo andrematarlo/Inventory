@@ -76,6 +76,16 @@
                                                 class="btn btn-sm btn-warning editEquipmentBtn" 
                                                 data-bs-toggle="tooltip"
                                                 data-equipment-id="{{ $item->equipment_id }}"
+                                                data-equipment-name="{{ $item->equipment_name }}"
+                                                data-laboratory-id="{{ $item->laboratory_id }}"
+                                                data-serial-number="{{ $item->serial_number }}"
+                                                data-model="{{ $item->model_number }}"
+                                                data-status="{{ $item->status }}"
+                                                data-condition="{{ $item->condition }}"
+                                                data-acquisition-date="{{ $item->acquisition_date ? date('Y-m-d', strtotime($item->acquisition_date)) : '' }}"
+                                                data-last-maintenance-date="{{ $item->last_maintenance_date ? date('Y-m-d', strtotime($item->last_maintenance_date)) : '' }}"
+                                                data-next-maintenance-date="{{ $item->next_maintenance_date ? date('Y-m-d', strtotime($item->next_maintenance_date)) : '' }}"
+                                                data-description="{{ $item->description ?? '' }}"
                                                 title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </button>
@@ -495,34 +505,62 @@
             $('#createEquipmentForm')[0].reset();
         });
 
-        // Edit Equipment
+        // Edit Equipment Button Click
         $(document).on('click', '.editEquipmentBtn', function() {
-            const equipmentId = $(this).data('equipment-id');
-            const equipmentName = $(this).data('equipment-name');
-            const laboratoryId = $(this).data('laboratory-id');
-            const serialNumber = $(this).data('serial-number');
-            const modelNumber = $(this).data('model-number');
-            const status = $(this).data('status');
-            const condition = $(this).data('condition');
-            const acquisitionDate = $(this).data('acquisition-date');
-            const lastMaintenanceDate = $(this).data('last-maintenance-date');
-            const nextMaintenanceDate = $(this).data('next-maintenance-date');
-            const description = $(this).data('description');
+            const btn = $(this);
+            
+            // Get data from button attributes
+            const equipmentId = btn.data('equipment-id');
+            const equipmentName = btn.data('equipment-name');
+            const laboratoryId = btn.data('laboratory-id');
+            const serialNumber = btn.data('serial-number');
+            const model = btn.data('model');
+            const status = btn.data('status');
+            const condition = btn.data('condition');
+            const acquisitionDate = btn.data('acquisition-date');
+            const lastMaintenanceDate = btn.data('last-maintenance-date');
+            const nextMaintenanceDate = btn.data('next-maintenance-date');
+            const description = btn.data('description');
+            
+            console.log('Populating edit form with:', {
+                id: equipmentId,
+                name: equipmentName,
+                laboratoryId: laboratoryId,
+                serialNumber: serialNumber,
+                model: model,
+                status: status,
+                condition: condition,
+                acquisitionDate: acquisitionDate,
+                lastMaintenanceDate: lastMaintenanceDate,
+                nextMaintenanceDate: nextMaintenanceDate,
+                description: description
+            });
 
+            // Populate the edit form fields
             $('#edit_equipment_id').val(equipmentId);
             $('#edit_equipment_name').val(equipmentName);
             $('#edit_laboratory_id').val(laboratoryId);
-            $('#edit_serial_number').val(serialNumber);
-            $('#edit_model_number').val(modelNumber);
             $('#edit_status').val(status);
             $('#edit_condition').val(condition);
-            $('#edit_acquisition_date').val(acquisitionDate);
-            $('#edit_last_maintenance_date').val(lastMaintenanceDate);
-            $('#edit_next_maintenance_date').val(nextMaintenanceDate);
+            
+            // Handle date fields properly
+            if (acquisitionDate) {
+                $('#edit_acquisition_date').val(acquisitionDate);
+            }
+            
+            if (lastMaintenanceDate) {
+                $('#edit_last_maintenance_date').val(lastMaintenanceDate);
+            }
+            
+            if (nextMaintenanceDate) {
+                $('#edit_next_maintenance_date').val(nextMaintenanceDate);
+            }
+            
             $('#edit_description').val(description || '');
-
-            const modal = new bootstrap.Modal(editEquipmentModal);
-            modal.show();
+            
+            // Show the modal
+            const editModal = new bootstrap.Modal(document.getElementById('editEquipmentModal'));
+            editModal.show();
         });
 
         // Handle edit form submission
@@ -535,7 +573,7 @@
                 equipment_name: $('#edit_equipment_name').val(),
                 laboratory_id: $('#edit_laboratory_id').val(),
                 serial_number: $('#edit_serial_number').val(),
-                model_number: $('#edit_model_number').val(),
+                model_number: $('#edit_model').val(),
                 status: $('#edit_status').val(),
                 condition: $('#edit_condition').val(),
                 acquisition_date: $('#edit_acquisition_date').val(),
