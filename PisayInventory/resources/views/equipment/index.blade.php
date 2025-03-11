@@ -6,7 +6,7 @@
         <h1 class="h3 mb-0 text-gray-800">Equipment</h1>
         @if($userPermissions->CanAdd)
         <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="addEquipmentBtn">
-            <i class="fas fa-plus fa-sm text-white-50"></i> Add Equipment
+            <i class="bi bi-plus"></i> Add Equipment
         </button>
         @endif
     </div>
@@ -14,18 +14,14 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             {{ session('error') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
@@ -189,7 +185,13 @@
 </div>
 
 <!-- Create Equipment Modal -->
-<div class="modal fade" id="createEquipmentModal" tabindex="-1" aria-labelledby="createEquipmentModalLabel" aria-hidden="true">
+<div class="modal fade" 
+     id="createEquipmentModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="createEquipmentModalLabel" 
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -536,24 +538,37 @@
                 description: description
             });
 
+            // Check if form fields exist
+            if ($('#edit_equipment_id').length === 0) {
+                console.error('Form field #edit_equipment_id not found');
+            }
+            
             // Populate the edit form fields
             $('#edit_equipment_id').val(equipmentId);
             $('#edit_equipment_name').val(equipmentName);
-            $('#edit_laboratory_id').val(laboratoryId);
-            $('#edit_status').val(status);
-            $('#edit_condition').val(condition);
+            $('#edit_laboratory_id').val(laboratoryId || '');
+            $('#edit_serial_number').val(serialNumber || '');
+            $('#edit_model_number').val(model || '');
+            $('#edit_status').val(status || 'Available');
+            $('#edit_condition').val(condition || 'Good');
             
-            // Handle date fields properly
+            // Handle date fields properly - add debugging
+            console.log('Setting acquisition date:', acquisitionDate);
             if (acquisitionDate) {
                 $('#edit_acquisition_date').val(acquisitionDate);
+                console.log('Acquisition date set to:', $('#edit_acquisition_date').val());
             }
             
+            console.log('Setting last maintenance date:', lastMaintenanceDate);
             if (lastMaintenanceDate) {
                 $('#edit_last_maintenance_date').val(lastMaintenanceDate);
+                console.log('Last maintenance date set to:', $('#edit_last_maintenance_date').val());
             }
             
+            console.log('Setting next maintenance date:', nextMaintenanceDate);
             if (nextMaintenanceDate) {
                 $('#edit_next_maintenance_date').val(nextMaintenanceDate);
+                console.log('Next maintenance date set to:', $('#edit_next_maintenance_date').val());
             }
             
             $('#edit_description').val(description || '');
@@ -561,6 +576,15 @@
             // Show the modal
             const editModal = new bootstrap.Modal(document.getElementById('editEquipmentModal'));
             editModal.show();
+            
+            // Double-check after modal is shown
+            setTimeout(() => {
+                console.log('After modal shown, date fields:', {
+                    acquisition: $('#edit_acquisition_date').val(),
+                    lastMaintenance: $('#edit_last_maintenance_date').val(),
+                    nextMaintenance: $('#edit_next_maintenance_date').val()
+                });
+            }, 500);
         });
 
         // Handle edit form submission
@@ -573,7 +597,7 @@
                 equipment_name: $('#edit_equipment_name').val(),
                 laboratory_id: $('#edit_laboratory_id').val(),
                 serial_number: $('#edit_serial_number').val(),
-                model_number: $('#edit_model').val(),
+                model_number: $('#edit_model_number').val(),
                 status: $('#edit_status').val(),
                 condition: $('#edit_condition').val(),
                 acquisition_date: $('#edit_acquisition_date').val(),

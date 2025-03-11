@@ -171,10 +171,10 @@
                                         @if($userPermissions->CanEdit)
                                         <button type="button" 
                                                 class="btn btn-sm btn-primary editLaboratoryBtn"
-                                                data-bs-toggle="tooltip"
-                                                data-bs-title="Edit"
-                                                data-laboratory-id="{{ $laboratory->laboratory_id }}"
-                                                data-laboratory-name="{{ $laboratory->laboratory_name }}"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editLaboratoryModal"
+                                                data-id="{{ $laboratory->laboratory_id }}"
+                                                data-name="{{ $laboratory->laboratory_name }}"
                                                 data-location="{{ $laboratory->location }}"
                                                 data-capacity="{{ $laboratory->capacity }}"
                                                 data-status="{{ $laboratory->status }}"
@@ -494,20 +494,20 @@
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Yes, delete it!',
                 allowOutsideClick: () => {
-        const popup = Swal.getPopup()
-        popup.classList.remove('swal2-show')
-        popup.classList.add('swal2-shake')
-        setTimeout(() => {
-            popup.classList.remove('swal2-shake')
-            popup.classList.add('swal2-show')
-        }, 100)
-        return false
-    },
-    allowEscapeKey: false
+                    const popup = Swal.getPopup()
+                    popup.classList.remove('swal2-show')
+                    popup.classList.add('swal2-shake')
+                    setTimeout(() => {
+                        popup.classList.remove('swal2-shake')
+                        popup.classList.add('swal2-show')
+                    }, 100)
+                    return false
+                },
+                allowEscapeKey: false
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: `/laboratories/${laboratoryId}`,
+                        url: `/inventory/laboratories/${laboratoryId}`,
                         type: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -624,7 +624,7 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: `/laboratories/${laboratoryId}/restore`,
+                        url: `/inventory/laboratories/${laboratoryId}/restore`,
                         type: 'PUT',
                         data: {
                             _token: '{{ csrf_token() }}'
@@ -669,6 +669,58 @@
             $("#editLaboratoryForm").trigger('reset');
             $(".is-invalid").removeClass('is-invalid');
             $(".invalid-feedback").remove();
+        });
+
+        // Handle Add Laboratory Form Submission
+        $('#addLaboratoryForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            // Reset any previous error states
+            $('.is-invalid').removeClass('is-invalid');
+            $('.invalid-feedback').empty();
+            
+            const formData = new FormData(this);
+            
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    // Close the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addLaboratoryModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Laboratory created successfully.',
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        // Validation errors
+                        const errors = xhr.responseJSON.errors;
+                        Object.keys(errors).forEach(field => {
+                            const input = $(`#${field}`);
+                            const feedback = $(`#${field}_error`);
+                            input.addClass('is-invalid');
+                            feedback.text(errors[field][0]);
+                        });
+                    } else {
+                        // Other errors
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'An error occurred while creating the laboratory.',
+                            icon: 'error'
+                        });
+                    }
+                }
+            });
         });
     });
 </script>

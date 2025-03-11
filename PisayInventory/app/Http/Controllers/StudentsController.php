@@ -13,7 +13,10 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\StudentsImport;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\Log;
-
+use App\Models\UserAccount;
+use App\Models\Role;
+use App\Models\UserRole;
+use Illuminate\Support\Facades\Hash;
 
 class StudentsController extends Controller
 {
@@ -73,38 +76,73 @@ class StudentsController extends Controller
      * @param  \Illuminate\Http\Request  $request
      */
     public function store(Request $request)
-    {
-        // Check if user has permission to add students
-        $userPermissions = $this->getUserPermissions('Students');
-        if (!$userPermissions || !$userPermissions->CanAdd) {
-            return redirect()->route('students.index')->with('error', 'You do not have permission to add students.');
-        }
-
-        // Validate the request
-        $validator = Validator::make($request->all(), [
-            'student_id' => 'required|string|max:20|unique:students,student_id',
-            'first_name' => 'required|string|max:50',
-            'last_name' => 'required|string|max:50',
-            'email' => 'nullable|email|max:100|unique:students,email',
-            'contact_number' => 'nullable|string|max:20',
-            'gender' => 'required|in:Male,Female,Other',
-            'date_of_birth' => 'nullable|date',
-            'address' => 'nullable|string',
-            'grade_level' => 'nullable|string|max:20',
-            'section' => 'nullable|string|max:20',
-            'status' => 'nullable|in:Active,Inactive'
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        // Create the student
-        Student::create($request->all());
-
-        return redirect()->route('students.index')->with('success', 'Student created successfully.');
+{
+    // Check permissions
+    $userPermissions = $this->getUserPermissions('Students');
+    if (!$userPermissions || !$userPermissions->CanAdd) {
+        return redirect()->route('students.index')->with('error', 'You do not have permission to add students.');
     }
 
+    // Validate the request
+    $validator = Validator::make($request->all(), [
+        'student_id' => 'required|string|max:20|unique:students,student_id',
+        'first_name' => 'required|string|max:50',
+        'last_name' => 'required|string|max:50',
+        'email' => 'nullable|email|max:100|unique:students,email',
+        'contact_number' => 'nullable|string|max:20',
+        'gender' => 'required|in:Male,Female,Other',
+        'date_of_birth' => 'nullable|date',
+        'address' => 'nullable|string',
+        'grade_level' => 'nullable|string|max:20',
+        'section' => 'nullable|string|max:20',
+        'status' => 'nullable|in:Active,Inactive'
+    ]);
+
+    if ($validator->fails()) {
+        return redirect()->back()->withErrors($validator)->withInput();
+    }
+
+    try {
+        DB::beginTransaction();
+
+        // Create user account
+        $userAccount = UserAccount::create([  // Use UserAccount model, not User
+            'Username' => strtolower($request->first_name . '.' . $request->last_name),
+            'Password' => Hash::make('password123'),
+            'CreatedByID' => Auth::id(),
+            'DateCreated' => now(),
+            'IsDeleted' => 0
+        ]);
+
+        // The role will be automatically set to 'Students' by the boot method
+
+        // Create student
+        $student = Student::create([
+            'student_id' => $request->student_id,
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
+            'contact_number' => $request->contact_number,
+            'gender' => $request->gender,
+            'date_of_birth' => $request->date_of_birth,
+            'address' => $request->address,
+            'grade_level' => $request->grade_level,
+            'section' => $request->section,
+            'status' => 'Active',
+            'UserAccountID' => $userAccount->UserAccountID
+        ]);
+
+        DB::commit();
+        return redirect()->route('students.index')
+            ->with('success', 'Student created successfully with login credentials.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return redirect()->back()
+            ->with('error', 'Error creating student: ' . $e->getMessage())
+            ->withInput();
+    }
+}
     /**
      * Display the specified student.
      *
