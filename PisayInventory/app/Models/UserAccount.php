@@ -8,7 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use App\Models\Item;
 use App\Models\Inventory;
 use App\Models\Role;
-
+use Illuminate\Support\Facades\Log;
 class UserAccount extends Authenticatable
 {
     use HasFactory, Notifiable;
@@ -24,6 +24,7 @@ class UserAccount extends Authenticatable
         'Email',
         'EmployeeID',
         'RoleID',
+        'role',
         'IsActive',
         'LastLogin',
         'CreatedByID',
@@ -51,6 +52,30 @@ class UserAccount extends Authenticatable
         'DateDeleted' => 'datetime',
         'DateRestored' => 'datetime'
     ];
+
+    // Add the boot method to handle student roles
+protected static function boot()
+{
+    parent::boot();
+
+    static::creating(function ($userAccount) {
+        // If this is being created from a student route
+        if (request()->route() && str_contains(request()->route()->getName(), 'students')) {
+            // Get the Students role from the database
+            $studentRole = Role::where('RoleName', 'Students')
+                ->where('IsDeleted', false)
+                ->first();
+
+            if ($studentRole) {
+                $userAccount->role = $studentRole->RoleName;
+                
+            } else {
+                Log::error('Students role not found in roles table');
+                throw new \Exception('Students role not found in the system');
+            }
+        }
+    });
+}
 
     // Accessor for Username
     public function getUsernameAttribute()

@@ -3,6 +3,9 @@
 namespace App\Imports;
 
 use App\Models\Student;
+use App\Models\UserAccount;
+use App\Models\Role;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +25,7 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
     protected $rowCount = 0;
     protected $skippedRows = [];
     protected $successCount = 0;
-    protected $duplicateRows = []; // New property for tracking duplicates
+    protected $duplicateRows = [];
 
     public function __construct(array $columnMapping, $createdById)
     {
@@ -143,20 +146,32 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
                 $existingStudent = Student::where('student_id', $studentData['student_id'])->first();
 
                 if ($existingStudent) {
-                    // Track duplicate record
                     $this->duplicateRows[] = [
                         'row' => $index + 2,
                         'student_id' => $studentData['student_id'],
                         'name' => $studentData['first_name'] . ' ' . $studentData['last_name']
                     ];
-                    Log::info('Duplicate student found:', ['student_id' => $studentData['student_id']]);
-                    continue; // Skip this record
-                } else {
-                    // Create new student
-                    Student::create($studentData);
-                    Log::info('Created new student:', ['student_id' => $studentData['student_id']]);
-                    $this->successCount++;
+                    continue; // Skip this record but continue with next one
                 }
+
+                // Create user account
+                $userAccount = UserAccount::create([
+                    'Username' => strtolower($studentData['first_name'] . '.' . $studentData['last_name']),
+                    'Password' => Hash::make('password123'),
+                    'CreatedByID' => $this->createdById,
+                    'DateCreated' => now(),
+                    'IsDeleted' => 0
+                ]);
+
+                // Create student with UserAccountID
+                $studentData['UserAccountID'] = $userAccount->UserAccountID;
+                Student::create($studentData);
+
+                $this->successCount++;
+                Log::info('Created new student with user account:', [
+                    'student_id' => $studentData['student_id'],
+                    'username' => $userAccount->Username
+                ]);
 
             } catch (\Exception $e) {
                 Log::error('Error processing row:', [
@@ -168,6 +183,9 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
                     'row' => $index + 2,
                     'reason' => $e->getMessage()
                 ];
+                
+                // Continue processing other records
+                continue;
             }
             
             $this->rowCount++;
