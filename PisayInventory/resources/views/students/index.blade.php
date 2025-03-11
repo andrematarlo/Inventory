@@ -126,7 +126,13 @@
                             <label for="excelFileInput" class="form-label">Select Excel File</label>
                             <input type="file" class="form-control" id="excelFileInput" accept=".xlsx, .xls">
                         </div>
-                        <button type="button" id="readExcelBtn" class="btn btn-primary">Preview Columns</button>
+                        <button type="button" id="readExcelBtn" class="btn btn-primary">
+                            <span class="normal-text">Preview Columns</span>
+                            <span class="loading-text d-none">
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                Loading...
+                            </span>
+                        </button>
                     </form>
                 </div>
                 
@@ -337,6 +343,20 @@
 
 <script>
 $(document).ready(function() {
+    // Function to toggle loading state of preview button
+    function togglePreviewLoading(isLoading) {
+        const btn = $('#readExcelBtn');
+        if (isLoading) {
+            btn.prop('disabled', true);
+            btn.find('.normal-text').addClass('d-none');
+            btn.find('.loading-text').removeClass('d-none');
+        } else {
+            btn.prop('disabled', false);
+            btn.find('.loading-text').addClass('d-none');
+            btn.find('.normal-text').removeClass('d-none');
+        }
+    }
+
     // Initialize DataTables
     $('#studentsTable').DataTable({
         responsive: true,
@@ -347,105 +367,111 @@ $(document).ready(function() {
     });
 
     // Handle file selection and preview
-    // Update the readExcelBtn click handler to include the new fields in auto-mapping
-$('#readExcelBtn').on('click', function(e) {
-    e.preventDefault();
-    console.log('Button clicked');
-    
-    var fileInput = document.getElementById('excelFileInput');
-    var file = fileInput.files[0];
-    
-    if (!file) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'No File Selected',
-            text: 'Please select an Excel file first'
-        });
-        return;
-    }
+    $('#readExcelBtn').on('click', function(e) {
+        e.preventDefault();
+        console.log('Button clicked');
+        
+        var fileInput = document.getElementById('excelFileInput');
+        var file = fileInput.files[0];
+        
+        if (!file) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No File Selected',
+                text: 'Please select an Excel file first'
+            });
+            return;
+        }
 
-    var formData = new FormData();
-    formData.append('excel_file', file);
+        // Show loading state
+        togglePreviewLoading(true);
 
-    $.ajax({
-        url: "/inventory/students/preview-columns",
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        },
-        success: function(response) {
-            console.log('Raw server response:', response);
-            
-            if (response.success && response.data && response.data.headers) {
-                console.log('Headers found:', response.data.headers);
+        var formData = new FormData();
+        formData.append('excel_file', file);
+
+        $.ajax({
+            url: "/inventory/students/preview-columns",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                console.log('Raw server response:', response);
                 
-                // Define common column name mappings
-                const commonMappings = {
-                    'student_id': ['student id', 'student number', 'id number', 'learner reference number', 'lrn'],
-                    'first_name': ['first name', 'firstname', 'given name'],
-                    'last_name': ['last name', 'lastname', 'surname', 'family name'],
-                    'middle_name': ['middle name', 'middlename'],
-                    'email': ['email', 'email address', 'e-mail'],
-                    'contact_number': ['contact', 'contact number', 'phone', 'mobile', 'telephone'],
-                    'gender': ['gender', 'sex'],
-                    'date_of_birth': ['birth date', 'birthdate', 'date of birth', 'dob'],
-                    'address': ['address', 'residence', 'location'],
-                    'grade_level': ['grade', 'grade level', 'year level', 'level'],
-                    'section': ['section', 'class', 'block']
-                };
+                if (response.success && response.data && response.data.headers) {
+                    console.log('Headers found:', response.data.headers);
+                    
+                    // Define common column name mappings
+                    const commonMappings = {
+                        'student_id': ['student id', 'student number', 'id number', 'learner reference number', 'lrn'],
+                        'first_name': ['first name', 'firstname', 'given name'],
+                        'last_name': ['last name', 'lastname', 'surname', 'family name'],
+                        'middle_name': ['middle name', 'middlename'],
+                        'email': ['email', 'email address', 'e-mail'],
+                        'contact_number': ['contact', 'contact number', 'phone', 'mobile', 'telephone'],
+                        'gender': ['gender', 'sex'],
+                        'date_of_birth': ['birth date', 'birthdate', 'date of birth', 'dob'],
+                        'address': ['address', 'residence', 'location'],
+                        'grade_level': ['grade', 'grade level', 'year level', 'level'],
+                        'section': ['section', 'class', 'block']
+                    };
 
-                // Populate all select elements
-                $('select[name^="column_mapping"]').each(function() {
-                    var select = $(this);
-                    var fieldName = select.attr('name').match(/\[(.*?)\]/)[1];
-                    
-                    // Clear existing options except the first one
-                    select.find('option:not(:first)').remove();
-                    
-                    // Add new options
-                    response.data.headers.forEach(function(header) {
-                        select.append(new Option(header, header));
+                    // Populate all select elements
+                    $('select[name^="column_mapping"]').each(function() {
+                        var select = $(this);
+                        var fieldName = select.attr('name').match(/\[(.*?)\]/)[1];
                         
-                        // Auto-select if header matches common mappings
-                        if (commonMappings[fieldName]) {
-                            const matchesMapping = commonMappings[fieldName].some(mapping => 
-                                header.toLowerCase().includes(mapping.toLowerCase())
-                            );
-                            if (matchesMapping) {
-                                select.val(header);
+                        // Clear existing options except the first one
+                        select.find('option:not(:first)').remove();
+                        
+                        // Add new options
+                        response.data.headers.forEach(function(header) {
+                            select.append(new Option(header, header));
+                            
+                            // Auto-select if header matches common mappings
+                            if (commonMappings[fieldName]) {
+                                const matchesMapping = commonMappings[fieldName].some(mapping => 
+                                    header.toLowerCase().includes(mapping.toLowerCase())
+                                );
+                                if (matchesMapping) {
+                                    select.val(header);
+                                }
                             }
-                        }
+                        });
                     });
+                    
+                    $('#importStep1').hide();
+                    $('#importStep2').show();
+                } else {
+                    console.error('Invalid response structure:', response);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Preview Failed',
+                        text: 'Invalid response format from server'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
                 });
-                
-                $('#importStep1').hide();
-                $('#importStep2').show();
-            } else {
-                console.error('Invalid response structure:', response);
                 Swal.fire({
                     icon: 'error',
                     title: 'Preview Failed',
-                    text: 'Invalid response format from server'
+                    text: 'Failed to preview columns: ' + error
                 });
+            },
+            complete: function() {
+                // Hide loading state
+                togglePreviewLoading(false);
             }
-        },
-        error: function(xhr, status, error) {
-            console.error('AJAX Error:', {
-                status: status,
-                error: error,
-                response: xhr.responseText
-            });
-            Swal.fire({
-                icon: 'error',
-                title: 'Preview Failed',
-                text: 'Failed to preview columns: ' + error
-            });
-        }
+        });
     });
-});
 
     // Handle back button
     $('#backToStep1Btn').on('click', function() {
