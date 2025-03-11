@@ -534,7 +534,9 @@
                 location: $('#edit_location').val(),
                 capacity: $('#edit_capacity').val(),
                 status: $('#edit_status').val(),
-                description: $('#edit_description').val()
+                description: $('#edit_description').val(),
+                _token: '{{ csrf_token() }}',
+                _method: 'PUT'
             };
 
             // Validate required fields
@@ -553,19 +555,26 @@
                 return;
             }
 
+            // Show loading state
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalText = submitBtn.html();
+            submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
+            submitBtn.prop('disabled', true);
+
             $.ajax({
-                url: `/laboratories/${laboratoryId}`,
-                type: 'PUT',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
+                url: '/inventory/laboratories/' + encodeURIComponent(laboratoryId),
+                type: 'POST',
                 data: formData,
                 success: function(response) {
+                    // Reset button state
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+
                     if (response.success) {
                         $('#editLaboratoryModal').modal('hide');
                         Swal.fire({
                             title: 'Success!',
-                            text: response.message,
+                            text: response.message || 'Laboratory updated successfully.',
                             icon: 'success'
                         }).then(() => {
                             window.location.reload();
@@ -579,6 +588,10 @@
                     }
                 },
                 error: function(xhr) {
+                    // Reset button state
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+
                     let errorMessage = 'An error occurred while updating the laboratory.';
                     if (xhr.responseJSON) {
                         if (xhr.responseJSON.errors) {
