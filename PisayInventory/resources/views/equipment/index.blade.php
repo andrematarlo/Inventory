@@ -6,7 +6,7 @@
         <h1 class="h3 mb-0 text-gray-800">Equipment</h1>
         @if($userPermissions->CanAdd)
         <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="addEquipmentBtn">
-            <i class="bi bi-plus"></i> Add Equipment
+            <i class="bi bi-plus"></i> Add Equipments
         </button>
         @endif
     </div>
