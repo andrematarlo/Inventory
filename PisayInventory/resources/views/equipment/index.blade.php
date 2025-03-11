@@ -538,11 +538,9 @@
                 description: description
             });
 
-            // Check if form fields exist
-            if ($('#edit_equipment_id').length === 0) {
-                console.error('Form field #edit_equipment_id not found');
-            }
-            
+            // Set the form action URL - update this to use the correct URL pattern
+            $('#editEquipmentForm').attr('action', `/inventory/equipment/${equipmentId}`);
+
             // Populate the edit form fields
             $('#edit_equipment_id').val(equipmentId);
             $('#edit_equipment_name').val(equipmentName);
@@ -552,23 +550,17 @@
             $('#edit_status').val(status || 'Available');
             $('#edit_condition').val(condition || 'Good');
             
-            // Handle date fields properly - add debugging
-            console.log('Setting acquisition date:', acquisitionDate);
+            // Handle date fields properly
             if (acquisitionDate) {
                 $('#edit_acquisition_date').val(acquisitionDate);
-                console.log('Acquisition date set to:', $('#edit_acquisition_date').val());
             }
             
-            console.log('Setting last maintenance date:', lastMaintenanceDate);
             if (lastMaintenanceDate) {
                 $('#edit_last_maintenance_date').val(lastMaintenanceDate);
-                console.log('Last maintenance date set to:', $('#edit_last_maintenance_date').val());
             }
             
-            console.log('Setting next maintenance date:', nextMaintenanceDate);
             if (nextMaintenanceDate) {
                 $('#edit_next_maintenance_date').val(nextMaintenanceDate);
-                console.log('Next maintenance date set to:', $('#edit_next_maintenance_date').val());
             }
             
             $('#edit_description').val(description || '');
@@ -576,42 +568,25 @@
             // Show the modal
             const editModal = new bootstrap.Modal(document.getElementById('editEquipmentModal'));
             editModal.show();
-            
-            // Double-check after modal is shown
-            setTimeout(() => {
-                console.log('After modal shown, date fields:', {
-                    acquisition: $('#edit_acquisition_date').val(),
-                    lastMaintenance: $('#edit_last_maintenance_date').val(),
-                    nextMaintenance: $('#edit_next_maintenance_date').val()
-                });
-            }, 500);
         });
 
         // Handle edit form submission
         $('#editEquipmentForm').on('submit', function(e) {
             e.preventDefault();
             
-            const equipmentId = $('#edit_equipment_id').val();
-            const formData = {
-                equipment_id: equipmentId,
-                equipment_name: $('#edit_equipment_name').val(),
-                laboratory_id: $('#edit_laboratory_id').val(),
-                serial_number: $('#edit_serial_number').val(),
-                model_number: $('#edit_model_number').val(),
-                status: $('#edit_status').val(),
-                condition: $('#edit_condition').val(),
-                acquisition_date: $('#edit_acquisition_date').val(),
-                last_maintenance_date: $('#edit_last_maintenance_date').val(),
-                next_maintenance_date: $('#edit_next_maintenance_date').val(),
-                description: $('#edit_description').val()
-            };
+            // Get form data and action URL
+            const formData = $(this).serialize();
+            const actionURL = $(this).attr('action');
+            
+            console.log('Submitting equipment update to:', actionURL);
+            console.log('Form data:', formData);
 
             // Validate required fields
             let errors = [];
-            if (!formData.equipment_name.trim()) errors.push('Equipment Name is required');
-            if (!formData.laboratory_id) errors.push('Laboratory is required');
-            if (!formData.status) errors.push('Status is required');
-            if (!formData.condition) errors.push('Condition is required');
+            if (!$('#edit_equipment_name').val().trim()) errors.push('Equipment Name is required');
+            if (!$('#edit_laboratory_id').val()) errors.push('Laboratory is required');
+            if (!$('#edit_status').val()) errors.push('Status is required');
+            if (!$('#edit_condition').val()) errors.push('Condition is required');
 
             if (errors.length > 0) {
                 Swal.fire({
@@ -622,33 +597,51 @@
                 return;
             }
 
+            // Show loading indicator
+            Swal.fire({
+                title: 'Updating...',
+                html: 'Please wait while we update the equipment.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             $.ajax({
-                url: `/equipment/${equipmentId}`,
-                type: 'PUT',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
+                url: actionURL,
+                type: 'POST', // Using POST with _method=PUT
                 data: formData,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
                 success: function(response) {
-                    if (response.success) {
-                        const editModal = bootstrap.Modal.getInstance(editEquipmentModal);
+                    // Close loading indicator
+                    Swal.close();
+                    
+                    // Properly close the modal
+                    const editModal = bootstrap.Modal.getInstance(document.getElementById('editEquipmentModal'));
+                    if (editModal) {
                         editModal.hide();
-                        Swal.fire({
-                            title: 'Success!',
-                            text: response.message,
-                            icon: 'success'
-                        }).then(() => {
-                            window.location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: response.message || 'Failed to update equipment.',
-                            icon: 'error'
-                        });
+                        
+                        // Manual cleanup in case the event doesn't fire
+                        $('body').removeClass('modal-open');
+                        $('.modal-backdrop').remove();
                     }
+                    
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Equipment updated successfully.',
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
                 },
                 error: function(xhr) {
+                    // Close loading indicator
+                    Swal.close();
+                    
+                    console.error('Update error:', xhr);
+                    
                     let errorMessage = 'An error occurred while updating the equipment.';
                     if (xhr.responseJSON) {
                         if (xhr.responseJSON.errors) {
@@ -682,36 +675,25 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: "{{ route('equipment.destroy', '') }}/" + equipmentId,
+                        url: `/inventory/equipment/${equipmentId}`,
                         type: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                         },
                         success: function(response) {
-                            if (response.success) {
-                                Swal.fire({
-                                    title: 'Deleted!',
-                                    text: response.message,
-                                    icon: 'success'
-                                }).then(() => {
-                                    location.reload();
-                                });
-                            } else {
-                                Swal.fire({
-                                    title: 'Error!',
-                                    text: response.message || 'An error occurred while deleting the equipment.',
-                                    icon: 'error'
-                                });
-                            }
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Equipment deleted successfully.',
+                                icon: 'success'
+                            }).then(() => {
+                                window.location.reload();
+                            });
                         },
                         error: function(xhr) {
-                            let errorMessage = 'An error occurred while deleting the equipment.';
-                            if (xhr.responseJSON && xhr.responseJSON.message) {
-                                errorMessage = xhr.responseJSON.message;
-                            }
+                            console.error('Delete error:', xhr);
                             Swal.fire({
                                 title: 'Error!',
-                                text: errorMessage,
+                                text: 'An error occurred while deleting the equipment.',
                                 icon: 'error'
                             });
                         }
