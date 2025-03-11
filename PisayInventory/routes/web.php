@@ -193,18 +193,47 @@ Route::middleware('auth')->group(function () {
             Route::post('/{borrowing}/restore', [EquipmentBorrowingController::class, 'restore'])->name('equipment.borrowings.restore');
         });
 
-        // Laboratory Reservations
-        Route::prefix('laboratory')->name('laboratory.')->group(function () {
-            Route::get('/reservations', [LaboratoryReservationController::class, 'index'])->name('reservations');
-            Route::get('/reservations/create', [LaboratoryReservationController::class, 'create'])->name('reservations.create');
-            Route::post('/reservations', [LaboratoryReservationController::class, 'store'])->name('reservations.store');
-            Route::get('/reservations/{reservation}', [LaboratoryReservationController::class, 'show'])->name('reservations.show');
-            Route::get('/reservations/{reservation}/edit', [LaboratoryReservationController::class, 'edit'])->name('reservations.edit');
-            Route::put('/reservations/{reservation}', [LaboratoryReservationController::class, 'update'])->name('reservations.update');
-            Route::delete('/reservations/{reservation}', [LaboratoryReservationController::class, 'destroy'])->name('reservations.destroy');
-            Route::post('/reservations/{reservation}/restore', [LaboratoryReservationController::class, 'restore'])->name('reservations.restore');
-            Route::post('/reservations/{reservation}/approve', [LaboratoryReservationController::class, 'approve'])->name('reservations.approve');
-            Route::post('/reservations/{reservation}/reject', [LaboratoryReservationController::class, 'reject'])->name('reservations.reject');
+                // Laboratory Reservations
+                Route::prefix('laboratory')->name('laboratory.')->group(function () {
+                    // Main reservation routes (keep original names)
+                    Route::get('/reservations', [LaboratoryReservationController::class, 'index'])
+                        ->name('reservations');  // This creates 'laboratory.reservations'
+                    Route::get('/reservations/create', [LaboratoryReservationController::class, 'create'])
+                        ->name('reservations.create');
+                    Route::post('/reservations', [LaboratoryReservationController::class, 'store'])
+                        ->name('reservations.store');
+                    
+                    // Student reservation routes
+                    Route::get('/reserve', [LaboratoryReservationController::class, 'studentCreate'])
+                        ->name('reserve');
+                    Route::post('/reserve', [LaboratoryReservationController::class, 'studentStore'])
+                        ->name('reserve.store');
+                
+                    // API routes
+                    Route::get('/reservations/data', [LaboratoryReservationController::class, 'getReservationsData'])
+                        ->name('reservations.data');
+                    Route::get('/reservations/counts', [LaboratoryReservationController::class, 'getStatusCounts'])
+                        ->name('reservations.counts');
+                    Route::get('/reservations/teachers', [LaboratoryReservationController::class, 'getTeachers'])
+                        ->name('reservations.getTeachers');
+                    Route::get('/reservations/generate-control-no', [LaboratoryReservationController::class, 'generateControlNo'])
+                        ->name('reservations.generateControlNo');
+
+            // Other reservation management routes
+            Route::get('/reservations/{reservation}', [LaboratoryReservationController::class, 'show'])
+                ->name('reservations.show');
+            Route::get('/reservations/{reservation}/edit', [LaboratoryReservationController::class, 'edit'])
+                ->name('reservations.edit');
+            Route::put('/reservations/{reservation}', [LaboratoryReservationController::class, 'update'])
+                ->name('reservations.update');
+            Route::delete('/reservations/{reservation}', [LaboratoryReservationController::class, 'destroy'])
+                ->name('reservations.destroy');
+            Route::post('/reservations/{reservation}/restore', [LaboratoryReservationController::class, 'restore'])
+                ->name('reservations.restore');
+            Route::post('/reservations/{reservation}/approve', [LaboratoryReservationController::class, 'approve'])
+                ->name('reservations.approve');
+            Route::post('/reservations/{reservation}/reject', [LaboratoryReservationController::class, 'reject'])
+                ->name('reservations.reject');
         });
     });
 });

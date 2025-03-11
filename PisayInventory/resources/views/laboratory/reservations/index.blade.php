@@ -7,65 +7,76 @@
             <h2>Laboratory Reservations</h2>
         </div>
         <div class="col text-end">
-            @if($userPermissions->CanAdd)
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-                    Add Reservation
-                </button>
-            @endif
+            <a href="{{ route('laboratory.reserve') }}" class="btn btn-primary">
+                Create New Reservation
+            </a>
         </div>
     </div>
 
     <div class="card">
         <div class="card-body">
+            <!-- Status Toggle Buttons -->
+            <div class="btn-group mb-4 w-100">
+                <button type="button" class="btn btn-outline-warning status-toggle active" data-status="For Approval">
+                    For Approval <span class="badge bg-warning ms-2" id="forApprovalCount">0</span>
+                </button>
+                <button type="button" class="btn btn-outline-success status-toggle" data-status="Approved">
+                    Approved <span class="badge bg-success ms-2" id="approvedCount">0</span>
+                </button>
+                <button type="button" class="btn btn-outline-danger status-toggle" data-status="Cancelled">
+                    Disapproved <span class="badge bg-danger ms-2" id="disapprovedCount">0</span>
+                </button>
+            </div>
+
+            <!-- Search and Entries Control -->
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
                     Show 
-                    <select class="form-select form-select-sm d-inline-block w-auto">
+                    <select class="form-select form-select-sm d-inline-block w-auto" id="entriesPerPage">
+                        <option value="10">10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
                     entries
                 </div>
-                <div class="d-flex gap-3 align-items-center">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="showDeleted">
-                        <label class="form-check-label" for="showDeleted">Show Deleted Records</label>
-                    </div>
-                    <div class="search-box">
-                        <input type="text" class="form-control" placeholder="Search...">
-                    </div>
+                <div class="search-box">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search...">
                 </div>
             </div>
 
+            <!-- Reservations Table -->
             <div class="table-responsive">
                 <table class="table table-bordered table-striped">
                     <thead>
                         <tr>
-                            <th style="width: 100px">Actions</th>
-                            <th>Status</th>
-                            <th>Reservation ID</th>
+                            <th>Control No.</th>
                             <th>Laboratory</th>
-                            <th>Reserved By</th>
+                            <th>Grade/Section</th>
+                            <th>Subject</th>
+                            <th>Teacher</th>
                             <th>Date</th>
                             <th>Time</th>
-                            <th>Purpose</th>
+                            <th>Requested By</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="activeRecords">
-                        @include('laboratory.reservations.table-rows', ['reservations' => $activeReservations])
-                    </tbody>
-                    <tbody id="deletedRecords" style="display: none;">
-                        @include('laboratory.reservations.table-rows', ['reservations' => $deletedReservations, 'isDeleted' => true])
+                    <tbody id="reservationsTableBody">
+                        <!-- Data will be loaded dynamically -->
                     </tbody>
                 </table>
             </div>
 
+            <!-- Pagination -->
             <div class="d-flex justify-content-between align-items-center mt-3">
                 <div>
-                    Showing <span id="recordsShowing">1 to {{ $activeReservations->count() }}</span> of {{ $activeReservations->total() }} entries
+                    Showing <span id="recordsShowing">0 to 0</span> of <span id="totalRecords">0</span> entries
                 </div>
-                {{ $activeReservations->links() }}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination" id="pagination">
+                        <!-- Pagination will be loaded dynamically -->
+                    </ul>
+                </nav>
             </div>
         </div>
     </div>
@@ -73,7 +84,7 @@
 
 <!-- View Modal -->
 <div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Reservation Details</h5>
@@ -82,159 +93,8 @@
             <div class="modal-body">
                 <!-- Content will be loaded dynamically -->
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Modal -->
-<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Reservation</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- Form fields will be added here -->
-            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="saveEdit">Save Changes</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Create Modal -->
-<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg"> <!-- Changed from modal-lg to modal-xl -->
-        <div class="modal-content">
-            <div class="modal-header text-center d-block border-bottom-0">
-                <div class="mt-3 mb-4 text-center"> <!-- Increased margin-bottom -->
-                    <h5 class="fw-bold mb-2">PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h5> <!-- Added margin-bottom -->
-                    <div class="d-flex align-items-center justify-content-center gap-2">
-                        <label class="form-label mb-0">CAMPUS:</label>
-                        <input type="text" class="form-control form-control-sm w-auto" name="campus" required>
-                    </div>
-                </div>
-                <h5 class="modal-title mb-3">LABORATORY RESERVATION FORM</h5> <!-- Added margin-bottom -->
-                <button type="button" class="btn-close position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body px-5"> <!-- Added horizontal padding -->
-                <form id="createForm">
-                    @csrf
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-end gap-4"> <!-- Aligned to right with gap -->
-                            <div class="d-flex align-items-center gap-2 mb-4"> <!-- Inline layout -->
-                                <label for="control_no" class="form-label mb-0">Control No.:</label>
-                                <input type="text" class="form-control form-control-sm w-auto" style="width: 85px !important;" id="control_no" name="control_no" readonly>
-                            </div>
-                            <div class="d-flex align-items-center gap-2 mb-4"> <!-- Inline layout -->
-                                <label for="school_year" class="form-label mb-0">SY:</label>
-                                <input type="text" class="form-control form-control-sm w-auto" style="width: 100px !important;" id="school_year" name="school_year" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="grade_section" class="form-label">Grade Level and Section</label>
-                            <input type="text" class="form-control" id="grade_section" name="grade_section" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="num_students" class="form-label">Number of Students</label>
-                            <input type="number" class="form-control" id="num_students" name="num_students" min="1" required>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="subject" class="form-label">Subject</label>
-                            <input type="text" class="form-control" id="subject" name="subject" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="teacher_in_charge" class="form-label">Teacher In-Charge</label>
-                            <input type="text" class="form-control" id="teacher_in_charge" name="teacher_in_charge" required>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="reservation_date" class="form-label">Date/Inclusive Dates</label>
-                            <input type="date" class="form-control" id="reservation_date" name="reservation_date" 
-                                   min="{{ date('Y-m-d', strtotime('+1 day')) }}" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="start_time" class="form-label">Start Time</label>
-                            <input type="time" class="form-control" id="start_time" name="start_time" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="end_time" class="form-label">End Time</label>
-                            <input type="time" class="form-control" id="end_time" name="end_time" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="laboratory_id" class="form-label">Preferred Lab Room</label>
-                        <select name="laboratory_id" id="laboratory_id" class="form-control" required>
-                            <option value="">Select Laboratory</option>
-                            @foreach($laboratories as $lab)
-                                <option value="{{ $lab->laboratory_id }}">{{ $lab->laboratory_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="requested_by" class="form-label">Requested by</label>
-                            <div class="d-flex flex-column">
-                                <input type="text" class="form-control" id="requested_by" name="requested_by" required>
-                                <small class="text-muted text-center mt-1">Teacher/Student</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="date_requested" class="form-label">Date Requested</label>
-                            <input type="date" class="form-control" id="date_requested" name="date_requested" 
-                                   value="{{ date('Y-m-d') }}" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">If user of the lab is a group, list down the names of students.</label>
-                        <div id="group_members">
-                            @for($i = 1; $i <= 5; $i++)
-                                <div class="input-group mb-2">
-                                    <span class="input-group-text">{{ $i }}.</span>
-                                    <input type="text" class="form-control" name="group_members[]">
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="endorsed_by" class="form-label">Endorsed by</label>
-                            <div class="d-flex flex-column">
-                                <input type="text" class="form-control" id="endorsed_by" name="endorsed_by">
-                                <small class="text-muted text-center mt-1">Subject Teacher/Unit Head</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="approved_by" class="form-label">Approved by</label>
-                            <div class="d-flex flex-column">
-                                <input type="text" class="form-control" id="approved_by" name="approved_by">
-                                <small class="text-muted text-center mt-1">SRS/SRA</small>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer flex-column px-5">
-                <div class="d-flex w-100 justify-content-end"> <!-- Changed to end alignment -->
-                    <button type="button" class="btn btn-primary" id="saveCreate">Submit Reservation</button>
-                </div>
-                <div class="w-100 text-start">
-                    <small class="text-muted">PSHS-00-F-CID-05-Ver02-Rev1-10/18/20</small>
-                </div>
             </div>
         </div>
     </div>
@@ -243,95 +103,204 @@
 
 @push('styles')
 <style>
-    .btn-group {
-        display: flex;
-        gap: 5px;
-    }
-    .btn-icon {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        border: none;
-        transition: all 0.2s;
-    }
-    .btn-icon:hover {
-        opacity: 0.8;
-        transform: translateY(-1px);
-    }
-    .badge {
-        font-size: 0.875rem;
-        padding: 0.375rem 0.65rem;
-    }
-    .search-box {
-        width: 250px;
-    }
-    .form-select {
-        min-width: 70px;
-    }
-    #createModal .modal-header {
-        border-bottom: 2px solid #dee2e6;
-        padding-bottom: 0;
-    }
-    
-    #createModal .modal-title {
-        width: 100%;
-        text-align: center;
-    }
-    
-    #createModal .form-control-sm {
-        height: 30px;
-        padding: 0.25rem 0.5rem;
-    }
-    #createModal .modal-content {
-        padding: 1rem;
-    }
+.status-toggle {
+    flex: 1;
+    padding: 1rem;
+    font-weight: 500;
+}
 
-    #createModal .form-label {
-        margin-bottom: 0.25rem;
-    }
+.status-toggle.active {
+    font-weight: bold;
+}
 
-    #createModal small.text-muted {
-        font-size: 0.8rem;
-    }
-    #createModal .modal-body,
-    #createModal .modal-footer {
-        padding-left: 3rem !important;  /* Increased padding */
-        padding-right: 3rem !important; /* Increased padding */
-    }
-        /* Adjust close button position */
-        #createModal .btn-close {
-        padding: 1rem;
-    }
+.btn-group {
+    gap: 10px;
+}
 
+.search-box {
+    width: 300px;
+}
+
+.badge {
+    font-size: 0.9rem;
+}
+
+.table th {
+    background-color: #f8f9fa;
+}
+
+.action-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    margin: 0 2px;
+}
+
+.table td {
+    vertical-align: middle;
+}
 </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 $(document).ready(function() {
-    // Toggle Deleted Records
-    $('#showDeleted').change(function() {
-        if ($(this).is(':checked')) {
-            $('#activeRecords').hide();
-            $('#deletedRecords').show();
-            $('#recordsShowing').text('1 to {{ $deletedReservations->count() }} of {{ $deletedReservations->total() }}');
-            $('.pagination').hide(); // Hide active records pagination
-        } else {
-            $('#deletedRecords').hide();
-            $('#activeRecords').show();
-            $('#recordsShowing').text('1 to {{ $activeReservations->count() }} of {{ $activeReservations->total() }}');
-            $('.pagination').show(); // Show active records pagination
-        }
+    let currentStatus = 'For Approval';
+    let currentPage = 1;
+    let searchQuery = '';
+    let entriesPerPage = 10;
+
+    // Initial load
+    loadReservations();
+    loadCounts();
+
+    // Status toggle click handler
+    $('.status-toggle').click(function() {
+        $('.status-toggle').removeClass('active');
+        $(this).addClass('active');
+        currentStatus = $(this).data('status');
+        currentPage = 1;
+        loadReservations();
     });
 
-    // View Reservation
-    $('.view-reservation').click(function() {
+    // Search input handler
+    $('#searchInput').on('input', debounce(function() {
+        searchQuery = $(this).val();
+        currentPage = 1;
+        loadReservations();
+    }, 500));
+
+    // Entries per page change handler
+    $('#entriesPerPage').change(function() {
+        entriesPerPage = $(this).val();
+        currentPage = 1;
+        loadReservations();
+    });
+
+    // Load reservations
+    function loadReservations() {
+        $.ajax({
+            url: "{{ route('laboratory.reservations') }}",
+            data: {
+                status: currentStatus,
+                page: currentPage,
+                search: searchQuery,
+                per_page: entriesPerPage
+            },
+            success: function(response) {
+                renderTable(response.data);
+                renderPagination(response.meta);
+                updateShowingEntries(response.meta);
+            }
+        });
+    }
+
+    // Load status counts
+    function loadCounts() {
+        $.ajax({
+            url: "{{ route('laboratory.reservations.counts') }}",
+            success: function(response) {
+                $('#forApprovalCount').text(response.forApproval);
+                $('#approvedCount').text(response.approved);
+                $('#disapprovedCount').text(response.cancelled);
+            }
+        });
+    }
+
+    // Render table
+    function renderTable(reservations) {
+        let html = '';
+        
+        if (reservations.length === 0) {
+            html = '<tr><td colspan="9" class="text-center">No reservations found</td></tr>';
+        } else {
+            reservations.forEach(function(reservation) {
+                html += `
+                    <tr>
+                        <td>${reservation.control_no}</td>
+                        <td>${reservation.laboratory.laboratory_name}</td>
+                        <td>${reservation.grade_section}</td>
+                        <td>${reservation.subject}</td>
+                        <td>${reservation.teacher ? reservation.teacher.FirstName + ' ' + reservation.teacher.LastName : '-'}</td>
+                        <td>${formatDate(reservation.reservation_date)}</td>
+                        <td>${formatTime(reservation.start_time)} - ${formatTime(reservation.end_time)}</td>
+                        <td>${reservation.requested_by}</td>
+                        <td>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-info action-btn view-reservation" 
+                                        data-id="${reservation.reservation_id}" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                ${currentStatus === 'For Approval' ? `
+                                    <button type="button" class="btn btn-success action-btn approve-reservation" 
+                                            data-id="${reservation.reservation_id}" title="Approve">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-danger action-btn disapprove-reservation" 
+                                            data-id="${reservation.reservation_id}" title="Disapprove">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        
+        $('#reservationsTableBody').html(html);
+    }
+
+    // Render pagination
+    function renderPagination(meta) {
+        let html = '';
+        
+        if (meta.last_page > 1) {
+            html = `
+                <li class="page-item ${meta.current_page === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${meta.current_page - 1}">Previous</a>
+                </li>
+            `;
+            
+            for (let i = 1; i <= meta.last_page; i++) {
+                html += `
+                    <li class="page-item ${meta.current_page === i ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    </li>
+                `;
+            }
+            
+            html += `
+                <li class="page-item ${meta.current_page === meta.last_page ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${meta.current_page + 1}">Next</a>
+                </li>
+            `;
+        }
+        
+        $('#pagination').html(html);
+        
+        // Pagination click handler
+        $('.page-link').click(function(e) {
+            e.preventDefault();
+            currentPage = $(this).data('page');
+            loadReservations();
+        });
+    }
+
+    // Update showing entries text
+    function updateShowingEntries(meta) {
+        const start = (meta.current_page - 1) * meta.per_page + 1;
+        const end = Math.min(start + meta.per_page - 1, meta.total);
+        $('#recordsShowing').text(`${start} to ${end}`);
+        $('#totalRecords').text(meta.total);
+    }
+
+    // View reservation
+    $(document).on('click', '.view-reservation', function() {
         const id = $(this).data('id');
         $.get("{{ route('laboratory.reservations.show', '_id_') }}".replace('_id_', id), function(data) {
             $('#viewModal .modal-body').html(data);
@@ -339,35 +308,68 @@ $(document).ready(function() {
         });
     });
 
-    // Edit Reservation
-    $('.edit-reservation').click(function() {
+    // Approve reservation
+    $(document).on('click', '.approve-reservation', function() {
         const id = $(this).data('id');
-        $.get("{{ route('laboratory.reservations.edit', '_id_') }}".replace('_id_', id), function(data) {
-            $('#editModal .modal-body').html(data);
-            $('#editModal').modal('show');
+        
+        Swal.fire({
+            title: 'Approve Reservation?',
+            text: "This will approve the laboratory reservation request.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, approve it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                approveReservation(id, 'Approved');
+            }
         });
     });
 
-    // Save Edit
-    $('#saveEdit').click(function() {
-        const form = $('#editModal form');
-        const id = form.data('id');
+    // Disapprove reservation
+    $(document).on('click', '.disapprove-reservation', function() {
+        const id = $(this).data('id');
         
+        Swal.fire({
+            title: 'Disapprove Reservation?',
+            text: "Please provide a reason for disapproval:",
+            input: 'textarea',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Disapprove',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'You need to provide a reason!'
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                approveReservation(id, 'Cancelled', result.value);
+            }
+        });
+    });
+
+    // Approve/Disapprove function
+    function approveReservation(id, status, remarks = null) {
         $.ajax({
-            url: "{{ route('laboratory.reservations.update', '_id_') }}".replace('_id_', id),
-            type: 'PUT',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            url: "{{ route('laboratory.reservations.approve', '_id_') }}".replace('_id_', id),
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                status: status,
+                remarks: remarks
             },
-            data: form.serialize(),
             success: function(response) {
-                $('#editModal').modal('hide');
                 Swal.fire({
                     icon: 'success',
                     title: 'Success!',
                     text: response.message
                 }).then(() => {
-                    location.reload();
+                    loadReservations();
+                    loadCounts();
                 });
             },
             error: function(xhr) {
@@ -378,147 +380,36 @@ $(document).ready(function() {
                 });
             }
         });
-    });
+    }
 
-    // Delete Reservation
-    $('.delete-reservation').click(function() {
-        const id = $(this).data('id');
-        
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "This reservation will be moved to trash. You can restore it later.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: "{{ route('laboratory.reservations.destroy', '_id_') }}".replace('_id_', id),
-                    type: 'DELETE',
-                    data: {
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-                        Swal.fire(
-                            'Deleted!',
-                            'The reservation has been moved to trash.',
-                            'success'
-                        ).then(() => {
-                            location.reload();
-                        });
-                    },
-                    error: function(xhr) {
-                        Swal.fire(
-                            'Error!',
-                            xhr.responseJSON?.message || 'Something went wrong.',
-                            'error'
-                        );
-                    }
-                });
-            }
+    // Helper functions
+    function formatDate(date) {
+        return new Date(date).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
         });
-    });
+    }
 
-    // Restore Reservation
-    $('.restore-reservation').click(function() {
-        const id = $(this).data('id');
-        
-        Swal.fire({
-            title: 'Restore Reservation?',
-            text: "This will restore the reservation from trash.",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, restore it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: "{{ route('laboratory.reservations.restore', '_id_') }}".replace('_id_', id),
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-                        Swal.fire(
-                            'Restored!',
-                            'The reservation has been restored.',
-                            'success'
-                        ).then(() => {
-                            location.reload();
-                        });
-                    },
-                    error: function(xhr) {
-                        Swal.fire(
-                            'Error!',
-                            xhr.responseJSON?.message || 'Something went wrong.',
-                            'error'
-                        );
-                    }
-                });
-            }
+    function formatTime(time) {
+        return new Date('2000-01-01 ' + time).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
         });
-    });
+    }
 
-    // Create Reservation
-    $('#saveCreate').click(function() {
-        const form = $('#createForm');
-        
-        $.ajax({
-            url: "{{ route('laboratory.reservations.store') }}",
-            type: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            data: form.serialize(),
-            success: function(response) {
-                $('#createModal').modal('hide');
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: 'Reservation created successfully.'
-                }).then(() => {
-                    location.reload();
-                });
-            },
-            error: function(xhr) {
-                let errorMessage = 'Something went wrong.';
-                if (xhr.responseJSON && xhr.responseJSON.errors) {
-                    errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
-                } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: errorMessage
-                });
-            }
-        });
-    });
-
-    // Reset form when modal is closed
-    $('#createModal').on('hidden.bs.modal', function () {
-        $('#createForm')[0].reset();
-    });
-
-    // Validate end time is after start time
-    $('#start_time, #end_time').change(function() {
-        const startTime = $('#start_time').val();
-        const endTime = $('#end_time').val();
-        
-        if (startTime && endTime && endTime <= startTime) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Time',
-                text: 'End time must be after start time'
-            });
-            $('#end_time').val('');
-        }
-    });
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
 });
 </script>
-@endpush 
+@endpush

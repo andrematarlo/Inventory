@@ -16,13 +16,24 @@ class LaboratoryReservation extends Model
 
     protected $fillable = [
         'reservation_id',
+        'control_no',
         'laboratory_id',
         'reserver_id',
+        'campus',
+        'school_year',
+        'grade_section',
+        'subject',
+        'teacher_id',
         'reservation_date',
         'start_time',
         'end_time',
-        'purpose',
         'num_students',
+        'requested_by_type',
+        'requested_by',
+        'date_requested',
+        'group_members',
+        'endorsed_by',
+        'approved_by',
         'status',
         'remarks',
         'created_by',
@@ -35,6 +46,7 @@ class LaboratoryReservation extends Model
 
     protected $dates = [
         'reservation_date',
+        'date_requested',
         'start_time',
         'end_time',
         'created_at',
@@ -44,7 +56,8 @@ class LaboratoryReservation extends Model
     ];
 
     protected $casts = [
-        'IsDeleted' => 'boolean'
+        'IsDeleted' => 'boolean',
+        'group_members' => 'array'
     ];
 
     public function laboratory()
@@ -57,39 +70,49 @@ class LaboratoryReservation extends Model
         return $this->belongsTo(User::class, 'reserver_id', 'UserAccountID');
     }
 
+    public function teacher()
+    {
+        return $this->belongsTo(Employee::class, 'teacher_id', 'EmployeeID');
+    }
+
+    public function endorsedBy()
+    {
+        return $this->belongsTo(Employee::class, 'endorsed_by', 'EmployeeID');
+    }
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(Employee::class, 'approved_by', 'EmployeeID');
+    }
+
     public function createdBy()
     {
-        return $this->belongsTo(User::class, 'created_by', 'id');
+        return $this->belongsTo(User::class, 'created_by', 'UserAccountID');
     }
 
     public function updatedBy()
     {
-        return $this->belongsTo(User::class, 'updated_by', 'id');
+        return $this->belongsTo(User::class, 'updated_by', 'UserAccountID');
     }
 
     public function deletedBy()
     {
-        return $this->belongsTo(User::class, 'deleted_by', 'id');
+        return $this->belongsTo(User::class, 'deleted_by', 'UserAccountID');
     }
 
     public function restoredBy()
     {
-        return $this->belongsTo(User::class, 'RestoredById', 'id');
+        return $this->belongsTo(User::class, 'RestoredById', 'UserAccountID');
     }
 
-    public function isActive()
+    public function isForApproval()
     {
-        return $this->status === 'Active';
+        return $this->status === 'For Approval';
     }
 
-    public function isPending()
+    public function isApproved()
     {
-        return $this->status === 'Pending';
-    }
-
-    public function isCompleted()
-    {
-        return $this->status === 'Completed';
+        return $this->status === 'Approved';
     }
 
     public function isCancelled()
@@ -104,11 +127,11 @@ class LaboratoryReservation extends Model
 
     public function canBeCancelled()
     {
-        return $this->isActive() && $this->isUpcoming();
+        return $this->isApproved() && $this->isUpcoming();
     }
 
     public function getRouteKeyName()
     {
         return 'reservation_id';
     }
-} 
+}
