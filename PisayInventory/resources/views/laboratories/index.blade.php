@@ -11,6 +11,34 @@
         @endif
     </div>
 
+    <!-- Display success message from session -->
+    @if(session('success'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Success!',
+                text: "{{ session('success') }}",
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+        });
+    </script>
+    @endif
+
+    <!-- Display error message from session -->
+    @if(session('error'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Error!',
+                text: "{{ session('error') }}",
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        });
+    </script>
+    @endif
+
     <!-- Add Laboratory Modal -->
     <div class="modal fade" 
      id="addLaboratoryModal" 
@@ -31,12 +59,12 @@
                     <div class="modal-body">
                         <div class="form-group row">
                             <div class="col-md-6">
-                                <label for="laboratory_id">Laboratory ID <span class="text-danger">*</span></label>
+                                <label for="laboratory_id">Laboratory ID <small class="text-muted">(Auto-generated)</small></label>
                                 <input type="text" 
                                        class="form-control @error('laboratory_id') is-invalid @enderror" 
                                        id="laboratory_id" 
-                                       name="laboratory_id" 
-                                       required>
+                                       name="laboratory_id"
+                                       readonly>
                                 <div class="invalid-feedback" id="laboratory_id_error"></div>
                             </div>
 
@@ -235,9 +263,10 @@
                 <h5 class="modal-title" id="editLaboratoryModalLabel">Edit Laboratory</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-            <form id="editLaboratoryForm" method="POST">
+            <form id="editLaboratoryForm" action="{{ route('laboratories.index') }}" method="POST">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="edit_id" id="edit_id">
                 <div class="modal-body">
                     <div class="form-group row">
                         <div class="col-md-6">
@@ -413,6 +442,10 @@
             $('#edit_capacity').val(capacity);
             $('#edit_status').val(status);
             $('#edit_description').val(description || '');
+            $('#edit_id').val(laboratoryId);
+            
+            // Set the form action URL
+            $('#editLaboratoryForm').attr('action', '{{ url("/inventory/laboratories") }}/' + laboratoryId);
 
             // Show the modal
             const editModal = new bootstrap.Modal(document.getElementById('editLaboratoryModal'));
@@ -465,12 +498,24 @@
             modal.show();
         });
 
- 
-        // Delete Laboratory Button Click
+        $('#addLaboratoryModal').on('show.bs.modal', function () {
+            // Get the next laboratory ID when opening the modal
+            $.ajax({
+                url: "{{ route('laboratories.getNextId') }}",
+                type: 'GET',
+                success: function(response) {
+                    $('#laboratory_id').val(response.next_id);
+                },
+                error: function(xhr) {
+                    console.error('Error getting next ID:', xhr);
+                }
+            });
+        });
+
+        // Handle delete laboratory
         $(document).on('click', '.deleteLaboratoryBtn', function() {
-            const btn = $(this);
-            const laboratoryId = btn.data('laboratory-id');
-            const laboratoryName = btn.data('laboratory-name');
+            const laboratoryId = $(this).data('laboratory-id');
+            const laboratoryName = $(this).data('laboratory-name');
             
             Swal.fire({
                 title: 'Delete Laboratory?',
@@ -479,18 +524,7 @@
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                allowOutsideClick: () => {
-                    const popup = Swal.getPopup()
-                    popup.classList.remove('swal2-show')
-                    popup.classList.add('swal2-shake')
-                    setTimeout(() => {
-                        popup.classList.remove('swal2-shake')
-                        popup.classList.add('swal2-show')
-                    }, 100)
-                    return false
-                },
-                allowEscapeKey: false
+                confirmButtonText: 'Yes, delete it!'
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
@@ -509,9 +543,13 @@
                             });
                         },
                         error: function(xhr) {
+                            let errorMessage = 'An error occurred while deleting the laboratory.';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
                             Swal.fire({
                                 title: 'Error!',
-                                text: 'An error occurred while deleting the laboratory.',
+                                text: errorMessage,
                                 icon: 'error'
                             });
                         }
@@ -526,6 +564,8 @@
             
             const laboratoryId = $('#edit_laboratory_id').val();
             const formData = {
+                _token: '{{ csrf_token() }}',
+                _method: 'PUT',
                 laboratory_id: laboratoryId,
                 laboratory_name: $('#edit_laboratory_name').val(),
                 location: $('#edit_location').val(),
@@ -550,32 +590,39 @@
                 return;
             }
 
+            // Show loading state
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalBtnText = submitBtn.html();
+            submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
+            submitBtn.prop('disabled', true);
+
             $.ajax({
-                url: `/laboratories/${laboratoryId}`,
-                type: 'PUT',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
+                url: `/inventory/laboratories/${encodeURIComponent(laboratoryId)}`,
+                type: 'POST',
                 data: formData,
                 success: function(response) {
-                    if (response.success) {
-                        $('#editLaboratoryModal').modal('hide');
-                        Swal.fire({
-                            title: 'Success!',
-                            text: response.message,
-                            icon: 'success'
-                        }).then(() => {
-                            window.location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: response.message || 'Failed to update laboratory.',
-                            icon: 'error'
-                        });
-                    }
+                    // Reset button state
+                    submitBtn.html(originalBtnText);
+                    submitBtn.prop('disabled', false);
+
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editLaboratoryModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Laboratory updated successfully.',
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
                 },
                 error: function(xhr) {
+                    // Reset button state
+                    submitBtn.html(originalBtnText);
+                    submitBtn.prop('disabled', false);
+
                     let errorMessage = 'An error occurred while updating the laboratory.';
                     if (xhr.responseJSON) {
                         if (xhr.responseJSON.errors) {
@@ -592,8 +639,6 @@
                 }
             });
         });
-
- 
 
         // Handle restore laboratory
         $(document).on('click', '.restoreLaboratoryBtn', function() {
@@ -666,15 +711,29 @@
             $('.is-invalid').removeClass('is-invalid');
             $('.invalid-feedback').empty();
             
+            // Show loading indicator on button
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalBtnText = submitBtn.html();
+            submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+            submitBtn.prop('disabled', true);
+            
             const formData = new FormData(this);
             
+            // Log form data for debugging
+            console.log('Submitting form with data:');
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+            
             $.ajax({
-                url: $(this).attr('action'),
+                url: "{{ route('laboratories.store') }}",
                 type: 'POST',
                 data: formData,
                 processData: false,
                 contentType: false,
                 success: function(response) {
+                    console.log('Success response:', response);
+                    
                     // Close the modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('addLaboratoryModal'));
                     modal.hide();
@@ -688,10 +747,23 @@
                         window.location.reload();
                     });
                 },
-                error: function(xhr) {
+                error: function(xhr, status, error) {
+                    console.error('Error response:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
+                    
+                    // Reset button state
+                    submitBtn.html(originalBtnText);
+                    submitBtn.prop('disabled', false);
+                    
                     if (xhr.status === 422) {
                         // Validation errors
                         const errors = xhr.responseJSON.errors;
+                        console.log('Validation errors:', errors);
+                        
                         Object.keys(errors).forEach(field => {
                             const input = $(`#${field}`);
                             const feedback = $(`#${field}_error`);
@@ -700,9 +772,27 @@
                         });
                     } else {
                         // Other errors
+                        let errorMessage = 'An error occurred while creating the laboratory.';
+                        
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            try {
+                                const jsonResponse = JSON.parse(xhr.responseText);
+                                if (jsonResponse.message) {
+                                    errorMessage = jsonResponse.message;
+                                }
+                            } catch (e) {
+                                // If not valid JSON, use the raw response text
+                                if (xhr.responseText.length < 100) {
+                                    errorMessage = xhr.responseText;
+                                }
+                            }
+                        }
+                        
                         Swal.fire({
                             title: 'Error!',
-                            text: 'An error occurred while creating the laboratory.',
+                            text: errorMessage,
                             icon: 'error'
                         });
                     }

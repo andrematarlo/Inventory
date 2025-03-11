@@ -62,20 +62,42 @@ class LaboratoriesController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $laboratory = Laboratory::findOrFail($id);
-        
-        $laboratory->update([
-            'laboratory_name' => $request->laboratory_name,
-            'location' => $request->location,
-            'capacity' => $request->capacity,
-            'status' => $request->status,
-            'description' => $request->description,
-            'updated_at' => now(),
-            'ModifiedById' => auth()->id()
-        ]);
+        try {
+            // Find the laboratory by ID
+            $laboratory = Laboratory::where('laboratory_id', $id)->firstOrFail();
+            
+            $laboratory->update([
+                'laboratory_name' => $request->laboratory_name,
+                'location' => $request->location,
+                'capacity' => $request->capacity,
+                'status' => $request->status,
+                'description' => $request->description,
+                'updated_at' => now(),
+                'ModifiedById' => auth()->id() ?? 1
+            ]);
 
-        return redirect()->route('laboratories.index')
-            ->with('success', 'Laboratory updated successfully.');
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Laboratory updated successfully.'
+                ]);
+            }
+
+            // Return with a session flash message for the SweetAlert2
+            return redirect()->route('laboratories.index')
+                ->with('success', 'Laboratory updated successfully.');
+        } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update laboratory: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()
+                ->with('error', 'Failed to update laboratory: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     public function store(Request $request)
@@ -88,33 +110,141 @@ class LaboratoriesController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        // Generate a unique laboratory ID (format: LAB-YYYYMMDD-XXXX)
-        $date = now()->format('Ymd');
-        $lastLab = Laboratory::whereDate('created_at', now())
+        // Verify the ID is unique before creating
+        if (Laboratory::withTrashed()->where('laboratory_id', $request->laboratory_id)->exists()) {
+            // If duplicate found, generate a new unique ID
+            $laboratoryId = $this->getNextUniqueId();
+        } else {
+            $laboratoryId = $request->laboratory_id;
+        }
+
+        try {
+            // Create the laboratory with the verified unique ID
+            Laboratory::create([
+                'laboratory_id' => $laboratoryId,
+                'laboratory_name' => $request->laboratory_name,
+                'location' => $request->location,
+                'capacity' => $request->capacity,
+                'status' => $request->status,
+                'description' => $request->description,
+                'created_by' => auth()->id() ?? 1
+            ]);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Laboratory added successfully.',
+                    'laboratory' => ['laboratory_id' => $laboratoryId]
+                ]);
+            }
+
+            return redirect()->route('laboratories.index')->with('success', 'Laboratory added successfully.');
+
+        } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create laboratory. ' . $e->getMessage()
+                ], 500);
+            }
+            return back()->with('error', 'Failed to create laboratory. ' . $e->getMessage());
+        }
+    }
+
+    private function getNextUniqueId()
+    {
+        // Get today's date in YYYYMMDD format
+        $today = date('Ymd');
+        
+        // Find the highest sequence number for today's date
+        $lastLab = Laboratory::withTrashed()
+            ->where('laboratory_id', 'LIKE', "LAB-{$today}-%")
             ->orderBy('laboratory_id', 'desc')
             ->first();
         
         $sequence = '0001';
         if ($lastLab) {
+            // Extract the sequence number from the last laboratory ID
             $lastSequence = substr($lastLab->laboratory_id, -4);
-            $sequence = str_pad((int)$lastSequence + 1, 4, '0', STR_PAD_LEFT);
+            if (is_numeric($lastSequence)) {
+                $sequence = str_pad((int)$lastSequence + 1, 4, '0', STR_PAD_LEFT);
+            }
         }
         
-        $laboratoryId = "LAB-{$date}-{$sequence}";
+        $laboratoryId = "LAB-{$today}-{$sequence}";
 
-        // Create the laboratory with the generated ID
-        Laboratory::create([
-            'laboratory_id' => $laboratoryId,
-            'laboratory_name' => $request->laboratory_name,
-            'location' => $request->location,
-            'capacity' => $request->capacity,
-            'status' => $request->status,
-            'description' => $request->description,
-            'created_at' => now(),
-            'updated_at' => now(),
-            'CreatedById' => auth()->id() // Add this if you're tracking who created
-        ]);
+        // Verify uniqueness
+        while (Laboratory::withTrashed()->where('laboratory_id', $laboratoryId)->exists()) {
+            $sequence = str_pad((int)$sequence + 1, 4, '0', STR_PAD_LEFT);
+            $laboratoryId = "LAB-{$today}-{$sequence}";
+        }
 
-        return redirect()->route('laboratories.index')->with('success', 'Laboratory added successfully.');
+        return $laboratoryId;
+    }
+
+    public function getNextId()
+    {
+        // Get today's date in YYYYMMDD format
+        $today = date('Ymd');
+        
+        // Find the highest sequence number for today's date
+        $lastLab = Laboratory::withTrashed()
+            ->where('laboratory_id', 'LIKE', "LAB-{$today}-%")
+            ->orderBy('laboratory_id', 'desc')
+            ->first();
+        
+        $sequence = '0001';
+        if ($lastLab) {
+            // Extract the sequence number from the last laboratory ID
+            $lastSequence = substr($lastLab->laboratory_id, -4);
+            if (is_numeric($lastSequence)) {
+                $sequence = str_pad((int)$lastSequence + 1, 4, '0', STR_PAD_LEFT);
+            }
+        }
+        
+        $laboratoryId = "LAB-{$today}-{$sequence}";
+
+        // Verify uniqueness
+        while (Laboratory::withTrashed()->where('laboratory_id', $laboratoryId)->exists()) {
+            $sequence = str_pad((int)$sequence + 1, 4, '0', STR_PAD_LEFT);
+            $laboratoryId = "LAB-{$today}-{$sequence}";
+        }
+
+        return response()->json(['next_id' => $laboratoryId]);
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $laboratory = Laboratory::findOrFail($id);
+            
+            // Check if laboratory has related equipment
+            if ($laboratory->equipment()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete laboratory because it has associated equipment.'
+                ], 422);
+            }
+
+            // Check if laboratory has active reservations
+            if ($laboratory->activeReservations()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete laboratory because it has active reservations.'
+                ], 422);
+            }
+
+            $laboratory->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Laboratory deleted successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while deleting the laboratory.'
+            ], 500);
+        }
     }
 } 

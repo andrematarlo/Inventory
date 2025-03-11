@@ -19,6 +19,7 @@ use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\RolesController;
 use App\Http\Controllers\StudentsController;
 use App\Http\Controllers\LaboratoryController;
+use App\Http\Controllers\LaboratoriesController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\LaboratoryReservationController;
 use App\Http\Controllers\EquipmentBorrowingController;
@@ -156,14 +157,16 @@ Route::middleware('auth')->group(function () {
         Route::resource('modules', ModuleController::class);
 
         // Laboratory Management Routes
-        Route::get('/laboratories', [LaboratoryController::class, 'index'])->name('laboratories.index');
-        Route::get('/laboratories/create', [LaboratoryController::class, 'create'])->name('laboratories.create');
-        Route::post('/laboratories', [LaboratoryController::class, 'store'])->name('laboratories.store');
-        Route::get('/laboratories/{id}', [LaboratoryController::class, 'show'])->name('laboratories.show');
-        Route::get('/laboratories/{id}/edit', [LaboratoryController::class, 'edit'])->name('laboratories.edit');
-        Route::put('/laboratories/{id}', [LaboratoryController::class, 'update'])->name('laboratories.update');
-        Route::delete('/laboratories/{id}', [LaboratoryController::class, 'destroy'])->name('laboratories.destroy');
-        Route::put('/laboratories/{laboratory}/restore', [LaboratoryController::class, 'restore'])->name('laboratories.restore');
+        // Laboratories
+        Route::get('/laboratories', [LaboratoriesController::class, 'index'])->name('laboratories.index');
+        Route::get('/laboratories/next-id', [LaboratoriesController::class, 'getNextId'])->name('laboratories.getNextId');
+        Route::get('/laboratories/create', [LaboratoriesController::class, 'create'])->name('laboratories.create');
+        Route::post('/laboratories', [LaboratoriesController::class, 'store'])->name('laboratories.store');
+        Route::get('/laboratories/{id}', [LaboratoriesController::class, 'show'])->name('laboratories.show')->where('id', '.*');
+        Route::get('/laboratories/{id}/edit', [LaboratoriesController::class, 'edit'])->name('laboratories.edit')->where('id', '.*');
+        Route::put('/laboratories/{id}', [LaboratoriesController::class, 'update'])->name('laboratories.update')->where('id', '.*');
+        Route::delete('/laboratories/{id}', [LaboratoriesController::class, 'destroy'])->name('laboratories.destroy')->where('id', '.*');
+        Route::put('laboratories/{laboratory}/restore', [LaboratoriesController::class, 'restore'])->name('laboratories.restore')->where('laboratory', '.*');
 
         // Equipment routes
         Route::prefix('equipment')->group(function () {
