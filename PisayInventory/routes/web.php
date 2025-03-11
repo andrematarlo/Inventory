@@ -243,3 +243,6 @@ Route::middleware('auth')->group(function () {
 
 // Role Policy routes
 Route::post('/roles/policies/create', [RoleController::class, 'createPolicy'])->name('roles.policies.create');
+
+// Equipment restore route
+Route::post('/equipment/{equipment}/restore', [EquipmentController::class, 'restore'])->name('equipment.restore');
