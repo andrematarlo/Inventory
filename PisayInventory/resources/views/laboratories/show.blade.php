@@ -5,12 +5,7 @@
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Laboratory Details</h1>
         <div>
-            @if($userPermissions->CanEdit)
-            <a href="{{ url('/inventory/laboratories/' . $laboratory->laboratory_id . '/edit') }}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-                <i class="bi bi-pencil-fill"></i> Edit Laboratory
-            </a>
-            @endif
-            <a href="{{ route('laboratories.index') }}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm ms-2">
+            <a href="{{ route('laboratories.index') }}" class="btn btn-secondary">
                 <i class="bi bi-arrow-left"></i> Back to List
             </a>
         </div>
@@ -72,7 +67,6 @@
                                     <th>Equipment ID</th>
                                     <th>Name</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -85,19 +79,10 @@
                                             {{ $equipment->status }}
                                         </span>
                                     </td>
-                                    <td>
-                                        @if($userPermissions->CanView)
-                                        <a href="{{ route('equipment.show', $equipment->equipment_id) }}" 
-                                           class="btn btn-info btn-sm"
-                                           title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        @endif
-                                    </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="4" class="text-center">No equipment found in this laboratory.</td>
+                                    <td colspan="3" class="text-center">No equipment found in this laboratory.</td>
                                 </tr>
                                 @endforelse
                             </tbody>
