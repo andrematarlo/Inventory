@@ -259,25 +259,29 @@ class LaboratoryController extends Controller
     }
 
     /**
-     * Restore the specified laboratory from storage.
+     * Restore the specified soft-deleted laboratory.
      *
      * @param  string  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function restore($id)
     {
         try {
-            // Find the laboratory with withTrashed to include soft-deleted records
+            // Find the laboratory including trashed (deleted) records
             $laboratory = Laboratory::withTrashed()->findOrFail($id);
             
-            // Restore the laboratory
+            // Restore it
             $laboratory->restore();
             
-            return redirect()->route('laboratories.index')
-                ->with('success', 'Laboratory restored successfully.');
+            return response()->json([
+                'success' => true,
+                'message' => 'Laboratory restored successfully'
+            ]);
         } catch (\Exception $e) {
-            return redirect()->route('laboratories.index')
-                ->with('error', 'Failed to restore laboratory: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to restore laboratory: ' . $e->getMessage()
+            ], 500);
         }
     }
 

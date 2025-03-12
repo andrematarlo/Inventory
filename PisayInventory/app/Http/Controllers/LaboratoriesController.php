@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Laboratory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class LaboratoriesController extends Controller
 {
@@ -250,6 +251,64 @@ class LaboratoriesController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while deleting the laboratory.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Restore the specified soft-deleted laboratory.
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function restore($id)
+    {
+        try {
+            // Log the ID we're trying to restore
+            \Log::info('Attempting to restore laboratory with ID: ' . $id);
+            
+            // Check if the record exists at all (even with trashed)
+            $exists = Laboratory::withTrashed()->where('laboratory_id', $id)->exists();
+            \Log::info('Laboratory exists in database (including trashed): ' . ($exists ? 'Yes' : 'No'));
+            
+            if (!$exists) {
+                // Try to find any laboratory to see if the model works
+                $anyLab = Laboratory::withTrashed()->first();
+                \Log::info('Any laboratory found: ' . ($anyLab ? 'Yes, ID: ' . $anyLab->laboratory_id : 'No'));
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Laboratory not found with ID: ' . $id
+                ], 404);
+            }
+            
+            // Get the laboratory directly
+            $laboratory = Laboratory::withTrashed()->where('laboratory_id', $id)->first();
+            
+            if (!$laboratory) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Laboratory found in exists() but not in first()'
+                ], 500);
+            }
+            
+            \Log::info('Laboratory found, deleted_at: ' . ($laboratory->deleted_at ? $laboratory->deleted_at : 'Not deleted'));
+            
+            // Restore it
+            $laboratory->restore();
+            \Log::info('Laboratory restored');
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Laboratory restored successfully'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Exception in restore: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to restore laboratory: ' . $e->getMessage()
             ], 500);
         }
     }

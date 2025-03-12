@@ -147,11 +147,11 @@
                         @foreach($laboratories as $laboratory)
                         <tr class="{{ $laboratory->deleted_at ? 'table-secondary deleted-record d-none' : 'active-record' }}">
                             <td>
-                                <div class="btn-group">
+                                <div class="btn-group" role="group" style="gap: 5px;">
                                     @if(!$laboratory->deleted_at)
                                         @if($userPermissions->CanView)
                                         <a href="{{ route('laboratories.show', $laboratory->laboratory_id) }}" 
-                                           class="btn btn-sm btn-info" 
+                                           class="btn btn-sm btn-info me-1" 
                                            data-bs-toggle="tooltip" 
                                            title="View Details">
                                             <i class="bi bi-eye-fill"></i>
@@ -159,25 +159,18 @@
                                         @endif
 
                                         @if($userPermissions->CanEdit)
-<<<<<<< HEAD
-                                        <button type="button" 
-                                                class="btn btn-sm btn-primary editLaboratoryBtn"
-                                                data-bs-toggle="tooltip" 
-                                               title="Edit Laboratory"
-                                               data-id="{{ $laboratory->laboratory_id }}"
-                                               data-name="{{ $laboratory->laboratory_name }}"
-                                                data-location="{{ $laboratory->location }}"
-                                                data-capacity="{{ $laboratory->capacity }}"
-                                                data-status="{{ $laboratory->status }}"
-                                               data-description="{{ $laboratory->description }}">
-=======
-                                        <a href="{{ url('/inventory/laboratories/' . $laboratory->laboratory_id . '/edit') }}" 
-                                           class="btn btn-sm btn-primary"
-                                                data-bs-toggle="tooltip" 
-                                           title="Edit Laboratory">
->>>>>>> 23d2c84a10c2d10a35245a9f289bb34124071656
+                                        <a href="javascript:void(0)" 
+                                           class="btn btn-sm btn-primary me-1 editLaboratoryBtn"
+                                           data-bs-toggle="tooltip" 
+                                           title="Edit Laboratory"
+                                           data-id="{{ $laboratory->laboratory_id }}"
+                                           data-name="{{ $laboratory->laboratory_name }}"
+                                           data-location="{{ $laboratory->location }}"
+                                           data-capacity="{{ $laboratory->capacity }}"
+                                           data-status="{{ $laboratory->status }}"
+                                           data-description="{{ $laboratory->description }}">
                                             <i class="bi bi-pencil-fill"></i>
-                                        </button>
+                                        </a>
                                         @endif
 
                                         @if($userPermissions->CanDelete)
@@ -374,11 +367,12 @@
                 <form id="restoreLaboratoryForm" method="POST">
                     @csrf
                     @method('PUT')
-                    <!-- Add all required hidden fields -->
-                    <input type="hidden" id="restore_laboratory_name" name="laboratory_name" value="">
-                    <input type="hidden" id="restore_location" name="location" value="">
-                    <input type="hidden" id="restore_capacity" name="capacity" value="1">
+                    <input type="hidden" id="restore_laboratory_id" name="laboratory_id">
+                    <input type="hidden" id="restore_laboratory_name" name="laboratory_name">
+                    <input type="hidden" id="restore_location" name="location" value="Restored">
+                    <input type="hidden" id="restore_capacity" name="capacity" value="30">
                     <input type="hidden" id="restore_status" name="status" value="Available">
+                    <input type="hidden" id="restore_description" name="description" value="">
                     <button type="submit" class="btn btn-success">Restore</button>
                 </form>
             </div>
@@ -626,60 +620,69 @@
             const laboratoryId = btn.data('laboratory-id');
             const laboratoryName = btn.data('laboratory-name');
             
-            // Create a non-restore update route - try standard update instead
-            const updateAction = `/inventory/laboratories/${laboratoryId}`;
-            
-            // Set form values
-            $('#restoreLaboratoryForm').attr('action', updateAction);
-            $('#restoreLaboratoryName').text(laboratoryName);
-            $('#restore_laboratory_name').val(laboratoryName);
-            $('#restore_location').val('Restored');
-            $('#restore_capacity').val(30);
-            $('#restore_status').val('Available');
-            
-            // Show the modal
-            const modal = new bootstrap.Modal(document.getElementById('restoreLaboratoryModal'));
-            modal.show();
-        });
-
-        // Handle restore form submission
-        $('#restoreLaboratoryForm').on('submit', function(e) {
-            e.preventDefault();
-            
-            // Show loading indicator
-            Swal.fire({
-                title: 'Restoring...',
-                text: 'Please wait while we restore the laboratory',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+            console.log('Restore button clicked for:', {
+                id: laboratoryId,
+                name: laboratoryName
             });
-
-            // Submit form via AJAX
-            $.ajax({
-                url: $(this).attr('action'),
-                type: 'POST',
-                data: $(this).serialize(),
-                success: function(response) {
+            
+            Swal.fire({
+                title: 'Restore Laboratory?',
+                text: `Are you sure you want to restore "${laboratoryName}" (ID: ${laboratoryId})?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, restore it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading indicator
                     Swal.fire({
-                        title: 'Success!',
-                        text: 'Laboratory restored successfully.',
-                        icon: 'success'
-                    }).then(() => {
-                        window.location.reload();
+                        title: 'Restoring...',
+                        text: 'Please wait while we restore the laboratory',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
                     });
-                },
-                error: function(xhr) {
-                    let errorMessage = 'An error occurred while restoring the laboratory.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
                     
-                    Swal.fire({
-                        title: 'Error!',
-                        text: errorMessage,
-                        icon: 'error'
+                    // Make direct AJAX call to restore using POST
+                    const restoreUrl = `/inventory/laboratories/${encodeURIComponent(laboratoryId)}/restore`;
+                    console.log('Sending restore request to:', restoreUrl);
+                    
+                    $.ajax({
+                        url: restoreUrl,
+                        type: 'POST', // Use POST directly
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            laboratory_id: laboratoryId,
+                            laboratory_name: laboratoryName,
+                            location: 'Restored',
+                            capacity: 30,
+                            status: 'Available'
+                        },
+                        success: function(response) {
+                            console.log('Restore success:', response);
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Laboratory restored successfully.',
+                                icon: 'success'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            console.error('Restore error:', xhr);
+                            let errorMessage = 'An error occurred while restoring the laboratory.';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+                            
+                            Swal.fire({
+                                title: 'Error!',
+                                text: errorMessage,
+                                icon: 'error'
+                            });
+                        }
                     });
                 }
             });

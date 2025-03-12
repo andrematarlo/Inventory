@@ -268,3 +268,41 @@ Route::delete('/equipment-borrowings/{id}', [EquipmentBorrowingController::class
 Route::post('/equipment-borrowings/{id}/return', [EquipmentBorrowingController::class, 'return'])
     ->name('equipment.borrowings.direct.return')
     ->where('id', '.*');
+
+// Add these routes for restoring laboratories (supporting both PUT and POST)
+Route::put('/inventory/laboratories/{laboratory}/restore', [App\Http\Controllers\LaboratoriesController::class, 'restore'])
+    ->name('laboratories.restore')
+    ->where('laboratory', '.*'); // This allows any character in the ID
+
+Route::post('/inventory/laboratories/{laboratory}/restore', [App\Http\Controllers\LaboratoriesController::class, 'restore'])
+    ->name('laboratories.restore.post')
+    ->where('laboratory', '.*');
+
+// Add this test route for debugging laboratory restore
+Route::get('/debug/laboratory/{id}', function($id) {
+    try {
+        // Try to find the laboratory
+        $lab = \App\Models\Laboratory::withTrashed()->where('laboratory_id', $id)->first();
+        
+        if (!$lab) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Laboratory not found with ID: ' . $id,
+                'all_labs' => \App\Models\Laboratory::withTrashed()->get(['laboratory_id', 'laboratory_name', 'deleted_at'])->toArray()
+            ]);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'laboratory' => $lab->toArray(),
+            'is_deleted' => $lab->trashed(),
+            'deleted_at' => $lab->deleted_at
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+    }
+})->where('id', '.*');
