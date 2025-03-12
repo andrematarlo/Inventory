@@ -444,14 +444,18 @@
         });
         
 
-        // Toggle deleted records
+        // Toggle between active and deleted records
         $('#showDeletedRecords').change(function() {
             if ($(this).is(':checked')) {
+                // Show only deleted records
+                $('.active-record').addClass('d-none');
                 $('.deleted-record').removeClass('d-none');
-                table.column(6).visible(true);
+                table.column(6).visible(true); // Show deleted_at column
             } else {
+                // Show only active records
+                $('.active-record').removeClass('d-none');
                 $('.deleted-record').addClass('d-none');
-                table.column(6).visible(false);
+                table.column(6).visible(false); // Hide deleted_at column
             }
             table.columns.adjust().draw();
         });
