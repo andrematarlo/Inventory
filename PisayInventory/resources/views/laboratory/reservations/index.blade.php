@@ -392,7 +392,7 @@ $(document).on('click', '.cancel-reservation', function() {
         confirmButtonText: 'Yes, cancel it!'
     }).then((result) => {
         if (result.isConfirmed) {
-            $.ajax({
+        $.ajax({
                 url: "{{ route('laboratory.reservations.approve', '_id_') }}".replace('_id_', id),
                 type: 'POST',
                 data: {
@@ -400,23 +400,23 @@ $(document).on('click', '.cancel-reservation', function() {
                     status: 'Cancelled',
                     remarks: 'Cancelled by user'
                 },
-                success: function(response) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
+            success: function(response) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
                         text: 'Reservation has been cancelled.'
-                    }).then(() => {
+                }).then(() => {
                         loadReservations();
                         loadCounts();
-                    });
-                },
-                error: function(xhr) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: xhr.responseJSON?.message || 'Something went wrong.'
-                    });
-                }
+                });
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: xhr.responseJSON?.message || 'Something went wrong.'
+                });
+            }
             });
         }
     });

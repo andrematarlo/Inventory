@@ -58,7 +58,7 @@
                     </thead>
                     <tbody>
                         @forelse($borrowings as $borrowing)
-                        <tr>
+                        <tr class="{{ $borrowing->deleted_at ? 'deleted-record' : 'active-record' }}" style="{{ $borrowing->deleted_at ? 'display: none;' : '' }}">
                             <td>
                                 <div class="btn-group">
                                     @if(!$borrowing->deleted_at)
@@ -356,14 +356,23 @@ $(document).ready(function() {
 
     // Handle show deleted toggle
     $('#showDeleted').change(function() {
-        const currentUrl = new URL(window.location.href);
         if (this.checked) {
-            currentUrl.searchParams.set('trashed', '1');
+            $('.active-record').hide();
+            $('.deleted-record').show();
         } else {
-            currentUrl.searchParams.delete('trashed');
+            $('.active-record').show();
+            $('.deleted-record').hide();
         }
-        window.location.href = currentUrl.toString();
     });
+
+    // Initialize the toggle state
+    if ($('#showDeleted').is(':checked')) {
+        $('.active-record').hide();
+        $('.deleted-record').show();
+    } else {
+        $('.active-record').show();
+        $('.deleted-record').hide();
+    }
 
     // Handle search input with debounce
     let searchTimeout;

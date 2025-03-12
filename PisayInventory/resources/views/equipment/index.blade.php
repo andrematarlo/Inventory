@@ -60,8 +60,8 @@
                                         @if($userPermissions->CanView)
                                         <a href="{{ route('equipment.show', ['equipment' => $item->equipment_id]) }}" 
                                            class="btn btn-sm btn-info" 
-                                           data-bs-toggle="tooltip"
-                                           title="View">
+                                                data-bs-toggle="tooltip"
+                                                title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         @endif
@@ -622,19 +622,19 @@
             
             // Handle date fields properly
             if (acquisitionDate) {
-                $('#edit_acquisition_date').val(acquisitionDate);
+            $('#edit_acquisition_date').val(acquisitionDate);
             }
             
             if (lastMaintenanceDate) {
-                $('#edit_last_maintenance_date').val(lastMaintenanceDate);
+            $('#edit_last_maintenance_date').val(lastMaintenanceDate);
             }
             
             if (nextMaintenanceDate) {
-                $('#edit_next_maintenance_date').val(nextMaintenanceDate);
+            $('#edit_next_maintenance_date').val(nextMaintenanceDate);
             }
             
             $('#edit_description').val(description || '');
-            
+
             // Show the modal
             const editModal = new bootstrap.Modal(document.getElementById('editEquipmentModal'));
             editModal.show();
@@ -698,13 +698,13 @@
                         $('.modal-backdrop').remove();
                     }
                     
-                    Swal.fire({
-                        title: 'Success!',
+                        Swal.fire({
+                            title: 'Success!',
                         text: 'Equipment updated successfully.',
-                        icon: 'success'
-                    }).then(() => {
-                        window.location.reload();
-                    });
+                            icon: 'success'
+                        }).then(() => {
+                            window.location.reload();
+                        });
                 },
                 error: function(xhr) {
                     // Close loading indicator
@@ -751,11 +751,11 @@
                             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                         },
                         success: function(response) {
-                            Swal.fire({
+                                Swal.fire({
                                 title: 'Success!',
                                 text: 'Equipment deleted successfully.',
-                                icon: 'success'
-                            }).then(() => {
+                                    icon: 'success'
+                                }).then(() => {
                                 window.location.reload();
                             });
                         },
