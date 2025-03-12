@@ -105,8 +105,8 @@ class StudentsController extends Controller
     try {
         DB::beginTransaction();
 
-        // Create user account
-        $userAccount = UserAccount::create([  // Use UserAccount model, not User
+        // Create user account first
+        $userAccount = UserAccount::create([
             'Username' => strtolower($request->first_name . '.' . $request->last_name),
             'Password' => Hash::make('password123'),
             'CreatedByID' => Auth::id(),
@@ -114,10 +114,11 @@ class StudentsController extends Controller
             'IsDeleted' => 0
         ]);
 
-        // The role will be automatically set to 'Students' by the boot method
+        // Get the last inserted ID
+        $lastUserAccountID = $userAccount->UserAccountID;
 
-        // Create student
-        $student = Student::create([
+        // Create student with the same UserAccountID
+        $student = new Student([
             'student_id' => $request->student_id,
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
@@ -128,9 +129,12 @@ class StudentsController extends Controller
             'address' => $request->address,
             'grade_level' => $request->grade_level,
             'section' => $request->section,
-            'status' => 'Active',
-            'UserAccountID' => $userAccount->UserAccountID
+            'status' => 'Active'
         ]);
+
+        // Set the UserAccountID explicitly
+        $student->UserAccountID = $lastUserAccountID;
+        $student->save();
 
         DB::commit();
         return redirect()->route('students.index')

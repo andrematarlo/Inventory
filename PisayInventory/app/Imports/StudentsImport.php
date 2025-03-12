@@ -145,11 +145,16 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
                 // Check for existing student
                 $existingStudent = Student::where('student_id', $studentData['student_id'])->first();
 
-                if ($existingStudent) {
+                // Add check for existing username in UserAccount
+                $username = strtolower($studentData['first_name'] . '.' . $studentData['last_name']);
+                $existingUserAccount = UserAccount::where('Username', $username)->first();
+
+                if ($existingStudent || $existingUserAccount) {
                     $this->duplicateRows[] = [
                         'row' => $index + 2,
                         'student_id' => $studentData['student_id'],
-                        'name' => $studentData['first_name'] . ' ' . $studentData['last_name']
+                        'name' => $studentData['first_name'] . ' ' . $studentData['last_name'],
+                        'reason' => $existingStudent ? 'Student ID already exists' : 'Username already exists'
                     ];
                     continue; // Skip this record but continue with next one
                 }

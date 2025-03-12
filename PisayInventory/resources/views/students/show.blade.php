@@ -19,7 +19,7 @@
             </div>
             <div>
                 @if($userPermissions && $userPermissions->CanEdit)
-                <a href="{{ route('students.edit', $student->StudentID) }}" class="btn btn-primary btn-sm">
+                <a href="{{ route('students.edit', $student->student_id) }}" class="btn btn-primary btn-sm">
                     <i class="fas fa-edit"></i> Edit
                 </a>
                 @endif
@@ -34,7 +34,7 @@
                     <table class="table table-borderless">
                         <tr>
                             <th width="30%">Student Number:</th>
-                            <td>{{ $student->StudentNumber }}</td>
+                            <td>{{ $student->student_id }}</td>
                         </tr>
                         <tr>
                             <th>Name:</th>
@@ -42,15 +42,15 @@
                         </tr>
                         <tr>
                             <th>Gender:</th>
-                            <td>{{ $student->Gender }}</td>
+                            <td>{{ $student->gender }}</td>
                         </tr>
                         <tr>
                             <th>Contact Number:</th>
-                            <td>{{ $student->ContactNumber ?? 'N/A' }}</td>
+                            <td>{{ $student->contact_number ?? 'N/A' }}</td>
                         </tr>
                         <tr>
                             <th>Email:</th>
-                            <td>{{ $student->Email ?? 'N/A' }}</td>
+                            <td>{{ $student->email ?? 'N/A' }}</td>
                         </tr>
                     </table>
                 </div>
@@ -58,17 +58,17 @@
                     <table class="table table-borderless">
                         <tr>
                             <th width="30%">Year Level:</th>
-                            <td>{{ $student->YearLevel }}</td>
+                            <td>{{ $student->grade_level }}</td>
                         </tr>
                         <tr>
                             <th>Section:</th>
-                            <td>{{ $student->Section }}</td>
+                            <td>{{ $student->section }}</td>
                         </tr>
                         <tr>
                             <th>Status:</th>
                             <td>
-                                <span class="badge bg-{{ $student->Status == 'Active' ? 'success' : 'danger' }}">
-                                    {{ $student->Status }}
+                                <span class="badge bg-{{ $student->status == 'Active' ? 'success' : 'danger' }}">
+                                    {{ $student->status }}
                                 </span>
                             </td>
                         </tr>
@@ -86,4 +86,4 @@
         </div>
     </div>
 </div>
-@endsection 
+@endsection

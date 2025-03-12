@@ -7,9 +7,9 @@
             <h2>Laboratory Reservations</h2>
         </div>
         <div class="col text-end">
-            <a href="{{ route('laboratory.reserve') }}" class="btn btn-primary">
-                Create New Reservation
-            </a>
+        <a href="{{ route('laboratory.reservations.create') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> Book Laboratory
+</a>
         </div>
     </div>
 
@@ -148,6 +148,8 @@
 
 @push('scripts')
 <script>
+    const userPermissions = @json($userPermissions);
+    console.log('userPermissions:', userPermissions); 
 $(document).ready(function() {
     let currentStatus = 'For Approval';
     let currentPage = 1;
@@ -183,78 +185,242 @@ $(document).ready(function() {
 
     // Load reservations
     function loadReservations() {
-        $.ajax({
-            url: "{{ route('laboratory.reservations') }}",
-            data: {
-                status: currentStatus,
-                page: currentPage,
-                search: searchQuery,
-                per_page: entriesPerPage
-            },
-            success: function(response) {
-                renderTable(response.data);
-                renderPagination(response.meta);
-                updateShowingEntries(response.meta);
-            }
-        });
-    }
+    $.ajax({
+        url: "{{ route('laboratory.reservations.data') }}",
+        data: {
+            status: currentStatus,
+            page: currentPage,
+            search: searchQuery,
+            per_page: entriesPerPage
+        },
+        success: function(response) {
+            console.log('Response:', response); // Debug log
+            renderTable(response.data);
+            renderPagination(response.meta);
+            updateShowingEntries(response.meta);
+        },
+        error: function(xhr, status, error) {
+            console.error('Error:', error);
+        }
+    });
+}
 
     // Load status counts
     function loadCounts() {
-        $.ajax({
-            url: "{{ route('laboratory.reservations.counts') }}",
-            success: function(response) {
-                $('#forApprovalCount').text(response.forApproval);
-                $('#approvedCount').text(response.approved);
-                $('#disapprovedCount').text(response.cancelled);
-            }
-        });
-    }
+    $.ajax({
+        url: "{{ route('laboratory.reservations.counts') }}", // Changed from 'laboratory.reservations.counts'
+        success: function(response) {
+            $('#forApprovalCount').text(response.forApproval);
+            $('#approvedCount').text(response.approved);
+            $('#disapprovedCount').text(response.cancelled);
+        }
+    });
+}
 
     // Render table
     function renderTable(reservations) {
-        let html = '';
-        
-        if (reservations.length === 0) {
-            html = '<tr><td colspan="9" class="text-center">No reservations found</td></tr>';
-        } else {
-            reservations.forEach(function(reservation) {
-                html += `
-                    <tr>
-                        <td>${reservation.control_no}</td>
-                        <td>${reservation.laboratory.laboratory_name}</td>
-                        <td>${reservation.grade_section}</td>
-                        <td>${reservation.subject}</td>
-                        <td>${reservation.teacher ? reservation.teacher.FirstName + ' ' + reservation.teacher.LastName : '-'}</td>
-                        <td>${formatDate(reservation.reservation_date)}</td>
-                        <td>${formatTime(reservation.start_time)} - ${formatTime(reservation.end_time)}</td>
-                        <td>${reservation.requested_by}</td>
-                        <td>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-info action-btn view-reservation" 
-                                        data-id="${reservation.reservation_id}" title="View">
-                                    <i class="fas fa-eye"></i>
+    let html = '';
+    
+    if (!reservations || reservations.length === 0) {
+        html = '<tr><td colspan="9" class="text-center">No reservations found</td></tr>';
+    } else {
+        reservations.forEach(function(reservation) {
+            const isOwnReservation = reservation.reserver_id === '{{ Auth::id() }}';
+            const currentUserEmployeeId = {{ Auth::user()->employee?->EmployeeID ?? 'null' }};
+            const isTeacherInCharge = reservation.teacher_id == currentUserEmployeeId;
+            const isAdmin = {{ Auth::user()->role === 'Admin' ? 'true' : 'false' }};
+            const userRole = '{{ Auth::user()->role }}';
+            const isSRSorSRA = userRole === 'SRS' || userRole === 'SRA';
+            
+            console.log('Debug Info:', {
+                teacherId: reservation.teacher_id,
+                currentUserEmployeeId: currentUserEmployeeId,
+                isTeacherInCharge: isTeacherInCharge,
+                requestedByType: reservation.requested_by_type,
+                endorsementStatus: reservation.endorsement_status,
+                isAdmin: isAdmin,
+                userRole: userRole,
+                isSRSorSRA: isSRSorSRA
+            });
+
+            html += `
+                <tr>
+                    <td>${reservation.control_no}</td>
+                    <td>${reservation.laboratory.laboratory_name}</td>
+                    <td>${reservation.grade_section}</td>
+                    <td>${reservation.subject}</td>
+                    <td>${reservation.teacher ? `${reservation.teacher.FirstName} ${reservation.teacher.LastName}` : '-'}</td>
+                    <td>${formatDate(reservation.reservation_date)}</td>
+                    <td>${formatTime(reservation.start_time)} - ${formatTime(reservation.end_time)}</td>
+                    <td>${reservation.requested_by}</td>
+                    <td>
+                        <div class="btn-group">
+                            <!-- View button always visible -->
+                            <button type="button" class="btn btn-info btn-sm view-reservation" 
+                                    data-id="${reservation.reservation_id}" title="View">
+                                <i class="bi bi-eye"></i>
+                            </button>
+
+                            ${/* SRS/SRA approval buttons */
+                            (isAdmin || isSRSorSRA) && !reservation.approved_by ? `
+                                <button type="button" class="btn btn-success btn-sm approve-reservation" 
+                                        data-id="${reservation.reservation_id}" title="Approve">
+                                    <i class="bi bi-check-lg"></i>
                                 </button>
-                                ${currentStatus === 'For Approval' ? `
-                                    <button type="button" class="btn btn-success action-btn approve-reservation" 
-                                            data-id="${reservation.reservation_id}" title="Approve">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-danger action-btn disapprove-reservation" 
-                                            data-id="${reservation.reservation_id}" title="Disapprove">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                ` : ''}
-                            </div>
-                        </td>
-                    </tr>
-                `;
+                                <button type="button" class="btn btn-danger btn-sm disapprove-reservation" 
+                                        data-id="${reservation.reservation_id}" title="Disapprove">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            ` : ''}
+
+                            ${/* Teacher In-Charge endorsement for student requests */
+                            !isAdmin && !isSRSorSRA && isTeacherInCharge && 
+                            reservation.requested_by_type === 'student' && 
+                            reservation.endorsement_status === 'For Endorsement' ? `
+                                <button type="button" class="btn btn-success btn-sm endorse-reservation" 
+                                        data-id="${reservation.reservation_id}" title="Endorse">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm reject-reservation" 
+                                        data-id="${reservation.reservation_id}" title="Reject">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            ` : ''}
+
+                            ${/* Unit Head endorsement for teacher requests */
+                            !isAdmin && !isSRSorSRA && userRole === 'Unit Head' && 
+                            reservation.requested_by_type === 'teacher' && 
+                            reservation.endorsement_status === 'For Endorsement' ? `
+                                <button type="button" class="btn btn-success btn-sm endorse-reservation" 
+                                        data-id="${reservation.reservation_id}" title="Endorse">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm reject-reservation" 
+                                        data-id="${reservation.reservation_id}" title="Reject">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            ` : ''}
+
+                            ${/* Cancel button for own pending requests */
+                            isOwnReservation && 
+                            reservation.endorsement_status === 'For Endorsement' ? `
+                                <button type="button" class="btn btn-danger btn-sm cancel-reservation" 
+                                        data-id="${reservation.reservation_id}" title="Cancel">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+    
+    $('#reservationsTableBody').html(html);
+}
+
+
+
+
+
+// Handle endorsement
+$(document).on('click', '.endorse-reservation', function() {
+    const fullReservationId = $(this).data('id');
+    // Log the full ID for debugging
+    console.log('Full Reservation ID:', fullReservationId);
+    
+    // Extract just the numeric part if it's a RES-prefixed ID
+    const reservationId = fullReservationId.replace('RES', '');
+    console.log('Processed Reservation ID:', reservationId);
+    
+    Swal.fire({
+        title: 'Endorse Reservation?',
+        text: 'This will forward the reservation for approval.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, endorse it!',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: "{{ route('laboratory.reservations.endorse', '_id_') }}".replace('_id_', reservationId),
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    full_id: fullReservationId // Send the full ID as well
+                },
+                success: function(response) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: response.message,
+                        icon: 'success'
+                    }).then(() => {
+                        currentStatus = 'Approved';
+                        $('.status-toggle').removeClass('active');
+                        $('.status-toggle[data-status="Approved"]').addClass('active');
+                        loadReservations();
+                        loadCounts();
+                    });
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: xhr.responseJSON?.message || 'An error occurred while processing your request.',
+                        icon: 'error'
+                    });
+                }
             });
         }
-        
-        $('#reservationsTableBody').html(html);
-    }
+    });
+});
 
+
+
+// Add this event handler for cancel button
+$(document).on('click', '.cancel-reservation', function() {
+    const id = $(this).data('id');
+    
+    Swal.fire({
+        title: 'Cancel Reservation?',
+        text: "Are you sure you want to cancel this reservation?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, cancel it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: "{{ route('laboratory.reservations.approve', '_id_') }}".replace('_id_', id),
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    status: 'Cancelled',
+                    remarks: 'Cancelled by user'
+                },
+                success: function(response) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Reservation has been cancelled.'
+                    }).then(() => {
+                        loadReservations();
+                        loadCounts();
+                    });
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: xhr.responseJSON?.message || 'Something went wrong.'
+                    });
+                }
+            });
+        }
+    });
+});
     // Render pagination
     function renderPagination(meta) {
         let html = '';
