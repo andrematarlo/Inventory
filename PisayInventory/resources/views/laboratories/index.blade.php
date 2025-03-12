@@ -159,6 +159,7 @@
                                         @endif
 
                                         @if($userPermissions->CanEdit)
+<<<<<<< HEAD
                                         <button type="button" 
                                                 class="btn btn-sm btn-primary editLaboratoryBtn"
                                                 data-bs-toggle="tooltip" 
@@ -169,6 +170,12 @@
                                                 data-capacity="{{ $laboratory->capacity }}"
                                                 data-status="{{ $laboratory->status }}"
                                                data-description="{{ $laboratory->description }}">
+=======
+                                        <a href="{{ url('/inventory/laboratories/' . $laboratory->laboratory_id . '/edit') }}" 
+                                           class="btn btn-sm btn-primary"
+                                                data-bs-toggle="tooltip" 
+                                           title="Edit Laboratory">
+>>>>>>> 23d2c84a10c2d10a35245a9f289bb34124071656
                                             <i class="bi bi-pencil-fill"></i>
                                         </button>
                                         @endif
