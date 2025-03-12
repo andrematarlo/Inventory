@@ -13,27 +13,22 @@ class Employee extends Model
     protected $table = 'employee';
     protected $primaryKey = 'EmployeeID';
     public $timestamps = false;
-    public $incrementing = true;
+    public $incrementing = false;
 
     // Remove automatic eager loading as it conflicts with our optimized queries
     // protected $with = ['userAccount', 'createdBy', 'modifiedBy'];
 
     protected $fillable = [
-        'UserAccountID',
+        'EmployeeID',
         'FirstName',
+        'MiddleName',
         'LastName',
         'Email',
-        'Gender',
-        'Address',
-        'DateCreated',
-        'CreatedByID',
-        'ModifiedByID',
-        'DateModified',
-        'DeletedByID',
-        'RestoredById',
-        'DateDeleted',
-        'DateRestored',
-        'IsDeleted'
+        'ContactNumber',
+        'Department',
+        'Position',
+        'created_by',
+        'updated_by'
     ];
 
     protected $casts = [
@@ -98,7 +93,7 @@ class Employee extends Model
     // Get full name attribute
     public function getFullNameAttribute()
     {
-        return "{$this->FirstName} {$this->LastName}";
+        return trim("{$this->FirstName} {$this->MiddleName} {$this->LastName}");
     }
 
     // Helper method to get full name of creator
@@ -237,5 +232,23 @@ class Employee extends Model
     public function scopeDeleted($query)
     {
         return $query->where('IsDeleted', true);
+    }
+
+    // Equipment borrowings relationship
+    public function equipmentBorrowings()
+    {
+        return $this->hasMany(EquipmentBorrowing::class, 'borrower_id', 'EmployeeID');
+    }
+
+    // Created borrowings relationship
+    public function createdBorrowings()
+    {
+        return $this->hasMany(EquipmentBorrowing::class, 'created_by', 'EmployeeID');
+    }
+
+    // Updated borrowings relationship
+    public function updatedBorrowings()
+    {
+        return $this->hasMany(EquipmentBorrowing::class, 'updated_by', 'EmployeeID');
     }
 } 

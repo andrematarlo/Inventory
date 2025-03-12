@@ -56,27 +56,63 @@ class EquipmentBorrowing extends Model
 
     public function borrower()
     {
-        return $this->belongsTo(UserAccount::class, 'borrower_id', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'borrower_id', 'EmployeeID');
     }
 
     public function createdBy()
     {
-        return $this->belongsTo(UserAccount::class, 'created_by', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'created_by', 'EmployeeID')
+            ->withDefault([
+                'FirstName' => 'System',
+                'LastName' => 'User'
+            ]);
     }
 
     public function updatedBy()
     {
-        return $this->belongsTo(UserAccount::class, 'updated_by', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'updated_by', 'EmployeeID')
+            ->withDefault([
+                'FirstName' => 'System',
+                'LastName' => 'User'
+            ]);
     }
 
     public function deletedBy()
     {
-        return $this->belongsTo(UserAccount::class, 'deleted_by', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'deleted_by', 'EmployeeID')
+            ->withDefault([
+                'FirstName' => 'System',
+                'LastName' => 'User'
+            ]);
     }
 
     public function restoredBy()
     {
-        return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
+        return $this->belongsTo(Employee::class, 'RestoredById', 'EmployeeID')
+            ->withDefault([
+                'FirstName' => 'System',
+                'LastName' => 'User'
+            ]);
+    }
+
+    public function getCreatedByNameAttribute()
+    {
+        return $this->createdBy ? $this->createdBy->FullName : 'System User';
+    }
+
+    public function getUpdatedByNameAttribute()
+    {
+        return $this->updatedBy ? $this->updatedBy->FullName : 'System User';
+    }
+
+    public function getDeletedByNameAttribute()
+    {
+        return $this->deletedBy ? $this->deletedBy->FullName : 'System User';
+    }
+
+    public function getRestoredByNameAttribute()
+    {
+        return $this->restoredBy ? $this->restoredBy->FullName : 'System User';
     }
 
     public function isOverdue()

@@ -162,9 +162,6 @@
                             @foreach($equipment as $item)
                                 <option value="{{ $item->equipment_id }}">
                                     {{ $item->equipment_name }}
-                                    @if($item->serial_number || $item->model_number)
-                                        ({{ $item->serial_number ?: $item->model_number }})
-                                    @endif
                                 </option>
                             @endforeach
                         </select>
@@ -239,9 +236,6 @@
                             @foreach($equipment as $item)
                                 <option value="{{ $item->equipment_id }}">
                                     {{ $item->equipment_name }}
-                                    @if($item->serial_number || $item->model_number)
-                                        ({{ $item->serial_number ?: $item->model_number }})
-                                    @endif
                                 </option>
                             @endforeach
                         </select>
@@ -570,38 +564,176 @@ $(document).ready(function() {
     $(document).on('click', '.editBorrowingBtn', function() {
         const borrowingId = $(this).data('borrowing-id');
         
+        // Add loading state to button
+        const button = $(this);
+        const originalHtml = button.html();
+        button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
         // Load borrowing details
         $.ajax({
-            url: "{{ url('equipment-borrowings') }}/" + borrowingId + "/edit",
+            url: "{{ route('equipment.borrowings.show', ['borrowing' => '_id_']) }}".replace('_id_', borrowingId),
             type: 'GET',
             success: function(response) {
-                if (response.success) {
-                    const borrowing = response.data;
-                    $('#editModal').modal('show');
+                try {
+                    // Handle both possible response formats
+                    const borrowing = response.data || response;
+                    console.log('Borrowing data:', borrowing); // Debug log
+                    
                     // Populate form fields
-                    $('#editForm').find('[name="equipment_id"]').val(borrowing.equipment_id);
-                    $('#editForm').find('[name="borrow_date"]').val(borrowing.borrow_date);
-                    $('#editForm').find('[name="expected_return_date"]').val(borrowing.expected_return_date);
-                    $('#editForm').find('[name="purpose"]').val(borrowing.purpose);
-                    $('#editForm').find('[name="condition_on_borrow"]').val(borrowing.condition_on_borrow);
-                    $('#editForm').find('[name="remarks"]').val(borrowing.remarks);
-                    $('#editForm').find('[name="borrowing_id"]').val(borrowing.borrowing_id);
-                } else {
+                    const form = $('#editForm');
+                    form.find('[name="borrowing_id"]').val(borrowingId);
+                    
+                    // Set equipment_id and ensure it exists in the dropdown
+                    const equipmentSelect = form.find('[name="equipment_id"]');
+                    if (borrowing.equipment_id) {
+                        if (equipmentSelect.find(`option[value="${borrowing.equipment_id}"]`).length === 0) {
+                            // If the equipment option doesn't exist, add it
+                            equipmentSelect.append(new Option(
+                                borrowing.equipment ? borrowing.equipment.equipment_name : borrowing.equipment_id,
+                                borrowing.equipment_id
+                            ));
+                        }
+                        equipmentSelect.val(borrowing.equipment_id);
+                    }
+
+                    form.find('[name="borrow_date"]').val(formatDate(borrowing.borrow_date));
+                    form.find('[name="expected_return_date"]').val(formatDate(borrowing.expected_return_date));
+                    form.find('[name="purpose"]').val(borrowing.purpose || '');
+                    form.find('[name="condition_on_borrow"]').val(borrowing.condition_on_borrow || '');
+                    form.find('[name="remarks"]').val(borrowing.remarks || '');
+
+                    // Show modal
+                    $('#editModal').modal('show');
+                } catch (error) {
+                    console.error('Error parsing response:', error);
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: response.message || 'Failed to load borrowing details'
+                        text: 'Failed to parse borrowing details'
                     });
                 }
             },
             error: function(xhr) {
+                console.error('Error response:', xhr.responseText);
+                const errorMessage = xhr.responseJSON?.message || 'Failed to load borrowing details';
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Failed to load borrowing details'
+                    text: errorMessage
                 });
+            },
+            complete: function() {
+                // Reset button state
+                button.prop('disabled', false).html(originalHtml);
             }
         });
+    });
+
+    // Handle Edit Form Submit
+    $('#saveEdit').click(function() {
+        const form = $('#editForm');
+        const borrowingId = form.find('[name="borrowing_id"]').val();
+        
+        // Get the dates
+        const borrowDate = new Date(form.find('[name="borrow_date"]').val());
+        const returnDate = new Date(form.find('[name="expected_return_date"]').val());
+
+        // Validate dates
+        if (returnDate <= borrowDate) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Date',
+                text: 'Expected return date must be after the borrow date'
+            });
+            return;
+        }
+
+        // Validate form
+        if (!form[0].checkValidity()) {
+            form[0].reportValidity();
+            return;
+        }
+
+        // Add loading state
+        const button = $(this);
+        button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+
+        // Format dates for submission
+        const formData = new FormData(form[0]);
+        formData.set('borrow_date', form.find('[name="borrow_date"]').val());
+        formData.set('expected_return_date', form.find('[name="expected_return_date"]').val());
+        formData.append('_method', 'PUT');
+
+        $.ajax({
+            url: "{{ route('equipment.borrowings.update', ['borrowing' => '_id_']) }}".replace('_id_', borrowingId),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                $('#editModal').modal('hide');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: response.message || 'Borrowing updated successfully'
+                }).then(() => {
+                    location.reload();
+                });
+            },
+            error: function(xhr) {
+                console.error('Error response:', xhr);
+                let errorMessage = 'Failed to update borrowing';
+                if (xhr.responseJSON?.errors) {
+                    errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                } else if (xhr.responseJSON?.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMessage
+                });
+            },
+            complete: function() {
+                // Reset button state
+                button.prop('disabled', false).html('Save Changes');
+            }
+        });
+    });
+
+    // Add date validation on expected return date change
+    $('#editForm [name="expected_return_date"]').on('change', function() {
+        const borrowDate = new Date($('#editForm [name="borrow_date"]').val());
+        const returnDate = new Date($(this).val());
+        
+        if (returnDate <= borrowDate) {
+            $(this).val(''); // Clear invalid date
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Date',
+                text: 'Expected return date must be after the borrow date'
+            });
+        }
+    });
+
+    // Update minimum return date when borrow date changes
+    $('#editForm [name="borrow_date"]').on('change', function() {
+        const borrowDate = new Date($(this).val());
+        const nextDay = new Date(borrowDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        
+        const returnDateInput = $('#editForm [name="expected_return_date"]');
+        returnDateInput.attr('min', nextDay.toISOString().split('T')[0]);
+        
+        // Clear return date if it's now invalid
+        const returnDate = new Date(returnDateInput.val());
+        if (returnDate <= borrowDate) {
+            returnDateInput.val('');
+        }
     });
 
     // Delete Borrowing

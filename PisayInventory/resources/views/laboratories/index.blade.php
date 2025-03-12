@@ -161,7 +161,7 @@
                                         @if($userPermissions->CanEdit)
                                         <a href="{{ url('/inventory/laboratories/' . $laboratory->laboratory_id . '/edit') }}" 
                                            class="btn btn-sm btn-primary"
-                                           data-bs-toggle="tooltip"
+                                                data-bs-toggle="tooltip" 
                                            title="Edit Laboratory">
                                             <i class="bi bi-pencil-fill"></i>
                                         </a>
