@@ -58,10 +58,10 @@
                     </thead>
                     <tbody>
                         @forelse($borrowings as $borrowing)
-                        <tr class="{{ $borrowing->deleted_at ? 'deleted-record' : 'active-record' }}" style="{{ $borrowing->deleted_at ? 'display: none;' : '' }}">
+                        <tr class="{{ $borrowing->IsDeleted ? 'deleted-record' : 'active-record' }}">
                             <td>
                                 <div class="btn-group">
-                                    @if(!$borrowing->deleted_at)
+                                    @if(!$borrowing->IsDeleted)
                                         @if($userPermissions->CanEdit)
                                             @if(!$borrowing->actual_return_date)
                                                 <button type="button" 
@@ -334,6 +334,13 @@
 .form-select {
     min-width: 70px;
 }
+.deleted-record {
+    display: none;
+    background-color: #fff3f3;
+}
+.active-record {
+    display: table-row;
+}
 </style>
 @endpush
 
@@ -354,24 +361,31 @@ $(document).ready(function() {
         window.location.href = currentUrl.toString();
     });
 
-    // Handle show deleted toggle
+    // Handle show deleted toggle with URL parameter update
     $('#showDeleted').change(function() {
+        const currentUrl = new URL(window.location.href);
         if (this.checked) {
             $('.active-record').hide();
             $('.deleted-record').show();
+            currentUrl.searchParams.set('trashed', '1');
+            window.location.href = currentUrl.toString();
         } else {
             $('.active-record').show();
             $('.deleted-record').hide();
+            currentUrl.searchParams.delete('trashed');
+            window.location.href = currentUrl.toString();
         }
     });
 
-    // Initialize the toggle state
-    if ($('#showDeleted').is(':checked')) {
+    // Initialize the toggle state based on URL parameter
+    if (new URL(window.location.href).searchParams.has('trashed')) {
         $('.active-record').hide();
         $('.deleted-record').show();
+        $('#showDeleted').prop('checked', true);
     } else {
         $('.active-record').show();
         $('.deleted-record').hide();
+        $('#showDeleted').prop('checked', false);
     }
 
     // Handle search input with debounce
