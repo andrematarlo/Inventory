@@ -1,64 +1,51 @@
 <div class="reservation-details">
     <div class="mb-3">
-        <label class="fw-bold">Reservation ID:</label>
-        <p>{{ $reservation->reservation_id }}</p>
+        <strong>Reservation ID:</strong>
+        <div>{{ $reservation->reservation_id }}</div>
     </div>
-    
+
     <div class="mb-3">
-        <label class="fw-bold">Laboratory:</label>
-        <p>{{ $reservation->laboratory->laboratory_name }}</p>
+        <strong>Laboratory:</strong>
+        <div>{{ $reservation->laboratory->laboratory_name }}</div>
     </div>
-    
+
     <div class="mb-3">
-        <label class="fw-bold">Reserved By:</label>
-        <p>
-            @if($reservation->reserver && $reservation->reserver->employee)
-                {{ $reservation->reserver->employee->FirstName }} 
-                {{ $reservation->reserver->employee->LastName }}
+        <strong>Reserved By:</strong>
+        <div>{{ $reservation->requested_by }}</div>
+    </div>
+
+    <div class="mb-3">
+        <strong>Date:</strong>
+        <div>{{ \Carbon\Carbon::parse($reservation->reservation_date)->format('M d, Y') }}</div>
+    </div>
+
+    <div class="mb-3">
+        <strong>Time:</strong>
+        <div>{{ \Carbon\Carbon::parse($reservation->start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($reservation->end_time)->format('h:i A') }}</div>
+    </div>
+
+    <div class="mb-3">
+        <strong>Number of Students:</strong>
+        <div>{{ $reservation->num_students }}</div>
+    </div>
+
+    <div class="mb-3">
+        <strong>Status:</strong>
+        <div>
+            @if($reservation->status == 'For Approval')
+                <span class="badge bg-warning">For Approval</span>
+            @elseif($reservation->status == 'Approved')
+                <span class="badge bg-success">Approved</span>
             @else
-                N/A
+                <span class="badge bg-danger">Disapproved</span>
             @endif
-        </p>
+        </div>
     </div>
-    
-    <div class="mb-3">
-        <label class="fw-bold">Date:</label>
-        <p>{{ date('M d, Y', strtotime($reservation->reservation_date)) }}</p>
-    </div>
-    
-    <div class="mb-3">
-        <label class="fw-bold">Time:</label>
-        <p>
-            {{ date('h:i A', strtotime($reservation->start_time)) }} - 
-            {{ date('h:i A', strtotime($reservation->end_time)) }}
-        </p>
-    </div>
-    
-    <div class="mb-3">
-        <label class="fw-bold">Purpose:</label>
-        <p>{{ $reservation->purpose }}</p>
-    </div>
-    
-    <div class="mb-3">
-        <label class="fw-bold">Number of Students:</label>
-        <p>{{ $reservation->num_students ?? 'N/A' }}</p>
-    </div>
-    
-    <div class="mb-3">
-        <label class="fw-bold">Status:</label>
-        <p>
-            <span class="badge {{ $reservation->status === 'Active' ? 'bg-success' : 
-                              ($reservation->status === 'Pending' ? 'bg-warning' : 
-                              ($reservation->status === 'Cancelled' ? 'bg-danger' : 'bg-secondary')) }}">
-                {{ $reservation->status }}
-            </span>
-        </p>
-    </div>
-    
+
     @if($reservation->remarks)
     <div class="mb-3">
-        <label class="fw-bold">Remarks:</label>
-        <p>{{ $reservation->remarks }}</p>
+        <strong>Remarks:</strong>
+        <div>{{ $reservation->remarks }}</div>
     </div>
     @endif
-</div> 
+</div>

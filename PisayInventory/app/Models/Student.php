@@ -22,7 +22,9 @@ class Student extends Model
      *
      * @var string
      */
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'student_id';
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     /**
      * The attributes that should be mutated to dates.
@@ -44,6 +46,7 @@ class Student extends Model
      * @var array
      */
     protected $fillable = [
+        'UserAccountID',
         'student_id',
         'first_name',
         'last_name',
