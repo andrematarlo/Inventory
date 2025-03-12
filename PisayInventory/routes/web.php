@@ -188,12 +188,24 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [EquipmentBorrowingController::class, 'index'])->name('equipment.borrowings');
             Route::get('/create', [EquipmentBorrowingController::class, 'create'])->name('equipment.borrowings.create');
             Route::post('/', [EquipmentBorrowingController::class, 'store'])->name('equipment.borrowings.store');
-            Route::get('/{borrowing}', [EquipmentBorrowingController::class, 'show'])->name('equipment.borrowings.show');
-            Route::get('/{borrowing}/edit', [EquipmentBorrowingController::class, 'edit'])->name('equipment.borrowings.edit');
-            Route::put('/{borrowing}', [EquipmentBorrowingController::class, 'update'])->name('equipment.borrowings.update');
-            Route::delete('/{borrowing}', [EquipmentBorrowingController::class, 'destroy'])->name('equipment.borrowings.destroy');
-            Route::post('/{borrowing}/return', [EquipmentBorrowingController::class, 'return'])->name('equipment.borrowings.return');
-            Route::post('/{borrowing}/restore', [EquipmentBorrowingController::class, 'restore'])->name('equipment.borrowings.restore');
+            Route::get('/{borrowing}', [EquipmentBorrowingController::class, 'show'])
+                ->name('equipment.borrowings.show')
+                ->where('borrowing', '.*');
+            Route::get('/{borrowing}/edit', [EquipmentBorrowingController::class, 'edit'])
+                ->name('equipment.borrowings.edit')
+                ->where('borrowing', '.*');
+            Route::put('/{borrowing}', [EquipmentBorrowingController::class, 'update'])
+                ->name('equipment.borrowings.update')
+                ->where('borrowing', '.*');
+            Route::delete('/{borrowing}', [EquipmentBorrowingController::class, 'destroy'])
+                ->name('equipment.borrowings.destroy')
+                ->where('borrowing', '.*');
+            Route::post('/{borrowing}/return', [EquipmentBorrowingController::class, 'return'])
+                ->name('equipment.borrowings.return')
+                ->where('borrowing', '.*');
+            Route::post('/{borrowing}/restore', [EquipmentBorrowingController::class, 'restore'])
+                ->name('equipment.borrowings.restore')
+                ->where('borrowing', '.*');
         });
 
                 // Laboratory Reservations
@@ -246,3 +258,23 @@ Route::post('/roles/policies/create', [RoleController::class, 'createPolicy'])->
 
 // Equipment restore route
 Route::post('/equipment/{equipment}/restore', [EquipmentController::class, 'restore'])->name('equipment.restore');
+
+// Direct routes for equipment borrowings at root level
+Route::get('/equipment-borrowings/{id}', [EquipmentBorrowingController::class, 'show'])
+    ->name('equipment.borrowings.direct.show')
+    ->where('id', '.*');
+Route::post('/equipment-borrowings/{id}/restore', [EquipmentBorrowingController::class, 'restore'])
+    ->name('equipment.borrowings.direct.restore')
+    ->where('id', '.*');
+Route::get('/equipment-borrowings/{id}/edit', [EquipmentBorrowingController::class, 'edit'])
+    ->name('equipment.borrowings.direct.edit')
+    ->where('id', '.*');
+Route::put('/equipment-borrowings/{id}', [EquipmentBorrowingController::class, 'update'])
+    ->name('equipment.borrowings.direct.update')
+    ->where('id', '.*');
+Route::delete('/equipment-borrowings/{id}', [EquipmentBorrowingController::class, 'destroy'])
+    ->name('equipment.borrowings.direct.destroy')
+    ->where('id', '.*');
+Route::post('/equipment-borrowings/{id}/return', [EquipmentBorrowingController::class, 'return'])
+    ->name('equipment.borrowings.direct.return')
+    ->where('id', '.*');
