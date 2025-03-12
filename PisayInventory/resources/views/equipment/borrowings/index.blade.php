@@ -364,21 +364,34 @@ $(document).ready(function() {
     // Handle show deleted toggle with URL parameter update
     $('#showDeleted').change(function() {
         const currentUrl = new URL(window.location.href);
+        
+        // Show loading spinner
+        Swal.fire({
+            title: 'Loading...',
+            text: this.checked ? 'Loading deleted records' : 'Loading active records',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            allowEnterKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         if (this.checked) {
-            $('.active-record').hide();
-            $('.deleted-record').show();
             currentUrl.searchParams.set('trashed', '1');
-            window.location.href = currentUrl.toString();
         } else {
-            $('.active-record').show();
-            $('.deleted-record').hide();
             currentUrl.searchParams.delete('trashed');
-            window.location.href = currentUrl.toString();
         }
+        
+        window.location.href = currentUrl.toString();
     });
 
-    // Initialize the toggle state based on URL parameter
-    if (new URL(window.location.href).searchParams.has('trashed')) {
+    // Initialize the toggle state based on URL parameter with loading state
+    const urlParams = new URL(window.location.href).searchParams;
+    const showDeleted = urlParams.has('trashed');
+    
+    if (showDeleted) {
         $('.active-record').hide();
         $('.deleted-record').show();
         $('#showDeleted').prop('checked', true);
