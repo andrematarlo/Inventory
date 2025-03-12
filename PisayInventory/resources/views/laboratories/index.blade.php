@@ -66,7 +66,7 @@
                                 @error('location')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                        </div>
+                            </div>
 
                             <div class="col-md-6">
                                 <label for="capacity">Capacity <span class="text-danger">*</span></label>
@@ -81,7 +81,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            </div>
+                        </div>
 
                         <div class="form-group row">
                             <div class="col-md-6">
@@ -159,12 +159,18 @@
                                         @endif
 
                                         @if($userPermissions->CanEdit)
-                                        <a href="{{ url('/inventory/laboratories/' . $laboratory->laboratory_id . '/edit') }}" 
-                                           class="btn btn-sm btn-primary"
-                                           data-bs-toggle="tooltip"
-                                           title="Edit Laboratory">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-primary editLaboratoryBtn"
+                                                data-bs-toggle="tooltip" 
+                                               title="Edit Laboratory"
+                                               data-id="{{ $laboratory->laboratory_id }}"
+                                               data-name="{{ $laboratory->laboratory_name }}"
+                                                data-location="{{ $laboratory->location }}"
+                                                data-capacity="{{ $laboratory->capacity }}"
+                                                data-status="{{ $laboratory->status }}"
+                                               data-description="{{ $laboratory->description }}">
                                             <i class="bi bi-pencil-fill"></i>
-                                        </a>
+                                        </button>
                                         @endif
 
                                         @if($userPermissions->CanDelete)
@@ -181,7 +187,7 @@
                                     @else
                                         @if($userPermissions->CanEdit)
                                         <button type="button" 
-                                                class="btn btn-sm btn-success restoreLaboratoryBtn" 
+                                                class="btn btn-sm btn-success restoreDirectBtn" 
                                                 data-bs-toggle="tooltip"
                                                 data-laboratory-id="{{ $laboratory->laboratory_id }}"
                                                 data-laboratory-name="{{ $laboratory->laboratory_name }}"
@@ -361,6 +367,11 @@
                 <form id="restoreLaboratoryForm" method="POST">
                     @csrf
                     @method('PUT')
+                    <!-- Add all required hidden fields -->
+                    <input type="hidden" id="restore_laboratory_name" name="laboratory_name" value="">
+                    <input type="hidden" id="restore_location" name="location" value="">
+                    <input type="hidden" id="restore_capacity" name="capacity" value="1">
+                    <input type="hidden" id="restore_status" name="status" value="Available">
                     <button type="submit" class="btn btn-success">Restore</button>
                 </form>
             </div>
@@ -405,6 +416,15 @@
             const status = btn.data('status');
             const description = btn.data('description');
 
+            console.log('Laboratory data:', {
+                id: laboratoryId,
+                name: laboratoryName,
+                location: location,
+                capacity: capacity,
+                status: status,
+                description: description
+            });
+
             // Set the form action URL with the correct path
             const formAction = '/inventory/laboratories/' + encodeURIComponent(laboratoryId);
             $('#editLaboratoryForm').attr('action', formAction);
@@ -417,7 +437,7 @@
             $('#edit_status').val(status);
             $('#edit_description').val(description || '');
 
-            // Show the modal
+            // Show the modal - using Bootstrap 5 method
             const editModal = new bootstrap.Modal(document.getElementById('editLaboratoryModal'));
             editModal.show();
         });
@@ -593,51 +613,48 @@
             });
         });
 
-        // Handle restore laboratory
-        $(document).on('click', '.restoreLaboratoryBtn', function() {
+        // Handle direct restore button click
+        $(document).on('click', '.restoreDirectBtn', function() {
             const btn = $(this);
             const laboratoryId = btn.data('laboratory-id');
             const laboratoryName = btn.data('laboratory-name');
             
-            console.log('Restore button clicked for:', {
-                id: laboratoryId,
-                name: laboratoryName
-            });
+            // Create a non-restore update route - try standard update instead
+            const updateAction = `/inventory/laboratories/${laboratoryId}`;
             
-            // Set the laboratory name in the modal
+            // Set form values
+            $('#restoreLaboratoryForm').attr('action', updateAction);
             $('#restoreLaboratoryName').text(laboratoryName);
+            $('#restore_laboratory_name').val(laboratoryName);
+            $('#restore_location').val('Restored');
+            $('#restore_capacity').val(30);
+            $('#restore_status').val('Available');
             
-            // Set the form action URL for restore
-            $('#restoreLaboratoryForm').attr('action', `/inventory/laboratories/${laboratoryId}/restore`);
-            
-            // Show the restore modal
-            const restoreModal = new bootstrap.Modal(document.getElementById('restoreLaboratoryModal'));
-            restoreModal.show();
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('restoreLaboratoryModal'));
+            modal.show();
         });
 
         // Handle restore form submission
         $('#restoreLaboratoryForm').on('submit', function(e) {
             e.preventDefault();
             
-            // Reset any previous error states
-            $('.is-invalid').removeClass('is-invalid');
-            $('.invalid-feedback').empty();
-            
-            const formData = new FormData(this);
-            
+            // Show loading indicator
+            Swal.fire({
+                title: 'Restoring...',
+                text: 'Please wait while we restore the laboratory',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Submit form via AJAX
             $.ajax({
                 url: $(this).attr('action'),
                 type: 'POST',
-                data: formData,
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
+                data: $(this).serialize(),
                 success: function(response) {
-                    // Close the modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('addLaboratoryModal'));
-                    modal.hide();
-                    
-                    // Show success message
                     Swal.fire({
                         title: 'Success!',
                         text: 'Laboratory restored successfully.',
@@ -647,23 +664,16 @@
                     });
                 },
                 error: function(xhr) {
-                    if (xhr.status === 422) {
-                        // Validation errors
-                        const errors = xhr.responseJSON.errors;
-                        Object.keys(errors).forEach(field => {
-                            const input = $(`#${field}`);
-                            const feedback = $(`#${field}_error`);
-                            input.addClass('is-invalid');
-                            feedback.text(errors[field][0]);
-                        });
-                    } else {
-                        // Other errors
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'An error occurred while creating the laboratory.',
-                            icon: 'error'
-                        });
+                    let errorMessage = 'An error occurred while restoring the laboratory.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
                     }
+                    
+                    Swal.fire({
+                        title: 'Error!',
+                        text: errorMessage,
+                        icon: 'error'
+                    });
                 }
             });
         });
