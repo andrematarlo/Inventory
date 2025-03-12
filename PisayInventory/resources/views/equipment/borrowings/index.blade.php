@@ -108,13 +108,7 @@
                                     <span class="text-danger">Equipment not found</span>
                                 @endif
                             </td>
-                            <td>
-                                @if($borrowing->borrower)
-                                    {{ $borrowing->borrower->FullName }}
-                                @else
-                                    <span class="text-danger">Borrower not found</span>
-                                @endif
-                            </td>
+                            <td>{{ $borrowing->borrower->FullName ?? '' }}</td>
                             <td>{{ $borrowing->borrow_date ? Carbon::parse($borrowing->borrow_date)->format('M d, Y') : '-' }}</td>
                             <td>{{ $borrowing->expected_return_date ? Carbon::parse($borrowing->expected_return_date)->format('M d, Y') : '-' }}</td>
                             <td>{{ $borrowing->actual_return_date ? Carbon::parse($borrowing->actual_return_date)->format('M d, Y') : '-' }}</td>
