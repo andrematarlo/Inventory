@@ -259,41 +259,25 @@ class LaboratoryController extends Controller
     }
 
     /**
-     * Restore a soft-deleted laboratory.
+     * Restore the specified laboratory from storage.
      *
      * @param  string  $id
      * @return \Illuminate\Http\Response
      */
     public function restore($id)
     {
-        // Check if user has permission to edit laboratories
-        $userPermissions = $this->getUserPermissions('Laboratory Management');
-        if (!$userPermissions || !$userPermissions->CanEdit) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to restore laboratories.'
-            ]);
-        }
-
         try {
-            DB::beginTransaction();
-
+            // Find the laboratory with withTrashed to include soft-deleted records
             $laboratory = Laboratory::withTrashed()->findOrFail($id);
-            $laboratory->update(['restored_by' => Auth::id()]);
+            
+            // Restore the laboratory
             $laboratory->restore();
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Laboratory restored successfully.'
-            ]);
+            
+            return redirect()->route('laboratories.index')
+                ->with('success', 'Laboratory restored successfully.');
         } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error restoring laboratory: ' . $e->getMessage()
-            ]);
+            return redirect()->route('laboratories.index')
+                ->with('error', 'Failed to restore laboratory: ' . $e->getMessage());
         }
     }
 
