@@ -38,10 +38,10 @@
                             @if($userPermissions && $userPermissions->CanEdit)
                             <td>
                                 <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#restoreModal{{ $student->id }}" title="Restore">
+                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#restoreModal{{ $student->student_id }}" title="Restore">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#forceDeleteModal{{ $student->id }}" title="Delete Permanently">
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#forceDeleteModal{{ $student->student_id }}" title="Delete Permanently">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -71,7 +71,7 @@
 <!-- Restore Modals -->
 @if($userPermissions && $userPermissions->CanEdit)
 @foreach($deletedStudents as $student)
-<div class="modal fade" id="restoreModal{{ $student->id }}" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="restoreModal{{ $student->student_id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -83,7 +83,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ route('students.restore', $student->id) }}" method="POST" class="d-inline">
+                <form action="{{ route('students.restore', $student->student_id) }}" method="POST" class="d-inline">
                     @csrf
                     <button type="submit" class="btn btn-success">Restore</button>
                 </form>
@@ -92,7 +92,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="forceDeleteModal{{ $student->id }}" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="forceDeleteModal{{ $student->student_id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -104,7 +104,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ route('students.force-delete', $student->id) }}" method="POST" class="d-inline">
+                <form action="{{ route('students.force-delete', $student->student_id) }}" method="POST" class="d-inline">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">Delete Permanently</button>
@@ -130,4 +130,4 @@
         });
     });
 </script>
-@endsection 
+@endsection

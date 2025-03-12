@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Yajra\DataTables\Facades\DataTables;
 
 class LaboratoryReservationController extends Controller
 {
@@ -92,18 +93,15 @@ class LaboratoryReservationController extends Controller
             'num_students' => 'required|integer|min:1',
             'requested_by_type' => 'required|in:teacher,student',
             'requested_by' => 'required|string',
-            'group_members' => 'nullable|array',
-            'remarks' => 'nullable|string'
+            'group_members' => 'nullable|array'
         ]);
 
         DB::beginTransaction();
 
-        // Generate control number using stored procedure
         $controlNo = DB::select('CALL GenerateLabReservationControlNo(@control_no)');
         $result = DB::select('SELECT @control_no as control_no');
         $controlNo = $result[0]->control_no;
 
-        // Check for conflicting reservations
         $conflictingReservation = LaboratoryReservation::where('laboratory_id', $validated['laboratory_id'])
             ->where('reservation_date', $validated['reservation_date'])
             ->where(function($query) use ($validated) {
@@ -136,7 +134,7 @@ class LaboratoryReservationController extends Controller
             'date_requested' => now(),
             'group_members' => $validated['group_members'],
             'status' => 'For Approval',
-            'remarks' => $validated['remarks'],
+            'remarks' => '',
             'created_by' => Auth::user()->UserAccountID,
             'IsDeleted' => false
         ]);
@@ -153,20 +151,21 @@ class LaboratoryReservationController extends Controller
 
         return redirect()->route('laboratory.reservations')
             ->with('success', 'Laboratory reservation created successfully.');
+
     } catch (\Exception $e) {
         DB::rollBack();
             
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error creating reservation: ' . $e->getMessage()
-                ], 500);
-            }
-
-            return back()->with('error', 'Error creating reservation: ' . $e->getMessage())
-                ->withInput();
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creating reservation: ' . $e->getMessage()
+            ], 500);
         }
+
+        return back()->with('error', 'Error creating reservation: ' . $e->getMessage())
+            ->withInput();
     }
+}
 
 
     /**
@@ -248,7 +247,7 @@ public function studentStore(Request $request)
             'end_time' => $validated['end_time'],
             'num_students' => $validated['num_students'],
             'requested_by_type' => 'student',
-            'requested_by' => Auth::user()->student->FirstName . ' ' . Auth::user()->student->LastName,
+            'requested_by' => Auth::user()->student->first_name . ' ' . Auth::user()->student->last_name,
             'date_requested' => now(),
             'group_members' => $validated['group_members'],
             'status' => 'For Approval',
@@ -276,17 +275,178 @@ public function studentStore(Request $request)
     
 
     // Add new method to get teachers
-public function getTeachers()
+    public function getTeachers(Request $request)
 {
-    $teachers = DB::table('employee')
-        ->join('useraccount_roles', 'employee.UserAccountID', '=', 'useraccount_roles.UserAccountID')
-        ->join('roles', 'useraccount_roles.RoleId', '=', 'roles.RoleId')
-        ->where('roles.RoleName', 'Teacher')
-        ->select('employee.EmployeeID', 
-                DB::raw("CONCAT(employee.FirstName, ' ', employee.LastName) as full_name"))
-        ->get();
+    try {
+        $search = $request->get('search', '');
 
-    return response()->json($teachers);
+        $teachers = DB::table('employee')
+            ->join('employee_roles', 'employee.EmployeeID', '=', 'employee_roles.EmployeeId')
+            ->join('roles', 'employee_roles.RoleId', '=', 'roles.RoleId')
+            ->select(
+                'employee.EmployeeID as id',
+                DB::raw("CONCAT(employee.FirstName, ' ', employee.LastName) as text")
+            )
+            ->where('employee.IsDeleted', 0)
+            ->where('employee_roles.IsDeleted', 0)
+            ->where('roles.RoleName', 'Teacher')  // Filter by role name instead of ID
+            ->where(function($query) use ($search) {
+                $query->where('employee.FirstName', 'LIKE', "%{$search}%")
+                    ->orWhere('employee.LastName', 'LIKE', "%{$search}%");
+            })
+            ->distinct()
+            ->get();
+
+        \Log::info('Teachers query result:', ['teachers' => $teachers]);
+
+        return response()->json($teachers);
+
+    } catch (\Exception $e) {
+        \Log::error('Error in getTeachers:', ['error' => $e->getMessage()]);
+        return response()->json([
+            'error' => 'Failed to fetch teachers: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
+public function getStudentInfo()
+{
+    try {
+        $user = Auth::user();
+        
+        if ($user->student) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'full_name' => trim($user->student->first_name . ' ' . $user->student->last_name),
+                    'grade_level' => $user->student->grade_level,
+                    'section' => $user->student->section
+                ]
+            ]);
+        } elseif ($user->employee) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'full_name' => trim($user->employee->first_name . ' ' . $user->employee->last_name),
+                    'type' => 'teacher'
+                ]
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No user information found'
+        ], 404);
+
+    } catch (\Exception $e) {
+        \Log::error('Error in getStudentInfo:', [
+            'error' => $e->getMessage(),
+            'user' => Auth::user()->toArray()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error retrieving user information: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function endorse($id)
+{
+    try {
+        \Log::info('Endorsement request received for ID: ' . $id);
+        
+        // Find the reservation
+        $reservation = LaboratoryReservation::where('reservation_id', 'RES' . $id)
+            ->orWhere('reservation_id', $id)
+            ->firstOrFail();
+            
+        $user = auth()->user();
+        
+        // Get the employee record associated with the user
+        $employee = \App\Models\Employee::where('UserAccountID', $user->UserAccountID)->first();
+        
+        if (!$employee) {
+            \Log::error('No employee record found for user:', ['user_id' => $user->UserAccountID]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee record not found'
+            ], 400);
+        }
+
+        // Debug logging for authorization check
+        \Log::info('Authorization check:', [
+            'user_employee_id' => $employee->EmployeeID,
+            'teacher_id' => $reservation->teacher_id,
+            'is_teacher_match' => $employee->EmployeeID === $reservation->teacher_id,
+            'requested_by_type' => $reservation->requested_by_type,
+            'user_role' => $user->role
+        ]);
+
+        // Check if user is the Teacher In-Charge for student requests
+        $isTeacherInCharge = $employee->EmployeeID === $reservation->teacher_id;
+        
+        // Validate if user can endorse
+        if (($isTeacherInCharge && $reservation->requested_by_type === 'student') ||
+            ($user->role === 'Unit Head' && $reservation->requested_by_type === 'teacher')) {
+            
+            DB::beginTransaction();
+            
+            try {
+                $reservation->update([
+                    'status' => 'Approved',
+                    'endorsement_status' => 'Approved',
+                    'endorsed_by' => $employee->EmployeeID,
+                    'endorsed_at' => now(),
+                    'endorser_role' => $isTeacherInCharge ? 'Teacher In-Charge' : 'Unit Head',
+                    'approved_by' => $employee->EmployeeID,
+                    'approved_at' => now(),
+                    'updated_by' => $employee->EmployeeID
+                ]);
+
+                DB::commit();
+
+                \Log::info('Reservation endorsed successfully', [
+                    'reservation_id' => $reservation->reservation_id,
+                    'endorsed_by' => $employee->EmployeeID
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Reservation has been approved'
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        }
+
+        \Log::warning('Authorization failed:', [
+            'is_teacher_in_charge' => $isTeacherInCharge,
+            'requested_by_type' => $reservation->requested_by_type,
+            'user_role' => $user->role,
+            'condition1' => ($isTeacherInCharge && $reservation->requested_by_type === 'student'),
+            'condition2' => ($user->role === 'Unit Head' && $reservation->requested_by_type === 'teacher')
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'You are not authorized to endorse this reservation'
+        ], 403);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Endorsement error:', [
+            'error' => $e->getMessage(),
+            'id' => $id
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error processing reservation: ' . $e->getMessage()
+        ], 500);
+    }
 }
 
 // Add method to approve reservation
@@ -327,6 +487,7 @@ public function getReservationsData(Request $request)
     $search = $request->get('search', '');
     $perPage = $request->get('per_page', 10);
 
+    // Get all reservations without filtering by user
     $query = LaboratoryReservation::with(['laboratory', 'teacher', 'reserver'])
         ->where('status', $status);
 
@@ -343,15 +504,23 @@ public function getReservationsData(Request $request)
 
     $reservations = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-    return response()->json($reservations);
+    return response()->json([
+        'data' => $reservations->items(),
+        'meta' => [
+            'current_page' => $reservations->currentPage(),
+            'last_page' => $reservations->lastPage(),
+            'per_page' => $reservations->perPage(),
+            'total' => $reservations->total()
+        ]
+    ]);
 }
 
 public function getStatusCounts()
 {
     $counts = [
-        'For Approval' => LaboratoryReservation::where('status', 'For Approval')->count(),
-        'Approved' => LaboratoryReservation::where('status', 'Approved')->count(),
-        'Cancelled' => LaboratoryReservation::where('status', 'Cancelled')->count()
+        'forApproval' => LaboratoryReservation::where('status', 'For Approval')->count(),
+        'approved' => LaboratoryReservation::where('status', 'Approved')->count(),
+        'cancelled' => LaboratoryReservation::where('status', 'Cancelled')->count()
     ];
 
     return response()->json($counts);
@@ -579,4 +748,5 @@ public function generateControlNo()
             ], 500);
         }
     }
+
 } 

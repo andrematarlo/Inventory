@@ -54,28 +54,26 @@ class UserAccount extends Authenticatable
     ];
 
     // Add the boot method to handle student roles
-protected static function boot()
-{
-    parent::boot();
-
-    static::creating(function ($userAccount) {
-        // If this is being created from a student route
-        if (request()->route() && str_contains(request()->route()->getName(), 'students')) {
-            // Get the Students role from the database
-            $studentRole = Role::where('RoleName', 'Students')
-                ->where('IsDeleted', false)
-                ->first();
-
-            if ($studentRole) {
-                $userAccount->role = $studentRole->RoleName;
-                
-            } else {
-                Log::error('Students role not found in roles table');
-                throw new \Exception('Students role not found in the system');
+    protected static function boot()
+    {
+        parent::boot();
+    
+        static::creating(function ($userAccount) {
+            if (request()->route() && str_contains(request()->route()->getName(), 'students')) {
+                $studentRole = Role::where('RoleName', 'Students')
+                    ->where('IsDeleted', false)
+                    ->first();
+    
+                if ($studentRole) {
+                    $userAccount->role = $studentRole->RoleName;
+                    
+                } else {
+                    Log::error('Students role not found in roles table');
+                    throw new \Exception('Students role not found in the system');
+                }
             }
-        }
-    });
-}
+        });
+    }
 
     // Accessor for Username
     public function getUsernameAttribute()

@@ -112,4 +112,10 @@ class User extends Authenticatable
     {
         return $this->hasOne(Employee::class, 'UserAccountID', 'UserAccountID');
     }
+    
+
+    public function student()
+    {
+        return $this->hasOne(Student::class, 'UserAccountID', 'UserAccountID');
+    }
 }

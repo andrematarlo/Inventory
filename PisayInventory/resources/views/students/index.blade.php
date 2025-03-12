@@ -48,12 +48,12 @@
                             <td>
                                 <div class="btn-group" role="group">
                                     @if($userPermissions->CanEdit)
-                                    <a href="{{ route('students.edit', $student->id) }}" class="btn btn-sm btn-primary" title="Edit">
+                                    <a href="{{ route('students.edit', $student->student_id) }}" class="btn btn-sm btn-primary" title="Edit">
                                         <i class="bi bi-pencil" style="color: white;"></i>
                                     </a>
                                     @endif
                                     @if($userPermissions->CanDelete)
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $student->id }}" title="Delete">
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $student->student_id }}" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                     @endif
@@ -83,7 +83,7 @@
 <!-- Delete Modals -->
 @if($userPermissions && $userPermissions->CanDelete)
 @foreach($students as $student)
-<div class="modal fade" id="deleteModal{{ $student->id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal fade" id="deleteModal{{ $student->student_id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -95,7 +95,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ route('students.destroy', $student->id) }}" method="POST" class="d-inline">
+                <form action="{{ route('students.destroy', $student->student_id) }}" method="POST" class="d-inline">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">Delete</button>
@@ -109,7 +109,6 @@
 
 <!-- Import Modal -->
 @if($userPermissions && $userPermissions->CanAdd)
-<!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -325,7 +324,6 @@
                         <label for="editEmail" class="form-label">Email</label>
                         <input type="email" class="form-control" id="editEmail" name="email">
                     </div>
-                    <!-- Add other fields as necessary -->
                 </form>
             </div>
             <div class="modal-footer">
@@ -607,7 +605,7 @@ $(document).ready(function() {
         // Populate the modal with student data
         $('#editStudentModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget); // Button that triggered the modal
-            var studentId = button.data('id');
+            var studentId = button.data('student-id');
             var firstName = button.data('first-name');
             var lastName = button.data('last-name');
             var email = button.data('email');
