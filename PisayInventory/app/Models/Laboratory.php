@@ -44,7 +44,7 @@ class Laboratory extends Model
      *
      * @var bool
      */
-    public $timestamps = false;
+    public $timestamps = true;
 
     /**
      * The attributes that are mass assignable.
@@ -63,7 +63,10 @@ class Laboratory extends Model
         'deleted_by',
         'RestoredById',
         'DateRestored',
-        'IsDeleted'
+        'IsDeleted',
+        'created_at',
+        'updated_at',
+        'deleted_at'
     ];
 
     /**

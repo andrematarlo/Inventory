@@ -593,75 +593,90 @@ function confirmLogout() {
     return confirm('Are you sure you want to logout?');
 }
 
-/* Script for dropdown */
+/* Script for dropdowns */
 document.addEventListener('DOMContentLoaded', function() {
-    const dropdownToggle = document.querySelector('#employeeDropdown');
-    const parentLi = dropdownToggle.closest('.nav-item');
-    const dropdownMenu = parentLi.querySelector('.dropdown-menu');
+    // Handle Employee Management dropdown
+    setupDropdown('employeeDropdown', 'employees');
 
-    // Check if we should open the dropdown on page load
-    const shouldOpenDropdown = localStorage.getItem('employeeDropdownOpen') === 'true' || 
-                             window.location.pathname.includes('/employees') ||
-                             window.location.pathname.includes('/roles');
-    
-    if (shouldOpenDropdown && !document.querySelector('.sidebar').classList.contains('collapsed')) {
-        parentLi.classList.add('show');
-        dropdownToggle.setAttribute('aria-expanded', 'true');
+    // Handle Laboratory Management dropdown
+    setupDropdown('laboratoryDropdown', 'laboratories');
+
+    function setupDropdown(dropdownId, pathCheck) {
+        const dropdownToggle = document.querySelector(`#${dropdownId}`);
+        if (!dropdownToggle) return; // Exit if element not found
+
+        const parentLi = dropdownToggle.closest('.nav-item');
+        const dropdownMenu = parentLi.querySelector('.dropdown-menu');
+
+        // Check if we should open the dropdown on page load
+        const shouldOpenDropdown = localStorage.getItem(`${dropdownId}Open`) === 'true' || 
+                                 window.location.pathname.includes(`/${pathCheck}`);
+        
+        if (shouldOpenDropdown && !document.querySelector('.sidebar').classList.contains('collapsed')) {
+            parentLi.classList.add('show');
+            dropdownToggle.setAttribute('aria-expanded', 'true');
+        }
+
+        dropdownToggle.addEventListener('click', function(e) {
+            const sidebar = document.querySelector('.sidebar');
+            e.preventDefault();
+            e.stopPropagation();
+           
+            if (sidebar.classList.contains('collapsed')) {
+                dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+            } else {
+                parentLi.classList.toggle('show');
+                dropdownToggle.setAttribute('aria-expanded', 
+                    parentLi.classList.contains('show') ? 'true' : 'false'
+                );
+                // Save state to localStorage
+                localStorage.setItem(`${dropdownId}Open`, parentLi.classList.contains('show'));
+            }
+        });
+
+        // Add click handler for dropdown items to prevent closing
+        dropdownMenu.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!document.querySelector('.sidebar').classList.contains('collapsed')) {
+                parentLi.classList.add('show');
+                dropdownToggle.setAttribute('aria-expanded', 'true');
+                localStorage.setItem(`${dropdownId}Open`, 'true');
+            }
+        });
+
+        // Handle hover for collapsed state
+        parentLi.addEventListener('mouseenter', function() {
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar.classList.contains('collapsed')) {
+                dropdownMenu.style.display = 'block';
+                dropdownToggle.setAttribute('aria-expanded', 'true');
+            }
+        });
+
+        parentLi.addEventListener('mouseleave', function() {
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar.classList.contains('collapsed')) {
+                dropdownMenu.style.display = 'none';
+                dropdownToggle.setAttribute('aria-expanded', 'false');
+            }
+        });
     }
 
-    dropdownToggle.addEventListener('click', function(e) {
-        const sidebar = document.querySelector('.sidebar');
-        e.preventDefault();
-        e.stopPropagation();
-       
-        if (sidebar.classList.contains('collapsed')) {
-            dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
-        } else {
-            parentLi.classList.toggle('show');
-            dropdownToggle.setAttribute('aria-expanded', 
-                parentLi.classList.contains('show') ? 'true' : 'false'
-            );
-            // Save state to localStorage
-            localStorage.setItem('employeeDropdownOpen', parentLi.classList.contains('show'));
-        }
-    });
-
-    // Add click handler for dropdown items to prevent closing
-    dropdownMenu.addEventListener('click', function(e) {
-        e.stopPropagation(); // Prevent event bubbling
-        if (!document.querySelector('.sidebar').classList.contains('collapsed')) {
-            parentLi.classList.add('show'); // Keep dropdown open
-            dropdownToggle.setAttribute('aria-expanded', 'true');
-            localStorage.setItem('employeeDropdownOpen', 'true');
-        }
-    });
-
-    // Handle hover for collapsed state
-    parentLi.addEventListener('mouseenter', function() {
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar.classList.contains('collapsed')) {
-            const dropdownMenu = parentLi.querySelector('.dropdown-menu');
-            dropdownMenu.style.display = 'block';
-            dropdownToggle.setAttribute('aria-expanded', 'true');
-        }
-    });
-
-    parentLi.addEventListener('mouseleave', function() {
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar.classList.contains('collapsed')) {
-            const dropdownMenu = parentLi.querySelector('.dropdown-menu');
-            dropdownMenu.style.display = 'none';
-            dropdownToggle.setAttribute('aria-expanded', 'false');
-        }
-    });
-
-    // Close dropdown when clicking outside
+    // Close dropdowns when clicking outside
     document.addEventListener('click', function(e) {
         const sidebar = document.querySelector('.sidebar');
-        if (!parentLi.contains(e.target) && !sidebar.classList.contains('collapsed')) {
-            parentLi.classList.remove('show');
-            dropdownToggle.setAttribute('aria-expanded', 'false');
-            localStorage.setItem('employeeDropdownOpen', 'false');
+        if (!sidebar.classList.contains('collapsed')) {
+            document.querySelectorAll('.nav-item.dropdown').forEach(function(dropdown) {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                    const dropdownToggle = dropdown.querySelector('.dropdown-toggle');
+                    if (dropdownToggle) {
+                        dropdownToggle.setAttribute('aria-expanded', 'false');
+                        const dropdownId = dropdownToggle.id;
+                        localStorage.setItem(`${dropdownId}Open`, 'false');
+                    }
+                }
+            });
         }
     });
 });

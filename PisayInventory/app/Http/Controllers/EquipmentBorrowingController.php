@@ -189,14 +189,17 @@ class EquipmentBorrowingController extends Controller
         try {
             $borrowing = EquipmentBorrowing::with([
                 'equipment',
-                'borrower.employee',
-                'creator.employee',
-                'modifier.employee',
-                'deleter.employee',
-                'restorer.employee'
+                'borrower',
+                'createdBy',
+                'updatedBy',
+                'deletedBy',
+                'restoredBy'
             ])->withTrashed()->findOrFail($id);
             
-            return view('equipment.borrowings.show', compact('borrowing'));
+            return response()->json([
+                'success' => true,
+                'data' => $borrowing
+            ]);
         } catch (\Exception $e) {
             Log::error('Error showing borrowing: ' . $e->getMessage());
             return response()->json([
@@ -247,52 +250,106 @@ class EquipmentBorrowingController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // Check if user has permission to edit borrowings
-        $userPermissions = $this->getUserPermissions('Laboratory Management');
-        if (!$userPermissions || !$userPermissions->CanEdit) {
-            return redirect()->route('equipment.borrowings')
-                ->with('error', 'You do not have permission to edit borrowings.');
-        }
-
-        $borrowing = EquipmentBorrowing::findOrFail($id);
-
-        // Only allow editing active borrowings
-        if (!$borrowing->canBeReturned()) {
-            return redirect()->route('equipment.borrowings')
-                ->with('error', 'Only active borrowings can be edited.');
-        }
-
-        // Validate the request
-        $validator = Validator::make($request->all(), [
-            'expected_return_date' => 'required|date|after:borrow_date',
-            'purpose' => 'required|string',
-            'remarks' => 'nullable|string'
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
         try {
+            // Check permissions
+            $userPermissions = $this->getUserPermissions('Equipment');
+            if (!$userPermissions || !$userPermissions->CanEdit) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to edit borrowings.'
+                ], 403);
+            }
+
+            // First validate the basic requirements
+            $validator = Validator::make($request->all(), [
+                'equipment_id' => 'required|exists:equipment,equipment_id',
+                'borrow_date' => 'required|date',
+                'expected_return_date' => 'required|date',
+                'purpose' => 'required|string',
+                'condition_on_borrow' => 'required|string|in:Good,Fair,Poor',
+                'remarks' => 'nullable|string'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first()
+                ], 422);
+            }
+
+            // Convert dates to Carbon instances for comparison
+            $borrowDate = Carbon::parse($request->borrow_date)->startOfDay();
+            $returnDate = Carbon::parse($request->expected_return_date)->startOfDay();
+
+            // Validate that return date is after borrow date
+            if ($returnDate->lte($borrowDate)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The expected return date must be after the borrow date.'
+                ], 422);
+            }
+
             DB::beginTransaction();
 
-            // Update the borrowing
+            $borrowing = EquipmentBorrowing::findOrFail($id);
+
+            // Only allow editing active borrowings
+            if (!$borrowing->canBeReturned()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only active borrowings can be edited.'
+                ], 422);
+            }
+
+            // Check if equipment is available or is the same as current
+            if ($request->equipment_id !== $borrowing->equipment_id) {
+                $equipment = Equipment::where('equipment_id', $request->equipment_id)
+                    ->where(function($query) {
+                        $query->where('status', 'Available')
+                              ->orWhere('status', 'Good');
+                    })
+                    ->first();
+
+                if (!$equipment) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Selected equipment is not available.'
+                    ], 422);
+                }
+
+                // Update old equipment status to Available
+                Equipment::where('equipment_id', $borrowing->equipment_id)
+                    ->update(['status' => 'Available']);
+
+                // Update new equipment status to Borrowed
+                $equipment->update(['status' => 'Borrowed']);
+            }
+
+            // Update borrowing record
             $borrowing->update([
-                'expected_return_date' => $request->expected_return_date,
+                'equipment_id' => $request->equipment_id,
+                'borrow_date' => $borrowDate->toDateString(),
+                'expected_return_date' => $returnDate->toDateString(),
                 'purpose' => $request->purpose,
+                'condition_on_borrow' => $request->condition_on_borrow,
                 'remarks' => $request->remarks,
-                'updated_by' => Auth::id()
+                'updated_by' => auth()->id()
             ]);
 
             DB::commit();
 
-            return redirect()->route('equipment.borrowings')
-                ->with('success', 'Borrowing updated successfully.');
+            return response()->json([
+                'success' => true,
+                'message' => 'Borrowing updated successfully'
+            ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()
-                ->with('error', 'Error updating borrowing: ' . $e->getMessage())
-                ->withInput();
+            Log::error('Error updating borrowing: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating borrowing: ' . $e->getMessage()
+            ], 500);
         }
     }
 

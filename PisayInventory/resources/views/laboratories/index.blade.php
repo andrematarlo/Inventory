@@ -5,8 +5,8 @@
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Laboratories</h1>
         @if($userPermissions->CanAdd)
-        <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addLaboratoryModal">
-            <i class="bi bi-plus"></i> Add Laboratory
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLaboratoryModal">
+            <i class="bi bi-plus-circle"></i> Add Laboratory
         </button>
         @endif
     </div>
@@ -14,8 +14,8 @@
     <!-- Add Laboratory Modal -->
     <div class="modal fade" 
      id="addLaboratoryModal" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
      tabindex="-1" 
      aria-labelledby="addLaboratoryModalLabel" 
      aria-hidden="true">
@@ -31,7 +31,7 @@
                     <div class="modal-body">
                         <div class="form-group row">
                             <div class="col-md-6">
-                                <label for="laboratory_id">Laboratory ID <span class="text-danger">*</span></label>
+                                <label for="laboratory_id">Laboratory ID <small class="text-muted">(Auto-generated)</small></label>
                                 <input type="text" 
                                        class="form-control @error('laboratory_id') is-invalid @enderror" 
                                        id="laboratory_id" 
@@ -46,8 +46,11 @@
                                        class="form-control @error('laboratory_name') is-invalid @enderror" 
                                        id="laboratory_name" 
                                        name="laboratory_name" 
+                                       value="{{ old('laboratory_name') }}" 
                                        required>
-                                <div class="invalid-feedback" id="laboratory_name_error"></div>
+                                @error('laboratory_name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
 
@@ -110,7 +113,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Create Laboratory</button>
                     </div>
                 </form>
@@ -144,11 +147,11 @@
                         @foreach($laboratories as $laboratory)
                         <tr class="{{ $laboratory->deleted_at ? 'table-secondary deleted-record d-none' : 'active-record' }}">
                             <td>
-                                <div class="btn-group">
+                                <div class="btn-group" role="group" style="gap: 5px;">
                                     @if(!$laboratory->deleted_at)
                                         @if($userPermissions->CanView)
                                         <a href="{{ route('laboratories.show', $laboratory->laboratory_id) }}" 
-                                           class="btn btn-sm btn-info" 
+                                           class="btn btn-sm btn-info me-1" 
                                            data-bs-toggle="tooltip" 
                                            title="View Details">
                                             <i class="bi bi-eye-fill"></i>
@@ -156,23 +159,23 @@
                                         @endif
 
                                         @if($userPermissions->CanEdit)
-                                        <button type="button" 
-                                                class="btn btn-sm btn-primary editLaboratoryBtn"
-                                                data-bs-toggle="tooltip"
-                                                data-bs-title="Edit"
-                                                data-laboratory-id="{{ $laboratory->laboratory_id }}"
-                                                data-laboratory-name="{{ $laboratory->laboratory_name }}"
-                                                data-location="{{ $laboratory->location }}"
-                                                data-capacity="{{ $laboratory->capacity }}"
-                                                data-status="{{ $laboratory->status }}"
-                                                data-description="{{ $laboratory->description }}">
+                                        <a href="javascript:void(0)" 
+                                           class="btn btn-sm btn-primary me-1 editLaboratoryBtn"
+                                           data-bs-toggle="tooltip" 
+                                           title="Edit Laboratory"
+                                           data-id="{{ $laboratory->laboratory_id }}"
+                                           data-name="{{ $laboratory->laboratory_name }}"
+                                           data-location="{{ $laboratory->location }}"
+                                           data-capacity="{{ $laboratory->capacity }}"
+                                           data-status="{{ $laboratory->status }}"
+                                           data-description="{{ $laboratory->description }}">
                                             <i class="bi bi-pencil-fill"></i>
-                                        </button>
+                                        </a>
                                         @endif
 
                                         @if($userPermissions->CanDelete)
                                         <button type="button" 
-                                                class="btn btn-sm btn-danger deleteLaboratoryBtn"
+                                                class="btn btn-sm btn-danger deleteLaboratoryBtn" 
                                                 data-bs-toggle="tooltip"
                                                 data-bs-title="Delete"
                                                 data-laboratory-id="{{ $laboratory->laboratory_id }}"
@@ -184,7 +187,7 @@
                                     @else
                                         @if($userPermissions->CanEdit)
                                         <button type="button" 
-                                                class="btn btn-sm btn-success restoreLaboratoryBtn" 
+                                                class="btn btn-sm btn-success restoreDirectBtn" 
                                                 data-bs-toggle="tooltip"
                                                 data-laboratory-id="{{ $laboratory->laboratory_id }}"
                                                 data-laboratory-name="{{ $laboratory->laboratory_name }}"
@@ -224,8 +227,8 @@
 <!-- Edit Laboratory Modal -->
 <div class="modal fade" 
      id="editLaboratoryModal" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
      tabindex="-1" 
      aria-labelledby="editLaboratoryModalLabel" 
      aria-hidden="true">
@@ -234,10 +237,11 @@
             <div class="modal-header">
                 <h5 class="modal-title" id="editLaboratoryModalLabel">Edit Laboratory</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+            </div>
             <form id="editLaboratoryForm" method="POST">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="edit_id" id="edit_id">
                 <div class="modal-body">
                     <div class="form-group row">
                         <div class="col-md-6">
@@ -304,7 +308,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Laboratory</button>
                 </div>
             </form>
@@ -315,8 +319,8 @@
 <!-- Delete Laboratory Modal -->
 <div class="modal fade" 
      id="deleteLaboratoryModal" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
      tabindex="-1" 
      aria-labelledby="deleteLaboratoryModalLabel" 
      aria-hidden="true">
@@ -330,7 +334,7 @@
                 Are you sure you want to delete laboratory "<span id="deleteLaboratoryName"></span>"?
             </div>
             <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="deleteLaboratoryForm" method="POST">
                     @csrf
                     @method('DELETE')
@@ -344,8 +348,8 @@
 <!-- Restore Laboratory Modal -->
 <div class="modal fade" 
      id="restoreLaboratoryModal" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
      tabindex="-1" 
      aria-labelledby="restoreLaboratoryModalLabel" 
      aria-hidden="true">
@@ -359,10 +363,16 @@
                 Are you sure you want to restore laboratory "<span id="restoreLaboratoryName"></span>"?
             </div>
             <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="restoreLaboratoryForm" method="POST">
                     @csrf
                     @method('PUT')
+                    <input type="hidden" id="restore_laboratory_id" name="laboratory_id">
+                    <input type="hidden" id="restore_laboratory_name" name="laboratory_name">
+                    <input type="hidden" id="restore_location" name="location" value="Restored">
+                    <input type="hidden" id="restore_capacity" name="capacity" value="30">
+                    <input type="hidden" id="restore_status" name="status" value="Available">
+                    <input type="hidden" id="restore_description" name="description" value="">
                     <button type="submit" class="btn btn-success">Restore</button>
                 </form>
             </div>
@@ -398,13 +408,27 @@
 
         // Edit Laboratory Button Click
         $(document).on('click', '.editLaboratoryBtn', function() {
+            console.log('Edit button clicked');
             const btn = $(this);
-            const laboratoryId = btn.data('laboratory-id');
-            const laboratoryName = btn.data('laboratory-name');
+            const laboratoryId = btn.data('id');
+            const laboratoryName = btn.data('name');
             const location = btn.data('location');
             const capacity = btn.data('capacity');
             const status = btn.data('status');
             const description = btn.data('description');
+
+            console.log('Laboratory data:', {
+                id: laboratoryId,
+                name: laboratoryName,
+                location: location,
+                capacity: capacity,
+                status: status,
+                description: description
+            });
+
+            // Set the form action URL with the correct path
+            const formAction = '/inventory/laboratories/' + encodeURIComponent(laboratoryId);
+            $('#editLaboratoryForm').attr('action', formAction);
 
             // Populate the edit form
             $('#edit_laboratory_id').val(laboratoryId);
@@ -414,32 +438,11 @@
             $('#edit_status').val(status);
             $('#edit_description').val(description || '');
 
-            // Show the modal
+            // Show the modal - using Bootstrap 5 method
             const editModal = new bootstrap.Modal(document.getElementById('editLaboratoryModal'));
             editModal.show();
         });
         
-
-        // Initialize Bootstrap Modals
-        const addLaboratoryModal = document.getElementById('addLaboratoryModal');
-        if (addLaboratoryModal) {
-            new bootstrap.Modal(addLaboratoryModal);
-        }
-
-        const editLaboratoryModal = document.getElementById('editLaboratoryModal');
-        if (editLaboratoryModal) {
-            new bootstrap.Modal(editLaboratoryModal);
-        }
-
-        const deleteLaboratoryModal = document.getElementById('deleteLaboratoryModal');
-        if (deleteLaboratoryModal) {
-            new bootstrap.Modal(deleteLaboratoryModal);
-        }
-
-        const restoreLaboratoryModal = document.getElementById('restoreLaboratoryModal');
-        if (restoreLaboratoryModal) {
-            new bootstrap.Modal(restoreLaboratoryModal);
-        }
 
         // Toggle deleted records
         $('#showDeletedRecords').change(function() {
@@ -455,22 +458,34 @@
 
         // Show modal if there are validation errors
         @if($errors->any())
-            const modal = new bootstrap.Modal(addLaboratoryModal);
+            const modal = new bootstrap.Modal(document.getElementById('addLaboratoryModal'));
             modal.show();
         @endif
 
-        // Add Laboratory Modal
+        // Add Laboratory Button Click
         $('#addLaboratoryBtn').on('click', function() {
-            const modal = new bootstrap.Modal(addLaboratoryModal);
+            const modal = new bootstrap.Modal(document.getElementById('addLaboratoryModal'));
             modal.show();
         });
 
- 
-        // Delete Laboratory Button Click
+        $('#addLaboratoryModal').on('show.bs.modal', function () {
+            // Get the next laboratory ID when opening the modal
+            $.ajax({
+                url: "{{ route('laboratories.getNextId') }}",
+                type: 'GET',
+                success: function(response) {
+                    $('#laboratory_id').val(response.next_id);
+                },
+                error: function(xhr) {
+                    console.error('Error getting next ID:', xhr);
+                }
+            });
+        });
+
+        // Handle delete laboratory
         $(document).on('click', '.deleteLaboratoryBtn', function() {
-            const btn = $(this);
-            const laboratoryId = btn.data('laboratory-id');
-            const laboratoryName = btn.data('laboratory-name');
+            const laboratoryId = $(this).data('laboratory-id');
+            const laboratoryName = $(this).data('laboratory-name');
             
             Swal.fire({
                 title: 'Delete Laboratory?',
@@ -479,18 +494,7 @@
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                allowOutsideClick: () => {
-                    const popup = Swal.getPopup()
-                    popup.classList.remove('swal2-show')
-                    popup.classList.add('swal2-shake')
-                    setTimeout(() => {
-                        popup.classList.remove('swal2-shake')
-                        popup.classList.add('swal2-show')
-                    }, 100)
-                    return false
-                },
-                allowEscapeKey: false
+                confirmButtonText: 'Yes, delete it!'
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
@@ -509,9 +513,13 @@
                             });
                         },
                         error: function(xhr) {
+                            let errorMessage = 'An error occurred while deleting the laboratory.';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
                             Swal.fire({
                                 title: 'Error!',
-                                text: 'An error occurred while deleting the laboratory.',
+                                text: errorMessage,
                                 icon: 'error'
                             });
                         }
@@ -531,15 +539,17 @@
                 location: $('#edit_location').val(),
                 capacity: $('#edit_capacity').val(),
                 status: $('#edit_status').val(),
-                description: $('#edit_description').val()
+                description: $('#edit_description').val(),
+                _token: '{{ csrf_token() }}',
+                _method: 'PUT'
             };
 
             // Validate required fields
             let errors = [];
-            if (!formData.laboratory_name.trim()) errors.push('Laboratory Name is required');
-            if (!formData.location.trim()) errors.push('Location is required');
-            if (!formData.capacity || parseInt(formData.capacity) < 1) errors.push('Capacity must be at least 1');
-            if (!formData.status) errors.push('Status is required');
+            if (!$('#edit_laboratory_name').val().trim()) errors.push('Laboratory Name is required');
+            if (!$('#edit_location').val().trim()) errors.push('Location is required');
+            if (!$('#edit_capacity').val() || parseInt($('#edit_capacity').val()) < 1) errors.push('Capacity must be at least 1');
+            if (!$('#edit_status').val()) errors.push('Status is required');
 
             if (errors.length > 0) {
                 Swal.fire({
@@ -550,19 +560,26 @@
                 return;
             }
 
+            // Show loading state
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalText = submitBtn.html();
+            submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
+            submitBtn.prop('disabled', true);
+
             $.ajax({
-                url: `/laboratories/${laboratoryId}`,
-                type: 'PUT',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
+                url: '/inventory/laboratories/' + encodeURIComponent(laboratoryId),
+                type: 'POST',
                 data: formData,
                 success: function(response) {
+                    // Reset button state
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+
                     if (response.success) {
                         $('#editLaboratoryModal').modal('hide');
                         Swal.fire({
                             title: 'Success!',
-                            text: response.message,
+                            text: response.message || 'Laboratory updated successfully.',
                             icon: 'success'
                         }).then(() => {
                             window.location.reload();
@@ -576,6 +593,10 @@
                     }
                 },
                 error: function(xhr) {
+                    // Reset button state
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+
                     let errorMessage = 'An error occurred while updating the laboratory.';
                     if (xhr.responseJSON) {
                         if (xhr.responseJSON.errors) {
@@ -593,16 +614,20 @@
             });
         });
 
- 
-
-        // Handle restore laboratory
-        $(document).on('click', '.restoreLaboratoryBtn', function() {
-            const laboratoryId = $(this).data('laboratory-id');
-            const laboratoryName = $(this).data('laboratory-name');
+        // Handle direct restore button click
+        $(document).on('click', '.restoreDirectBtn', function() {
+            const btn = $(this);
+            const laboratoryId = btn.data('laboratory-id');
+            const laboratoryName = btn.data('laboratory-name');
+            
+            console.log('Restore button clicked for:', {
+                id: laboratoryId,
+                name: laboratoryName
+            });
             
             Swal.fire({
                 title: 'Restore Laboratory?',
-                text: `Are you sure you want to restore "${laboratoryName}"?`,
+                text: `Are you sure you want to restore "${laboratoryName}" (ID: ${laboratoryId})?`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#28a745',
@@ -610,102 +635,55 @@
                 confirmButtonText: 'Yes, restore it!'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // Show loading indicator
+                    Swal.fire({
+                        title: 'Restoring...',
+                        text: 'Please wait while we restore the laboratory',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Make direct AJAX call to restore using POST
+                    const restoreUrl = `/inventory/laboratories/${encodeURIComponent(laboratoryId)}/restore`;
+                    console.log('Sending restore request to:', restoreUrl);
+                    
                     $.ajax({
-                        url: `/inventory/laboratories/${laboratoryId}/restore`,
-                        type: 'PUT',
+                        url: restoreUrl,
+                        type: 'POST', // Use POST directly
                         data: {
-                            _token: '{{ csrf_token() }}'
+                            _token: '{{ csrf_token() }}',
+                            laboratory_id: laboratoryId,
+                            laboratory_name: laboratoryName,
+                            location: 'Restored',
+                            capacity: 30,
+                            status: 'Available'
                         },
                         success: function(response) {
-                            if (response.success) {
-                                Swal.fire({
-                                    title: 'Restored!',
-                                    text: response.message,
-                                    icon: 'success'
-                                }).then(() => {
-                                    window.location.reload();
-                                });
-                            } else {
-                                Swal.fire({
-                                    title: 'Error!',
-                                    text: response.message,
-                                    icon: 'error'
-                                });
-                            }
+                            console.log('Restore success:', response);
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Laboratory restored successfully.',
+                                icon: 'success'
+                            }).then(() => {
+                                window.location.reload();
+                            });
                         },
                         error: function(xhr) {
+                            console.error('Restore error:', xhr);
+                            let errorMessage = 'An error occurred while restoring the laboratory.';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+                            
                             Swal.fire({
                                 title: 'Error!',
-                                text: 'An error occurred while restoring the laboratory.',
+                                text: errorMessage,
                                 icon: 'error'
                             });
                         }
                     });
-                }
-            });
-        });
-
-        // Reset forms when modals are closed
-        $('#addLaboratoryModal').on('hidden.bs.modal', function () {
-            $("#addLaboratoryForm").trigger('reset');
-            $(".is-invalid").removeClass('is-invalid');
-            $(".invalid-feedback").remove();
-        });
-
-        $('#editLaboratoryModal').on('hidden.bs.modal', function () {
-            $("#editLaboratoryForm").trigger('reset');
-            $(".is-invalid").removeClass('is-invalid');
-            $(".invalid-feedback").remove();
-        });
-
-        // Handle Add Laboratory Form Submission
-        $('#addLaboratoryForm').on('submit', function(e) {
-            e.preventDefault();
-            
-            // Reset any previous error states
-            $('.is-invalid').removeClass('is-invalid');
-            $('.invalid-feedback').empty();
-            
-            const formData = new FormData(this);
-            
-            $.ajax({
-                url: $(this).attr('action'),
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    // Close the modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('addLaboratoryModal'));
-                    modal.hide();
-                    
-                    // Show success message
-                    Swal.fire({
-                        title: 'Success!',
-                        text: 'Laboratory created successfully.',
-                        icon: 'success'
-                    }).then(() => {
-                        window.location.reload();
-                    });
-                },
-                error: function(xhr) {
-                    if (xhr.status === 422) {
-                        // Validation errors
-                        const errors = xhr.responseJSON.errors;
-                        Object.keys(errors).forEach(field => {
-                            const input = $(`#${field}`);
-                            const feedback = $(`#${field}_error`);
-                            input.addClass('is-invalid');
-                            feedback.text(errors[field][0]);
-                        });
-                    } else {
-                        // Other errors
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'An error occurred while creating the laboratory.',
-                            icon: 'error'
-                        });
-                    }
                 }
             });
         });
