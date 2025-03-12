@@ -5,7 +5,7 @@
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Edit Laboratory</h1>
         <a href="{{ route('laboratories.index') }}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
-            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to List
+            <i class="bi bi-arrow-left"></i> Back to List
         </a>
     </div>
 
@@ -14,22 +14,19 @@
             <h6 class="m-0 font-weight-bold text-primary">Laboratory Information</h6>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ route('laboratories.update', $laboratory->laboratory_id) }}">
+            <form method="POST" action="{{ url('/inventory/laboratories/' . $laboratory->laboratory_id) }}">
                 @csrf
                 @method('PUT')
 
                 <div class="form-group row">
                     <div class="col-md-6">
-                        <label for="laboratory_id">Laboratory ID <span class="text-danger">*</span></label>
+                        <label for="laboratory_id">Laboratory ID</label>
                         <input type="text" 
-                               class="form-control @error('laboratory_id') is-invalid @enderror" 
+                               class="form-control" 
                                id="laboratory_id" 
                                name="laboratory_id" 
-                               value="{{ old('laboratory_id', $laboratory->laboratory_id) }}" 
-                               required>
-                        @error('laboratory_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                               value="{{ $laboratory->laboratory_id }}" 
+                               readonly>
                     </div>
 
                     <div class="col-md-6">
@@ -46,7 +43,7 @@
                     </div>
                 </div>
 
-                <div class="form-group row">
+                <div class="form-group row mt-3">
                     <div class="col-md-6">
                         <label for="location">Location <span class="text-danger">*</span></label>
                         <input type="text" 
@@ -75,14 +72,13 @@
                     </div>
                 </div>
 
-                <div class="form-group row">
+                <div class="form-group row mt-3">
                     <div class="col-md-6">
                         <label for="status">Status <span class="text-danger">*</span></label>
                         <select class="form-control @error('status') is-invalid @enderror" 
                                 id="status" 
                                 name="status" 
                                 required>
-                            <option value="">Select Status</option>
                             <option value="Available" {{ old('status', $laboratory->status) === 'Available' ? 'selected' : '' }}>Available</option>
                             <option value="Occupied" {{ old('status', $laboratory->status) === 'Occupied' ? 'selected' : '' }}>Occupied</option>
                             <option value="Under Maintenance" {{ old('status', $laboratory->status) === 'Under Maintenance' ? 'selected' : '' }}>Under Maintenance</option>
@@ -93,7 +89,7 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group mt-3">
                     <label for="description">Description</label>
                     <textarea class="form-control @error('description') is-invalid @enderror" 
                               id="description" 
@@ -104,16 +100,20 @@
                     @enderror
                 </div>
 
-                <div class="form-group">
+                <div class="form-group mt-3">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Update Laboratory
+                        <i class="bi bi-save"></i> Update Laboratory
                     </button>
                     <a href="{{ route('laboratories.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancel
+                        <i class="bi bi-x"></i> Cancel
                     </a>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+@endpush
 @endsection 

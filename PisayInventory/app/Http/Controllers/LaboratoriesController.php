@@ -39,17 +39,23 @@ class LaboratoriesController extends Controller
 
     public function edit($id)
     {
-        $laboratory = Laboratory::findOrFail($id);
-        
-        // Get user permissions for laboratories
-        $userPermissions = (object) [
-            'CanView' => true,  // You should replace these with actual permission checks
-            'CanAdd' => true,
-            'CanEdit' => true,
-            'CanDelete' => true
-        ];
+        try {
+            // Find the laboratory by ID
+            $laboratory = Laboratory::where('laboratory_id', $id)->firstOrFail();
+            
+            // Get user permissions for laboratories
+            $userPermissions = (object) [
+                'CanView' => true,
+                'CanAdd' => true,
+                'CanEdit' => true,
+                'CanDelete' => true
+            ];
 
-        return view('laboratories.edit', compact('laboratory', 'userPermissions'));
+            return view('laboratories.edit', compact('laboratory', 'userPermissions'));
+        } catch (\Exception $e) {
+            return redirect()->route('laboratories.index')
+                ->with('error', 'Laboratory not found.');
+        }
     }
 
     public function update(Request $request, $id)

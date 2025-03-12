@@ -156,60 +156,50 @@ Route::middleware('auth')->group(function () {
         // Module Management
         Route::resource('modules', ModuleController::class);
 
-        // Laboratory Management Routes
-        // Laboratories
-        Route::get('/laboratories', [LaboratoriesController::class, 'index'])->name('laboratories.index');
-        Route::get('/laboratories/next-id', [LaboratoriesController::class, 'getNextId'])->name('laboratories.getNextId');
-        Route::get('/laboratories/create', [LaboratoriesController::class, 'create'])->name('laboratories.create');
-        Route::post('/laboratories', [LaboratoriesController::class, 'store'])->name('laboratories.store');
-        Route::get('/laboratories/{id}', [LaboratoriesController::class, 'show'])->name('laboratories.show')->where('id', '.*');
-        Route::get('/laboratories/{id}/edit', [LaboratoriesController::class, 'edit'])->name('laboratories.edit')->where('id', '.*');
-        Route::put('/laboratories/{id}', [LaboratoriesController::class, 'update'])->name('laboratories.update')->where('id', '.*');
-        Route::delete('/laboratories/{id}', [LaboratoriesController::class, 'destroy'])->name('laboratories.destroy')->where('id', '.*');
-        Route::put('laboratories/{laboratory}/restore', [LaboratoriesController::class, 'restore'])->name('laboratories.restore')->where('laboratory', '.*');
-
-        // Equipment routes
-        Route::prefix('equipment')->group(function () {
-            // The restore route must come BEFORE other routes
-            Route::post('/{equipment}/restore', [EquipmentController::class, 'restore'])->name('equipment.restore');
-            
-            // Basic CRUD routes
-            Route::get('/', [EquipmentController::class, 'index'])->name('equipment.index');
-            Route::get('/create', [EquipmentController::class, 'create'])->name('equipment.create');
-            Route::post('/', [EquipmentController::class, 'store'])->name('equipment.store');
-            Route::get('/{equipment}', [EquipmentController::class, 'show'])->name('equipment.show');
-            Route::get('/{equipment}/edit', [EquipmentController::class, 'edit'])->name('equipment.edit');
-            Route::put('/{equipment}', [EquipmentController::class, 'update'])->name('equipment.update');
-            Route::delete('/{equipment}', [EquipmentController::class, 'destroy'])->name('equipment.destroy');
+// Laboratory Management Routes
+    // Laboratories
+        Route::prefix('laboratories')->group(function () {
+            Route::get('/', [LaboratoriesController::class, 'index'])->name('laboratories.index');
+            Route::get('/next-id', [LaboratoriesController::class, 'getNextId'])->name('laboratories.getNextId');
+            Route::get('/create', [LaboratoriesController::class, 'create'])->name('laboratories.create');
+            Route::post('/', [LaboratoriesController::class, 'store'])->name('laboratories.store');
+            Route::get('/{id}', [LaboratoriesController::class, 'show'])->name('laboratories.show')->where('id', '.*');
+            Route::get('/{id}/edit', [LaboratoriesController::class, 'edit'])->name('laboratories.edit')->where('id', '.*');
+            Route::put('/{id}', [LaboratoriesController::class, 'update'])->name('laboratories.update')->where('id', '.*');
+            Route::delete('/{id}', [LaboratoriesController::class, 'destroy'])->name('laboratories.destroy')->where('id', '.*');
+            Route::put('/{id}/restore', [LaboratoriesController::class, 'restore'])->name('laboratories.restore')->where('id', '.*');
         });
+
+    // Equipment routes
+    Route::prefix('equipment')->group(function () {
+        // The restore route must come BEFORE other routes
+        Route::post('/{equipment}/restore', [EquipmentController::class, 'restore'])->name('equipment.restore');
+        
+        // Basic CRUD routes
+        Route::get('/', [EquipmentController::class, 'index'])->name('equipment.index');
+        Route::get('/create', [EquipmentController::class, 'create'])->name('equipment.create');
+        Route::post('/', [EquipmentController::class, 'store'])->name('equipment.store');
+        Route::get('/{equipment}', [EquipmentController::class, 'show'])->name('equipment.show');
+        Route::get('/{equipment}/edit', [EquipmentController::class, 'edit'])->name('equipment.edit');
+        Route::put('/{equipment}', [EquipmentController::class, 'update'])->name('equipment.update');
+        Route::delete('/{equipment}', [EquipmentController::class, 'destroy'])->name('equipment.destroy');
+    });
 
         // Equipment Borrowing routes
         Route::prefix('equipment-borrowings')->group(function () {
             Route::get('/', [EquipmentBorrowingController::class, 'index'])->name('equipment.borrowings');
             Route::get('/create', [EquipmentBorrowingController::class, 'create'])->name('equipment.borrowings.create');
             Route::post('/', [EquipmentBorrowingController::class, 'store'])->name('equipment.borrowings.store');
-            Route::get('/{borrowing}', [EquipmentBorrowingController::class, 'show'])
-                ->name('equipment.borrowings.show')
-                ->where('borrowing', '.*');
-            Route::get('/{borrowing}/edit', [EquipmentBorrowingController::class, 'edit'])
-                ->name('equipment.borrowings.edit')
-                ->where('borrowing', '.*');
-            Route::put('/{borrowing}', [EquipmentBorrowingController::class, 'update'])
-                ->name('equipment.borrowings.update')
-                ->where('borrowing', '.*');
-            Route::delete('/{borrowing}', [EquipmentBorrowingController::class, 'destroy'])
-                ->name('equipment.borrowings.destroy')
-                ->where('borrowing', '.*');
-            Route::post('/{borrowing}/return', [EquipmentBorrowingController::class, 'return'])
-                ->name('equipment.borrowings.return')
-                ->where('borrowing', '.*');
-            Route::post('/{borrowing}/restore', [EquipmentBorrowingController::class, 'restore'])
-                ->name('equipment.borrowings.restore')
-                ->where('borrowing', '.*');
+            Route::get('/{borrowing}', [EquipmentBorrowingController::class, 'show'])->name('equipment.borrowings.show');
+            Route::get('/{borrowing}/edit', [EquipmentBorrowingController::class, 'edit'])->name('equipment.borrowings.edit');
+            Route::put('/{borrowing}', [EquipmentBorrowingController::class, 'update'])->name('equipment.borrowings.update');
+            Route::delete('/{borrowing}', [EquipmentBorrowingController::class, 'destroy'])->name('equipment.borrowings.destroy');
+            Route::post('/{borrowing}/return', [EquipmentBorrowingController::class, 'return'])->name('equipment.borrowings.return');
+            Route::post('/{borrowing}/restore', [EquipmentBorrowingController::class, 'restore'])->name('equipment.borrowings.restore');
         });
 
-                // Laboratory Reservations
-                Route::prefix('laboratory')->name('laboratory.')->group(function () {
+    // Laboratory Reservations
+    Route::prefix('laboratory')->name('laboratory.')->group(function () {
                     // Main reservation routes (keep original names)
                     Route::get('/reservations', [LaboratoryReservationController::class, 'index'])
                         ->name('reservations');  // This creates 'laboratory.reservations'

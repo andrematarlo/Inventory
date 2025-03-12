@@ -66,7 +66,7 @@
                                 @error('location')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                            </div>
+                        </div>
 
                             <div class="col-md-6">
                                 <label for="capacity">Capacity <span class="text-danger">*</span></label>
@@ -81,7 +81,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                        </div>
+                            </div>
 
                         <div class="form-group row">
                             <div class="col-md-6">
@@ -113,7 +113,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Create Laboratory</button>
                     </div>
                 </form>
@@ -159,21 +159,17 @@
                                         @endif
 
                                         @if($userPermissions->CanEdit)
-                                        <button type="button" 
-                                                class="btn btn-sm btn-primary editLaboratoryBtn"
-                                                data-id="{{ $laboratory->laboratory_id }}"
-                                                data-name="{{ $laboratory->laboratory_name }}"
-                                                data-location="{{ $laboratory->location }}"
-                                                data-capacity="{{ $laboratory->capacity }}"
-                                                data-status="{{ $laboratory->status }}"
-                                                data-description="{{ $laboratory->description }}">
+                                        <a href="{{ url('/inventory/laboratories/' . $laboratory->laboratory_id . '/edit') }}" 
+                                           class="btn btn-sm btn-primary"
+                                           data-bs-toggle="tooltip"
+                                           title="Edit Laboratory">
                                             <i class="bi bi-pencil-fill"></i>
-                                        </button>
+                                        </a>
                                         @endif
 
                                         @if($userPermissions->CanDelete)
                                         <button type="button" 
-                                                class="btn btn-sm btn-danger deleteLaboratoryBtn"
+                                                class="btn btn-sm btn-danger deleteLaboratoryBtn" 
                                                 data-bs-toggle="tooltip"
                                                 data-bs-title="Delete"
                                                 data-laboratory-id="{{ $laboratory->laboratory_id }}"
@@ -235,7 +231,7 @@
             <div class="modal-header">
                 <h5 class="modal-title" id="editLaboratoryModalLabel">Edit Laboratory</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+            </div>
             <form id="editLaboratoryForm" method="POST">
                 @csrf
                 @method('PUT')
@@ -332,7 +328,7 @@
                 Are you sure you want to delete laboratory "<span id="deleteLaboratoryName"></span>"?
             </div>
             <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="deleteLaboratoryForm" method="POST">
                     @csrf
                     @method('DELETE')
@@ -361,7 +357,7 @@
                 Are you sure you want to restore laboratory "<span id="restoreLaboratoryName"></span>"?
             </div>
             <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="restoreLaboratoryForm" method="POST">
                     @csrf
                     @method('PUT')
@@ -409,17 +405,9 @@
             const status = btn.data('status');
             const description = btn.data('description');
 
-            console.log('Populating modal with data:', {
-                id: laboratoryId,
-                name: laboratoryName,
-                location: location,
-                capacity: capacity,
-                status: status,
-                description: description
-            });
-
-            // Set the form action URL
-            $('#editLaboratoryForm').attr('action', `/inventory/laboratories/${laboratoryId}`);
+            // Set the form action URL with the correct path
+            const formAction = '/inventory/laboratories/' + encodeURIComponent(laboratoryId);
+            $('#editLaboratoryForm').attr('action', formAction);
 
             // Populate the edit form
             $('#edit_laboratory_id').val(laboratoryId);
@@ -428,10 +416,6 @@
             $('#edit_capacity').val(capacity);
             $('#edit_status').val(status);
             $('#edit_description').val(description || '');
-            $('#edit_id').val(laboratoryId);
-            
-            // Set the form action URL
-            $('#editLaboratoryForm').attr('action', '{{ url("/inventory/laboratories") }}/' + laboratoryId);
 
             // Show the modal
             const editModal = new bootstrap.Modal(document.getElementById('editLaboratoryModal'));
