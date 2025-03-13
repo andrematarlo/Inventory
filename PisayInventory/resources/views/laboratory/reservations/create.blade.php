@@ -44,13 +44,22 @@
                                     <input type="text" class="form-control" name="grade_section" 
                                         value="{{ Auth::user()->student->grade_level }} - {{ Auth::user()->student->section }}" 
                                         readonly>
+                                @elseif(Auth::user()->role === 'Teacher')
+                                    <input type="text" class="form-control" name="grade_section" 
+                                        placeholder="Not applicable for teacher reservations" 
+                                        readonly>
+                                    <!-- Add a hidden input to ensure the form submits even without grade_section -->
+                                    <input type="hidden" name="grade_section" value="N/A">
                                 @else
                                     <input type="text" class="form-control" name="grade_section" required>
                                 @endif
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Number of Students:</label>
-                                <input type="number" class="form-control" name="num_students" min="1" required>
+                                <input type="number" class="form-control" name="num_students" 
+                                    min="1" 
+                                    @if(Auth::user()->role === 'Teacher') value="1" @endif
+                                    required>
                             </div>
                         </div>
 
@@ -147,8 +156,10 @@
                                 <div class="d-flex flex-column">
                                     <input type="text" class="form-control" name="endorsed_by" 
                                         disabled 
-                                        placeholder="Will be endorsed by Subject Teacher/Unit Head">
-                                    <small class="text-muted text-center mt-1">Subject Teacher/Unit Head</small>
+                                        placeholder="{{ Auth::user()->role === 'Teacher' ? 'Will be endorsed by Unit Head' : 'Will be endorsed by Subject Teacher/Unit Head' }}">
+                                    <small class="text-muted text-center mt-1">
+                                        {{ Auth::user()->role === 'Teacher' ? 'Unit Head' : 'Subject Teacher/Unit Head' }}
+                                    </small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -268,7 +279,7 @@ $('select[name="teacher_id"]').select2({
 
     // Generate control number on page load
     $.get('{{ route("laboratory.reservations.generateControlNo") }}', function(response) {
-        $('input[name="control_no"]').val(response.control_no);
+        $('input[name="control_no"]').val(' ');
     });
 
     // Set current school year
@@ -281,61 +292,78 @@ $('select[name="teacher_id"]').select2({
     $('input[name="school_year"]').val(schoolYear);
 
     // Form submission
-    $('#reservationForm').submit(function(e) {
-        e.preventDefault();
-        
-        // Validate required fields
-        const requiredFields = ['grade_section', 'subject', 'teacher_id', 'reservation_date', 
-                              'start_time', 'end_time', 'num_students'];
-        let isValid = true;
-        
-        requiredFields.forEach(field => {
-            if (!$(`[name="${field}"]`).val()) {
-                isValid = false;
-                $(`[name="${field}"]`).addClass('is-invalid');
-            } else {
-                $(`[name="${field}"]`).removeClass('is-invalid');
-            }
-        });
+$('#reservationForm').submit(function(e) {
+    e.preventDefault();
+    
+    // Validate required fields
+    const requiredFields = ['subject', 'teacher_id', 'reservation_date', 
+                          'start_time', 'end_time', 'num_students'];
+    
+    // Only add grade_section to required fields if user is not a teacher
+    @if(Auth::user()->role !== 'Teacher')
+        requiredFields.push('grade_section');
+    @endif
 
-        if (!isValid) {
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        if (!$(`[name="${field}"]`).val()) {
+            isValid = false;
+            $(`[name="${field}"]`).addClass('is-invalid');
+        } else {
+            $(`[name="${field}"]`).removeClass('is-invalid');
+        }
+    });
+
+    if (!isValid) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please fill in all required fields'
+        });
+        return;
+    }
+
+    // Show loading state while processing
+    Swal.fire({
+        title: 'Submitting Reservation',
+        text: 'Please wait...',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+        
+    $.ajax({
+        url: '{{ route("laboratory.reservations.store") }}',
+        type: 'POST',
+        data: $(this).serialize(),
+        success: function(response) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Your reservation has been submitted successfully.'
+            }).then(() => {
+                window.location.href = '{{ route("laboratory.reservations") }}';
+            });
+        },
+        error: function(xhr) {
+            let errorMessage = 'Something went wrong.';
+            if (xhr.responseJSON && xhr.responseJSON.errors) {
+                errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
+            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            
             Swal.fire({
                 icon: 'error',
-                title: 'Validation Error',
-                text: 'Please fill in all required fields'
+                title: 'Error!',
+                text: errorMessage
             });
-            return;
         }
-        
-        $.ajax({
-            url: '{{ route("laboratory.reservations.store") }}',
-            type: 'POST',
-            data: $(this).serialize(),
-            success: function(response) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: 'Your reservation has been submitted successfully.'
-                }).then(() => {
-                    window.location.href = '{{ route("laboratory.reservations") }}';
-                });
-            },
-            error: function(xhr) {
-                let errorMessage = 'Something went wrong.';
-                if (xhr.responseJSON && xhr.responseJSON.errors) {
-                    errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
-                } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: errorMessage
-                });
-            }
-        });
     });
+});
 
     // Validate time inputs
     $('input[name="start_time"], input[name="end_time"]').change(function() {

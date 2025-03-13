@@ -23,9 +23,9 @@
                 <button type="button" class="btn btn-outline-success status-toggle" data-status="Approved">
                     Approved <span class="badge bg-success ms-2" id="approvedCount">0</span>
                 </button>
-                <button type="button" class="btn btn-outline-danger status-toggle" data-status="Cancelled">
-                    Disapproved <span class="badge bg-danger ms-2" id="disapprovedCount">0</span>
-                </button>
+                <button type="button" class="status-toggle btn btn-outline-danger" data-status="Disapproved">
+        Disapproved <span class="badge bg-danger" id="disapprovedCount">0</span>
+    </button>
             </div>
 
             <!-- Search and Entries Control -->
@@ -493,31 +493,66 @@ $(document).on('click', '.cancel-reservation', function() {
         });
     });
 
-    // Disapprove reservation
-    $(document).on('click', '.disapprove-reservation', function() {
-        const id = $(this).data('id');
-        
-        Swal.fire({
-            title: 'Disapprove Reservation?',
-            text: "Please provide a reason for disapproval:",
-            input: 'textarea',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Disapprove',
-            inputValidator: (value) => {
-                if (!value) {
-                    return 'You need to provide a reason!'
-                }
+   // Disapprove reservation click handler
+$(document).on('click', '.disapprove-reservation', function() {
+    const id = $(this).data('id');
+    
+    Swal.fire({
+        title: 'Disapprove Reservation?',
+        text: "Please provide a reason for disapproval:",
+        input: 'textarea',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Disapprove',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'You need to provide a reason!'
             }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                approveReservation(id, 'Cancelled', result.value);
-            }
-        });
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            disapproveReservation(id, result.value);  // Call the new function
+        }
     });
+});
 
+// Separate function for disapproval
+function disapproveReservation(id, remarks) {
+    $.ajax({
+        url: "{{ route('laboratory.reservations.disapprove', '_id_') }}".replace('_id_', id),
+        type: 'POST',
+        data: {
+            _token: '{{ csrf_token() }}',
+            remarks: remarks
+        },
+        success: function(response) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: response.message
+            }).then(() => {
+                // Update the status toggle buttons
+                $('.status-toggle').removeClass('active');
+                $('.status-toggle[data-status="Disapproved"]').addClass('active');
+                
+                // Update current status and reload
+                currentStatus = 'Disapproved';
+                currentPage = 1; // Reset to first page
+                loadReservations();
+                loadCounts();
+            });
+        },
+        error: function(xhr) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: xhr.responseJSON?.message || 'Something went wrong.'
+            });
+        }
+    });
+}
     // Approve/Disapprove function
     function approveReservation(id, status, remarks = null) {
         $.ajax({

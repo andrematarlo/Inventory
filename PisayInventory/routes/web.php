@@ -201,14 +201,16 @@ Route::middleware('auth')->group(function () {
     // Laboratory Reservations
     Route::prefix('laboratory')->name('laboratory.')->group(function () {
                     // Main reservation routes (keep original names)
-                    Route::get('/reservations', [LaboratoryReservationController::class, 'index'])
+                Route::get('/reservations', [LaboratoryReservationController::class, 'index'])
                         ->name('reservations');
-                    Route::get('/reservations/create', [LaboratoryReservationController::class, 'create'])
+                Route::get('/reservations/create', [LaboratoryReservationController::class, 'create'])
                         ->name('reservations.create');
                 Route::post('/reservations', [LaboratoryReservationController::class, 'store'])
                     ->name('reservations.store');
-                    Route::post('/reservations/{id}/endorse', [LaboratoryReservationController::class, 'endorse'])
+                Route::post('/reservations/{id}/endorse', [LaboratoryReservationController::class, 'endorse'])
                     ->name('reservations.endorse');
+                Route::post('/reservations/{reservation}/disapprove', [LaboratoryReservationController::class, 'disapprove'])
+                    ->name('reservations.disapprove');
 
                 // Add these new routes
                 Route::get('/reservations/student-info', [LaboratoryReservationController::class, 'getStudentInfo'])

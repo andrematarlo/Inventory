@@ -80,28 +80,52 @@ class LaboratoryReservationController extends Controller
     public function store(Request $request)
 {
     try {
-        $validated = $request->validate([
+        $user = auth()->user();
+        $isTeacher = $user->role === 'Teacher';
+
+        // Get employee ID if user is a teacher
+        $employeeId = null;
+        if ($isTeacher) {
+            $employee = \App\Models\Employee::where('UserAccountID', $user->UserAccountID)->first();
+            $employeeId = $employee ? $employee->EmployeeID : null;
+        }
+
+        // Modify validation rules based on user role
+        $validationRules = [
             'laboratory_id' => 'required|exists:laboratories,laboratory_id',
             'campus' => 'required|string',
             'school_year' => 'required|string',
-            'grade_section' => 'required|string',
             'subject' => 'required|string',
-            'teacher_id' => 'required|exists:employee,EmployeeID',
             'reservation_date' => 'required|date|after:today',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
             'num_students' => 'required|integer|min:1',
-            'requested_by_type' => 'required|in:teacher,student',
             'requested_by' => 'required|string',
             'group_members' => 'nullable|array'
-        ]);
+        ];
+
+        // Add teacher_id validation only for students
+        if (!$isTeacher) {
+            $validationRules['teacher_id'] = 'required|exists:employee,EmployeeID';
+        }
+
+        // Modify grade_section validation based on role
+        if ($isTeacher) {
+            $validationRules['grade_section'] = 'nullable|string';
+        } else {
+            $validationRules['grade_section'] = 'required|string';
+        }
+
+        $validated = $request->validate($validationRules);
 
         DB::beginTransaction();
 
+        // Your existing control number generation
         $controlNo = DB::select('CALL GenerateLabReservationControlNo(@control_no)');
         $result = DB::select('SELECT @control_no as control_no');
         $controlNo = $result[0]->control_no;
 
+        // Your existing conflict check
         $conflictingReservation = LaboratoryReservation::where('laboratory_id', $validated['laboratory_id'])
             ->where('reservation_date', $validated['reservation_date'])
             ->where(function($query) use ($validated) {
@@ -115,29 +139,34 @@ class LaboratoryReservationController extends Controller
             throw new \Exception('This time slot is already reserved.');
         }
 
-        $reservation = LaboratoryReservation::create([
+        // Prepare creation data with role-specific values
+        $creationData = [
             'reservation_id' => 'RES' . date('YmdHis'),
             'control_no' => $controlNo,
             'laboratory_id' => $validated['laboratory_id'],
             'reserver_id' => Auth::user()->UserAccountID,
             'campus' => $validated['campus'],
             'school_year' => $validated['school_year'],
-            'grade_section' => $validated['grade_section'],
+            'grade_section' => $isTeacher ? 'N/A' : $validated['grade_section'],
             'subject' => $validated['subject'],
-            'teacher_id' => $validated['teacher_id'],
+            'teacher_id' => $isTeacher ? $employeeId : $validated['teacher_id'],
             'reservation_date' => $validated['reservation_date'],
             'start_time' => $validated['start_time'],
             'end_time' => $validated['end_time'],
             'num_students' => $validated['num_students'],
-            'requested_by_type' => $validated['requested_by_type'],
             'requested_by' => $validated['requested_by'],
+            'requested_by_type' => $isTeacher ? 'teacher' : 'student',
+            'endorsement_status' => 'For Endorsement',
+            'endorser_role' => $isTeacher ? 'Unit Head' : 'Teacher In-Charge',
             'date_requested' => now(),
             'group_members' => $validated['group_members'],
             'status' => 'For Approval',
             'remarks' => '',
             'created_by' => Auth::user()->UserAccountID,
             'IsDeleted' => false
-        ]);
+        ];
+
+        $reservation = LaboratoryReservation::create($creationData);
 
         DB::commit();
 
@@ -462,10 +491,20 @@ public function approve($id)
             ], 422);
         }
 
+        // Get the employee ID associated with the current user
+        $employee = \App\Models\Employee::where('UserAccountID', Auth::user()->UserAccountID)->first();
+        
+        if (!$employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No employee record found for the current user.'
+            ], 422);
+        }
+
         $reservation->update([
             'status' => 'Approved',
-            'approved_by' => Auth::user()->UserAccountID,
-            'updated_by' => Auth::user()->UserAccountID
+            'approved_by' => $employee->EmployeeID,  // Use the actual EmployeeID
+            'updated_by' => $employee->EmployeeID    // Use the same EmployeeID for updated_by
         ]);
 
         return response()->json([
@@ -476,6 +515,57 @@ public function approve($id)
         return response()->json([
             'success' => false,
             'message' => 'Error approving reservation: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function disapprove($id)
+{
+    try {
+        $reservation = LaboratoryReservation::findOrFail($id);
+        
+        if ($reservation->status !== 'For Approval') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only reservations with For Approval status can be disapproved.'
+            ], 422);
+        }
+
+        // Get the employee ID associated with the current user
+        $employee = \App\Models\Employee::where('UserAccountID', Auth::user()->UserAccountID)->first();
+        
+        if (!$employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No employee record found for the current user.'
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $reservation->update([
+                'status' => 'Disapproved',
+                'disapproved_by' => $employee->EmployeeID,
+                'disapproved_at' => now(),
+                'updated_by' => $employee->EmployeeID
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Reservation has been disapproved.'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error disapproving reservation: ' . $e->getMessage()
         ], 500);
     }
 }
