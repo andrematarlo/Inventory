@@ -1,10 +1,15 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-4 px-4">
     <div class="row justify-content-center">
-        <div class="col-md-10">
+        <div class="col-md-15">
             <div class="card">
+                <div class="position-absolute top-0 end-0 mt-4 me-4">
+                    <a href="{{ route('laboratory.reservations') }}" class="btn btn-link text-dark">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
                 <div class="card-header text-center border-bottom-0 bg-white pt-4">
                     <h4 class="fw-bold mb-2">PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h4>
 
@@ -192,35 +197,101 @@
 </div>
 @endsection
 
-@push('styles')
+@section('styles')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
 <style>
-.card-header {
-    background-color: white;
-    border-bottom: 2px solid #dee2e6;
-}
+    /* Core Layout */
+    .container-fluid {
+        padding: 2rem !important;
+        max-width: 800px;  /* Adjusted for centered, narrower layout */
+        margin: 0 auto;
+    }
 
-.form-label {
-    font-weight: 500;
-    margin-bottom: 0.3rem;
-}
+    .card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+    }
 
-.input-group-text {
-    background-color: #f8f9fa;
-}
+    /* Header */
+    .card-header {
+        text-align: center;
+        border: none;
+        background: none;
+        padding: 1rem 0 2rem !important;
+    }
+        /* Campus field specific styling */
+        .d-flex.align-items-center.justify-content-center.gap-2.mb-2 {
+        margin-top: -1.5rem !important;  /* Pull campus field up */
+        margin-bottom: 2rem !important;  /* Add space below campus field */
+    }
 
-.select2-container .select2-selection--single {
-    height: 38px;
-    border-color: #ced4da;
-}
+    /* Campus input width */
+    input[name="campus"] {
+        width: 250px !important;  /* Adjust width as needed */
+    }
 
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 36px;
-}
+    /* Close Button */
+    .btn-link {
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+    }
+    .btn-link .bi-x-lg {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
 
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 36px;
-}
+    .btn-link:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        transform: scale(1.1);
+    }
+
+    /* Form Layout */
+    .form-group {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+</style>
+@endsection
+
+@push('styles')
+<style>
+    /* Form Elements */
+    .form-control {
+        border: 1px solid #dee2e6;
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* Time Input Group */
+    .time-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Select2 Customization */
+    .select2-container .select2-selection--single {
+        height: 38px;
+        border-color: #dee2e6;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding: 1rem !important;
+        }
+        
+        .card {
+            padding: 1rem;
+        }
+    }
 </style>
 @endpush
 
@@ -385,3 +456,4 @@ $('#reservationForm').submit(function(e) {
 });
 </script>
 @endpush
+
