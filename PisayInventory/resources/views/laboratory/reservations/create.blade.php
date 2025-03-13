@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
+<div class="laboratory-reservation-form">
 <div class="container-fluid py-4 px-4">
     <div class="row justify-content-center">
         <div class="col-md-15">
@@ -161,7 +162,7 @@
                                 <div class="d-flex flex-column">
                                     <input type="text" class="form-control" name="endorsed_by" 
                                         disabled 
-                                        placeholder="{{ Auth::user()->role === 'Teacher' ? 'Will be endorsed by Unit Head' : 'Will be endorsed by Subject Teacher/Unit Head' }}">
+                                        placeholder="{{ Auth::user()->role === 'Teacher' ? 'Will be endorsed by Unit Head' : 'Will be endorsed by Subject Teacher' }}">
                                     <small class="text-muted text-center mt-1">
                                         {{ Auth::user()->role === 'Teacher' ? 'Unit Head' : 'Subject Teacher/Unit Head' }}
                                     </small>
@@ -195,6 +196,7 @@
         </div>
     </div>
 </div>
+</div>
 @endsection
 
 @section('styles')
@@ -202,59 +204,58 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
 <style>
     /* Core Layout */
-    .container-fluid {
-        padding: 2rem !important;
-        max-width: 800px;  /* Adjusted for centered, narrower layout */
+    .laboratory-reservation-form .container-fluid {
+        padding: 1rem !important;
+        max-width: 1200px;  /* Adjusted for centered, narrower layout */
         margin: 0 auto;
     }
 
-    .card {
+    .laboratory-reservation-form .card {
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        padding: 2rem;
+        padding: 3rem;
     }
 
     /* Header */
-    .card-header {
+    .laboratory-reservation-form .card-header {
         text-align: center;
         border: none;
         background: none;
         padding: 1rem 0 2rem !important;
     }
         /* Campus field specific styling */
-        .d-flex.align-items-center.justify-content-center.gap-2.mb-2 {
+    .laboratory-reservation-form .d-flex.align-items-center.justify-content-center.gap-2.mb-2 {
         margin-top: -1.5rem !important;  /* Pull campus field up */
         margin-bottom: 2rem !important;  /* Add space below campus field */
     }
 
     /* Campus input width */
-    input[name="campus"] {
+    .laboratory-reservation-form input[name="campus"] {
         width: 250px !important;  /* Adjust width as needed */
     }
 
     /* Close Button */
-    .btn-link {
-        position: absolute;
+    .laboratory-reservation-form .card .btn-link {        position: absolute;
         right: 1rem;
         top: 1rem;
     }
-    .btn-link .bi-x-lg {
+    .laboratory-reservation-form .card .btn-link .bi-x-lg {
         font-size: 1.5rem;
         font-weight: 600;
     }
 
-    .btn-link:hover {
+    .laboratory-reservation-form .card .btn-link:hover {
         background-color: rgba(0, 0, 0, 0.05);
         transform: scale(1.1);
     }
 
     /* Form Layout */
-    .form-group {
+    .laboratory-reservation-form .form-group {
         margin-bottom: 1.5rem !important;
     }
 
-    .form-label {
+    .laboratory-reservation-form .form-label {
         font-weight: 500;
         margin-bottom: 0.5rem;
     }
@@ -264,7 +265,7 @@
 @push('styles')
 <style>
     /* Form Elements */
-    .form-control {
+    .laboratory-reservation-form.form-control {
         border: 1px solid #dee2e6;
         padding: 0.5rem 0.75rem;
     }
