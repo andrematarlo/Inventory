@@ -36,13 +36,20 @@
                 <span class="badge bg-warning">For Approval</span>
             @elseif($reservation->status == 'Approved')
                 <span class="badge bg-success">Approved</span>
-            @else
+            @elseif($reservation->status == 'Disapproved')
                 <span class="badge bg-danger">Disapproved</span>
+            @else
+                <span class="badge bg-secondary">Cancelled</span>
             @endif
         </div>
     </div>
 
-    @if($reservation->remarks)
+    @if($reservation->status == 'Disapproved')
+    <div class="mb-3">
+        <strong>Reason for Disapproval:</strong>
+        <div>{{ $reservation->remarks }}</div>
+    </div>
+    @elseif($reservation->remarks)
     <div class="mb-3">
         <strong>Remarks:</strong>
         <div>{{ $reservation->remarks }}</div>

@@ -502,6 +502,7 @@ $(document).on('click', '.disapprove-reservation', function() {
         title: 'Disapprove Reservation?',
         text: "Please provide a reason for disapproval:",
         input: 'textarea',
+        inputPlaceholder: 'Enter detailed reason for disapproval...',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
@@ -509,12 +510,15 @@ $(document).on('click', '.disapprove-reservation', function() {
         confirmButtonText: 'Disapprove',
         inputValidator: (value) => {
             if (!value) {
-                return 'You need to provide a reason!'
+                return 'You need to provide a reason for disapproval!';
+            }
+            if (value.length < 10) {
+                return 'Please provide a more detailed reason (at least 10 characters)';
             }
         }
     }).then((result) => {
-        if (result.isConfirmed) {
-            disapproveReservation(id, result.value);  // Call the new function
+        if (result.isConfirmed && result.value) {
+            disapproveReservation(id, result.value);
         }
     });
 });
@@ -531,8 +535,10 @@ function disapproveReservation(id, remarks) {
         success: function(response) {
             Swal.fire({
                 icon: 'success',
-                title: 'Success!',
-                text: response.message
+                title: 'Reservation Disapproved',
+                text: 'The reservation has been disapproved with the provided reason.',
+                timer: 2000,
+                showConfirmButton: false
             }).then(() => {
                 // Update the status toggle buttons
                 $('.status-toggle').removeClass('active');
@@ -549,7 +555,8 @@ function disapproveReservation(id, remarks) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error!',
-                text: xhr.responseJSON?.message || 'Something went wrong.'
+                text: xhr.responseJSON?.message || 'Failed to disapprove the reservation. Please try again.',
+                confirmButtonColor: '#dc3545'
             });
         }
     });

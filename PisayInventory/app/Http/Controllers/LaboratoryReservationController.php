@@ -524,6 +524,13 @@ public function disapprove($id)
     try {
         $reservation = LaboratoryReservation::findOrFail($id);
         
+        // Add debugging
+        \Log::info('Disapproval request received', [
+            'id' => $id,
+            'remarks' => request('remarks'),
+            'request_data' => request()->all()
+        ]);
+        
         if ($reservation->status !== 'For Approval') {
             return response()->json([
                 'success' => false,
@@ -531,7 +538,6 @@ public function disapprove($id)
             ], 422);
         }
 
-        // Get the employee ID associated with the current user
         $employee = \App\Models\Employee::where('UserAccountID', Auth::user()->UserAccountID)->first();
         
         if (!$employee) {
@@ -544,11 +550,26 @@ public function disapprove($id)
         DB::beginTransaction();
 
         try {
-            $reservation->update([
+            $updateData = [
                 'status' => 'Disapproved',
+                'remarks' => request('remarks'),
                 'disapproved_by' => $employee->EmployeeID,
                 'disapproved_at' => now(),
                 'updated_by' => $employee->EmployeeID
+            ];
+            
+            // Add more debugging
+            \Log::info('Attempting to update reservation', [
+                'update_data' => $updateData
+            ]);
+
+            $reservation->update($updateData);
+
+            // Verify the update
+            $updatedReservation = $reservation->fresh();
+            \Log::info('Reservation updated', [
+                'new_status' => $updatedReservation->status,
+                'new_remarks' => $updatedReservation->remarks
             ]);
 
             DB::commit();
@@ -559,6 +580,10 @@ public function disapprove($id)
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error in disapproval process', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             throw $e;
         }
 
