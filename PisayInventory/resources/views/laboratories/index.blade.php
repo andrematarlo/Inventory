@@ -66,7 +66,7 @@
                                 @error('location')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                            </div>
+                        </div>
 
                             <div class="col-md-6">
                                 <label for="capacity">Capacity <span class="text-danger">*</span></label>
@@ -81,7 +81,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                        </div>
+                            </div>
 
                         <div class="form-group row">
                             <div class="col-md-6">
@@ -161,13 +161,13 @@
                                         @if($userPermissions->CanEdit)
                                         <a href="javascript:void(0)" 
                                            class="btn btn-sm btn-primary me-1 editLaboratoryBtn"
-                                           data-bs-toggle="tooltip" 
+                                                data-bs-toggle="tooltip" 
                                            title="Edit Laboratory"
                                            data-id="{{ $laboratory->laboratory_id }}"
                                            data-name="{{ $laboratory->laboratory_name }}"
-                                           data-location="{{ $laboratory->location }}"
-                                           data-capacity="{{ $laboratory->capacity }}"
-                                           data-status="{{ $laboratory->status }}"
+                                                data-location="{{ $laboratory->location }}"
+                                                data-capacity="{{ $laboratory->capacity }}"
+                                                data-status="{{ $laboratory->status }}"
                                            data-description="{{ $laboratory->description }}">
                                             <i class="bi bi-pencil-fill"></i>
                                         </a>
@@ -444,14 +444,18 @@
         });
         
 
-        // Toggle deleted records
+        // Toggle between active and deleted records
         $('#showDeletedRecords').change(function() {
             if ($(this).is(':checked')) {
+                // Show only deleted records
+                $('.active-record').addClass('d-none');
                 $('.deleted-record').removeClass('d-none');
-                table.column(6).visible(true);
+                table.column(6).visible(true); // Show deleted_at column
             } else {
+                // Show only active records
+                $('.active-record').removeClass('d-none');
                 $('.deleted-record').addClass('d-none');
-                table.column(6).visible(false);
+                table.column(6).visible(false); // Hide deleted_at column
             }
             table.columns.adjust().draw();
         });

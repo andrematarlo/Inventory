@@ -60,22 +60,22 @@ class Equipment extends Model
 
     public function createdBy()
     {
-        return $this->belongsTo(User::class, 'created_by', 'id');
+        return $this->belongsTo(UserAccount::class, 'created_by', 'UserAccountID');
     }
 
     public function updatedBy()
     {
-        return $this->belongsTo(User::class, 'updated_by', 'id');
+        return $this->belongsTo(UserAccount::class, 'updated_by', 'UserAccountID');
     }
 
     public function deletedBy()
     {
-        return $this->belongsTo(User::class, 'deleted_by', 'id');
+        return $this->belongsTo(UserAccount::class, 'deleted_by', 'UserAccountID');
     }
 
     public function restoredBy()
     {
-        return $this->belongsTo(User::class, 'RestoredById', 'id');
+        return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
     }
 
     public function isAvailable()

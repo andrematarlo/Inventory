@@ -58,10 +58,10 @@
                     </thead>
                     <tbody>
                         @forelse($borrowings as $borrowing)
-                        <tr>
+                        <tr class="{{ $borrowing->IsDeleted ? 'deleted-record' : 'active-record' }}">
                             <td>
                                 <div class="btn-group">
-                                    @if(!$borrowing->deleted_at)
+                                    @if(!$borrowing->IsDeleted)
                                         @if($userPermissions->CanEdit)
                                             @if(!$borrowing->actual_return_date)
                                                 <button type="button" 
@@ -334,6 +334,13 @@
 .form-select {
     min-width: 70px;
 }
+.deleted-record {
+    display: none;
+    background-color: #fff3f3;
+}
+.active-record {
+    display: table-row;
+}
 </style>
 @endpush
 
@@ -354,16 +361,45 @@ $(document).ready(function() {
         window.location.href = currentUrl.toString();
     });
 
-    // Handle show deleted toggle
+    // Handle show deleted toggle with URL parameter update
     $('#showDeleted').change(function() {
         const currentUrl = new URL(window.location.href);
+        
+        // Show loading spinner
+        Swal.fire({
+            title: 'Loading...',
+            text: this.checked ? 'Loading deleted records' : 'Loading active records',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            allowEnterKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         if (this.checked) {
             currentUrl.searchParams.set('trashed', '1');
         } else {
             currentUrl.searchParams.delete('trashed');
         }
+        
         window.location.href = currentUrl.toString();
     });
+
+    // Initialize the toggle state based on URL parameter with loading state
+    const urlParams = new URL(window.location.href).searchParams;
+    const showDeleted = urlParams.has('trashed');
+    
+    if (showDeleted) {
+        $('.active-record').hide();
+        $('.deleted-record').show();
+        $('#showDeleted').prop('checked', true);
+    } else {
+        $('.active-record').show();
+        $('.deleted-record').hide();
+        $('#showDeleted').prop('checked', false);
+    }
 
     // Handle search input with debounce
     let searchTimeout;

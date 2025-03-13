@@ -58,13 +58,12 @@
                                 <div class="btn-group">
                                     @if(!$item->deleted_at)
                                         @if($userPermissions->CanView)
-                                        <button type="button" 
-                                                class="btn btn-sm btn-info viewEquipmentBtn" 
+                                        <a href="{{ route('equipment.show', ['equipment' => $item->equipment_id]) }}" 
+                                           class="btn btn-sm btn-info" 
                                                 data-bs-toggle="tooltip"
-                                                data-equipment-id="{{ $item->equipment_id }}"
                                                 title="View">
                                             <i class="bi bi-eye"></i>
-                                        </button>
+                                        </a>
                                         @endif
 
                                         @if($userPermissions->CanEdit)
@@ -409,6 +408,77 @@
     </div>
 </div>
 
+<!-- View Equipment Modal -->
+<div class="modal fade" id="viewEquipmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Equipment Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="fw-bold">Equipment ID:</label>
+                        <p id="view_equipment_id"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold">Equipment Name:</label>
+                        <p id="view_equipment_name"></p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="fw-bold">Laboratory:</label>
+                        <p id="view_laboratory"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold">Status:</label>
+                        <p id="view_status"></p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="fw-bold">Serial Number:</label>
+                        <p id="view_serial_number"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold">Model Number:</label>
+                        <p id="view_model_number"></p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="fw-bold">Condition:</label>
+                        <p id="view_condition"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold">Acquisition Date:</label>
+                        <p id="view_acquisition_date"></p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="fw-bold">Last Maintenance:</label>
+                        <p id="view_last_maintenance"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold">Next Maintenance:</label>
+                        <p id="view_next_maintenance"></p>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold">Description:</label>
+                    <p id="view_description"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
@@ -552,19 +622,19 @@
             
             // Handle date fields properly
             if (acquisitionDate) {
-                $('#edit_acquisition_date').val(acquisitionDate);
+            $('#edit_acquisition_date').val(acquisitionDate);
             }
             
             if (lastMaintenanceDate) {
-                $('#edit_last_maintenance_date').val(lastMaintenanceDate);
+            $('#edit_last_maintenance_date').val(lastMaintenanceDate);
             }
             
             if (nextMaintenanceDate) {
-                $('#edit_next_maintenance_date').val(nextMaintenanceDate);
+            $('#edit_next_maintenance_date').val(nextMaintenanceDate);
             }
             
             $('#edit_description').val(description || '');
-            
+
             // Show the modal
             const editModal = new bootstrap.Modal(document.getElementById('editEquipmentModal'));
             editModal.show();
@@ -628,13 +698,13 @@
                         $('.modal-backdrop').remove();
                     }
                     
-                    Swal.fire({
-                        title: 'Success!',
+                        Swal.fire({
+                            title: 'Success!',
                         text: 'Equipment updated successfully.',
-                        icon: 'success'
-                    }).then(() => {
-                        window.location.reload();
-                    });
+                            icon: 'success'
+                        }).then(() => {
+                            window.location.reload();
+                        });
                 },
                 error: function(xhr) {
                     // Close loading indicator
@@ -681,11 +751,11 @@
                             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                         },
                         success: function(response) {
-                            Swal.fire({
+                                Swal.fire({
                                 title: 'Success!',
                                 text: 'Equipment deleted successfully.',
-                                icon: 'success'
-                            }).then(() => {
+                                    icon: 'success'
+                                }).then(() => {
                                 window.location.reload();
                             });
                         },
@@ -752,6 +822,80 @@
                             });
                         }
                     });
+                }
+            });
+        });
+
+        // View Equipment
+        $(document).on('click', '.viewEquipmentBtn', function() {
+            const equipmentId = $(this).data('equipment-id');
+            
+            // Add loading state
+            const button = $(this);
+            const originalHtml = button.html();
+            button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+            $.ajax({
+                url: `/inventory/equipment/${equipmentId}`,
+                type: 'GET',
+                success: function(response) {
+                    // Format dates
+                    const formatDate = (date) => {
+                        if (!date) return 'Not Set';
+                        return new Date(date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                    };
+
+                    // Get status badge color
+                    const getStatusBadgeColor = (status) => {
+                        switch(status) {
+                            case 'Available': return 'success';
+                            case 'In Use': return 'warning';
+                            case 'Under Maintenance': return 'info';
+                            case 'Damaged': return 'danger';
+                            default: return 'secondary';
+                        }
+                    };
+
+                    // Get condition badge color
+                    const getConditionBadgeColor = (condition) => {
+                        switch(condition) {
+                            case 'Good': return 'success';
+                            case 'Fair': return 'warning';
+                            case 'Poor': return 'danger';
+                            default: return 'secondary';
+                        }
+                    };
+                    
+                    // Populate modal fields
+                    $('#view_equipment_id').text(response.equipment_id || 'N/A');
+                    $('#view_equipment_name').text(response.equipment_name || 'N/A');
+                    $('#view_laboratory').text(response.laboratory ? response.laboratory.laboratory_name : 'Unassigned');
+                    $('#view_status').html(`<span class="badge bg-${getStatusBadgeColor(response.status)}">${response.status || 'Not Set'}</span>`);
+                    $('#view_serial_number').text(response.serial_number || 'Not Specified');
+                    $('#view_model_number').text(response.model_number || 'Not Specified');
+                    $('#view_condition').html(`<span class="badge bg-${getConditionBadgeColor(response.condition)}">${response.condition || 'Not Set'}</span>`);
+                    $('#view_acquisition_date').text(formatDate(response.acquisition_date));
+                    $('#view_last_maintenance').text(formatDate(response.last_maintenance_date));
+                    $('#view_next_maintenance').text(formatDate(response.next_maintenance_date));
+                    $('#view_description').text(response.description || 'No description available');
+
+                    // Show modal
+                    $('#viewEquipmentModal').modal('show');
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: xhr.responseJSON?.message || 'Failed to load equipment details'
+                    });
+                },
+                complete: function() {
+                    // Reset button state
+                    button.prop('disabled', false).html(originalHtml);
                 }
             });
         });
