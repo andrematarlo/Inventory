@@ -610,7 +610,8 @@ public function getStatusCounts()
     $counts = [
         'forApproval' => LaboratoryReservation::where('status', 'For Approval')->count(),
         'approved' => LaboratoryReservation::where('status', 'Approved')->count(),
-        'cancelled' => LaboratoryReservation::where('status', 'Cancelled')->count()
+        'cancelled' => LaboratoryReservation::where('status', 'Cancelled')->count(),
+        'disapproved' => LaboratoryReservation::where('status', 'Disapproved')->count()  // Add this line
     ];
 
     return response()->json($counts);

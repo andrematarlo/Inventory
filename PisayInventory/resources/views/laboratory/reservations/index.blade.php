@@ -207,13 +207,11 @@ $(document).ready(function() {
 
     // Load status counts
     function loadCounts() {
-    $.ajax({
-        url: "{{ route('laboratory.reservations.counts') }}", // Changed from 'laboratory.reservations.counts'
-        success: function(response) {
-            $('#forApprovalCount').text(response.forApproval);
-            $('#approvedCount').text(response.approved);
-            $('#disapprovedCount').text(response.cancelled);
-        }
+    $.get("{{ route('laboratory.reservations.counts') }}", function(response) {
+        $('#forApprovalCount').text(response.forApproval);
+        $('#approvedCount').text(response.approved);
+        $('#cancelledCount').text(response.cancelled);
+        $('#disapprovedCount').text(response.disapproved);  // Add this line
     });
 }
 
