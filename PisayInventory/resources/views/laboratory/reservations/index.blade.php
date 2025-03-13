@@ -243,73 +243,76 @@ $(document).ready(function() {
 
             html += `
                 <tr>
-                    <td>${reservation.control_no}</td>
-                    <td>${reservation.laboratory.laboratory_name}</td>
-                    <td>${reservation.grade_section}</td>
-                    <td>${reservation.subject}</td>
-                    <td>${reservation.teacher ? `${reservation.teacher.FirstName} ${reservation.teacher.LastName}` : '-'}</td>
-                    <td>${formatDate(reservation.reservation_date)}</td>
-                    <td>${formatTime(reservation.start_time)} - ${formatTime(reservation.end_time)}</td>
-                    <td>${reservation.requested_by}</td>
-                    <td>
-                        <div class="btn-group">
-                            <!-- View button always visible -->
-                            <button type="button" class="btn btn-info btn-sm view-reservation" 
-                                    data-id="${reservation.reservation_id}" title="View">
-                                <i class="bi bi-eye"></i>
+            <td>${reservation.control_no}</td>
+            <td>${reservation.laboratory.laboratory_name}</td>
+            <td>${reservation.grade_section}</td>
+            <td>${reservation.subject}</td>
+            <td>${reservation.teacher ? `${reservation.teacher.FirstName} ${reservation.teacher.LastName}` : '-'}</td>
+            <td>${formatDate(reservation.reservation_date)}</td>
+            <td>${formatTime(reservation.start_time)} - ${formatTime(reservation.end_time)}</td>
+            <td>${reservation.requested_by}</td>
+            <td>
+                <div class="btn-group">
+                    <!-- View button always visible -->
+                    <button type="button" class="btn btn-info btn-sm view-reservation" 
+                            data-id="${reservation.reservation_id}" title="View">
+                        <i class="bi bi-eye"></i>
+                    </button>
+
+                    ${/* Only show other buttons if status is not Disapproved */
+                    reservation.status !== 'Disapproved' ? `
+                        ${/* SRS/SRA approval buttons */
+                        (isAdmin || isSRSorSRA) && !reservation.approved_by ? `
+                            <button type="button" class="btn btn-success btn-sm approve-reservation" 
+                                    data-id="${reservation.reservation_id}" title="Approve">
+                                <i class="bi bi-check-lg"></i>
                             </button>
+                            <button type="button" class="btn btn-danger btn-sm disapprove-reservation" 
+                                    data-id="${reservation.reservation_id}" title="Disapprove">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        ` : ''}
 
-                            ${/* SRS/SRA approval buttons */
-                            (isAdmin || isSRSorSRA) && !reservation.approved_by ? `
-                                <button type="button" class="btn btn-success btn-sm approve-reservation" 
-                                        data-id="${reservation.reservation_id}" title="Approve">
-                                    <i class="bi bi-check-lg"></i>
-                                </button>
-                                <button type="button" class="btn btn-danger btn-sm disapprove-reservation" 
-                                        data-id="${reservation.reservation_id}" title="Disapprove">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            ` : ''}
+                        ${/* Teacher In-Charge endorsement for student requests */
+                        !isAdmin && !isSRSorSRA && isTeacherInCharge && 
+                        reservation.requested_by_type === 'student' && 
+                        reservation.endorsement_status === 'For Endorsement' ? `
+                            <button type="button" class="btn btn-success btn-sm endorse-reservation" 
+                                    data-id="${reservation.reservation_id}" title="Endorse">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm reject-reservation" 
+                                    data-id="${reservation.reservation_id}" title="Reject">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        ` : ''}
 
-                            ${/* Teacher In-Charge endorsement for student requests */
-                            !isAdmin && !isSRSorSRA && isTeacherInCharge && 
-                            reservation.requested_by_type === 'student' && 
-                            reservation.endorsement_status === 'For Endorsement' ? `
-                                <button type="button" class="btn btn-success btn-sm endorse-reservation" 
-                                        data-id="${reservation.reservation_id}" title="Endorse">
-                                    <i class="bi bi-check-lg"></i>
-                                </button>
-                                <button type="button" class="btn btn-danger btn-sm reject-reservation" 
-                                        data-id="${reservation.reservation_id}" title="Reject">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            ` : ''}
+                        ${/* Unit Head endorsement for teacher requests */
+                        !isAdmin && !isSRSorSRA && userRole === 'Unit Head' && 
+                        reservation.requested_by_type === 'teacher' && 
+                        reservation.endorsement_status === 'For Endorsement' ? `
+                            <button type="button" class="btn btn-success btn-sm endorse-reservation" 
+                                    data-id="${reservation.reservation_id}" title="Endorse">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm reject-reservation" 
+                                    data-id="${reservation.reservation_id}" title="Reject">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        ` : ''}
 
-                            ${/* Unit Head endorsement for teacher requests */
-                            !isAdmin && !isSRSorSRA && userRole === 'Unit Head' && 
-                            reservation.requested_by_type === 'teacher' && 
-                            reservation.endorsement_status === 'For Endorsement' ? `
-                                <button type="button" class="btn btn-success btn-sm endorse-reservation" 
-                                        data-id="${reservation.reservation_id}" title="Endorse">
-                                    <i class="bi bi-check-lg"></i>
-                                </button>
-                                <button type="button" class="btn btn-danger btn-sm reject-reservation" 
-                                        data-id="${reservation.reservation_id}" title="Reject">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            ` : ''}
-
-                            ${/* Cancel button for own pending requests */
-                            isOwnReservation && 
-                            reservation.endorsement_status === 'For Endorsement' ? `
-                                <button type="button" class="btn btn-danger btn-sm cancel-reservation" 
-                                        data-id="${reservation.reservation_id}" title="Cancel">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            ` : ''}
-                        </div>
-                    </td>
-                </tr>
+                        ${/* Cancel button for own pending requests */
+                        isOwnReservation && 
+                        reservation.endorsement_status === 'For Endorsement' ? `
+                            <button type="button" class="btn btn-danger btn-sm cancel-reservation" 
+                                    data-id="${reservation.reservation_id}" title="Cancel">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        ` : ''}
+                    ` : ''}
+                </div>
+            </td>
+        </tr>
             `;
         });
     }
