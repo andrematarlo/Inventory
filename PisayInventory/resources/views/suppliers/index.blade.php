@@ -473,9 +473,7 @@
                                         @endif
                                         @if($userPermissions->CanDelete)
                                         <button type="button" 
-                                                class="btn btn-danger delete-supplier" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#deleteSupplierModal"
+                                                class="btn btn-danger delete-supplier-btn" 
                                                 data-supplier-id="{{ $supplier->SupplierID }}"
                                                 data-supplier-name="{{ $supplier->CompanyName }}">
                                             <i class="bi bi-trash"></i>
@@ -592,7 +590,7 @@
     @endforeach
 @endif  
 
-<!-- Delete Modal Template -->
+<!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteSupplierModal" tabindex="-1" aria-labelledby="deleteSupplierModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -602,11 +600,11 @@
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete this supplier?</p>
-                <p id="supplierToDelete" class="fw-bold"></p>
+                <p id="supplierNameToDelete" class="fw-bold"></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteSupplierForm" method="POST" style="display: inline;">
+                <form id="deleteSupplierForm" action="" method="POST">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">Delete</button>
@@ -772,7 +770,7 @@
         });
 
         // Initialize all supplier modals
-        const supplierModals = document.querySelectorAll('[id^="addSupplierModal"], [id^="editSupplierModal"], [id^="deleteSupplierModal"]');
+        const supplierModals = document.querySelectorAll('[id^="addSupplierModal"], [id^="editSupplierModal"], [id^="deleteConfirmationModal"]');
         supplierModals.forEach(modal => {
             // Initialize with Bootstrap's options
             const bsModal = new bootstrap.Modal(modal, {
@@ -816,72 +814,19 @@
             });
         });
 
-        // Delete supplier handling
-        $('.delete-supplier').click(function() {
+        // Handle delete supplier button clicks
+        $('.delete-supplier-btn').on('click', function() {
             const supplierId = $(this).data('supplier-id');
             const supplierName = $(this).data('supplier-name');
             
             // Update the modal content
-            $('#supplierToDelete').text(supplierName);
+            $('#supplierNameToDelete').text(supplierName);
             
-            // Update the form action with proper URL
-            $('#deleteSupplierForm').attr('action', `{{ route('suppliers.index') }}/${supplierId}`);
-        });
-
-        // Handle form submission with SweetAlert
-        $('#deleteSupplierForm').on('submit', function(e) {
-            e.preventDefault();
-            const form = this;
-
-            // Close the modal
-            $('#deleteSupplierModal').modal('hide');
-
-            // Show loading state
-            Swal.fire({
-                title: 'Deleting...',
-                text: 'Please wait while we process your request',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                allowEnterKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            // Submit the form
-            $.ajax({
-                url: $(form).attr('action'),
-                type: 'POST',
-                data: $(form).serialize(),
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: 'Supplier has been deleted successfully.',
-                        confirmButtonColor: '#28a745'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.reload();
-                        }
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error('Delete Error:', xhr.responseText);
-                    let errorMessage = 'Something went wrong while deleting the supplier.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: errorMessage,
-                        confirmButtonColor: '#dc3545'
-                    });
-                }
-            });
+            // Set the form action
+            $('#deleteSupplierForm').attr('action', `/inventory/suppliers/${supplierId}`);
+            
+            // Show the modal
+            $('#deleteSupplierModal').modal('show');
         });
 
         // Restore confirmation handler
