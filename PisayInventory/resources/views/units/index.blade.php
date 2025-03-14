@@ -248,32 +248,22 @@
     </div>
 </div>
 
-<!-- Restore Modal Template -->
-<div class="modal fade" 
-     id="restoreUnitModal" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
-     tabindex="-1">
+<!-- Restore Modal -->
+<div class="modal fade" id="restoreUnitModal" tabindex="-1" aria-labelledby="restoreUnitModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-arrow-counterclockwise"></i> Restore Unit
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="restoreUnitModalLabel">Restore Unit</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-0">Are you sure you want to restore this unit?</p>
-                <div id="unitToRestore" class="alert alert-success mt-3">
-                    <i class="bi bi-info-circle"></i> This unit will be restored and available in the active records.
-                </div>
+                <p>Are you sure you want to restore this unit?</p>
+                <p id="unitNameToRestore" class="fw-bold text-success"></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg"></i> Cancel
-                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-success" id="confirmRestoreBtn">
-                    <i class="bi bi-arrow-counterclockwise"></i> Confirm Restore
+                    <i class="bi bi-arrow-counterclockwise"></i> Restore
                 </button>
             </div>
         </div>
@@ -354,49 +344,77 @@
             form.submit();
         });
 
-        // Restore confirmation handler
-        $('.btn-success').click(function(e) {
+        // Restore unit handling
+        $('.restore-unit').click(function(e) {
             e.preventDefault();
             const form = $(this).closest('form');
-            const unitName = $(this).closest('tr').find('td:nth-child(2)').text().trim();
+            const unitName = $(this).closest('tr').find('td:eq(1)').text(); // Get unit name from the table
             
-            // Update modal content with unit name and confirmation message
-            $('#restoreUnitModal .modal-body p').html(
-                `Are you sure you want to restore unit: <strong>${unitName}</strong>?`
-            );
-            $('#unitToRestore').html(
-                `<i class="bi bi-info-circle"></i> Unit <strong>${unitName}</strong> will be restored and moved to active records.`
-            );
+            // Update modal content
+            $('#unitNameToRestore').text(unitName);
             
             // Store the form for use in confirmation
             $('#confirmRestoreBtn').data('form', form);
             
             // Show the modal
-            const restoreModal = new bootstrap.Modal(document.getElementById('restoreUnitModal'));
-            restoreModal.show();
+            $('#restoreUnitModal').modal('show');
         });
 
         // Handle restore confirmation
         $('#confirmRestoreBtn').click(function() {
             const form = $(this).data('form');
-            if (form) {
-                // Hide the modal before submitting
-                $('#restoreUnitModal').modal('hide');
-                
-                // Submit the form
-                form.submit();
+            
+            // Hide the modal
+            $('#restoreUnitModal').modal('hide');
+            
+            // Show loading state
+            Swal.fire({
+                title: 'Restoring...',
+                text: 'Please wait while we process your request',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
 
-                // Show success notification
-                Swal.fire({
-                    title: 'Success!',
-                    text: 'Unit has been restored successfully.',
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    toast: true,
-                    position: 'top-end'
-                });
-            }
+            // Submit the form using AJAX
+            $.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: form.serialize(),
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Unit has been restored successfully.',
+                        confirmButtonColor: '#198754',
+                        showConfirmButton: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.reload();
+                        }
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Restore Error:', xhr.responseText);
+                    let errorMessage = 'Something went wrong while restoring the unit.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: errorMessage,
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
         });
     });
 </script>
@@ -552,6 +570,62 @@ document.addEventListener('DOMContentLoaded', function() {
     #restoreUnitModal .btn-success:hover {
         background-color: #157347;
         border-color: #146c43;
+    }
+
+    /* Restore Modal Styles */
+    #restoreUnitModal .modal-header {
+        background-color: #198754;
+        color: white;
+    }
+
+    #restoreUnitModal .btn-close-white {
+        filter: brightness(0) invert(1);
+    }
+
+    #restoreUnitModal .modal-body {
+        padding: 1.5rem;
+    }
+
+    #restoreUnitModal #unitNameToRestore {
+        color: #198754;
+        font-size: 1.1rem;
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    #restoreUnitModal .modal-footer {
+        padding: 1rem;
+        border-top: 1px solid #dee2e6;
+    }
+
+    #restoreUnitModal .btn-success {
+        background-color: #198754;
+        border-color: #198754;
+    }
+
+    #restoreUnitModal .btn-success:hover {
+        background-color: #157347;
+        border-color: #146c43;
+    }
+
+    /* SweetAlert2 Custom Styles */
+    .swal2-popup {
+        font-size: 0.9rem;
+    }
+
+    .swal2-title {
+        font-size: 1.5rem;
+    }
+
+    .swal2-content {
+        font-size: 1rem;
+    }
+
+    .swal2-confirm {
+        padding: 0.5rem 1.5rem !important;
     }
 </style>
 @endsection

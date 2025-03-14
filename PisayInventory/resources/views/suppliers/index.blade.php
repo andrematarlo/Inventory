@@ -465,7 +465,7 @@
                                     <div class="d-flex gap-2">
                                         @if($userPermissions->CanEdit)
                                         <button type="button" 
-                                                class="btn btn-primary" 
+                                                class="btn btn-primary btn-sm" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
                                             <i class="bi bi-pencil-square"></i>
@@ -473,7 +473,9 @@
                                         @endif
                                         @if($userPermissions->CanDelete)
                                         <button type="button" 
-                                                class="btn btn-danger delete-supplier-btn" 
+                                                class="btn btn-danger btn-sm delete-supplier" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteSupplierModal"
                                                 data-supplier-id="{{ $supplier->SupplierID }}"
                                                 data-supplier-name="{{ $supplier->CompanyName }}">
                                             <i class="bi bi-trash"></i>
@@ -604,10 +606,11 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteSupplierForm" action="" method="POST">
+                <form id="deleteSupplierForm" method="POST" style="display: inline;">
                     @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
                 </form>
             </div>
         </div>
@@ -641,10 +644,8 @@
 @section('scripts')
 <!-- Add jQuery if not already included -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<!-- Add DataTables JS -->
-<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
 
 <!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -656,50 +657,32 @@
     $(document).ready(function() {
         console.log('Document ready'); // Debug log
 
-        // Initialize DataTables
-        const activeTable = $('#suppliersTable').DataTable({
+        // Initialize DataTable
+        const table = $('#suppliersTable').DataTable({
+            responsive: true,
             pageLength: 10,
-            responsive: {
-                details: false  // Disable the details display functionality
-            },
-            dom: '<"datatable-header"<"dataTables_length"l><"dataTables_filter"f>>' +
-                 't' +
-                 '<"datatable-footer"<"dataTables_info"i><"dataTables_paginate"p>>',
-            language: {
-                search: "Search:",
-                searchPlaceholder: "Search suppliers..."
-            },
+            ordering: true,
+            searching: true,
             columnDefs: [
-                { className: "actions-column", targets: 0, width: "100px", orderable: false, createdCell: function(td, cellData, rowData, row, col) {
-                    // Ensure no additional buttons are added to the actions column
-                    $(td).find('.btn-group').addClass('only-edit-delete');
-                }},
-                { className: "name-column", targets: 1 },
-                { className: "contact-person-column", targets: 2 },
-                { className: "contact-number-column", targets: 3 },
-                { className: "email-column", targets: 4 },
-                { className: "address-column", targets: 5 },
-                { className: "created-by-column", targets: 6 },
-                { className: "created-date-column", targets: 7 }
+                { orderable: false, targets: 0 }, // Actions column
+                { orderable: true, targets: '_all' }
             ],
-            order: [[1, 'asc']], // Order by name column by default
-        });
-
-        const deletedTable = $('#deletedSuppliersTable').DataTable({
-            pageLength: 10,
-            responsive: {
-                details: false  // Disable the details display functionality
-            },
+            order: [[1, 'asc']], // Sort by company name by default
             language: {
                 search: "Search:",
-                searchPlaceholder: "Search suppliers..."
-            },
-            "ordering": false,
-            "order": [],
-            "columnDefs": [{
-                "orderable": false,
-                "targets": "_all"
-            }]
+                searchPlaceholder: "Search suppliers...",
+                lengthMenu: "Show _MENU_ entries",
+                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                infoEmpty: "Showing 0 to 0 of 0 entries",
+                infoFiltered: "(filtered from _MAX_ total entries)",
+                emptyTable: "No suppliers found",
+                paginate: {
+                    first: "First",
+                    last: "Last",
+                    next: "Next",
+                    previous: "Previous"
+                }
+            }
         });
 
         // Show active records by default
@@ -709,13 +692,13 @@
         $('#activeRecordsBtn').click(function() {
             $('#activeSuppliers').show();
             $('#deletedSuppliers').hide();
-            activeTable.columns.adjust().draw();
+            table.columns.adjust().draw();
         });
 
         $('#showDeletedBtn').click(function() {
             $('#activeSuppliers').hide();
             $('#deletedSuppliers').show();
-            deletedTable.columns.adjust().draw();
+            table.columns.adjust().draw();
         });
 
         // Initialize Select2 for multiple selection
@@ -814,19 +797,75 @@
             });
         });
 
-        // Handle delete supplier button clicks
-        $('.delete-supplier-btn').on('click', function() {
+        // Delete supplier handling
+        $('.delete-supplier').click(function() {
             const supplierId = $(this).data('supplier-id');
             const supplierName = $(this).data('supplier-name');
             
             // Update the modal content
             $('#supplierNameToDelete').text(supplierName);
             
-            // Set the form action
-            $('#deleteSupplierForm').attr('action', `/inventory/suppliers/${supplierId}`);
+            // Update the form action with the correct route
+            $('#deleteSupplierForm').attr('action', `{{ url('inventory/suppliers/delete') }}/${supplierId}`);
             
             // Show the modal
             $('#deleteSupplierModal').modal('show');
+        });
+
+        // Handle delete form submission
+        $('#deleteSupplierForm').on('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+
+            // Close the modal
+            $('#deleteSupplierModal').modal('hide');
+
+            // Show loading state
+            Swal.fire({
+                title: 'Deleting...',
+                text: 'Please wait while we process your request',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Submit the form using POST
+            $.ajax({
+                url: $(form).attr('action'),
+                type: 'POST',
+                data: $(form).serialize(),
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Supplier has been deleted successfully.',
+                        confirmButtonColor: '#28a745'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.reload();
+                        }
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Delete Error:', xhr.responseText);
+                    let errorMessage = 'Something went wrong while deleting the supplier.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: errorMessage,
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
         });
 
         // Restore confirmation handler
