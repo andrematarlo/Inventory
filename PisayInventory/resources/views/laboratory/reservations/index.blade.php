@@ -418,7 +418,7 @@ $(document).on('click', '.cancel-reservation', function() {
                     text: xhr.responseJSON?.message || 'Something went wrong.'
                 });
             }
-            });
+        });
         }
     });
 });
@@ -525,14 +525,14 @@ $(document).on('click', '.disapprove-reservation', function() {
 
 // Separate function for disapproval
 function disapproveReservation(id, remarks) {
-    $.ajax({
+                $.ajax({
         url: "{{ route('laboratory.reservations.disapprove', '_id_') }}".replace('_id_', id),
-        type: 'POST',
-        data: {
+                    type: 'POST',
+                    data: {
             _token: '{{ csrf_token() }}',
             remarks: remarks
-        },
-        success: function(response) {
+                    },
+                    success: function(response) {
             Swal.fire({
                 icon: 'success',
                 title: 'Reservation Disapproved',
@@ -549,9 +549,9 @@ function disapproveReservation(id, remarks) {
                 currentPage = 1; // Reset to first page
                 loadReservations();
                 loadCounts();
-            });
-        },
-        error: function(xhr) {
+                        });
+                    },
+                    error: function(xhr) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error!',

@@ -388,12 +388,15 @@
 @endsection
 
 @section('content')
+<!-- Add CSRF Token meta tag at the top of the content section -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Suppliers Management</h2>
         @if($userPermissions && $userPermissions->CanAdd)
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-            Add Supplier
+        <button type="button" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+            <i class="bi bi-plus-circle"></i> Add Supplier
         </button>
         @endif
     </div>
@@ -465,19 +468,24 @@
                                     <div class="d-flex gap-2">
                                         @if($userPermissions->CanEdit)
                                         <button type="button" 
-                                                class="btn btn-primary" 
+                                                class="btn btn-primary btn-sm" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#editSupplierModal{{ $supplier->SupplierID }}">
-                                            <i class="bi bi-pencil-square"></i>
+                                            <i class="bi bi-pencil"></i>
                                         </button>
                                         @endif
                                         @if($userPermissions->CanDelete)
-                                        <button type="button" 
-                                                class="btn btn-danger delete-supplier-btn" 
-                                                data-supplier-id="{{ $supplier->SupplierID }}"
-                                                data-supplier-name="{{ $supplier->CompanyName }}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" 
+                                              method="POST" 
+                                              style="display: inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Are you sure you want to delete {{ $supplier->CompanyName }}?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
                                         @endif
                                     </div>
                                 </td>
@@ -590,7 +598,7 @@
     @endforeach
 @endif  
 
-<!-- Delete Confirmation Modal -->
+<!-- Update Delete Confirmation Modal -->
 <div class="modal fade" id="deleteSupplierModal" tabindex="-1" aria-labelledby="deleteSupplierModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -604,11 +612,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteSupplierForm" action="" method="POST">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
             </div>
         </div>
     </div>
@@ -654,13 +658,11 @@
 
 <script>
     $(document).ready(function() {
-        console.log('Document ready'); // Debug log
-
         // Initialize DataTables
         const activeTable = $('#suppliersTable').DataTable({
             pageLength: 10,
             responsive: {
-                details: false  // Disable the details display functionality
+                details: false
             },
             dom: '<"datatable-header"<"dataTables_length"l><"dataTables_filter"f>>' +
                  't' +
@@ -668,192 +670,108 @@
             language: {
                 search: "Search:",
                 searchPlaceholder: "Search suppliers..."
-            },
-            columnDefs: [
-                { className: "actions-column", targets: 0, width: "100px", orderable: false, createdCell: function(td, cellData, rowData, row, col) {
-                    // Ensure no additional buttons are added to the actions column
-                    $(td).find('.btn-group').addClass('only-edit-delete');
-                }},
-                { className: "name-column", targets: 1 },
-                { className: "contact-person-column", targets: 2 },
-                { className: "contact-number-column", targets: 3 },
-                { className: "email-column", targets: 4 },
-                { className: "address-column", targets: 5 },
-                { className: "created-by-column", targets: 6 },
-                { className: "created-date-column", targets: 7 }
-            ],
-            order: [[1, 'asc']], // Order by name column by default
+            }
         });
 
         const deletedTable = $('#deletedSuppliersTable').DataTable({
             pageLength: 10,
             responsive: {
-                details: false  // Disable the details display functionality
+                details: false
             },
             language: {
                 search: "Search:",
                 searchPlaceholder: "Search suppliers..."
-            },
-            "ordering": false,
-            "order": [],
-            "columnDefs": [{
-                "orderable": false,
-                "targets": "_all"
-            }]
+            }
         });
 
         // Show active records by default
+        $('#activeSuppliers').show();
         $('#deletedSuppliers').hide();
 
         // Toggle between active and deleted records
         $('#activeRecordsBtn').click(function() {
+            $(this).addClass('active');
+            $('#showDeletedBtn').removeClass('active');
             $('#activeSuppliers').show();
             $('#deletedSuppliers').hide();
             activeTable.columns.adjust().draw();
         });
 
         $('#showDeletedBtn').click(function() {
+            $(this).addClass('active');
+            $('#activeRecordsBtn').removeClass('active');
             $('#activeSuppliers').hide();
             $('#deletedSuppliers').show();
             deletedTable.columns.adjust().draw();
         });
 
-        // Initialize Select2 for multiple selection
-        function initializeSelect2(modalId) {
-            $(`#${modalId} .select2-multiple`).select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                dropdownParent: $(`#${modalId}`),
-                placeholder: 'Search and select items',
-                allowClear: true,
-                closeOnSelect: false,
-                tags: false,
-                language: {
-                    noResults: function() {
-                        return 'No items found';
-                    },
-                    searching: function() {
-                        return 'Searching...';
-                    }
-                },
-                templateResult: formatItem,
-                templateSelection: formatItemSelection
-            });
-        }
+        let supplierIdToDelete = null;
 
-        // Format each item in dropdown
-        function formatItem(item) {
-            if (!item.id) return item.text;
-            return $(`<span><i class="bi bi-box"></i> ${item.text}</span>`);
-        }
+        // Handle delete button click
+        $('.delete-supplier-btn').on('click', function(e) {
+            e.preventDefault();
+            const button = $(this);
+            const form = button.closest('form');
+            const supplierName = button.data('supplier-name');
 
-        // Format selected items
-        function formatItemSelection(item) {
-            if (!item.id) return item.text;
-            return $(`<span><i class="bi bi-check2"></i> ${item.text}</span>`);
-        }
-
-        // Initialize Select2 for each modal
-        $('.modal').each(function() {
-            initializeSelect2($(this).attr('id'));
-        });
-
-        // Reinitialize Select2 when modal opens
-        $('.modal').on('shown.bs.modal', function() {
-            initializeSelect2($(this).attr('id'));
-        });
-
-        // Clear form and Select2 when modal closes
-        $('.modal').on('hidden.bs.modal', function() {
-            $(this).find('form').trigger('reset');
-            $(this).find('.select2-multiple').val(null).trigger('change');
-        });
-
-        // Initialize all supplier modals
-        const supplierModals = document.querySelectorAll('[id^="addSupplierModal"], [id^="editSupplierModal"], [id^="deleteConfirmationModal"]');
-        supplierModals.forEach(modal => {
-            // Initialize with Bootstrap's options
-            const bsModal = new bootstrap.Modal(modal, {
-                backdrop: 'static',
-                keyboard: false
-            });
-
-            // Add click handler to prevent closing
-            $(modal).on('click mousedown', function(e) {
-                if ($(e.target).hasClass('modal')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-            });
-
-            // Also prevent Esc key
-            $(modal).on('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    return false;
+            Swal.fire({
+                title: 'Delete Supplier',
+                text: `Are you sure you want to delete ${supplierName}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Delete',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Deleting...',
+                        text: 'Please wait while we delete the supplier.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                            // Submit the form
+                            form.submit();
+                        }
+                    });
                 }
             });
         });
 
-        // Initialize all modals with static backdrop
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            const bsModal = new bootstrap.Modal(modal, {
-                backdrop: 'static',
-                keyboard: false
-            });
-
-            // Prevent modal from closing when clicking outside
-            $(modal).on('mousedown', function(e) {
-                if ($(e.target).is('.modal')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-            });
-        });
-
-        // Handle delete supplier button clicks
-        $('.delete-supplier-btn').on('click', function() {
-            const supplierId = $(this).data('supplier-id');
-            const supplierName = $(this).data('supplier-name');
-            
-            // Update the modal content
-            $('#supplierNameToDelete').text(supplierName);
-            
-            // Set the form action
-            $('#deleteSupplierForm').attr('action', `/inventory/suppliers/${supplierId}`);
-            
-            // Show the modal
-            $('#deleteSupplierModal').modal('show');
-        });
-
-        // Restore confirmation handler
-        $('.restore-supplier').click(function(e) {
+        // Handle restore supplier button clicks
+        $(document).on('click', '.restore-supplier', function(e) {
             e.preventDefault();
             const form = $(this).closest('form');
             const supplierName = $(this).data('supplier-name');
             
-            // Update modal content
-            $('#restoreSupplierModal .modal-body p').html(
-                `Are you sure you want to restore supplier: <strong>${supplierName}</strong>?`
-            );
-            
-            // Store the form for use in confirmation
-            $('#confirmRestoreBtn').data('form', form);
-            
-            // Show the modal
-            const restoreModal = new bootstrap.Modal(document.getElementById('restoreSupplierModal'));
-            restoreModal.show();
-        });
+            Swal.fire({
+                title: 'Restore Supplier?',
+                html: `Are you sure you want to restore supplier:<br><strong>${supplierName}</strong>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, restore it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Restoring...',
+                        html: 'Please wait while we restore the supplier.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
 
-        // Handle restore confirmation
-        $('#confirmRestoreBtn').click(function() {
-            const form = $(this).data('form');
-            if (form) {
-                form.submit();
-            }
+                    form.submit();
+                }
+            });
         });
     });
 </script>
