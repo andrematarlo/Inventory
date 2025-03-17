@@ -29,6 +29,22 @@
         <div>{{ $reservation->num_students }}</div>
     </div>
 
+        <!-- Add Group Members section -->
+        @if($reservation->group_members && count(array_filter($reservation->group_members)) > 0)
+    <div class="mb-3">
+        <strong>Group Members:</strong>
+        <div>
+            <ol class="ps-3 mb-0">
+                @foreach($reservation->group_members as $member)
+                    @if(!empty($member))
+                        <li>{{ $member }}</li>
+                    @endif
+                @endforeach
+            </ol>
+        </div>
+    </div>
+    @endif
+
     <div class="mb-3">
         <strong>Status:</strong>
         <div>
