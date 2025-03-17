@@ -164,7 +164,7 @@
                                         disabled 
                                         placeholder="{{ Auth::user()->role === 'Teacher' ? 'Will be endorsed by Unit Head' : 'Will be endorsed by Subject Teacher' }}">
                                     <small class="text-muted text-center mt-1">
-                                        {{ Auth::user()->role === 'Teacher' ? 'Unit Head' : 'Subject Teacher/Unit Head' }}
+                                        {{ Auth::user()->role === 'Teacher' ? 'Unit Head' : 'Subject Teacher' }}
                                     </small>
                                 </div>
                             </div>

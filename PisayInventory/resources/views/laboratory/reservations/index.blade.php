@@ -303,6 +303,7 @@ $(document).ready(function() {
 
                         ${/* Cancel button for own pending requests */
                         isOwnReservation && 
+                        reservation.status !== 'Approved' && // Add this condition
                         reservation.endorsement_status === 'For Endorsement' ? `
                             <button type="button" class="btn btn-danger btn-sm cancel-reservation" 
                                     data-id="${reservation.reservation_id}" title="Cancel">
