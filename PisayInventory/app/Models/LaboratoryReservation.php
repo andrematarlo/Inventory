@@ -37,6 +37,11 @@ class LaboratoryReservation extends Model
         'endorsed_at',
         'endorser_role',
         'approved_by',
+        'approved_at',
+        'approver_role',
+        'disapproved_by',
+        'disapproved_at',
+        'disapprover_role',
         'status',
         'remarks',
         'created_by',
@@ -137,4 +142,21 @@ class LaboratoryReservation extends Model
     {
         return 'reservation_id';
     }
+
+    public function endorser()
+{
+    return $this->belongsTo(Employee::class, 'endorsed_by', 'EmployeeID');
+}
+
+public function approver()
+{
+    return $this->belongsTo(Employee::class, 'approved_by', 'EmployeeID');
+}
+
+public function disapprover()
+{
+    return $this->belongsTo(\App\Models\Employee::class, 'disapproved_by', 'EmployeeID')
+        ->withDefault() // This will prevent null errors
+        ->select(['EmployeeID', 'FirstName', 'LastName']);
+}
 }

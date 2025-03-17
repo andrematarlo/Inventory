@@ -59,16 +59,54 @@
             @endif
         </div>
     </div>
+    
 
-    @if($reservation->status == 'Disapproved')
-    <div class="mb-3">
-        <strong>Reason for Disapproval:</strong>
-        <div>{{ $reservation->remarks }}</div>
+        <!-- Add Endorsement/Approval/Disapproval Information -->
+@if($reservation->endorsed_by)
+<div class="mb-3">
+    <strong>Endorsed by:</strong>
+    <div>
+        {{ optional($reservation->endorser)->FirstName }} 
+        {{ optional($reservation->endorser)->LastName }}
     </div>
-    @elseif($reservation->remarks)
-    <div class="mb-3">
-        <strong>Remarks:</strong>
-        <div>{{ $reservation->remarks }}</div>
-    </div>
+    @if($reservation->endorsed_at)
+        <small class="text-muted">{{ \Carbon\Carbon::parse($reservation->endorsed_at)->format('M d, Y h:i A') }}</small>
     @endif
+</div>
+@endif
+
+@if($reservation->status == 'Approved' && $reservation->approved_by)
+<div class="mb-3">
+    <strong>Approved by:</strong>
+    <div>
+        {{ optional($reservation->approver)->FirstName }} 
+        {{ optional($reservation->approver)->LastName }}
+    </div>
+    @if($reservation->approved_at)
+        <small class="text-muted">{{ \Carbon\Carbon::parse($reservation->approved_at)->format('M d, Y h:i A') }}</small>
+    @endif
+</div>
+@endif
+
+@if($reservation->status === 'Disapproved')
+<div class="mb-3">
+    <strong>Disapproved by:</strong>
+    <div>
+        @if($reservation->disapproved_by && $reservation->disapprover)
+            {{ $reservation->disapprover->FirstName }} {{ $reservation->disapprover->LastName }}
+            @if($reservation->disapproved_at)
+                <br>
+                <small class="text-muted">{{ \Carbon\Carbon::parse($reservation->disapproved_at)->format('M d, Y h:i A') }}</small>
+            @endif
+        @else
+            <span class="text-muted">Not specified</span>
+        @endif
+    </div>
+</div>
+
+<div class="mb-3">
+    <strong>Reason for Disapproval:</strong>
+    <div>{{ $reservation->remarks ?? 'No reason provided' }}</div>
+</div>
+@endif
 </div>

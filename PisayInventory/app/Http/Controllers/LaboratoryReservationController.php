@@ -501,10 +501,25 @@ public function approve($id)
             ], 422);
         }
 
+        // Add logging to track the update
+        \Log::info('Attempting to approve reservation', [
+            'reservation_id' => $id,
+            'employee_id' => $employee->EmployeeID
+        ]);
+
         $reservation->update([
             'status' => 'Approved',
             'approved_by' => $employee->EmployeeID,  // Use the actual EmployeeID
+            'approved_at' => now(),                  // Add the timestamp
             'updated_by' => $employee->EmployeeID    // Use the same EmployeeID for updated_by
+        ]);
+
+        // Verify the update
+        $updatedReservation = $reservation->fresh();
+        \Log::info('Reservation approved', [
+            'status' => $updatedReservation->status,
+            'approved_by' => $updatedReservation->approved_by,
+            'approved_at' => $updatedReservation->approved_at
         ]);
 
         return response()->json([
@@ -524,11 +539,13 @@ public function disapprove($id)
     try {
         $reservation = LaboratoryReservation::findOrFail($id);
         
-        // Add debugging
+        // Enhanced debugging for initial state
         \Log::info('Disapproval request received', [
             'id' => $id,
             'remarks' => request('remarks'),
-            'request_data' => request()->all()
+            'request_data' => request()->all(),
+            'current_status' => $reservation->status,
+            'current_disapproved_by' => $reservation->disapproved_by
         ]);
         
         if ($reservation->status !== 'For Approval') {
@@ -539,6 +556,12 @@ public function disapprove($id)
         }
 
         $employee = \App\Models\Employee::where('UserAccountID', Auth::user()->UserAccountID)->first();
+        
+        // Log employee details
+        \Log::info('Employee found', [
+            'employee_id' => $employee ? $employee->EmployeeID : null,
+            'name' => $employee ? ($employee->FirstName . ' ' . $employee->LastName) : 'Not found'
+        ]);
         
         if (!$employee) {
             return response()->json([
@@ -558,18 +581,20 @@ public function disapprove($id)
                 'updated_by' => $employee->EmployeeID
             ];
             
-            // Add more debugging
             \Log::info('Attempting to update reservation', [
                 'update_data' => $updateData
             ]);
 
             $reservation->update($updateData);
 
-            // Verify the update
+            // Enhanced verification logging
             $updatedReservation = $reservation->fresh();
             \Log::info('Reservation updated', [
                 'new_status' => $updatedReservation->status,
-                'new_remarks' => $updatedReservation->remarks
+                'new_remarks' => $updatedReservation->remarks,
+                'new_disapproved_by' => $updatedReservation->disapproved_by,
+                'new_disapproved_at' => $updatedReservation->disapproved_at,
+                'employee_id_match' => $updatedReservation->disapproved_by === $employee->EmployeeID
             ]);
 
             DB::commit();
@@ -659,16 +684,35 @@ public function generateControlNo()
     
      */
     public function show($id)
-    {
-        $reservation = LaboratoryReservation::with(['laboratory', 'reserver.employee'])
-            ->findOrFail($id);
-        
-        if (request()->ajax()) {
-            return view('laboratory.reservations.show', compact('reservation'))->render();
+{
+    $reservation = LaboratoryReservation::with([
+        'laboratory', 
+        'reserver.employee',
+        'endorser',
+        'approver',
+        'disapprover' => function($query) {
+            $query->select(['EmployeeID', 'FirstName', 'LastName']);
         }
-        
-        return view('laboratory.reservations.show', compact('reservation'));
+    ])->findOrFail($id);
+    
+    // Add more detailed debugging
+    \Log::info('Reservation details:', [
+        'id' => $id,
+        'status' => $reservation->status,
+        'disapproved_by' => $reservation->disapproved_by,
+        'disapproved_at' => $reservation->disapproved_at,
+        'disapprover_info' => $reservation->disapprover ? [
+            'id' => $reservation->disapprover->EmployeeID,
+            'name' => $reservation->disapprover->FirstName . ' ' . $reservation->disapprover->LastName
+        ] : null
+    ]);
+    
+    if (request()->ajax()) {
+        return view('laboratory.reservations.show', compact('reservation'))->render();
     }
+    
+    return view('laboratory.reservations.show', compact('reservation'));
+}
 
     /**
      * Show the form for editing the specified reservation.
