@@ -475,12 +475,18 @@
                                         </button>
                                         @endif
                                         @if($userPermissions->CanDelete)
-                                        <button type="button" 
-                                                class="btn btn-danger delete-supplier-btn" 
-                                                data-supplier-id="{{ $supplier->SupplierID }}"
-                                                data-supplier-name="{{ $supplier->CompanyName }}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <form action="{{ route('suppliers.destroy', $supplier->SupplierID) }}" 
+                                              method="POST" 
+                                              class="d-inline delete-supplier-form">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" 
+                                                    class="btn btn-danger btn-sm delete-supplier-btn" 
+                                                    data-supplier-id="{{ $supplier->SupplierID }}"
+                                                    data-supplier-name="{{ $supplier->CompanyName }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
                                         @endif
                                     </div>
                                 </td>
@@ -543,10 +549,12 @@
                         <tr>
                             <td>
                                 <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
-                                      method="POST">
+                                      method="POST" 
+                                      class="d-inline restore-supplier-form">
                                     @csrf
                                     <button type="button" 
-                                            class="btn btn-sm btn-success restore-supplier"
+                                            class="btn btn-success btn-sm restore-supplier-btn"
+                                            data-supplier-id="{{ $supplier->SupplierID }}"
                                             data-supplier-name="{{ $supplier->CompanyName }}">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </button>
@@ -726,16 +734,16 @@
 
         let supplierIdToDelete = null;
 
-        // Handle delete button click
+        // Delete supplier handler
         $('.delete-supplier-btn').on('click', function(e) {
             e.preventDefault();
             const button = $(this);
-            const form = button.closest('form');
             const supplierName = button.data('supplier-name');
+            const form = button.closest('.delete-supplier-form');
 
             Swal.fire({
                 title: 'Delete Supplier',
-                text: `Are you sure you want to delete ${supplierName}?`,
+                html: `Are you sure you want to delete supplier:<br><strong>${supplierName}</strong>?`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
@@ -744,7 +752,6 @@
                 cancelButtonText: 'Cancel'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Show loading state
                     Swal.fire({
                         title: 'Deleting...',
                         text: 'Please wait while we delete the supplier.',
@@ -753,7 +760,6 @@
                         showConfirmButton: false,
                         didOpen: () => {
                             Swal.showLoading();
-                            // Submit the form
                             form.submit();
                         }
                     });
@@ -761,29 +767,15 @@
             });
         });
 
-        // Handle delete supplier button clicks
-        $('.delete-supplier-btn').on('click', function() {
-            const supplierId = $(this).data('supplier-id');
-            const supplierName = $(this).data('supplier-name');
-            
-            // Update the modal content
-            $('#supplierNameToDelete').text(supplierName);
-            
-            // Set the form action
-            $('#deleteSupplierForm').attr('action', `/inventory/suppliers/${supplierId}`);
-            
-            // Show the modal
-            $('#deleteSupplierModal').modal('show');
-        });
-
-        // Restore confirmation handler
-        $('.restore-supplier').click(function(e) {
+        // Restore supplier handler
+        $('.restore-supplier-btn').on('click', function(e) {
             e.preventDefault();
-            const form = $(this).closest('form');
-            const supplierName = $(this).data('supplier-name');
-            
+            const button = $(this);
+            const supplierName = button.data('supplier-name');
+            const form = button.closest('.restore-supplier-form');
+
             Swal.fire({
-                title: 'Restore Supplier?',
+                title: 'Restore Supplier',
                 html: `Are you sure you want to restore supplier:<br><strong>${supplierName}</strong>?`,
                 icon: 'question',
                 showCancelButton: true,
@@ -793,17 +785,17 @@
                 cancelButtonText: 'Cancel'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Show loading state
                     Swal.fire({
                         title: 'Restoring...',
-                        html: 'Please wait while we restore the supplier.',
+                        text: 'Please wait while we restore the supplier.',
                         allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
                         didOpen: () => {
                             Swal.showLoading();
+                            form.submit();
                         }
                     });
-
-                    form.submit();
                 }
             });
         });
