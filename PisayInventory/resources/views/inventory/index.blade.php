@@ -192,7 +192,7 @@
     </div>
 
     <!-- Deleted Records Card -->
-    <div class="card mb-4" id="deletedRecordsCard" style="display: none;">
+    <div class="card mb-4" id="deletedRecordsCard">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Deleted Inventory</h5>
@@ -487,13 +487,6 @@
 <!-- Add jQuery if not already included -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- Add DataTables JS -->
-<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
-
-<!-- Select2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <!-- Add SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -503,39 +496,25 @@ const successMessage = "{{ Session::has('success') ? Session::get('success') : '
 const errorMessage = "{{ Session::has('error') ? Session::get('error') : '' }}";
 
 $(document).ready(function() {
-    // Initialize DataTable for inventory
-    $('#inventoryTable').DataTable({
-        responsive: true,
-        order: [[7, 'desc']] // Order by date created by default
-    });
-
-    // Initialize deleted records table if it exists
-    if ($('#deletedInventoryTable').length) {
-        $('#deletedInventoryTable').DataTable({
-            responsive: true,
-            order: [[11, 'desc']] // Order by date deleted
-        });
-    }
-
     // Toggle between active and deleted records
     const activeRecordsBtn = $('#activeRecords');
     const deletedRecordsBtn = $('#deletedRecords');
-    const activeTable = $('#inventoryTableWrapper');
-    const deletedTable = $('#deletedInventoryTableWrapper');
+    const activeRecordsCard = $('#activeRecordsCard');
+    const deletedRecordsCard = $('#deletedRecordsCard');
 
     // Hide deleted records by default
-    deletedTable.hide();
+    deletedRecordsCard.hide();
 
     activeRecordsBtn.click(function() {
-        activeTable.show();
-        deletedTable.hide();
+        activeRecordsCard.show();
+        deletedRecordsCard.hide();
         activeRecordsBtn.removeClass('btn-outline-primary').addClass('btn-primary');
         deletedRecordsBtn.removeClass('btn-danger').addClass('btn-outline-danger');
     });
 
     deletedRecordsBtn.click(function() {
-        activeTable.hide();
-        deletedTable.show();
+        activeRecordsCard.hide();
+        deletedRecordsCard.show();
         activeRecordsBtn.removeClass('btn-primary').addClass('btn-outline-primary');
         deletedRecordsBtn.removeClass('btn-outline-danger').addClass('btn-danger');
     });
@@ -594,8 +573,11 @@ $(document).ready(function() {
                 // Create and submit form
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ route('inventory.index') }}/" + inventoryId + "/restore";
-                form.innerHTML = `@csrf`;
+                form.action = "{{ route('inventory.restore', ':id') }}".replace(':id', inventoryId);
+                form.innerHTML = `
+                    @csrf
+                    @method('PUT')
+                `;
                 document.body.appendChild(form);
                 form.submit();
             }
@@ -620,19 +602,27 @@ $(document).ready(function() {
             confirmButtonColor: '#dc3545'
         });
     }
+
+    // Simple search functionality for active records
+    $('#activeSearchInput').on('keyup', function() {
+        const searchText = $(this).val().toLowerCase();
+        $('#activeTableBody tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+        });
+    });
+
+    // Simple search functionality for deleted records
+    $('#deletedSearchInput').on('keyup', function() {
+        const searchText = $(this).val().toLowerCase();
+        $('#deletedTableBody tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+        });
+    });
 });
 </script>
 @endsection
 
 @section('styles')
-<!-- Add DataTables CSS -->
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
-
-<!-- Select2 CSS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-
 <!-- Add SweetAlert2 CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 @endsection
