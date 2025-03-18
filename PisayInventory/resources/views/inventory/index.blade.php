@@ -192,7 +192,7 @@
     </div>
 
     <!-- Deleted Records Card -->
-    <div class="card mb-4" id="deletedRecordsCard" style="display: none;">
+    <div class="card mb-4" id="deletedRecordsCard">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Deleted Inventory</h5>
@@ -520,22 +520,22 @@ $(document).ready(function() {
     // Toggle between active and deleted records
     const activeRecordsBtn = $('#activeRecords');
     const deletedRecordsBtn = $('#deletedRecords');
-    const activeTable = $('#inventoryTableWrapper');
-    const deletedTable = $('#deletedInventoryTableWrapper');
+    const activeRecordsCard = $('#activeRecordsCard');
+    const deletedRecordsCard = $('#deletedRecordsCard');
 
     // Hide deleted records by default
-    deletedTable.hide();
+    deletedRecordsCard.hide();
 
     activeRecordsBtn.click(function() {
-        activeTable.show();
-        deletedTable.hide();
+        activeRecordsCard.show();
+        deletedRecordsCard.hide();
         activeRecordsBtn.removeClass('btn-outline-primary').addClass('btn-primary');
         deletedRecordsBtn.removeClass('btn-danger').addClass('btn-outline-danger');
     });
 
     deletedRecordsBtn.click(function() {
-        activeTable.hide();
-        deletedTable.show();
+        activeRecordsCard.hide();
+        deletedRecordsCard.show();
         activeRecordsBtn.removeClass('btn-primary').addClass('btn-outline-primary');
         deletedRecordsBtn.removeClass('btn-outline-danger').addClass('btn-danger');
     });
@@ -594,8 +594,11 @@ $(document).ready(function() {
                 // Create and submit form
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ route('inventory.index') }}/" + inventoryId + "/restore";
-                form.innerHTML = `@csrf`;
+                form.action = "{{ route('inventory.restore', ':id') }}".replace(':id', inventoryId);
+                form.innerHTML = `
+                    @csrf
+                    @method('PUT')
+                `;
                 document.body.appendChild(form);
                 form.submit();
             }
