@@ -10,7 +10,7 @@
                 <h5 class="modal-title">Add New Supplier</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('suppliers.store') }}" method="POST">
+            <form action="{{ route('suppliers.store') }}" method="POST" id="addSupplierForm">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -74,8 +74,7 @@
                                 multiple="multiple"
                                 data-placeholder="Search items">
                             @foreach($items as $item)
-                                <option value="{{ $item->ItemId }}"
-                                    {{ in_array($item->ItemId, old('items', [])) ? 'selected' : '' }}>
+                                <option value="{{ $item->ItemId }}">
                                     {{ $item->ItemName }}
                                 </option>
                             @endforeach
@@ -83,6 +82,7 @@
                         @error('items')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple items, or use the search box to find items</small>
                     </div>
                 </div>
 
@@ -104,55 +104,21 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
-    $('.select2-multiple').select2({
+    // Initialize Select2
+    const select2Instance = $('.select2-multiple').select2({
         theme: 'bootstrap-5',
         width: '100%',
         dropdownParent: $('#addSupplierModal'),
         placeholder: 'Search items',
         allowClear: true,
         closeOnSelect: false,
-        tags: false,
         templateResult: formatOption,
         templateSelection: formatSelection
-    }).on('select2:select', function(e) {
-        // Hide the selected option from dropdown
-        var selectedId = e.params.data.id;
-        var option = $(this).children('[value=' + selectedId + ']');
-        option.prop('disabled', true);
-        $(this).select2('destroy');
-        $(this).select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            dropdownParent: $('#addSupplierModal'),
-            placeholder: 'Search items',
-            allowClear: true,
-            closeOnSelect: false,
-            tags: false,
-            templateResult: formatOption,
-            templateSelection: formatSelection
-        });
-    }).on('select2:unselect', function(e) {
-        // Show the unselected option in dropdown
-        var unselectedId = e.params.data.id;
-        var option = $(this).children('[value=' + unselectedId + ']');
-        option.prop('disabled', false);
-        $(this).select2('destroy');
-        $(this).select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            dropdownParent: $('#addSupplierModal'),
-            placeholder: 'Search items',
-            allowClear: true,
-            closeOnSelect: false,
-            tags: false,
-            templateResult: formatOption,
-            templateSelection: formatSelection
-        });
     });
 
     function formatOption(item) {
         if (!item.id) return item.text;
-        return $(`<span><i class="bi bi-box"></i> ${item.text}</span>`);
+        return $('<div><i class="bi bi-box me-2"></i>' + item.text + '</div>');
     }
 
     function formatSelection(item) {
@@ -160,10 +126,18 @@ $(document).ready(function() {
         return item.text;
     }
 
-    // Clear selection when modal is closed
+    // Handle form submission
+    $('#addSupplierForm').on('submit', function(e) {
+        // The items are automatically included in the form submission
+        // because the select element has the name="items[]" attribute
+        // No need to manually add hidden inputs
+        return true;
+    });
+
+    // Clear form when modal is closed
     $('#addSupplierModal').on('hidden.bs.modal', function() {
-        $('.select2-multiple').val(null).trigger('change');
-        $('.select2-multiple option').prop('disabled', false);
+        $('#addSupplierForm')[0].reset();
+        select2Instance.val(null).trigger('change');
     });
 });
 </script>

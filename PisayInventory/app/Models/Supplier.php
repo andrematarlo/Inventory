@@ -106,7 +106,8 @@ class Supplier extends Model
     public function items()
     {
         return $this->belongsToMany(Item::class, 'items_suppliers', 'SupplierID', 'ItemId')
-            ->withPivot('DateModified', 'ModifiedById', 'IsDeleted');
+            ->withPivot('DateModified', 'ModifiedById', 'IsDeleted')
+            ->wherePivot('IsDeleted', false);
     }
 
     // Query scopes

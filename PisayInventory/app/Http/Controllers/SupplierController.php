@@ -21,7 +21,9 @@ class SupplierController extends Controller
     {
         try {
             $activeSuppliers = Supplier::where('IsDeleted', false)
-                ->with('items')
+                ->with(['items' => function($query) {
+                    $query->where('items.IsDeleted', false);
+                }])
                 ->orderBy('CompanyName')
                 ->paginate(10);
 
@@ -65,13 +67,24 @@ class SupplierController extends Controller
         try {
             DB::beginTransaction();
 
+            Log::info('Starting supplier creation with data:', [
+                'request_data' => $request->all(),
+                'items' => $request->input('items')
+            ]);
+
             $validated = $request->validate([
                 'CompanyName' => 'required|string|max:255',
                 'ContactPerson' => 'required|string|max:255',
                 'TelephoneNumber' => 'nullable|string|max:20',
                 'ContactNum' => 'required|string|max:20',
                 'Address' => 'required|string',
-                'items' => 'nullable|array|exists:items,ItemId'
+                'items' => 'nullable|array',
+                'items.*' => 'exists:items,ItemId'
+            ]);
+
+            Log::info('Validation passed:', [
+                'validated_data' => $validated,
+                'items' => $validated['items'] ?? []
             ]);
 
             // Get the next SupplierID
@@ -79,7 +92,7 @@ class SupplierController extends Controller
             $nextSupplierId = $lastSupplier ? $lastSupplier->SupplierID + 1 : 1;
 
             $supplier = new Supplier();
-            $supplier->SupplierID = $nextSupplierId;  // Set the SupplierID manually
+            $supplier->SupplierID = $nextSupplierId;
             $supplier->CompanyName = $validated['CompanyName'];
             $supplier->ContactPerson = $validated['ContactPerson'];
             $supplier->TelephoneNumber = $validated['TelephoneNumber'];
@@ -88,26 +101,61 @@ class SupplierController extends Controller
             $supplier->CreatedById = Auth::id();
             $supplier->DateCreated = now();
             $supplier->IsDeleted = false;
+            
+            Log::info('About to save supplier:', [
+                'supplier_data' => $supplier->toArray()
+            ]);
+            
             $supplier->save();
 
             // Attach items to supplier with the correct pivot data
             if (!empty($validated['items'])) {
                 $now = now();
-                $itemData = array_fill_keys($validated['items'], [
-                    'CreatedById' => Auth::id(),
-                    'DateCreated' => $now,
-                    'ModifiedById' => Auth::id(),
-                    'DateModified' => $now,
-                    'IsDeleted' => false
+                $itemData = [];
+                
+                Log::info('Processing items to attach:', [
+                    'items' => $validated['items']
                 ]);
-                $supplier->items()->attach($itemData);
+
+                foreach ($validated['items'] as $itemId) {
+                    // Insert directly into the pivot table
+                    DB::table('items_suppliers')->insert([
+                        'ItemId' => $itemId,
+                        'SupplierID' => $supplier->SupplierID,
+                        'DateCreated' => $now,
+                        'CreatedById' => Auth::id(),
+                        'DateModified' => $now,
+                        'ModifiedById' => Auth::id(),
+                        'IsDeleted' => false
+                    ]);
+                }
+                
+                Log::info('Items attached successfully');
+
+                // Verify items were attached
+                $attachedItems = DB::table('items_suppliers')
+                    ->where('SupplierID', $supplier->SupplierID)
+                    ->where('IsDeleted', false)
+                    ->pluck('ItemId')
+                    ->toArray();
+
+                Log::info('Verified attached items:', [
+                    'attached_items' => $attachedItems,
+                    'count' => count($attachedItems)
+                ]);
+            } else {
+                Log::info('No items to attach');
             }
 
             DB::commit();
+            Log::info('Supplier created successfully');
             return redirect()->route('suppliers.index')->with('success', 'Supplier created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error creating supplier: ' . $e->getMessage());
+            Log::error('Error creating supplier:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', 'Error creating supplier: ' . $e->getMessage())->withInput();
         }
     }
@@ -123,10 +171,20 @@ class SupplierController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Supplier $supplier)
+    public function edit($id)
     {
-        $items = Item::where('IsDeleted', false)->get();
-        return view('suppliers.edit', compact('supplier', 'items'));
+        try {
+            $supplier = Supplier::where('SupplierID', $id)->firstOrFail();
+            $items = Item::where('IsDeleted', false)->get();
+            return view('suppliers.edit', compact('supplier', 'items'));
+        } catch (\Exception $e) {
+            Log::error('Error loading supplier for edit:', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            return redirect()->route('suppliers.index')
+                ->with('error', 'Supplier not found');
+        }
     }
 
     /**
@@ -135,6 +193,11 @@ class SupplierController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            Log::info('Starting supplier update:', [
+                'id' => $id,
+                'request_data' => $request->all()
+            ]);
+
             // Validate the request
             $validated = $request->validate([
                 'CompanyName' => 'required|string|max:255',
@@ -146,14 +209,49 @@ class SupplierController extends Controller
                 'items.*' => 'exists:items,ItemId'
             ]);
 
+            Log::info('Validation passed:', [
+                'validated_data' => $validated
+            ]);
+
             DB::beginTransaction();
 
             // Find the supplier
+            Log::info('Looking for supplier with ID:', ['id' => $id]);
+            
+            // Check if ID is an object or array
+            if (is_object($id) || is_array($id)) {
+                Log::info('ID is an object/array:', ['id' => $id]);
+                if (isset($id->SupplierID)) {
+                    $id = $id->SupplierID;
+                } elseif (is_array($id) && isset($id['SupplierID'])) {
+                    $id = $id['SupplierID'];
+                }
+            }
+
+            // If it's a string containing JSON, try to decode it
+            if (is_string($id) && strpos($id, '{') !== false) {
+                Log::info('ID appears to be JSON string:', ['id' => $id]);
+                $decoded = json_decode($id, true);
+                if (isset($decoded['SupplierID'])) {
+                    $id = $decoded['SupplierID'];
+                }
+            }
+
             $supplier = Supplier::where('SupplierID', $id)->first();
             
             if (!$supplier) {
+                Log::error('Supplier not found:', [
+                    'id' => $id,
+                    'id_type' => gettype($id),
+                    'id_value' => $id
+                ]);
                 throw new \Exception('Supplier not found');
             }
+
+            Log::info('Found supplier:', [
+                'supplier_id' => $supplier->SupplierID,
+                'company_name' => $supplier->CompanyName
+            ]);
 
             // Update supplier basic information
             $supplier->CompanyName = $validated['CompanyName'];
@@ -161,7 +259,7 @@ class SupplierController extends Controller
             $supplier->ContactNum = $validated['ContactNum'];
             $supplier->TelephoneNumber = $validated['TelephoneNumber'];
             $supplier->Address = $validated['Address'];
-            $supplier->ModifiedById = auth()->id();
+            $supplier->ModifiedById = Auth::id();
             $supplier->DateModified = now();
             $supplier->save();
 
@@ -190,7 +288,7 @@ class SupplierController extends Controller
                         ->update([
                             'IsDeleted' => true,
                             'DateModified' => now(),
-                            'ModifiedById' => auth()->id()
+                            'ModifiedById' => Auth::id()
                         ]);
                 }
 
@@ -200,9 +298,9 @@ class SupplierController extends Controller
                         'SupplierID' => $supplier->SupplierID,
                         'ItemId' => $itemId,
                         'DateCreated' => now(),
-                        'CreatedById' => auth()->id(),
+                        'CreatedById' => Auth::id(),
                         'DateModified' => now(),
-                        'ModifiedById' => auth()->id(),
+                        'ModifiedById' => Auth::id(),
                         'IsDeleted' => false
                     ]);
                 }
@@ -215,7 +313,7 @@ class SupplierController extends Controller
                         ->update([
                             'IsDeleted' => false,
                             'DateModified' => now(),
-                            'ModifiedById' => auth()->id()
+                            'ModifiedById' => Auth::id()
                         ]);
                 }
             } else {
@@ -225,7 +323,7 @@ class SupplierController extends Controller
                     ->update([
                         'IsDeleted' => true,
                         'DateModified' => now(),
-                        'ModifiedById' => auth()->id()
+                        'ModifiedById' => Auth::id()
                     ]);
             }
 
