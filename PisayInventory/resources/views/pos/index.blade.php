@@ -77,30 +77,28 @@
                     </thead>
                     <tbody>
                         @php
-                            $orders = DB::table('orders')
-                                ->leftJoin('students', 'orders.StudentId', '=', 'students.student_id')
-                                ->where('orders.IsDeleted', 0)
-                                ->orderBy('orders.DateCreated', 'desc')
-                                ->select('orders.*', 'students.first_name as FirstName', 'students.last_name as LastName')
+                            $orders = App\Models\POSOrder::with('student')
+                                ->where('IsDeleted', false)
+                                ->orderBy('created_at', 'desc')
                                 ->paginate(10);
                         @endphp
                         
                         @forelse($orders as $order)
                             <tr>
                                 <td class="ps-3 fw-medium">{{ $order->OrderNumber }}</td>
-                                <td>{{ date('M d, Y h:i A', strtotime($order->DateCreated)) }}</td>
+                                <td>{{ date('M d, Y h:i A', strtotime($order->created_at)) }}</td>
                                 <td>
                                     @if($order->StudentId)
-                                        {{ $order->FirstName }} {{ $order->LastName }}
+                                        {{ $order->student->FirstName }} {{ $order->student->LastName }}
                                     @else
                                         <span class="text-muted fst-italic">None</span>
                                     @endif
                                 </td>
                                 <td class="fw-medium text-primary">₱{{ number_format($order->TotalAmount, 2) }}</td>
                                 <td>
-                                    @if($order->PaymentType == 'cash')
+                                    @if($order->PaymentMethod == 'cash')
                                         <span class="badge bg-info text-dark">Cash</span>
-                                    @elseif($order->PaymentType == 'deposit')
+                                    @elseif($order->PaymentMethod == 'deposit')
                                         <span class="badge bg-secondary">Deposit</span>
                                     @endif
                                 </td>
@@ -263,14 +261,14 @@
                     
                     // Format payment method badge
                     let paymentBadge = '';
-                    if (order.PaymentType === 'cash') {
+                    if (order.PaymentMethod === 'cash') {
                         paymentBadge = '<span class="badge bg-info text-dark">Cash</span>';
-                    } else if (order.PaymentType === 'deposit') {
+                    } else if (order.PaymentMethod === 'deposit') {
                         paymentBadge = '<span class="badge bg-secondary">Deposit</span>';
                     }
                     
                     // Format date
-                    const orderDate = new Date(order.DateCreated);
+                    const orderDate = new Date(order.created_at);
                     const formattedDate = orderDate.toLocaleString('en-US', {
                         year: 'numeric',
                         month: 'short',

@@ -26,13 +26,16 @@ class Item extends Model
         'DateDeleted',
         'RestoredById',
         'DateRestored',
-        'IsDeleted'
+        'IsDeleted',
+        'Price',
+        'Status'
     ];
 
     // Add query scopes
     public function scopeActive($query)
     {
-        return $query->where('IsDeleted', false);
+        return $query->where('IsDeleted', false)
+                    ->where('Status', 'Active');
     }
 
     public function scopeTrashed($query)

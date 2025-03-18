@@ -23,6 +23,8 @@ use App\Http\Controllers\LaboratoriesController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\LaboratoryReservationController;
 use App\Http\Controllers\EquipmentBorrowingController;
+use App\Http\Controllers\POSController;
+use App\Http\Controllers\DepositController;
 
 // Add this at the top of your routes to debug
 Route::get('/debug/routes', function() {
@@ -161,6 +163,29 @@ Route::middleware('auth')->group(function () {
 
         // Module Management
         Route::resource('modules', ModuleController::class);
+
+        // Point of Sale Routes
+        Route::prefix('pos')->group(function () {
+            Route::get('/', [POSController::class, 'index'])->name('pos.index');
+            Route::get('/create', [POSController::class, 'create'])->name('pos.create');
+            Route::post('/store', [POSController::class, 'store'])->name('pos.store');
+            Route::get('/show/{id}', [POSController::class, 'show'])->name('pos.show');
+            Route::post('/process/{id}', [POSController::class, 'process'])->name('pos.process');
+            Route::post('/cancel/{id}', [POSController::class, 'cancel'])->name('pos.cancel');
+            Route::get('/order-details/{id}', [POSController::class, 'getOrderDetails'])->name('pos.order-details');
+            Route::post('/add-menu-item', [POSController::class, 'addMenuItem'])->name('pos.add-menu-item');
+            
+            // Cash Deposit Routes
+            Route::get('/deposits', [DepositController::class, 'index'])->name('pos.deposits');
+            Route::post('/deposits/store', [DepositController::class, 'store'])->name('pos.deposits.store');
+            Route::get('/deposits/{id}', [DepositController::class, 'show'])->name('pos.deposits.show');
+            Route::get('/student-balance/{id}', [DepositController::class, 'getStudentBalance'])->name('pos.student-balance');
+            
+            // Reports
+            Route::get('/reports', [POSController::class, 'reports'])->name('pos.reports');
+            Route::get('/reports/sales', [POSController::class, 'salesReport'])->name('pos.reports.sales');
+            Route::get('/reports/deposits', [POSController::class, 'depositsReport'])->name('pos.reports.deposits');
+        });
 
 // Laboratory Management Routes
     // Laboratories

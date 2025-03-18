@@ -4,54 +4,56 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CashDeposit extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     
-    protected $table = 'cash_deposits';
+    protected $table = 'student_deposits';
     protected $primaryKey = 'DepositID';
-    public $timestamps = false;
-    
+
     protected $fillable = [
-        'StudentID',
-        'Amount',
+        'student_id',
         'TransactionDate',
-        'Description',
+        'ReferenceNumber',
         'TransactionType',
-        'ProcessedBy',
-        'Remarks'
+        'Amount',
+        'BalanceBefore',
+        'BalanceAfter',
+        'Notes'
     ];
-    
-    /**
-     * Get the student associated with this deposit.
-     */
+
+    protected $dates = [
+        'TransactionDate',
+        'created_at',
+        'updated_at',
+        'deleted_at'
+    ];
+
+    protected $casts = [
+        'Amount' => 'decimal:2',
+        'BalanceBefore' => 'decimal:2',
+        'BalanceAfter' => 'decimal:2'
+    ];
+
     public function student()
     {
-        return $this->belongsTo(Student::class, 'StudentID', 'StudentID');
+        return $this->belongsTo(Student::class, 'student_id', 'student_id');
     }
-    
-    /**
-     * Get the user who processed this deposit.
-     */
-    public function processedBy()
+
+    public static function boot()
     {
-        return $this->belongsTo(User::class, 'ProcessedBy', 'id');
-    }
-    
-    /**
-     * Scope a query to only include deposits (positive amount).
-     */
-    public function scopeDeposits($query)
-    {
-        return $query->where('Amount', '>', 0);
-    }
-    
-    /**
-     * Scope a query to only include payments (negative amount).
-     */
-    public function scopePayments($query)
-    {
-        return $query->where('Amount', '<', 0);
+        parent::boot();
+        
+        static::creating(function ($deposit) {
+            if (empty($deposit->ReferenceNumber)) {
+                $deposit->ReferenceNumber = 'DEP-' . date('Ymd') . '-' . str_pad(static::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
+            }
+            
+            if (empty($deposit->TransactionDate)) {
+                $deposit->TransactionDate = now();
+            }
+        });
     }
 } 

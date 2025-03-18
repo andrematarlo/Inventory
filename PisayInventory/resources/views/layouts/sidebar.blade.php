@@ -23,6 +23,7 @@
             $inventoryPermissions = $controller->getUserPermissions('Inventory');
             $studentPermissions = $controller->getUserPermissions('Students');
             $laboratoryPermissions = $controller->getUserPermissions('Laboratory Management');
+            $posPermissions = $controller->getUserPermissions('Point of Sale');
         }
         
         // Check permissions for each module
@@ -33,6 +34,7 @@
         $hasInventoryAccess = $inventoryPermissions && $inventoryPermissions->CanView;
         $hasStudentAccess = $studentPermissions && $studentPermissions->CanView || $isAdmin;
         $hasLaboratoryAccess = $laboratoryPermissions && $laboratoryPermissions->CanView || $isAdmin;
+        $hasPOSAccess = $posPermissions && $posPermissions->CanView || $isAdmin;
     @endphp
 
     <ul class="nav flex-column py-2">
@@ -135,6 +137,36 @@
                 <i class="bi bi-file-earmark-text"></i>
                 <span>Reports</span>
             </a>
+        </li>
+        @endif
+        @if($hasPOSAccess)
+        <li class="nav-item dropdown">
+            <a href="#" class="nav-link dropdown-toggle" id="posDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-cart3"></i>
+                <span>Point of Sale</span>
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="posDropdown">
+                <li>
+                    <a class="dropdown-item {{ request()->routeIs('pos.index') ? 'active' : '' }}" href="{{ route('pos.index') }}">
+                        <i class="bi bi-list-check"></i> Orders
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item {{ request()->routeIs('pos.create') ? 'active' : '' }}" href="{{ route('pos.create') }}">
+                        <i class="bi bi-plus-circle"></i> New Order
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item {{ request()->routeIs('pos.deposits') ? 'active' : '' }}" href="{{ route('pos.deposits') }}">
+                        <i class="bi bi-wallet2"></i> Deposits
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item {{ request()->routeIs('pos.reports') ? 'active' : '' }}" href="{{ route('pos.reports') }}">
+                        <i class="bi bi-graph-up"></i> POS Reports
+                    </a>
+                </li>
+            </ul>
         </li>
         @endif
         @if($hasLaboratoryAccess)

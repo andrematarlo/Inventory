@@ -293,5 +293,54 @@
 
         @yield('scripts')
         @stack('scripts')
+
+    <!-- Scripts -->
+    <script src="{{ asset('js/app.js') }}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Display SweetAlert flash messages from session
+            @if (session('alert'))
+                Swal.fire({
+                    icon: '{{ session('alert')['type'] }}',
+                    title: '{{ session('alert')['title'] }}',
+                    text: '{{ session('alert')['text'] }}',
+                    @if (isset(session('alert')['footer']))
+                    footer: '{{ session('alert')['footer'] }}',
+                    @endif
+                    confirmButtonColor: '{{ session('alert')['type'] === 'success' ? '#4CAF50' : '#F44336' }}'
+                });
+            @elseif (session('success'))
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: '{{ session('success') }}',
+                    confirmButtonColor: '#4CAF50'
+                });
+            @elseif (session('error'))
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: '{{ session('error') }}',
+                    confirmButtonColor: '#F44336'
+                });
+            @elseif (session('warning'))
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Warning',
+                    text: '{{ session('warning') }}',
+                    confirmButtonColor: '#F9A825'
+                });
+            @elseif (session('info'))
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Information',
+                    text: '{{ session('info') }}',
+                    confirmButtonColor: '#2196F3'
+                });
+            @endif
+        });
+    </script>
     </body>
 </html>

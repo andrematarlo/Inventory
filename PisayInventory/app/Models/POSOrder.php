@@ -4,42 +4,43 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class POSOrder extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     
     protected $table = 'pos_orders';
     protected $primaryKey = 'OrderID';
     public $timestamps = false;
     
     protected $fillable = [
-        'OrderDate',
+        'student_id',
         'TotalAmount',
         'PaymentMethod',
         'Status',
-        'StudentID',
-        'AmountTendered',
-        'Change',
-        'CompletedDate',
-        'ProcessedBy',
-        'Remarks'
+        'OrderNumber'
+    ];
+    
+    protected $casts = [
+        'TotalAmount' => 'decimal:2',
+        'deleted_at' => 'datetime'
     ];
     
     /**
-     * Get the items in this order.
+     * Get the student that owns the order.
+     */
+    public function student()
+    {
+        return $this->belongsTo(Student::class, 'student_id', 'student_id');
+    }
+    
+    /**
+     * Get the items for the order.
      */
     public function items()
     {
         return $this->hasMany(POSOrderItem::class, 'OrderID', 'OrderID');
-    }
-    
-    /**
-     * Get the student associated with this order.
-     */
-    public function student()
-    {
-        return $this->belongsTo(Student::class, 'StudentID', 'StudentID');
     }
     
     /**
@@ -50,12 +51,16 @@ class POSOrder extends Model
         return $this->belongsTo(User::class, 'ProcessedBy', 'id');
     }
     
-    /**
-     * Get the formatted order number.
-     */
-    public function getOrderNumberAttribute()
+    public static function boot()
     {
-        return str_pad($this->OrderID, 6, '0', STR_PAD_LEFT);
+        parent::boot();
+        
+        static::creating(function ($order) {
+            // Generate order number if not set
+            if (empty($order->OrderNumber)) {
+                $order->OrderNumber = 'ORD-' . date('Ymd') . '-' . str_pad(static::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
+            }
+        });
     }
     
     /**
@@ -63,7 +68,7 @@ class POSOrder extends Model
      */
     public function scopePending($query)
     {
-        return $query->where('Status', 'Pending');
+        return $query->where('Status', 'pending');
     }
     
     /**
@@ -71,6 +76,16 @@ class POSOrder extends Model
      */
     public function scopeCompleted($query)
     {
-        return $query->where('Status', 'Completed');
+        return $query->where('Status', 'completed');
+    }
+
+    public function scopeCancelled($query)
+    {
+        return $query->where('Status', 'cancelled');
+    }
+
+    public function getTotalItemsAttribute()
+    {
+        return $this->items()->sum('Quantity');
     }
 } 

@@ -10,188 +10,279 @@ use App\Models\PaymentTransaction;
 use App\Models\Classification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use App\Models\POSOrder;
+use App\Models\POSOrderItem;
+use App\Models\Student;
+use App\Models\CashDeposit;
+use Exception;
 
 class POSController extends Controller
 {
     public function index()
     {
-        $menuItems = DB::table('menu_items')
-                        ->where('IsDeleted', 0)
-                        ->where('IsAvailable', 1)
-                        ->get();
-                        
-        $categories = DB::table('classification')
-                        ->where('IsDeleted', 0)
-                        ->get();
-        
-        // Check if logged in user is a student and get their balance
+        $orders = POSOrder::with(['student', 'items'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        // Get student info if logged in user is a student
         $isStudent = Auth::check() && Auth::user()->role === 'Student';
         $studentBalance = 0;
         $studentId = null;
-        
+
         if ($isStudent) {
             $studentId = Auth::user()->student_id;
-            $studentBalance = DB::table('student_deposits')
-                ->where('student_id', $studentId)
-                ->where('status', 'Active')
-                ->orderBy('created_at', 'desc')
-                ->value('balance_after') ?? 0;
+            $studentBalance = CashDeposit::where('student_id', $studentId)
+                ->whereNull('deleted_at')
+                ->sum('Amount');
         }
-        
-        return view('pos.index', compact('menuItems', 'categories', 'isStudent', 'studentBalance', 'studentId'));
+
+        return view('pos.index', compact('orders', 'isStudent', 'studentBalance', 'studentId'));
     }
     
     public function create()
     {
-        $menuItems = DB::table('menu_items')
-                        ->where('IsDeleted', 0)
-                        ->where('IsAvailable', 1)
+        $menuItems = MenuItem::active()
+                        ->with(['classification', 'unitOfMeasure'])
                         ->get();
-        
-        // Debug information                
-        if ($menuItems->isEmpty()) {
-            // If no menu items found, check if there are any items at all
-            $allItems = DB::table('menu_items')->get();
-            
-            if ($allItems->isEmpty()) {
-                // No items at all in the table
-                session()->flash('info', 'No menu items found in the database. Please add items to display them here.');
-            } else {
-                // Items exist but none match the criteria
-                $deletedCount = DB::table('menu_items')->where('IsDeleted', 1)->count();
-                $unavailableCount = DB::table('menu_items')->where('IsAvailable', 0)->count();
-                
-                session()->flash('info', "Found {$allItems->count()} total items, but {$deletedCount} are deleted and {$unavailableCount} are marked as unavailable.");
-            }
-        }
                         
         $categories = DB::table('classification')
-                        ->where('IsDeleted', 0)
-                        ->get();
-        
+                      ->where('IsDeleted', false)
+                      ->orderBy('ClassificationName')
+                      ->get();
+
         return view('pos.create', compact('menuItems', 'categories'));
     }
     
     public function store(Request $request)
     {
-        // Log raw $_POST data
-        \Illuminate\Support\Facades\Log::info('Raw $_POST data', [
-            'post_data' => $_POST
-        ]);
-        
-        // More detailed debug log
-        \Illuminate\Support\Facades\Log::info('Order submission received', [
-            'payment_type' => $request->payment_type,
-            'student_id' => $request->student_id,
-            'total_amount' => $request->total_amount,
-            'has_cart_items' => isset($request->cart_items),
-            'cart_items_type' => isset($request->cart_items) ? gettype($request->cart_items) : 'not set',
-            'cart_items_raw' => $request->cart_items,
-            'all_request_data' => $request->all()
-        ]);
-        
-        // Try to decode JSON if it's a string
-        if (isset($request->cart_items) && is_string($request->cart_items)) {
-            try {
-                $decodedItems = json_decode($request->cart_items, true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $request->merge(['cart_items' => $decodedItems]);
-                    \Illuminate\Support\Facades\Log::info('Successfully decoded cart_items JSON', [
-                        'decoded_items' => $decodedItems
-                    ]);
-                } else {
-                    \Illuminate\Support\Facades\Log::error('JSON decode error', [
-                        'error' => json_last_error_msg()
-                    ]);
-                }
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Exception decoding JSON', [
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-        
-        // Validate the request data
         try {
-            $validated = $request->validate([
-                'payment_type' => 'required|in:cash,card,deposit',
-                'student_id' => 'required_if:payment_type,deposit|nullable|exists:students,student_id',
-                'total_amount' => 'required|numeric|min:0',
-                'cart_items' => 'required|array',
-                'cart_items.*.id' => 'nullable',  // Can be null for custom items
-                'cart_items.*.name' => 'required|string',
-                'cart_items.*.price' => 'required|numeric|min:0',
-                'cart_items.*.quantity' => 'required|integer|min:1',
+            DB::beginTransaction();
+            
+            // Parse cart items from JSON string if needed
+            $cartItems = $request->items;
+            if (!is_array($cartItems) && $request->has('cart_items')) {
+                $cartItems = json_decode($request->cart_items, true);
+                Log::debug('Parsed cart items from JSON string', ['cartItems' => $cartItems]);
+            }
+            
+            // Debug request data
+            Log::debug('Order request data:', [
+                'student_id' => $request->student_id,
+                'total_amount' => $request->total_amount,
+                'payment_method' => $request->payment_type,
+                'items' => $cartItems
             ]);
             
-            \Illuminate\Support\Facades\Log::info('Validation passed', [
-                'validated_data' => $validated
+            // Generate order number
+            $orderNumber = 'ORD-' . date('Ymd') . '-' . str_pad(
+                POSOrder::whereDate('created_at', today())->count() + 1, 
+                4, 
+                '0', 
+                STR_PAD_LEFT
+            );
+            
+            Log::debug('Generated order number: ' . $orderNumber);
+            
+            // Debug table structure
+            Log::debug('POS Orders table structure:', [
+                'columns' => DB::getSchemaBuilder()->getColumnListing('pos_orders')
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            \Illuminate\Support\Facades\Log::error('Validation failed', [
-                'errors' => $e->errors()
+            
+            // Create the order
+            $order = POSOrder::create([
+                'student_id' => $request->student_id,
+                'TotalAmount' => $request->total_amount,
+                'PaymentMethod' => $request->payment_type,
+                'Status' => 'pending',
+                'OrderNumber' => $orderNumber
             ]);
-            throw $e;  // Re-throw to let Laravel handle it normally
+            
+            Log::debug('Order created:', ['order_id' => $order->OrderID, 'order_data' => $order->toArray()]);
+            
+            // Add order items
+            foreach ($cartItems as $item) {
+                // Check if it's a custom item or menu item
+                if (!empty($item['isCustom']) && $item['isCustom']) {
+                    Log::debug('Processing custom item:', ['item' => $item]);
+                    
+                    // Insert custom item using DB query to bypass foreign key constraint
+                    $orderItemId = DB::table('pos_order_items')->insertGetId([
+                        'OrderID' => $order->OrderID,
+                        'ItemID' => null, // Set ItemID to null for custom items
+                        'Quantity' => $item['quantity'],
+                        'UnitPrice' => $item['price'],
+                        'Subtotal' => $item['price'] * $item['quantity'],
+                        'ItemName' => $item['name'],
+                        'IsCustomItem' => true,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                    
+                    Log::debug('Custom order item created:', ['order_item_id' => $orderItemId]);
+                } else {
+                    // Regular menu item
+                    if (!empty($item['id'])) {
+                        $menuItem = MenuItem::findOrFail($item['id']);
+                        Log::debug('Processing menu item:', ['menu_item' => $menuItem->toArray(), 'quantity' => $item['quantity']]);
+                        
+                        $orderItem = POSOrderItem::create([
+                            'OrderID' => $order->OrderID,
+                            'ItemID' => $menuItem->MenuItemID,
+                            'Quantity' => $item['quantity'],
+                            'UnitPrice' => $menuItem->Price,
+                            'Subtotal' => $menuItem->Price * $item['quantity'],
+                            'ItemName' => $menuItem->ItemName,
+                            'IsCustomItem' => false
+                        ]);
+                        
+                        Log::debug('Order item created:', ['order_item' => $orderItem->toArray()]);
+                    } else {
+                        // If no ID but has name and price, treat as custom item
+                        Log::debug('Processing item without ID as custom:', ['item' => $item]);
+                        
+                        // Insert custom item using DB query to bypass foreign key constraint
+                        $orderItemId = DB::table('pos_order_items')->insertGetId([
+                            'OrderID' => $order->OrderID,
+                            'ItemID' => null, // Set ItemID to null for custom items
+                            'Quantity' => $item['quantity'],
+                            'UnitPrice' => $item['price'],
+                            'Subtotal' => $item['price'] * $item['quantity'],
+                            'ItemName' => $item['name'],
+                            'IsCustomItem' => true,
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                        
+                        Log::debug('Custom order item created:', ['order_item_id' => $orderItemId]);
+                    }
+                }
+            }
+            
+            DB::commit();
+            Log::debug('Order transaction committed successfully');
+            
+            $responseData = [
+                'success' => true,
+                'message' => 'Order created successfully',
+                'order' => $order,
+                'alert' => [
+                    'type' => 'success',
+                    'title' => 'Success!',
+                    'text' => 'Order #' . $orderNumber . ' created successfully'
+                ]
+            ];
+            
+            return response()->json($responseData);
+            
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating order: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Get database structure for debugging
+            $tableStructure = [];
+            try {
+                $tableStructure['pos_orders'] = DB::getSchemaBuilder()->getColumnListing('pos_orders');
+                $tableStructure['pos_order_items'] = DB::getSchemaBuilder()->getColumnListing('pos_order_items');
+                $tableStructure['menu_items'] = DB::getSchemaBuilder()->getColumnListing('menu_items');
+            } catch (\Exception $ex) {
+                $tableStructure['error'] = $ex->getMessage();
+            }
+            
+            $responseData = [
+                'success' => false,
+                'message' => 'Error creating order: ' . $e->getMessage(),
+                'details' => $e->getTraceAsString(),
+                'debug' => [
+                    'request' => $request->all(),
+                    'table_structure' => $tableStructure
+                ],
+                'alert' => [
+                    'type' => 'error',
+                    'title' => 'Order Failed',
+                    'text' => 'Error: ' . $e->getMessage(),
+                    'footer' => 'Please check the console for more details'
+                ]
+            ];
+            
+            return response()->json($responseData, 500);
         }
-
+    }
+    
+    public function show(POSOrder $order)
+    {
+        $order->load(['items.item', 'student']);
+        return view('pos.show', compact('order'));
+    }
+    
+    public function process(POSOrder $order)
+    {
         try {
             DB::beginTransaction();
 
-            // Create order with StudentId field
-            $orderData = [
-                'OrderNumber' => 'ORD-' . time(),
-                'TotalAmount' => $request->total_amount,
-                'PaymentType' => $request->payment_type,
-                'Status' => 'pending',
-                'CreatedById' => Auth::id() ?? 1,
-                'DateCreated' => now()
-            ];
-            
-            // Add StudentId if provided (required for deposit payments)
-            if ($request->has('student_id') && !empty($request->student_id)) {
-                $orderData['StudentId'] = $request->student_id;
-            }
-
-            $orderId = DB::table('orders')->insertGetId($orderData);
-
-            // Create order items
-            foreach ($request->cart_items as $item) {
-                DB::table('order_items')->insert([
-                    'OrderId' => $orderId,
-                    'ItemId' => $item['id'],
-                    'Quantity' => $item['quantity'],
-                    'UnitPrice' => $item['price'],
-                    'Subtotal' => $item['price'] * $item['quantity'],
-                    'CreatedById' => Auth::id() ?? 1,
-                    'DateCreated' => now()
-                ]);
-
-                // Update stock only for non-custom items
-                if (!isset($item['isCustom']) || !$item['isCustom']) {
-                    DB::table('menu_items')
-                        ->where('ItemId', $item['id'])
-                        ->decrement('StocksAvailable', $item['quantity']);
-                }
-            }
-
-            // Create payment transaction
-            DB::table('payment_transactions')->insert([
-                'OrderId' => $orderId,
-                'Amount' => $request->total_amount,
-                'PaymentType' => $request->payment_type,
-                'Status' => 'pending',
-                'ReferenceNumber' => 'PAY-' . time(),
-                'CreatedById' => Auth::id() ?? 1,
-                'DateCreated' => now()
-            ]);
+            $order->Status = 'completed';
+            $order->ProcessedBy = Auth::id();
+            $order->ProcessedAt = now();
+            $order->save();
 
             DB::commit();
-            return redirect()->route('pos.index')->with('success', 'Order processed successfully');
 
-        } catch (\Exception $e) {
-            DB::rollback();
-            return redirect()->back()->with('error', 'Failed to process order: ' . $e->getMessage());
+            return redirect()->route('pos.show', $order->OrderID)
+                ->with('success', 'Order processed successfully');
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            return back()->with('error', $e->getMessage());
         }
+    }
+    
+    public function cancel(POSOrder $order)
+    {
+        try {
+            DB::beginTransaction();
+
+            // If it was a deposit payment, refund the amount
+            if ($order->PaymentMethod === 'deposit' && $order->Status === 'completed') {
+                $balance = CashDeposit::where('student_id', $order->student_id)
+                    ->whereNull('deleted_at')
+                    ->sum('Amount');
+
+                CashDeposit::create([
+                    'student_id' => $order->student_id,
+                    'TransactionDate' => now(),
+                    'ReferenceNumber' => "REFUND-{$order->OrderNumber}",
+                    'TransactionType' => 'refund',
+                    'Amount' => $order->TotalAmount,
+                    'BalanceBefore' => $balance,
+                    'BalanceAfter' => $balance + $order->TotalAmount,
+                    'Notes' => "Refund for cancelled Order #{$order->OrderNumber}"
+                ]);
+            }
+
+            $order->Status = 'cancelled';
+            $order->save();
+
+            DB::commit();
+
+            return redirect()->route('pos.show', $order->OrderID)
+                ->with('success', 'Order cancelled successfully');
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            return back()->with('error', $e->getMessage());
+        }
+    }
+    
+    public function getStudentBalance($studentId)
+    {
+        $balance = CashDeposit::where('student_id', $studentId)
+            ->whereNull('deleted_at')
+            ->sum('Amount');
+
+        return response()->json(['balance' => $balance]);
     }
     
     public function filterByCategory($categoryId)
@@ -201,7 +292,7 @@ class POSController extends Controller
                         ->where('IsAvailable', 1);
                         
         if ($categoryId) {
-            $menuItems = $menuItems->where('ClassificationId', $categoryId);
+            $menuItems = $menuItems->where('ClassificationID', $categoryId);
         }
         
         $menuItems = $menuItems->get();
@@ -432,18 +523,6 @@ class POSController extends Controller
         }
     }
     
-    // Get current student balance (for AJAX calls)
-    public function getStudentBalance($studentId)
-    {
-        $balance = DB::table('student_deposits')
-            ->where('student_id', $studentId)
-            ->where('status', 'Active')
-            ->orderBy('created_at', 'desc')
-            ->value('balance_after') ?? 0;
-            
-        return response()->json(['balance' => $balance]);
-    }
-    
     // POS Reports function
     public function reports()
     {
@@ -556,7 +635,7 @@ class POSController extends Controller
         $request->validate([
             'item_name' => 'required|string|max:100',
             'price' => 'required|numeric|min:0',
-            'category_id' => 'required|exists:classification,ClassificationId',
+            'category_id' => 'required|exists:classification,ClassificationID',
             'description' => 'nullable|string|max:255',
         ]);
 
@@ -567,24 +646,38 @@ class POSController extends Controller
             $menuItemId = DB::table('menu_items')->insertGetId([
                 'ItemName' => $request->item_name,
                 'Price' => $request->price,
-                'ClassificationId' => $request->category_id,
+                'ClassificationID' => $request->category_id,
                 'Description' => $request->description,
-                'StocksAvailable' => 100, // Default stock
-                'IsAvailable' => 1,
-                'IsDeleted' => 0,
-                'CreatedById' => Auth::id() ?? 1,
-                'DateCreated' => now()
+                'IsAvailable' => true,
+                'IsDeleted' => false,
+                'created_at' => now(),
+                'updated_at' => now()
             ]);
             
             DB::commit();
             
+            $successMessage = "Menu item '{$request->item_name}' added successfully!";
+            
             return redirect()->route('pos.create')
-                ->with('success', "Menu item '{$request->item_name}' added successfully!");
+                ->with('success', $successMessage)
+                ->with('alert', [
+                    'type' => 'success',
+                    'title' => 'Menu Item Added',
+                    'text' => $successMessage
+                ]);
                 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            $errorMessage = 'Failed to add menu item: ' . $e->getMessage();
+            
             return redirect()->back()
-                ->with('error', 'Failed to add menu item: ' . $e->getMessage())
+                ->with('error', $errorMessage)
+                ->with('alert', [
+                    'type' => 'error',
+                    'title' => 'Error Adding Menu Item',
+                    'text' => $errorMessage
+                ])
                 ->withInput();
         }
     }

@@ -2,218 +2,236 @@
 
 @section('styles')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .menu-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .menu-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .category-btn.active {
+        background-color: #4CAF50 !important;
+        border-color: #4CAF50 !important;
+        color: white !important;
+    }
+    .cart-item {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        padding: 15px;
+        transition: all 0.3s ease;
+    }
+    .cart-item:hover {
+        background-color: #e9ecef;
+    }
+    .quantity-control {
+        width: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: white;
+        border-radius: 20px;
+        padding: 5px;
+        border: 1px solid #dee2e6;
+    }
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: #e9ecef;
+        color: #495057;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .quantity-btn:hover {
+        background: #dee2e6;
+    }
+    .quantity-input {
+        width: 40px;
+        text-align: center;
+        border: none;
+        background: transparent;
+        font-weight: bold;
+    }
+    .cart-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 20px;
+        height: calc(100vh - 200px);
+        display: flex;
+        flex-direction: column;
+    }
+    .cart-items-container {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    .cart-items-container::-webkit-scrollbar {
+        width: 5px;
+    }
+    .cart-items-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .cart-items-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    .cart-items-container::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    .menu-image {
+        height: 150px;
+        object-fit: cover;
+        border-radius: 10px 10px 0 0;
+    }
+    .price-tag {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255,255,255,0.9);
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: bold;
+        color: #4CAF50;
+    }
+    .stock-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(255,255,255,0.9);
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+    }
+</style>
 @endsection
 
 @section('content')
 <div class="container-fluid py-4">
-    <div class="row" style="min-height: 85vh;">
+    <div class="row">
         <!-- Left Side - Menu Items -->
-        <div class="col-lg-8 mb-4">
-            <!-- Add Custom Item Button (Moved outside the card) -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="fs-3 fw-bold mb-0">Student Kiosk</h2>
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">Student Kiosk</h2>
                 <div>
-                    <a href="{{ route('pos.index') }}" class="btn btn-outline-secondary me-2">
-                        <i class="fas fa-arrow-left me-1"></i> Back to Orders
+                    <a href="{{ route('pos.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Orders
                     </a>
-                    <button id="add-custom-item-btn" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#custom-item-modal">
-                        <i class="fas fa-plus me-1"></i> Add Item
-                    </button>
                 </div>
             </div>
 
-            <!-- Alerts -->
-            @if(session('info'))
-            <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
-                {{ session('info') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            @endif
-            
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            @endif
-
-            @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            @endif
-            
-            <div class="card shadow h-100">
-                <div class="card-body d-flex flex-column">
                     <!-- Categories -->
-                    <div class="mb-4 overflow-auto" style="white-space: nowrap;">
-                        <button class="category-btn btn btn-primary me-2 mb-2" data-category="all">
+            <div class="mb-4 categories-wrapper">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-outline-success category-btn active" data-category="all">
                             All Items
                         </button>
                         @foreach($categories as $category)
-                            <button class="category-btn btn btn-outline-primary me-2 mb-2" 
+                        <button class="btn btn-outline-success category-btn" 
                                     data-category="{{ $category->ClassificationId }}">
                                 {{ $category->ClassificationName }}
                             </button>
                         @endforeach
+                </div>
                     </div>
 
                     <!-- Menu Items Grid -->
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 flex-grow-1 overflow-auto" id="menu-items-container">
-                        @if($menuItems->isEmpty())
-                            <div class="col-12 text-center py-5 my-5">
-                                <div class="display-1 text-muted mb-4"><i class="fas fa-box-open"></i></div>
-                                <h3 class="fs-4 text-muted mb-3">No Menu Items Available</h3>
-                                <p class="text-muted mb-4">There are no menu items available for students to order.</p>
-                                <p class="mb-0">Click the "Add Item" button above to add menu items.</p>
-                            </div>
-                        @else
+            <div class="row g-4" id="menu-items-container">
                             @foreach($menuItems as $item)
-                                <div class="col">
-                                    <div class="card h-100 menu-item" 
-                                         data-id="{{ $item->ItemId }}"
-                                         data-name="{{ $item->ItemName }}"
-                                         data-price="{{ $item->Price }}"
-                                         data-category="{{ $item->ClassificationId }}">
-                                        <div class="card-img-top bg-light text-center" style="height: 120px; overflow: hidden;">
+                    <div class="col-md-6 col-xl-4 menu-item" data-category="{{ $item->ClassificationId }}">
+                        <div class="menu-card card h-100 position-relative">
+                            <div class="position-relative">
                                             @if(isset($item->ImagePath) && !empty($item->ImagePath))
-                                                <img src="{{ asset($item->ImagePath) }}" alt="{{ $item->ItemName }}" class="h-100 object-fit-cover">
+                                    <img src="{{ asset($item->ImagePath) }}" class="menu-image w-100" alt="{{ $item->ItemName }}">
                                             @else
-                                                <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                                                    <i class="fas fa-image fa-2x"></i>
+                                    <div class="menu-image w-100 bg-light d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-utensils fa-2x text-muted"></i>
                                                 </div>
                                             @endif
+                                <div class="price-tag">₱{{ number_format($item->Price, 2) }}</div>
+                                <div class="stock-badge">
+                                    <i class="fas fa-box me-1"></i>{{ $item->StocksAvailable ?? 0 }}
+                                </div>
                                         </div>
-                                        <div class="card-body d-flex flex-column">
-                                            <h5 class="card-title text-truncate">{{ $item->ItemName }}</h5>
-                                            <p class="card-text text-truncate text-muted small">
+                            <div class="card-body">
+                                <h5 class="card-title mb-2">{{ $item->ItemName }}</h5>
+                                <p class="card-text text-muted small mb-3">
                                                 {{ isset($item->Description) ? $item->Description : 'No description' }}
                                             </p>
-                                            <div class="d-flex justify-content-between align-items-center mt-auto pt-2">
-                                                <span class="fw-bold text-primary">₱{{ number_format($item->Price, 2) }}</span>
-                                                <span class="badge bg-light text-dark">Stock: {{ $item->StocksAvailable ?? 0 }}</span>
-                                            </div>
+                                <button class="btn btn-success w-100 add-to-cart-btn"
+                                        data-id="{{ $item->ItemId }}"
+                                        data-name="{{ $item->ItemName }}"
+                                        data-price="{{ $item->Price }}">
+                                    <i class="fas fa-cart-plus me-2"></i>Add to Cart
+                                </button>
                                         </div>
                                     </div>
                                 </div>
                             @endforeach
-                        @endif
-                    </div>
-                </div>
             </div>
         </div>
 
         <!-- Right Side - Cart -->
         <div class="col-lg-4">
-            <div class="card shadow h-100">
-                <div class="card-body d-flex flex-column">
-                    <h2 class="card-title text-center fw-bold mb-4">Order Summary</h2>
+            <div class="cart-container">
+                <h3 class="text-center mb-4">Order Summary</h3>
                     
                     <!-- Cart Items -->
-                    <div class="flex-grow-1 overflow-auto mb-4" id="cart-container" style="min-height: 300px;">
-                        <div id="empty-cart-message" class="text-center py-5 text-muted">
-                            <div class="mb-2"><i class="fas fa-shopping-cart fa-3x"></i></div>
-                            <p class="mb-1">Your cart is empty</p>
-                            <p class="small">Add items from the menu</p>
+                <div class="cart-items-container mb-4">
+                    <div id="empty-cart-message" class="text-center py-5">
+                        <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Your cart is empty</h5>
+                        <p class="text-muted small">Add items from the menu to get started</p>
                         </div>
-                        <div id="cart-items" class="d-none">
-                            <!-- Cart items will be added here via JavaScript -->
+                    <div id="cart-items">
+                        <!-- Cart items will be added here -->
                         </div>
                     </div>
 
                     <!-- Cart Footer -->
+                <div class="mt-auto">
                     <div class="border-top pt-3">
-                        <div class="d-flex justify-content-between mb-4">
-                            <span class="fw-bold fs-4">Total:</span>
-                            <span class="fw-bold fs-4 text-primary" id="cart-total">₱0.00</span>
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4 class="mb-0">Total:</h4>
+                            <h4 class="mb-0 text-success" id="cart-total">₱0.00</h4>
                         </div>
 
                         <!-- Payment Method -->
                         <div class="mb-4">
-                            <label class="form-label fw-medium mb-2">Payment Method</label>
+                            <label class="form-label fw-bold mb-2">Payment Method</label>
                             <div class="d-flex gap-2">
-                                <button id="pay-cash" class="payment-btn btn btn-outline-primary flex-grow-1 py-2">
-                                    <i class="fas fa-money-bill me-1"></i> Cash
+                                <button id="pay-cash" class="btn btn-outline-success flex-grow-1 payment-btn">
+                                    <i class="fas fa-money-bill me-2"></i>Cash
                                 </button>
-                                <button id="pay-deposit" class="payment-btn btn btn-outline-primary flex-grow-1 py-2">
-                                    <i class="fas fa-piggy-bank me-1"></i> Deposit
+                                <button id="pay-deposit" class="btn btn-outline-success flex-grow-1 payment-btn">
+                                    <i class="fas fa-piggy-bank me-2"></i>Deposit
                                 </button>
                             </div>
                         </div>
                         
-                        <!-- Student Selection (for deposit payment) -->
+                        <!-- Student Selection -->
                         <div id="student-selection" class="mb-4 d-none">
-                            <label class="form-label fw-medium mb-2">Select Student</label>
+                            <label class="form-label fw-bold mb-2">Select Student</label>
                             <select id="student-id" class="form-select">
-                                <option value="">Select a student</option>
-                                <!-- Students will be loaded via AJAX -->
+                                <option value="">Search for a student...</option>
                             </select>
-                            <div class="invalid-feedback">Please select a student for deposit payment</div>
                         </div>
 
-                        <button id="place-order-btn" class="btn btn-lg btn-secondary w-100 py-3 fw-bold" disabled>
-                            Place Order
+                        <button id="place-order-btn" class="btn btn-lg btn-success w-100" disabled>
+                            <i class="fas fa-check-circle me-2"></i>Place Order
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<form id="order-form" action="{{ route('pos.store') }}" method="POST" class="d-none">
-    @csrf
-    <input type="hidden" name="cart_items" id="items-input">
-    <input type="hidden" name="payment_type" id="payment-type-input">
-    <input type="hidden" name="total_amount" id="total-amount-input">
-    <input type="hidden" name="student_id" id="student-id-input">
-</form>
-
-<!-- Custom Item Modal -->
-<div class="modal fade" id="custom-item-modal" tabindex="-1" aria-labelledby="customItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="customItemModalLabel">Add Menu Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form action="{{ route('pos.add-menu-item') }}" method="POST">
-                    @csrf
-                    <div class="mb-3">
-                        <label for="item_name" class="form-label">Item Name*</label>
-                        <input type="text" id="item_name" name="item_name" class="form-control" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="price" class="form-label">Price*</label>
-                        <div class="input-group">
-                            <span class="input-group-text">₱</span>
-                            <input type="number" id="price" name="price" class="form-control" min="0" step="0.01" required>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="category_id" class="form-label">Category*</label>
-                        <select id="category_id" name="category_id" class="form-select" required>
-                            <option value="">Select a category</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->ClassificationId }}">{{ $category->ClassificationName }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description (Optional)</label>
-                        <textarea id="description" name="description" class="form-control" rows="2"></textarea>
-                    </div>
-                    
-                    <div class="d-flex justify-content-end mt-4">
-                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">Save to Menu</button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
@@ -221,112 +239,43 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const cart = {};
-        let selectedPaymentMethod = null;
-        let customItemCounter = 0;
-        const cartItems = document.getElementById('cart-items');
-        
-        // Initialize Bootstrap components
-        const customItemModal = new bootstrap.Modal(document.getElementById('custom-item-modal'));
-        
-        // Focus input field when modal is shown
-        document.getElementById('custom-item-modal').addEventListener('shown.bs.modal', function() {
-            document.getElementById('item_name').focus();
-        });
-        
-        // Add student selection change listener
-        document.getElementById('student-id').addEventListener('change', function() {
-            if (selectedPaymentMethod === 'deposit') {
-                updateCart(); // This will update the button state
-            }
-        });
-        
-        // Handle tab changes to reset forms
-        document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
-            tab.addEventListener('shown.bs.tab', function (event) {
-                if (event.target.id === 'custom-tab') {
-                    document.getElementById('custom-item-name').focus();
-                } else if (event.target.id === 'menu-tab') {
-                    document.getElementById('item_name').focus();
-                }
-            });
-        });
-        
-        // Menu item click
-        document.querySelectorAll('.menu-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                const name = this.getAttribute('data-name');
-                const price = parseFloat(this.getAttribute('data-price'));
-                
-                if (cart[id]) {
-                    cart[id].quantity++;
-                } else {
-                    cart[id] = {
-                        id: id,
-                        name: name,
-                        price: price,
-                        quantity: 1
-                    };
-                }
-                
-                updateCart();
-            });
-        });
-        
-        // Category filtering
+        // Initialize cart
+        const POS = {
+            cart: {},
+            selectedPaymentMethod: null,
+            
+            init() {
+                this.initializeEventListeners();
+                this.updateCartDisplay();
+            },
+            
+            initializeEventListeners() {
+                // Category buttons
         document.querySelectorAll('.category-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                // Update active state
-                document.querySelectorAll('.category-btn').forEach(b => {
-                    b.classList.remove('btn-primary');
-                    b.classList.add('btn-outline-primary');
+                    btn.addEventListener('click', (e) => this.handleCategoryFilter(e));
                 });
                 
-                this.classList.remove('btn-outline-primary');
-                this.classList.add('btn-primary');
-                
-                const categoryId = this.getAttribute('data-category');
-                
-                // Filter menu items
-                document.querySelectorAll('.menu-item').forEach(item => {
-                    const parent = item.closest('.col');
-                    if (categoryId === 'all' || item.getAttribute('data-category') === categoryId) {
-                        parent.style.display = 'block';
-                    } else {
-                        parent.style.display = 'none';
-                    }
+                // Add to cart buttons
+                document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.handleAddToCart(e));
                 });
-            });
-        });
-        
-        // Payment method selection
+                
+                // Payment method buttons
         document.querySelectorAll('.payment-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.payment-btn').forEach(b => {
-                    b.classList.remove('btn-primary');
-                    b.classList.add('btn-outline-primary');
+                    btn.addEventListener('click', (e) => this.handlePaymentMethodSelection(e));
                 });
                 
-                this.classList.remove('btn-outline-primary');
-                this.classList.add('btn-primary');
+                // Place order button
+                document.getElementById('place-order-btn').addEventListener('click', 
+                    () => this.handlePlaceOrder());
                 
-                const studentSelectionDiv = document.getElementById('student-selection');
-                
-                if (this.id === 'pay-cash') {
-                    selectedPaymentMethod = 'cash';
-                    studentSelectionDiv.classList.add('d-none');
-                } else if (this.id === 'pay-deposit') {
-                    selectedPaymentMethod = 'deposit';
-                    studentSelectionDiv.classList.remove('d-none');
-                    
-                    // Initialize Select2 for student selection if not already done
-                    if (!$('#student-id').data('select2')) {
+                // Initialize Select2
                         $('#student-id').select2({
                             width: '100%',
-                            placeholder: 'Search for a student',
                             ajax: {
                                 url: '{{ url("/inventory/students/select2") }}',
                                 dataType: 'json',
@@ -339,194 +288,285 @@
                                 },
                                 processResults: function(data) {
                                     return {
-                                        results: data.map(function(student) {
-                                            return {
+                                results: data.map(student => ({
                                                 id: student.student_id,
-                                                text: student.student_id + ' - ' + student.first_name + ' ' + student.last_name
-                                            };
-                                        })
+                                    text: `${student.student_id} - ${student.first_name} ${student.last_name}`
+                                }))
                                     };
                                 },
                                 cache: true
-                            }
-                        });
                     }
-                }
+                }).on('change', () => this.updateCartDisplay());
+            },
+            
+            handleCategoryFilter(e) {
+                const selectedCategory = e.target.getAttribute('data-category');
                 
-                // Update place order button
-                updateCart();
-            });
-        });
-        
-        // Place order button
-        document.getElementById('place-order-btn').addEventListener('click', function() {
-            if (Object.keys(cart).length === 0 || !selectedPaymentMethod) {
-                return;
-            }
-            
-            // Validate student selection for deposit payments
-            if (selectedPaymentMethod === 'deposit') {
-                const studentId = document.getElementById('student-id').value;
-                if (!studentId) {
-                    document.getElementById('student-id').classList.add('is-invalid');
-                    return;
-                } else {
-                    document.getElementById('student-id').classList.remove('is-invalid');
-                }
-                
-                // Set the student ID input
-                document.getElementById('student-id-input').value = studentId;
-            }
-            
-            // Prepare form data
-            const itemsInput = document.getElementById('items-input');
-            const paymentTypeInput = document.getElementById('payment-type-input');
-            const totalAmountInput = document.getElementById('total-amount-input');
-            const orderForm = document.getElementById('order-form');
-            
-            let total = 0;
-            const items = [];
-            
-            Object.keys(cart).forEach(itemId => {
-                const item = cart[itemId];
-                total += item.price * item.quantity;
-                
-                // Ensure we're only sending data that matches the database schema
-                items.push({
-                    id: item.id,
-                    quantity: item.quantity,
-                    price: item.price,
-                    name: item.name,
-                    isCustom: item.isCustom || false
+                // Update active state
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                    btn.classList.remove('active');
                 });
-            });
+                e.target.classList.add('active');
+                
+                // Filter items
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    const itemCategory = item.getAttribute('data-category');
+                    item.style.display = 
+                        (selectedCategory === 'all' || itemCategory === selectedCategory) 
+                        ? '' : 'none';
+                });
+            },
             
-            // Log the items for debugging
-            console.log('Submitting order with cart_items:', items);
+            handleAddToCart(e) {
+                e.preventDefault();
+                const btn = e.target.closest('.add-to-cart-btn');
+                const itemId = btn.getAttribute('data-id');
+                const itemName = btn.getAttribute('data-name');
+                const itemPrice = parseFloat(btn.getAttribute('data-price'));
+                
+                // Add to cart
+                if (!this.cart[itemId]) {
+                    this.cart[itemId] = {
+                        id: itemId,
+                        name: itemName,
+                        price: itemPrice,
+                        quantity: 1
+                    };
+                } else {
+                    this.cart[itemId].quantity++;
+                }
+                
+                // Visual feedback
+                const originalBtn = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check me-2"></i>Added!';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalBtn;
+                    btn.classList.remove('btn-outline-success');
+                    btn.classList.add('btn-success');
+                }, 1000);
+                
+                this.updateCartDisplay();
+            },
             
-            // Create a deep copy of the form data for logging
-            const formDataForLog = {
-                cart_items: JSON.parse(JSON.stringify(items)),
-                payment_type: selectedPaymentMethod,
-                total_amount: total.toFixed(2),
-                student_id: selectedPaymentMethod === 'deposit' ? document.getElementById('student-id-input').value : null
-            };
-            console.log('Full form data to be submitted:', formDataForLog);
-            
-            // Set form input values
-            itemsInput.value = JSON.stringify(items);
-            paymentTypeInput.value = selectedPaymentMethod;
-            totalAmountInput.value = total.toFixed(2);
-            
-            // Submit form
-            console.log('Form data prepared, submitting form...');
-            console.log('Payment type:', selectedPaymentMethod);
-            console.log('Total amount:', total.toFixed(2));
-            if (selectedPaymentMethod === 'deposit') {
-                console.log('Student ID:', document.getElementById('student-id-input').value);
-            }
-            orderForm.submit();
-        });
-        
-        // Function to update cart display
-        function updateCart() {
+            updateCartDisplay() {
+                const cartItems = document.getElementById('cart-items');
             const emptyCartMessage = document.getElementById('empty-cart-message');
             const cartTotal = document.getElementById('cart-total');
             const placeOrderBtn = document.getElementById('place-order-btn');
             
+                // Clear existing cart items
             cartItems.innerHTML = '';
+                let total = 0;
             
-            let total = 0;
-            const cartKeys = Object.keys(cart);
+                const cartKeys = Object.keys(this.cart);
             
             if (cartKeys.length === 0) {
                 emptyCartMessage.classList.remove('d-none');
                 cartItems.classList.add('d-none');
-                placeOrderBtn.classList.remove('btn-primary');
-                placeOrderBtn.classList.add('btn-secondary');
                 placeOrderBtn.disabled = true;
             } else {
                 emptyCartMessage.classList.add('d-none');
                 cartItems.classList.remove('d-none');
                 
+                    // Create a new cart items container
+                    const cartItemsContainer = document.createElement('div');
+                
                 cartKeys.forEach(itemId => {
-                    const item = cart[itemId];
-                    total += item.price * item.quantity;
+                        const item = this.cart[itemId];
+                        const subtotal = item.price * item.quantity;
+                        total += subtotal;
                     
                     const itemElement = document.createElement('div');
-                    itemElement.className = 'card mb-2';
+                        itemElement.className = 'cart-item';
                     itemElement.innerHTML = `
-                        <div class="card-body p-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="card-title mb-0">${item.name}</h6>
-                                <span class="badge bg-primary">₱${item.price.toFixed(2)}</span>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-0">${item.name}</h6>
+                                <span class="text-success">₱${item.price.toFixed(2)}</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted">Quantity:</span>
-                                <div class="input-group input-group-sm" style="width: 120px;">
-                                    <button class="btn btn-outline-secondary decrement-btn" type="button" data-id="${itemId}">-</button>
-                                    <span class="form-control text-center">${item.quantity}</span>
-                                    <button class="btn btn-outline-secondary increment-btn" type="button" data-id="${itemId}">+</button>
-                                </div>
+                                <span class="text-muted small">Subtotal: ₱${subtotal.toFixed(2)}</span>
+                                <div class="quantity-control">
+                                    <button class="quantity-btn minus" data-id="${itemId}">-</button>
+                                    <input type="text" class="quantity-input" value="${item.quantity}" readonly>
+                                    <button class="quantity-btn plus" data-id="${itemId}">+</button>
                             </div>
                         </div>
                     `;
+                        
+                        cartItemsContainer.appendChild(itemElement);
+                        
+                        // Add quantity button listeners
+                        const plusBtn = itemElement.querySelector('.plus');
+                        const minusBtn = itemElement.querySelector('.minus');
+                        
+                        plusBtn.addEventListener('click', () => {
+                            this.cart[itemId].quantity++;
+                            this.updateCartDisplay();
+                        });
+                        
+                        minusBtn.addEventListener('click', () => {
+                            if (this.cart[itemId].quantity > 1) {
+                                this.cart[itemId].quantity--;
+                            } else {
+                                delete this.cart[itemId];
+                            }
+                            this.updateCartDisplay();
+                        });
+                    });
                     
-                    cartItems.appendChild(itemElement);
+                    // Replace the cart items with the new container
+                    cartItems.appendChild(cartItemsContainer);
+                    
+                    // Update order button state
+                    placeOrderBtn.disabled = !this.selectedPaymentMethod || 
+                        (this.selectedPaymentMethod === 'deposit' && 
+                         !document.getElementById('student-id').value);
+                }
+                
+                cartTotal.textContent = `₱${total.toFixed(2)}`;
+            },
+            
+            handlePaymentMethodSelection(e) {
+                const btn = e.target.closest('.payment-btn');
+                
+                document.querySelectorAll('.payment-btn').forEach(b => {
+                    b.classList.remove('btn-success');
+                    b.classList.add('btn-outline-success');
                 });
                 
-                // Update order button state based on payment method
-                if (selectedPaymentMethod) {
-                    // For deposit payments, also check student selection
-                    if (selectedPaymentMethod === 'deposit') {
-                        const studentId = document.getElementById('student-id').value;
-                        if (!studentId) {
-                            placeOrderBtn.classList.remove('btn-primary');
-                            placeOrderBtn.classList.add('btn-secondary');
-                            placeOrderBtn.disabled = true;
-                        } else {
-                            placeOrderBtn.classList.remove('btn-secondary');
-                            placeOrderBtn.classList.add('btn-primary');
-                            placeOrderBtn.disabled = false;
-                        }
-                    } else {
-                        placeOrderBtn.classList.remove('btn-secondary');
-                        placeOrderBtn.classList.add('btn-primary');
-                        placeOrderBtn.disabled = false;
-                    }
-                } else {
-                    placeOrderBtn.classList.remove('btn-primary');
-                    placeOrderBtn.classList.add('btn-secondary');
-                    placeOrderBtn.disabled = true;
+                btn.classList.remove('btn-outline-success');
+                btn.classList.add('btn-success');
+                
+                this.selectedPaymentMethod = btn.id === 'pay-cash' ? 'cash' : 'deposit';
+                
+                const studentSelection = document.getElementById('student-selection');
+                studentSelection.classList.toggle('d-none', this.selectedPaymentMethod === 'cash');
+                
+                this.updateCartDisplay();
+            },
+            
+            handlePlaceOrder() {
+                if (Object.keys(this.cart).length === 0 || !this.selectedPaymentMethod) {
+                    return;
                 }
-            }
-            
-            cartTotal.textContent = `₱${total.toFixed(2)}`;
-            
-            // Add event listeners to new buttons
-            document.querySelectorAll('.increment-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const itemId = this.getAttribute('data-id');
-                    cart[itemId].quantity++;
-                    updateCart();
-                });
-            });
-            
-            document.querySelectorAll('.decrement-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const itemId = this.getAttribute('data-id');
-                    if (cart[itemId].quantity > 1) {
-                        cart[itemId].quantity--;
-                    } else {
-                        delete cart[itemId];
+                
+                const items = Object.values(this.cart).map(item => ({
+                    id: item.id,
+                    quantity: item.quantity,
+                    price: item.price,
+                    name: item.name
+                }));
+                
+                const total = items.reduce((sum, item) => 
+                    sum + (item.price * item.quantity), 0);
+                
+                const orderData = {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    cart_items: JSON.stringify(items),
+                    payment_type: this.selectedPaymentMethod,
+                    total_amount: total.toFixed(2),
+                    student_id: this.selectedPaymentMethod === 'deposit' ? 
+                        document.getElementById('student-id').value : null
+                };
+                
+                Swal.fire({
+                    title: 'Processing Order...',
+                    html: 'Please wait while we process your order',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
                     }
-                    updateCart();
                 });
-            });
-        }
+                
+                $.ajax({
+                    url: '{{ route("pos.store") }}',
+                    method: 'POST',
+                    data: orderData,
+                    dataType: 'json',
+                    success: (response) => {
+                        Swal.close();
+                        
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Order Created',
+                                text: `Order #${response.order.OrderNumber} created successfully`,
+                                showCancelButton: true,
+                                confirmButtonText: 'View Order',
+                                cancelButtonText: 'New Order',
+                                confirmButtonColor: '#4CAF50'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = 
+                                        `/inventory/pos/orders/${response.order.OrderID}`;
+                                }
+                            });
+                            
+                            this.resetOrder();
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.message || 'Failed to create order',
+                                confirmButtonColor: '#F44336'
+                            });
+                        }
+                    },
+                    error: (xhr) => {
+                        Swal.close();
+                        
+                        let errorMessage = 'Failed to create order';
+                        
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.alert) {
+                                Swal.fire({
+                                    icon: response.alert.type,
+                                    title: response.alert.title,
+                                    text: response.alert.text,
+                                    confirmButtonColor: '#F44336'
+                                });
+                                return;
+                            }
+                            errorMessage = response.message || errorMessage;
+                        } catch (e) {
+                            console.error('Error parsing response:', e);
+                        }
+                        
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Order Failed',
+                            text: errorMessage,
+                            confirmButtonColor: '#F44336'
+                        });
+                    }
+                });
+            },
+            
+            resetOrder() {
+                this.cart = {};
+                this.selectedPaymentMethod = null;
+                
+                document.querySelectorAll('.payment-btn').forEach(btn => {
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-success');
+                });
+                
+                document.getElementById('student-selection').classList.add('d-none');
+                
+                if ($('#student-id').data('select2')) {
+                    $('#student-id').val(null).trigger('change');
+                }
+                
+                this.updateCartDisplay();
+            }
+        };
         
-        // Initialize cart
-        updateCart();
+        // Initialize POS system
+        POS.init();
     });
 </script>
 @endpush
