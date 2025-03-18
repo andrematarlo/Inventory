@@ -13,7 +13,7 @@
             </div>
             <form action="{{ route('suppliers.update', $supplier->SupplierID) }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                @method('PUT')
+                @method('POST')
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
@@ -78,14 +78,13 @@
 
                     <div class="mb-3">
                         <label for="items{{ $supplier->SupplierID }}" class="form-label">Items Supplied</label>
-                        <select class="form-select select2-multiple @error('items') is-invalid @enderror" 
+                        <select class="form-select items-select @error('items') is-invalid @enderror" 
                                 id="items{{ $supplier->SupplierID }}" 
                                 name="items[]" 
                                 multiple="multiple"
-                                data-placeholder="Select items">
-                            @foreach($items as $item)
-                                <option value="{{ $item->ItemId }}"
-                                    {{ in_array($item->ItemId, old('items', $supplier->items->pluck('ItemId')->toArray())) ? 'selected' : '' }}>
+                                data-placeholder="Type to search items">
+                            @foreach($supplier->items as $item)
+                                <option value="{{ $item->ItemId }}" selected>
                                     {{ $item->ItemName }}
                                 </option>
                             @endforeach

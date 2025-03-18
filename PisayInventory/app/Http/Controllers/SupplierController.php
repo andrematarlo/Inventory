@@ -129,10 +129,13 @@ class SupplierController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Supplier $supplier)
+    public function update(Request $request, $id)
     {
         try {
             DB::beginTransaction();
+
+            // Find the supplier
+            $supplier = Supplier::where('SupplierID', $id)->firstOrFail();
 
             $validated = $request->validate([
                 'CompanyName' => 'required|string|max:255',

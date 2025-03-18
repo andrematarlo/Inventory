@@ -416,6 +416,87 @@
 
 <script>
     $(document).ready(function() {
+        // Initialize Select2 for both add and edit modals
+        function initializeSelect2(element, modalId) {
+            $(element).select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                dropdownParent: $(modalId),
+                placeholder: 'Search items',
+                allowClear: true,
+                closeOnSelect: false,
+                tags: false,
+                ajax: {
+                    url: '{{ route("items.search") }}',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return {
+                            q: params.term || '',
+                            page: params.page || 1
+                        };
+                    },
+                    processResults: function(data, params) {
+                        params.page = params.page || 1;
+                        return {
+                            results: data.items,
+                            pagination: {
+                                more: data.pagination.more
+                            }
+                        };
+                    },
+                    cache: true
+                },
+                templateResult: formatOption,
+                templateSelection: formatSelection
+            }).on('select2:select', function(e) {
+                var selectedId = e.params.data.id;
+                var option = $(this).children('[value=' + selectedId + ']');
+                option.prop('disabled', true);
+                $(this).select2('destroy');
+                initializeSelect2(this, modalId);
+            }).on('select2:unselect', function(e) {
+                var unselectedId = e.params.data.id;
+                var option = $(this).children('[value=' + unselectedId + ']');
+                option.prop('disabled', false);
+                $(this).select2('destroy');
+                initializeSelect2(this, modalId);
+            });
+        }
+
+        function formatOption(item) {
+            if (!item.id) return item.text;
+            return $(`<span><i class="bi bi-box"></i> ${item.text}</span>`);
+        }
+
+        function formatSelection(item) {
+            if (!item.id) return item.text;
+            return item.text;
+        }
+
+        // Initialize Select2 for add modal
+        initializeSelect2('.select2-multiple', '#addSupplierModal');
+
+        // Initialize Select2 for edit modals
+        $('.items-select').each(function() {
+            var modalId = '#' + $(this).closest('.modal').attr('id');
+            initializeSelect2(this, modalId);
+        });
+
+        // Clear selection when modals are closed
+        $('#addSupplierModal').on('hidden.bs.modal', function() {
+            $('.select2-multiple').val(null).trigger('change');
+            $('.select2-multiple option').prop('disabled', false);
+        });
+
+        $('.modal').on('hidden.bs.modal', function() {
+            var select = $(this).find('.items-select');
+            if (select.length) {
+                select.val(null).trigger('change');
+                select.find('option').prop('disabled', false);
+            }
+        });
+
         // Show active records by default
         $('#activeSuppliers').show();
         $('#deletedSuppliers').hide();

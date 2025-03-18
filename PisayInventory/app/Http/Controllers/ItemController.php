@@ -611,4 +611,42 @@ public function export(Request $request)
     {
         return parent::getUserPermissions('Items');
     }
+
+    public function search(Request $request)
+    {
+        Log::info('Item search request:', [
+            'query' => $request->get('q'),
+            'page' => $request->get('page'),
+            'all_params' => $request->all()
+        ]);
+
+        $search = $request->get('q');
+        $page = $request->get('page', 1);
+        $perPage = 10;
+
+        $items = Item::where('IsDeleted', false)
+            ->where(function($query) use ($search) {
+                $query->where('ItemName', 'LIKE', "%{$search}%")
+                    ->orWhere('Description', 'LIKE', "%{$search}%");
+            })
+            ->select('ItemId as id', 'ItemName as text')
+            ->orderBy('ItemName')
+            ->paginate($perPage);
+
+        $response = [
+            'items' => $items->items(),
+            'total_count' => $items->total(),
+            'pagination' => [
+                'more' => $items->hasMorePages()
+            ]
+        ];
+
+        Log::info('Item search response:', [
+            'items_count' => count($response['items']),
+            'total_count' => $response['total_count'],
+            'has_more' => $response['pagination']['more']
+        ]);
+
+        return response()->json($response);
+    }
 } 
