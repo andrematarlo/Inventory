@@ -614,39 +614,27 @@ public function export(Request $request)
 
     public function search(Request $request)
     {
-        Log::info('Item search request:', [
-            'query' => $request->get('q'),
-            'page' => $request->get('page'),
-            'all_params' => $request->all()
-        ]);
+        try {
+            $query = Item::query()
+                ->where('IsDeleted', false);
 
-        $search = $request->get('q');
-        $page = $request->get('page', 1);
-        $perPage = 10;
+            if ($request->has('q') && !empty($request->q)) {
+                $query->where('ItemName', 'like', '%' . $request->q . '%');
+            }
 
-        $items = Item::where('IsDeleted', false)
-            ->where(function($query) use ($search) {
-                $query->where('ItemName', 'LIKE', "%{$search}%")
-                    ->orWhere('Description', 'LIKE', "%{$search}%");
-            })
-            ->select('ItemId as id', 'ItemName as text')
-            ->orderBy('ItemName')
-            ->paginate($perPage);
+            $items = $query->get();
 
-        $response = [
-            'items' => $items->items(),
-            'total_count' => $items->total(),
-            'pagination' => [
-                'more' => $items->hasMorePages()
-            ]
-        ];
+            $formattedItems = $items->map(function($item) {
+                return [
+                    'id' => $item->ItemId,
+                    'text' => $item->ItemName
+                ];
+            });
 
-        Log::info('Item search response:', [
-            'items_count' => count($response['items']),
-            'total_count' => $response['total_count'],
-            'has_more' => $response['pagination']['more']
-        ]);
-
-        return response()->json($response);
+            return response()->json($formattedItems);
+        } catch (\Exception $e) {
+            \Log::error('Item search error: ' . $e->getMessage());
+            return response()->json([], 500);
+        }
     }
 } 

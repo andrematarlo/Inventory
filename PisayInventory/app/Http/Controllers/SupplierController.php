@@ -21,6 +21,7 @@ class SupplierController extends Controller
     {
         try {
             $activeSuppliers = Supplier::where('IsDeleted', false)
+                ->with('items')
                 ->orderBy('CompanyName')
                 ->paginate(10);
 
@@ -28,7 +29,9 @@ class SupplierController extends Controller
                 ->orderBy('CompanyName')
                 ->paginate(10);
 
-            $items = Item::where('IsDeleted', false)->get();
+            $items = Item::where('IsDeleted', false)
+                ->orderBy('ItemName')
+                ->get();
 
             $userPermissions = $this->getUserPermissions();
 
@@ -132,74 +135,115 @@ class SupplierController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            DB::beginTransaction();
-
-            // Find the supplier
-            $supplier = Supplier::where('SupplierID', $id)->firstOrFail();
-
+            // Validate the request
             $validated = $request->validate([
                 'CompanyName' => 'required|string|max:255',
                 'ContactPerson' => 'required|string|max:255',
-                'TelephoneNumber' => 'nullable|string|max:20',
                 'ContactNum' => 'required|string|max:20',
-                'Address' => 'required|string',
-                'items' => 'nullable|array|exists:items,ItemId'
+                'TelephoneNumber' => 'nullable|string|max:20',
+                'Address' => 'required|string|max:500',
+                'items' => 'nullable|array',
+                'items.*' => 'exists:items,ItemId'
             ]);
 
+            DB::beginTransaction();
+
+            // Find the supplier
+            $supplier = Supplier::where('SupplierID', $id)->first();
+            
+            if (!$supplier) {
+                throw new \Exception('Supplier not found');
+            }
+
+            // Update supplier basic information
             $supplier->CompanyName = $validated['CompanyName'];
             $supplier->ContactPerson = $validated['ContactPerson'];
-            $supplier->TelephoneNumber = $validated['TelephoneNumber'];
             $supplier->ContactNum = $validated['ContactNum'];
+            $supplier->TelephoneNumber = $validated['TelephoneNumber'];
             $supplier->Address = $validated['Address'];
-            $supplier->ModifiedById = Auth::id();
+            $supplier->ModifiedById = auth()->id();
             $supplier->DateModified = now();
             $supplier->save();
 
-            // Handle items relationship
+            // Handle items relationships
             if (isset($validated['items'])) {
-                // Soft delete removed relationships
-                DB::table('items_suppliers')
+                // Get current items
+                $currentItems = DB::table('items_suppliers')
                     ->where('SupplierID', $supplier->SupplierID)
-                    ->whereNotIn('ItemId', $validated['items'])
-                    ->update([
-                        'IsDeleted' => true,
-                        'DeletedById' => Auth::id(),
-                        'DateDeleted' => now()
-                    ]);
+                    ->where('IsDeleted', false)
+                    ->pluck('ItemId')
+                    ->toArray();
 
-                // Add new relationships and update existing ones
-                $now = now();
-                foreach ($validated['items'] as $itemId) {
+                $newItems = $validated['items'];
+
+                // Items to remove
+                $itemsToRemove = array_diff($currentItems, $newItems);
+                
+                // Items to add
+                $itemsToAdd = array_diff($newItems, $currentItems);
+
+                // Mark items as deleted
+                if (!empty($itemsToRemove)) {
                     DB::table('items_suppliers')
-                        ->updateOrInsert(
-                            ['SupplierID' => $supplier->SupplierID, 'ItemId' => $itemId],
-                            [
-                                'CreatedById' => Auth::id(),
-                                'DateCreated' => $now,
-                                'ModifiedById' => Auth::id(),
-                                'DateModified' => $now,
-                                'IsDeleted' => false,
-                                'DeletedById' => null,
-                                'DateDeleted' => null
-                            ]
-                        );
+                        ->where('SupplierID', $supplier->SupplierID)
+                        ->whereIn('ItemId', $itemsToRemove)
+                        ->update([
+                            'IsDeleted' => true,
+                            'DateModified' => now(),
+                            'ModifiedById' => auth()->id()
+                        ]);
+                }
+
+                // Add new items
+                foreach ($itemsToAdd as $itemId) {
+                    DB::table('items_suppliers')->insert([
+                        'SupplierID' => $supplier->SupplierID,
+                        'ItemId' => $itemId,
+                        'DateCreated' => now(),
+                        'CreatedById' => auth()->id(),
+                        'DateModified' => now(),
+                        'ModifiedById' => auth()->id(),
+                        'IsDeleted' => false
+                    ]);
+                }
+
+                // Update existing items
+                if (!empty($newItems)) {
+                    DB::table('items_suppliers')
+                        ->where('SupplierID', $supplier->SupplierID)
+                        ->whereIn('ItemId', $newItems)
+                        ->update([
+                            'IsDeleted' => false,
+                            'DateModified' => now(),
+                            'ModifiedById' => auth()->id()
+                        ]);
                 }
             } else {
-                // Soft delete all relationships if no items selected
+                // If no items selected, mark all as deleted
                 DB::table('items_suppliers')
                     ->where('SupplierID', $supplier->SupplierID)
                     ->update([
                         'IsDeleted' => true,
-                        'DeletedById' => Auth::id(),
-                        'DateDeleted' => now()
+                        'DateModified' => now(),
+                        'ModifiedById' => auth()->id()
                     ]);
             }
 
             DB::commit();
-            return redirect()->route('suppliers.index')->with('success', 'Supplier updated successfully');
+
+            return redirect()->route('suppliers.index')
+                ->with('success', 'Supplier updated successfully.');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Error updating supplier: ' . $e->getMessage())->withInput();
+            Log::error('Error updating supplier:', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()
+                ->withInput()
+                ->with('error', 'Error updating supplier. Please try again. Error: ' . $e->getMessage());
         }
     }
 

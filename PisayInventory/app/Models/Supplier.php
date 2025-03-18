@@ -12,22 +12,18 @@ class Supplier extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'SupplierID',
         'CompanyName',
         'ContactPerson',
-        'TelephoneNumber',
         'ContactNum',
+        'TelephoneNumber',
         'Address',
-        'ImagePath',
-        'CreatedById',
-        'DateCreated',
         'ModifiedById',
         'DateModified',
+        'IsDeleted',
         'DeletedById',
         'DateDeleted',
         'RestoredById',
-        'DateRestored',
-        'IsDeleted'
+        'DateRestored'
     ];
 
     protected $casts = [
@@ -110,8 +106,7 @@ class Supplier extends Model
     public function items()
     {
         return $this->belongsToMany(Item::class, 'items_suppliers', 'SupplierID', 'ItemId')
-                    ->withPivot(['DateCreated', 'CreatedById', 'DateModified', 'ModifiedById', 'IsDeleted'])
-                    ->wherePivot('IsDeleted', false);
+            ->withPivot('DateModified', 'ModifiedById', 'IsDeleted');
     }
 
     // Query scopes

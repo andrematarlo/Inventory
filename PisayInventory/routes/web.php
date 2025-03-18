@@ -92,7 +92,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/store', [SupplierController::class, 'store'])->name('suppliers.store');
             Route::delete('/{id}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
             Route::post('/{id}/restore', [SupplierController::class, 'restore'])->name('suppliers.restore');
-            Route::post('/update/{id}', [SupplierController::class, 'update'])->name('suppliers.update');
+            Route::put('/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
         });
 
         // Classifications Management

@@ -119,11 +119,36 @@
     
     .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
         background-color: #f8f9fa;
-        color: #212529;
         border: 1px solid #dee2e6;
+        border-radius: 4px;
         padding: 2px 8px;
         margin: 2px;
-        border-radius: 3px;
+        display: flex;
+        align-items: center;
+    }
+
+    .select2-container--bootstrap-5 .select2-results__option {
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+    }
+
+    .select2-container--bootstrap-5 .select2-results__option .bi-box {
+        margin-right: 8px;
+        font-size: 1.1em;
+    }
+
+    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice .bi-box {
+        margin-right: 6px;
+    }
+    
+    .select2-container--bootstrap-5 .select2-search__field {
+        margin-top: 4px;
+    }
+    
+    .select2-results__option--highlighted {
+        background-color: #e9ecef !important;
+        color: #000 !important;
     }
 </style>
 @endsection
@@ -229,12 +254,12 @@
                                               class="d-inline delete-supplier-form">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="button" 
+                                        <button type="button" 
                                                     class="btn btn-danger btn-sm delete-supplier-btn" 
-                                                    data-supplier-id="{{ $supplier->SupplierID }}"
-                                                    data-supplier-name="{{ $supplier->CompanyName }}">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
+                                                data-supplier-id="{{ $supplier->SupplierID }}"
+                                                data-supplier-name="{{ $supplier->CompanyName }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                         </form>
                                         @endif
                                     </div>
@@ -416,84 +441,62 @@
 
 <script>
     $(document).ready(function() {
-        // Initialize Select2 for both add and edit modals
-        function initializeSelect2(element, modalId) {
+        // Initialize Select2 for items dropdowns
+        function initializeSelect2(element) {
             $(element).select2({
                 theme: 'bootstrap-5',
                 width: '100%',
-                dropdownParent: $(modalId),
+                dropdownParent: $(element).closest('.modal'),
                 placeholder: 'Search items',
                 allowClear: true,
-                closeOnSelect: false,
-                tags: false,
+                minimumInputLength: 0,
                 ajax: {
                     url: '{{ route("items.search") }}',
                     dataType: 'json',
                     delay: 250,
                     data: function(params) {
                         return {
-                            q: params.term || '',
+                            search: params.term || '',
                             page: params.page || 1
                         };
                     },
-                    processResults: function(data, params) {
-                        params.page = params.page || 1;
+                    processResults: function(data) {
                         return {
-                            results: data.items,
-                            pagination: {
-                                more: data.pagination.more
-                            }
+                            results: data.items.map(function(item) {
+                                return {
+                                    id: item.id,
+                                    text: item.text
+                                };
+                            })
                         };
                     },
                     cache: true
                 },
-                templateResult: formatOption,
-                templateSelection: formatSelection
-            }).on('select2:select', function(e) {
-                var selectedId = e.params.data.id;
-                var option = $(this).children('[value=' + selectedId + ']');
-                option.prop('disabled', true);
-                $(this).select2('destroy');
-                initializeSelect2(this, modalId);
-            }).on('select2:unselect', function(e) {
-                var unselectedId = e.params.data.id;
-                var option = $(this).children('[value=' + unselectedId + ']');
-                option.prop('disabled', false);
-                $(this).select2('destroy');
-                initializeSelect2(this, modalId);
+                templateResult: function(item) {
+                    if (!item.id) return item.text;
+                    return $('<div><i class="bi bi-box"></i> ' + item.text + '</div>');
+                },
+                templateSelection: function(item) {
+                    if (!item.id) return item.text;
+                    return $('<div><i class="bi bi-box"></i> ' + item.text + '</div>');
+                },
+                escapeMarkup: function(markup) {
+                    return markup;
+                }
             });
         }
 
-        function formatOption(item) {
-            if (!item.id) return item.text;
-            return $(`<span><i class="bi bi-box"></i> ${item.text}</span>`);
-        }
-
-        function formatSelection(item) {
-            if (!item.id) return item.text;
-            return item.text;
-        }
-
-        // Initialize Select2 for add modal
-        initializeSelect2('.select2-multiple', '#addSupplierModal');
-
-        // Initialize Select2 for edit modals
+        // Initialize Select2 for all items-select elements
         $('.items-select').each(function() {
-            var modalId = '#' + $(this).closest('.modal').attr('id');
-            initializeSelect2(this, modalId);
+            initializeSelect2(this);
         });
 
-        // Clear selection when modals are closed
-        $('#addSupplierModal').on('hidden.bs.modal', function() {
-            $('.select2-multiple').val(null).trigger('change');
-            $('.select2-multiple option').prop('disabled', false);
-        });
-
-        $('.modal').on('hidden.bs.modal', function() {
-            var select = $(this).find('.items-select');
+        // Reinitialize Select2 when edit modal is shown
+        $('.modal').on('shown.bs.modal', function() {
+            const select = $(this).find('.items-select');
             if (select.length) {
-                select.val(null).trigger('change');
-                select.find('option').prop('disabled', false);
+                select.select2('destroy');
+                initializeSelect2(select);
             }
         });
 
@@ -588,11 +591,11 @@
                     Swal.fire({
                         title: 'Restoring...',
                         text: 'Please wait while we restore the supplier.',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
                         showConfirmButton: false,
-                        didOpen: () => {
-                            Swal.showLoading();
+                didOpen: () => {
+                    Swal.showLoading();
                             form.submit();
                         }
                     });
