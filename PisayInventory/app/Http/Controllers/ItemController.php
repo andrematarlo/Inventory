@@ -272,14 +272,6 @@ public function export(Request $request)
                 'request_data' => $request->all()
             ]);
 
-                    // Check for duplicates, excluding the current item
-        $duplicate = Item::checkDuplicate($request->ItemName, $request->Description)
-        ->where('ItemId', '!=', $id)
-        ->first();
-    if ($duplicate) {
-        throw new \Exception('An item with the same name and description already exists.');
-    }
-
             // Clean and validate the ID
             $cleanId = is_numeric($id) ? $id : null;
             
@@ -324,6 +316,15 @@ public function export(Request $request)
             
             if (!$item) {
                 throw new \Exception("Item not found with ID: $cleanId");
+            }
+
+            // Check for duplicates, excluding the current item
+            $duplicate = Item::checkDuplicate($validated['ItemName'], $validated['Description'])
+                ->where('ItemId', '!=', $cleanId)
+                ->first();
+
+            if ($duplicate) {
+                throw new \Exception('An item with the same name and description already exists.');
             }
 
             // Get current employee

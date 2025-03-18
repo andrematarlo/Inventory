@@ -42,8 +42,8 @@ class Item extends Model
 
     public function scopeCheckDuplicate($query, $itemName, $description)
     {
-        return $query->where('ItemName', $itemName)
-                    ->where('Description', $description)
+        return $query->whereRaw('LOWER(ItemName) = ?', [strtolower($itemName)])
+                    ->whereRaw('LOWER(Description) = ?', [strtolower($description)])
                     ->where('IsDeleted', false);
     }
 
