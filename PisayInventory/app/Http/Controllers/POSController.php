@@ -47,7 +47,7 @@ class POSController extends Controller
                         ->get();
                         
         $categories = DB::table('classification')
-                      ->where('IsDeleted', false)
+                      ->whereNull('deleted_at')
                       ->orderBy('ClassificationName')
                       ->get();
 
@@ -288,7 +288,7 @@ class POSController extends Controller
     public function filterByCategory($categoryId)
     {
         $menuItems = DB::table('menu_items')
-                        ->where('IsDeleted', 0)
+                        ->whereNull('deleted_at')
                         ->where('IsAvailable', 1);
                         
         if ($categoryId) {
@@ -303,10 +303,10 @@ class POSController extends Controller
     // Cashiering function - for processing payments
     public function cashiering()
     {
-        $pendingOrders = DB::table('orders')
-                           ->where('IsDeleted', 0)
+        $pendingOrders = DB::table('pos_orders')
+                           ->whereNull('deleted_at')
                            ->where('Status', 'pending')
-                           ->orderBy('DateCreated', 'desc')
+                           ->orderBy('created_at', 'desc')
                            ->get();
                            
         return view('pos.cashiering', compact('pendingOrders'));
@@ -542,85 +542,88 @@ class POSController extends Controller
         return view('pos.reports', compact('salesData'));
     }
     
-    // Process payment for an order
-    public function processPayment(Request $request, $orderId)
+    // For payment transactions
+    public function processPayment($orderId, Request $request)
     {
-        $request->validate([
-            'payment_amount' => 'required|numeric',
-            'payment_type' => 'required|in:cash,deposit'
-        ]);
-        
         try {
             DB::beginTransaction();
             
-            // Get the order details
-            $order = DB::table('orders')
-                ->where('OrderId', $orderId)
+            // Validate inputs
+            $validated = $request->validate([
+                'payment_amount' => 'required|numeric|min:0',
+                'payment_type' => 'required|in:cash,deposit'
+            ]);
+            
+            // Get the order
+            $order = DB::table('pos_orders')
+                ->where('OrderID', $orderId)
+                ->where('Status', 'pending') // Only pending orders can be processed
+                ->whereNull('deleted_at')
                 ->first();
-                
+            
             if (!$order) {
-                return redirect()->back()->with('error', 'Order not found.');
+                return redirect()->back()->with('error', 'Order not found or cannot be processed');
             }
             
-            // Handle deposit payment
-            if ($request->payment_type === 'deposit') {
-                // Verify student ID is present in the order
-                if (empty($order->StudentId)) {
-                    return redirect()->back()->with('error', 'Student ID is required for deposit payments.');
+            // Verify payment amount
+            $paymentAmount = $validated['payment_amount'];
+            if ($paymentAmount < $order->TotalAmount) {
+                return redirect()->back()->with('error', 'Payment amount cannot be less than the order total');
+            }
+            
+            // Calculate change
+            $changeAmount = $paymentAmount - $order->TotalAmount;
+            
+            // Process payment based on type
+            if ($validated['payment_type'] === 'deposit') {
+                // Check student deposit balance
+                if (!$order->student_id) {
+                    return redirect()->back()->with('error', 'Cannot use deposit payment for an order without a student');
                 }
                 
-                // Get student's current balance
-                $currentBalance = DB::table('student_deposits')
-                    ->where('student_id', $order->StudentId)
-                    ->where('status', 'Active')
-                    ->orderBy('created_at', 'desc')
-                    ->value('balance_after') ?? 0;
-                    
-                // Check if student has enough balance
-                if ($currentBalance < $order->TotalAmount) {
-                    return redirect()->back()->with('error', 'Insufficient balance. Current balance: ₱' . number_format($currentBalance, 2));
+                $balance = CashDeposit::where('student_id', $order->student_id)
+                    ->whereNull('deleted_at')
+                    ->sum('Amount');
+                
+                if ($balance < $order->TotalAmount) {
+                    return redirect()->back()->with('error', 'Insufficient deposit balance');
                 }
                 
-                // Calculate new balance
-                $newBalance = $currentBalance - $order->TotalAmount;
-                
-                // Record the payment as a deduction from deposit balance
-                DB::table('student_deposits')->insert([
-                    'student_id' => $order->StudentId,
-                    'transaction_date' => now(),
-                    'reference_number' => 'PAY-' . $order->OrderNumber,
-                    'transaction_type' => 'Payment',
-                    'amount' => -$order->TotalAmount, // Negative amount for deduction
-                    'balance_before' => $currentBalance,
-                    'balance_after' => $newBalance,
-                    'notes' => 'Payment for Order #' . $order->OrderNumber,
-                    'created_by' => Auth::id(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                    'status' => 'Active'
+                // Create new deposit record with negative amount
+                CashDeposit::create([
+                    'student_id' => $order->student_id,
+                    'Amount' => -$order->TotalAmount,
+                    'ReferenceType' => 'order_payment',
+                    'ReferenceID' => $order->OrderID,
+                    'Status' => 'completed',
+                    'ProcessedBy' => Auth::id() ?? 1,
+                    'ProcessedAt' => now()
                 ]);
             }
+            
+            // Create payment transaction record
+            DB::table('payment_transactions')->insert([
+                'OrderId' => $order->OrderID,
+                'Amount' => $order->TotalAmount,
+                'PaymentType' => $validated['payment_type'],
+                'Status' => 'completed',
+                'ReferenceNumber' => 'PAY-' . $order->OrderNumber,
+                'CreatedById' => Auth::id() ?? 1,
+                'DateCreated' => now(),
+                'ModifiedById' => Auth::id() ?? 1,
+                'DateModified' => now()
+            ]);
             
             // Update order status
-            DB::table('orders')
-                ->where('OrderId', $orderId)
-                ->update([
-                    'Status' => 'paid',
-                    'ModifiedById' => Auth::id() ?? 1,
-                    'DateModified' => now()
-                ]);
-                
-            // Update payment transaction
-            DB::table('payment_transactions')
-                ->where('OrderId', $orderId)
+            DB::table('pos_orders')
+                ->where('OrderID', $orderId)
                 ->update([
                     'Status' => 'completed',
-                    'Amount' => $request->payment_amount,
-                    'ModifiedById' => Auth::id() ?? 1,
-                    'DateModified' => now()
+                    'updated_at' => now()
                 ]);
-                
+            
             DB::commit();
+            
             return redirect()->route('pos.cashiering')->with('success', 'Payment processed successfully');
             
         } catch (\Exception $e) {
@@ -689,10 +692,10 @@ class POSController extends Controller
             DB::beginTransaction();
             
             // Get the order
-            $order = DB::table('orders')
-                ->where('OrderId', $orderId)
+            $order = DB::table('pos_orders')
+                ->where('OrderID', $orderId)
                 ->where('Status', 'pending') // Only pending orders can be cancelled
-                ->where('IsDeleted', 0)
+                ->whereNull('deleted_at')
                 ->first();
                 
             if (!$order) {
@@ -700,23 +703,22 @@ class POSController extends Controller
             }
             
             // Update order status
-            DB::table('orders')
-                ->where('OrderId', $orderId)
+            DB::table('pos_orders')
+                ->where('OrderID', $orderId)
                 ->update([
                     'Status' => 'cancelled',
-                    'ModifiedById' => Auth::id() ?? 1,
-                    'DateModified' => now()
+                    'updated_at' => now()
                 ]);
-                
+            
             // Restore stock for each order item
-            $orderItems = DB::table('order_items')
-                ->where('OrderId', $orderId)
+            $orderItems = DB::table('pos_order_items')
+                ->where('OrderID', $orderId)
                 ->get();
                 
             foreach ($orderItems as $item) {
                 // Only increment stock for regular inventory items
                 DB::table('menu_items')
-                    ->where('ItemId', $item->ItemId)
+                    ->where('ItemID', $item->ItemID)
                     ->increment('StocksAvailable', $item->Quantity);
             }
             
@@ -743,11 +745,11 @@ class POSController extends Controller
     public function getOrderDetails($orderId)
     {
         try {
-            $order = DB::table('orders')
-                ->leftJoin('students', 'orders.StudentId', '=', 'students.student_id')
-                ->where('orders.OrderId', $orderId)
-                ->where('orders.IsDeleted', 0)
-                ->select('orders.*', 'students.first_name as FirstName', 'students.last_name as LastName', 'students.student_id as StudentNumber')
+            $order = DB::table('pos_orders')
+                ->leftJoin('students', 'pos_orders.student_id', '=', 'students.student_id')
+                ->where('pos_orders.OrderID', $orderId)
+                ->whereNull('pos_orders.deleted_at')
+                ->select('pos_orders.*', 'students.first_name as FirstName', 'students.last_name as LastName', 'students.student_id as StudentNumber')
                 ->first();
                 
             if (!$order) {
@@ -755,11 +757,11 @@ class POSController extends Controller
             }
             
             // Get order items
-            $items = DB::table('order_items')
-                ->leftJoin('menu_items', 'order_items.ItemId', '=', 'menu_items.ItemId')
-                ->where('order_items.OrderId', $orderId)
+            $items = DB::table('pos_order_items')
+                ->leftJoin('menu_items', 'pos_order_items.ItemID', '=', 'menu_items.ItemID')
+                ->where('pos_order_items.OrderID', $orderId)
                 ->select(
-                    'order_items.*',
+                    'pos_order_items.*',
                     'menu_items.ItemName',
                     'menu_items.ImagePath'
                 )

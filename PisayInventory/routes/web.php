@@ -175,11 +175,27 @@ Route::middleware('auth')->group(function () {
             Route::get('/order-details/{id}', [POSController::class, 'getOrderDetails'])->name('pos.order-details');
             Route::post('/add-menu-item', [POSController::class, 'addMenuItem'])->name('pos.add-menu-item');
             
+            // Cashiering routes
+            Route::get('/cashiering', [POSController::class, 'cashiering'])->name('pos.cashiering');
+            Route::post('/process-payment/{id}', [POSController::class, 'processPayment'])->name('pos.process-payment');
+            
+            // Cash Deposit Routes
+            Route::get('/cashdeposit', [POSController::class, 'cashDeposit'])->name('pos.cashdeposit');
+            Route::post('/cashdeposit/store', [POSController::class, 'storeDeposit'])->name('pos.cashdeposit.store');
+            Route::post('/cashdeposit/{id}/approve', [POSController::class, 'approveDeposit'])->name('pos.cashdeposit.approve');
+            Route::post('/cashdeposit/{id}/reject', [POSController::class, 'rejectDeposit'])->name('pos.cashdeposit.reject');
+            
+            // Student Select2 search
+            Route::get('/students/select2', [POSController::class, 'searchStudents'])->name('pos.students.select2');
+            
             // Cash Deposit Routes
             Route::get('/deposits', [DepositController::class, 'index'])->name('pos.deposits');
             Route::post('/deposits/store', [DepositController::class, 'store'])->name('pos.deposits.store');
             Route::get('/deposits/{id}', [DepositController::class, 'show'])->name('pos.deposits.show');
             Route::get('/student-balance/{id}', [DepositController::class, 'getStudentBalance'])->name('pos.student-balance');
+            
+            // Category filtering
+            Route::get('/filter-by-category/{categoryId?}', [POSController::class, 'filterByCategory'])->name('pos.filter-by-category');
             
             // Reports
             Route::get('/reports', [POSController::class, 'reports'])->name('pos.reports');

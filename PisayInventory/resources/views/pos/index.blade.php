@@ -78,7 +78,6 @@
                     <tbody>
                         @php
                             $orders = App\Models\POSOrder::with('student')
-                                ->where('IsDeleted', false)
                                 ->orderBy('created_at', 'desc')
                                 ->paginate(10);
                         @endphp

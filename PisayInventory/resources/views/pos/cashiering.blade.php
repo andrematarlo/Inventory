@@ -43,15 +43,15 @@
                         @forelse($pendingOrders as $order)
                             <tr>
                                 <td>{{ $order->OrderNumber }}</td>
-                                <td>{{ date('M d, Y h:i A', strtotime($order->DateCreated)) }}</td>
+                                <td>{{ date('M d, Y h:i A', strtotime($order->created_at)) }}</td>
                                 <td>₱{{ number_format($order->TotalAmount, 2) }}</td>
-                                <td>{{ ucfirst($order->PaymentType) }}</td>
+                                <td>{{ ucfirst($order->PaymentMethod) }}</td>
                                 <td>
                                     <span class="badge bg-warning">Pending</span>
                                 </td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-success process-payment-btn" 
-                                            data-order-id="{{ $order->OrderId }}"
+                                            data-order-id="{{ $order->OrderID }}"
                                             data-order-number="{{ $order->OrderNumber }}"
                                             data-total="{{ $order->TotalAmount }}">
                                         Process Payment
@@ -89,11 +89,11 @@
                     <tbody>
                         @php
                             $completedPayments = DB::table('payment_transactions')
-                                ->join('orders', 'payment_transactions.OrderId', '=', 'orders.OrderId')
+                                ->join('pos_orders', 'payment_transactions.OrderID', '=', 'pos_orders.OrderID')
                                 ->where('payment_transactions.Status', 'completed')
                                 ->orderBy('payment_transactions.DateModified', 'desc')
                                 ->limit(5)
-                                ->get(['orders.OrderNumber', 'payment_transactions.DateModified', 'payment_transactions.Amount', 'payment_transactions.PaymentType', 'payment_transactions.Status']);
+                                ->get(['pos_orders.OrderNumber', 'payment_transactions.DateModified', 'payment_transactions.Amount', 'payment_transactions.PaymentType', 'payment_transactions.Status']);
                         @endphp
                         
                         @forelse($completedPayments as $payment)
@@ -181,7 +181,7 @@
                 const total = this.getAttribute('data-total');
                 
                 // Set form action
-                paymentForm.action = `{{ url('pos/payment') }}/${orderId}`;
+                paymentForm.action = `{{ route('pos.process-payment', '') }}/${orderId}`;
                 
                 // Set values
                 orderNumberInput.value = orderNumber;
