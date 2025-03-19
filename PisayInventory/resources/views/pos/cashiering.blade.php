@@ -88,23 +88,20 @@
                     </thead>
                     <tbody>
                         @php
-                            $completedPayments = DB::table('payment_transactions')
-                                ->join('pos_orders', 'payment_transactions.OrderID', '=', 'pos_orders.OrderID')
-                                ->where('payment_transactions.Status', 'completed')
-                                ->orderBy('payment_transactions.DateModified', 'desc')
+                            $completedOrders = DB::table('pos_orders')
+                                ->where('Status', 'completed')
+                                ->orderBy('updated_at', 'desc')
                                 ->limit(5)
-                                ->get(['pos_orders.OrderNumber', 'payment_transactions.DateModified', 'payment_transactions.Amount', 'payment_transactions.PaymentType', 'payment_transactions.Status']);
+                                ->get(['OrderNumber', 'updated_at as DateModified', 'TotalAmount as Amount', 'PaymentMethod as PaymentType', 'Status']);
                         @endphp
                         
-                        @forelse($completedPayments as $payment)
+                        @forelse($completedOrders as $order)
                             <tr>
-                                <td>{{ $payment->OrderNumber }}</td>
-                                <td>{{ date('M d, Y h:i A', strtotime($payment->DateModified)) }}</td>
-                                <td>₱{{ number_format($payment->Amount, 2) }}</td>
-                                <td>{{ ucfirst($payment->PaymentType) }}</td>
-                                <td>
-                                    <span class="badge bg-success">Completed</span>
-                                </td>
+                                <td>{{ $order->OrderNumber }}</td>
+                                <td>{{ date('M d, Y h:i A', strtotime($order->DateModified)) }}</td>
+                                <td>₱{{ number_format($order->Amount, 2) }}</td>
+                                <td>{{ ucfirst($order->PaymentType) }}</td>
+                                <td><span class="badge bg-success">{{ ucfirst($order->Status) }}</span></td>
                             </tr>
                         @empty
                             <tr>
