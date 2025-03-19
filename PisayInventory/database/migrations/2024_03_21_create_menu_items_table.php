@@ -15,6 +15,7 @@ return new class extends Migration
             $table->decimal('Price', 10, 2);
             $table->unsignedBigInteger('ClassificationID')->nullable();
             $table->unsignedBigInteger('UnitOfMeasureID')->nullable();
+            $table->integer('StocksAvailable')->default(0);
             $table->boolean('IsAvailable')->default(true);
             $table->boolean('IsDeleted')->default(false);
             $table->timestamps();

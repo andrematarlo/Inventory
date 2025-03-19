@@ -29,7 +29,7 @@ class POSController extends Controller
         $isStudent = Auth::check() && Auth::user()->role === 'Student';
         $studentBalance = 0;
         $studentId = null;
-
+        
         if ($isStudent) {
             $studentId = Auth::user()->student_id;
             $studentBalance = CashDeposit::where('student_id', $studentId)
@@ -46,11 +46,10 @@ class POSController extends Controller
                         ->with(['classification', 'unitOfMeasure'])
                         ->get();
                         
-        $categories = DB::table('classification')
-                      ->whereNull('deleted_at')
+        $categories = Classification::where('IsDeleted', false)
                       ->orderBy('ClassificationName')
                       ->get();
-
+        
         return view('pos.create', compact('menuItems', 'categories'));
     }
     
@@ -63,7 +62,14 @@ class POSController extends Controller
             $cartItems = $request->items;
             if (!is_array($cartItems) && $request->has('cart_items')) {
                 $cartItems = json_decode($request->cart_items, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new \Exception('Invalid cart data format');
+                }
                 Log::debug('Parsed cart items from JSON string', ['cartItems' => $cartItems]);
+            }
+
+            if (empty($cartItems) || !is_array($cartItems)) {
+                throw new \Exception('No items in cart');
             }
             
             // Debug request data
@@ -73,6 +79,24 @@ class POSController extends Controller
                 'payment_method' => $request->payment_type,
                 'items' => $cartItems
             ]);
+            
+            // Check stock availability for all items before proceeding
+            foreach ($cartItems as $item) {
+                if (!isset($item['id']) || !is_numeric($item['id'])) {
+                    throw new \Exception('Invalid item ID');
+                }
+
+                if (!isset($item['quantity']) || !is_numeric($item['quantity'])) {
+                    throw new \Exception('Invalid quantity');
+                }
+
+                if (empty($item['isCustom']) || !$item['isCustom']) {
+                    $menuItem = MenuItem::findOrFail((int)$item['id']);
+                    if (!$menuItem->hasSufficientStock($item['quantity'])) {
+                        throw new \Exception("Insufficient stock for item: {$menuItem->ItemName}");
+                    }
+                }
+            }
             
             // Generate order number
             $orderNumber = 'ORD-' . date('Ymd') . '-' . str_pad(
@@ -91,7 +115,7 @@ class POSController extends Controller
             
             // Create the order
             $order = POSOrder::create([
-                'student_id' => $request->student_id,
+            'student_id' => $request->student_id,
                 'TotalAmount' => $request->total_amount,
                 'PaymentMethod' => $request->payment_type,
                 'Status' => 'pending',
@@ -100,9 +124,8 @@ class POSController extends Controller
             
             Log::debug('Order created:', ['order_id' => $order->OrderID, 'order_data' => $order->toArray()]);
             
-            // Add order items
+            // Add order items and update stock
             foreach ($cartItems as $item) {
-                // Check if it's a custom item or menu item
                 if (!empty($item['isCustom']) && $item['isCustom']) {
                     Log::debug('Processing custom item:', ['item' => $item]);
                     
@@ -136,7 +159,13 @@ class POSController extends Controller
                             'IsCustomItem' => false
                         ]);
                         
-                        Log::debug('Order item created:', ['order_item' => $orderItem->toArray()]);
+                        // Decrement stock
+                        $menuItem->decrementStock($item['quantity']);
+                        
+                        Log::debug('Order item created and stock updated:', [
+                            'order_item' => $orderItem->toArray(),
+                            'remaining_stock' => $menuItem->StocksAvailable
+                        ]);
                     } else {
                         // If no ID but has name and price, treat as custom item
                         Log::debug('Processing item without ID as custom:', ['item' => $item]);
@@ -560,7 +589,7 @@ class POSController extends Controller
                 ->where('Status', 'pending') // Only pending orders can be processed
                 ->whereNull('deleted_at')
                 ->first();
-            
+                
             if (!$order) {
                 return redirect()->back()->with('error', 'Order not found or cannot be processed');
             }
@@ -614,7 +643,7 @@ class POSController extends Controller
                     'ChangeAmount' => $changeAmount,
                     'updated_at' => now()
                 ]);
-            
+                
             DB::commit();
             
             return redirect()->route('pos.cashiering')->with('success', 'Payment processed successfully');
@@ -632,6 +661,7 @@ class POSController extends Controller
             'item_name' => 'required|string|max:100',
             'price' => 'required|numeric|min:0',
             'category_id' => 'required|exists:classification,ClassificationID',
+            'stocks_available' => 'required|integer|min:0',
             'description' => 'nullable|string|max:255',
         ]);
 
@@ -644,6 +674,7 @@ class POSController extends Controller
                 'Price' => $request->price,
                 'ClassificationID' => $request->category_id,
                 'Description' => $request->description,
+                'StocksAvailable' => $request->stocks_available,
                 'IsAvailable' => true,
                 'IsDeleted' => false,
                 'created_at' => now(),
@@ -702,22 +733,26 @@ class POSController extends Controller
                     'Status' => 'cancelled',
                     'updated_at' => now()
                 ]);
-            
+                
             // Restore stock for each order item
             $orderItems = DB::table('pos_order_items')
                 ->where('OrderID', $orderId)
                 ->get();
                 
             foreach ($orderItems as $item) {
-                if (!empty($item->ItemID)) {
-                    // Only increment stock for regular inventory items
-                    DB::table('menu_items')
-                        ->where('ItemID', $item->ItemID)
-                        ->increment('StocksAvailable', $item->Quantity);
+                if (!empty($item->ItemID) && !$item->IsCustomItem) {
+                    // Only increment stock for regular menu items
+                    $menuItem = MenuItem::find($item->ItemID);
+                    if ($menuItem) {
+                        $menuItem->incrementStock($item->Quantity);
+                        Log::debug('Stock restored for item:', [
+                            'item_id' => $item->ItemID,
+                            'quantity_restored' => $item->Quantity,
+                            'new_stock' => $menuItem->StocksAvailable
+                        ]);
+                    }
                 }
             }
-            
-            // Skip updating payment_transactions
             
             DB::commit();
             
@@ -725,6 +760,11 @@ class POSController extends Controller
             
         } catch (\Exception $e) {
             DB::rollback();
+            Log::error('Error cancelling order:', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return redirect()->back()->with('error', 'Failed to cancel order: ' . $e->getMessage());
         }
     }

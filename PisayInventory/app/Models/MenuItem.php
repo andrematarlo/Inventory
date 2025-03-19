@@ -15,6 +15,7 @@ class MenuItem extends Model
         'Price',
         'ClassificationID',
         'UnitOfMeasureID',
+        'StocksAvailable',
         'IsAvailable',
         'IsDeleted'
     ];
@@ -22,7 +23,8 @@ class MenuItem extends Model
     protected $casts = [
         'Price' => 'decimal:2',
         'IsAvailable' => 'boolean',
-        'IsDeleted' => 'boolean'
+        'IsDeleted' => 'boolean',
+        'StocksAvailable' => 'integer'
     ];
     
     /**
@@ -43,5 +45,42 @@ class MenuItem extends Model
     {
         return $this->belongsTo(UnitOfMeasure::class, 'UnitOfMeasureID', 'UnitOfMeasureID')
                     ->withDefault(['UnitName' => 'N/A']);
+    }
+    
+    /**
+     * Check if the item has sufficient stock.
+     *
+     * @param int $quantity
+     * @return bool
+     */
+    public function hasSufficientStock($quantity = 1)
+    {
+        return $this->StocksAvailable >= $quantity;
+    }
+    
+    /**
+     * Decrement the stock by the given quantity.
+     *
+     * @param int $quantity
+     * @return bool
+     */
+    public function decrementStock($quantity = 1)
+    {
+        if ($this->hasSufficientStock($quantity)) {
+            $this->decrement('StocksAvailable', $quantity);
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * Increment the stock by the given quantity.
+     *
+     * @param int $quantity
+     * @return void
+     */
+    public function incrementStock($quantity = 1)
+    {
+        $this->increment('StocksAvailable', $quantity);
     }
 } 
