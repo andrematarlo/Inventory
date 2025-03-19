@@ -28,23 +28,27 @@
         
         // Check permissions for each module
         $isAdmin = Auth::check() && Auth::user()->role === 'Admin';
+        $isStudent = Auth::check() && Auth::user()->role === 'Students';
         $hasHRAccess = $hrPermissions && $hrPermissions->CanView;
         $hasPurchasingAccess = $purchasingPermissions && $purchasingPermissions->CanView;
         $hasReceivingAccess = $receivingPermissions && $receivingPermissions->CanView;
         $hasInventoryAccess = $inventoryPermissions && $inventoryPermissions->CanView;
         $hasStudentAccess = $studentPermissions && $studentPermissions->CanView || $isAdmin;
         $hasLaboratoryAccess = $laboratoryPermissions && $laboratoryPermissions->CanView || $isAdmin;
-        $hasPOSAccess = $posPermissions && $posPermissions->CanView || $isAdmin;
+        $hasPOSAccess = $posPermissions && $posPermissions->CanView || $isAdmin || $isStudent;
     @endphp
 
     <ul class="nav flex-column py-2">
+        @if(!$isStudent)
         <li class="nav-item">
             <a href="{{ route('dashboard') }}" class="nav-link text-white {{ request()->routeIs('dashboard') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-speedometer2"></i>
                 <span>Dashboard</span>
             </a>
         </li>
-        @if($hasStudentAccess)
+        @endif
+
+        @if($hasStudentAccess && !$isStudent)
         <li class="nav-item">
             <a href="{{ route('students.index') }}" class="nav-link text-white {{ request()->routeIs('students.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-mortarboard"></i>
@@ -52,6 +56,7 @@
             </a>
         </li>
         @endif
+
         @if($isAdmin)
         <li class="nav-item">
             <a class="nav-link {{ request()->routeIs('modules.*') ? 'active' : '' }}" href="{{ route('modules.index') }}">
@@ -60,31 +65,33 @@
             </a>
         </li>
         @endif
+
         @if($hasHRAccess)
         <li class="nav-item dropdown">
-        <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <a href="#" class="nav-link dropdown-toggle" id="employeeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-people"></i>
                 <span>Employee Management</span>
             </a>
             <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
-    <li>
-        <a class="dropdown-item {{ request()->routeIs('employees.index') ? 'active' : '' }}" href="{{ route('employees.index') }}">
-            <i class="bi bi-person"></i> Employees
-        </a>
-    </li>
-    <li>
-        <a class="dropdown-item {{ request()->routeIs('roles.index') ? 'active' : '' }}" href="{{ route('roles.index') }}">
-            <i class="bi bi-person-badge"></i> Roles
-        </a>
-    </li>
-    <li>
-        <a class="dropdown-item {{ request()->routeIs('roles.policies') ? 'active' : '' }}" href="{{ route('roles.policies') }}">
-            <i class="bi bi-shield-check"></i> Role Policies
-        </a>
-    </li>
-</ul>
+                <li>
+                    <a class="dropdown-item {{ request()->routeIs('employees.index') ? 'active' : '' }}" href="{{ route('employees.index') }}">
+                        <i class="bi bi-person"></i> Employees
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item {{ request()->routeIs('roles.index') ? 'active' : '' }}" href="{{ route('roles.index') }}">
+                        <i class="bi bi-person-badge"></i> Roles
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item {{ request()->routeIs('roles.policies') ? 'active' : '' }}" href="{{ route('roles.policies') }}">
+                        <i class="bi bi-shield-check"></i> Role Policies
+                    </a>
+                </li>
+            </ul>
         </li>
         @endif
+
         @if($hasPurchasingAccess)
         <li class="nav-item">
             <a href="{{ route('purchases.index') }}" class="nav-link text-white {{ request()->routeIs('purchases.*') ? 'active bg-primary' : '' }}">
@@ -93,6 +100,7 @@
             </a>
         </li>
         @endif
+
         @if($hasReceivingAccess)
         <li class="nav-item">
             <a href="{{ route('receiving.index') }}" class="nav-link text-white {{ request()->routeIs('receiving.*') ? 'active bg-primary' : '' }}">
@@ -101,6 +109,7 @@
             </a>
         </li>
         @endif
+
         @if($hasInventoryAccess)
         <li class="nav-item">
             <a href="{{ route('items.index') }}" class="nav-link text-white {{ request()->routeIs('items.*') ? 'active bg-primary' : '' }}">
@@ -139,6 +148,7 @@
             </a>
         </li>
         @endif
+
         @if($hasPOSAccess)
         <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="posDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -146,30 +156,35 @@
                 <span>Point of Sale</span>
             </a>
             <ul class="dropdown-menu" aria-labelledby="posDropdown">
+                @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
                 <li>
                     <a class="dropdown-item {{ request()->routeIs('pos.index') ? 'active' : '' }}" href="{{ route('pos.index') }}">
                         <i class="bi bi-list-check"></i> Orders
                     </a>
                 </li>
+                @endif
                 <li>
                     <a class="dropdown-item {{ request()->routeIs('pos.create') ? 'active' : '' }}" href="{{ route('pos.create') }}">
                         <i class="bi bi-plus-circle"></i> New Order
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ request()->routeIs('pos.deposits') ? 'active' : '' }}" href="{{ route('pos.deposits') }}">
+                    <a class="dropdown-item {{ request()->routeIs('pos.deposits.*') ? 'active' : '' }}" href="{{ route('pos.deposits.index') }}">
                         <i class="bi bi-wallet2"></i> Deposits
                     </a>
                 </li>
+                @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
                 <li>
                     <a class="dropdown-item {{ request()->routeIs('pos.reports') ? 'active' : '' }}" href="{{ route('pos.reports') }}">
                         <i class="bi bi-graph-up"></i> POS Reports
                     </a>
                 </li>
+                @endif
             </ul>
         </li>
         @endif
-        @if($hasLaboratoryAccess)
+
+        @if($hasLaboratoryAccess && $isStudent)
         <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="laboratoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-building"></i>

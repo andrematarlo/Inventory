@@ -61,6 +61,10 @@
                                 </select>
                             </div>
                             <div class="col-md-6 text-end">
+                                <div id="student-balance-display" style="display: none;">
+                                    <h6 class="mb-1">Available Balance</h6>
+                                    <h3 class="text-primary mb-0">₱<span id="balance-amount">0.00</span></h3>
+                                </div>
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-outline-primary active" data-view="grid">
                                         <i class="bi bi-grid"></i>
@@ -169,15 +173,15 @@
                             <label class="d-block mb-2">Payment Method</label>
                             <div class="d-flex gap-3">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="payment_method" 
+                                    <input class="form-check-input" type="radio" name="payment_type" 
                                            id="cashPayment" value="cash" checked>
                                     <label class="form-check-label" for="cashPayment">
                                         <i class="bi bi-cash me-1"></i> Cash
                                     </label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="payment_method" 
-                                           id="depositPayment" value="deposit">
+                                    <input class="form-check-input" type="radio" name="payment_type" 
+                                           id="depositPayment" value="deposit" disabled>
                                     <label class="form-check-label" for="depositPayment">
                                         <i class="bi bi-wallet2 me-1"></i> Student Deposit
                                     </label>
@@ -263,23 +267,63 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Initialize Select2 for student selection
+    // Initialize student select2
     $('#student').select2({
         theme: 'bootstrap-5',
+        placeholder: 'Search student by ID or name...',
+        allowClear: true,
+        minimumInputLength: 1,
         ajax: {
-            url: '{{ route("pos.students.select2") }}',
+            url: '{{ route("pos.search-students") }}',
             dataType: 'json',
             delay: 250,
+            data: function(params) {
+                return {
+                    term: params.term || '',
+                    page: params.page || 1
+                };
+            },
             processResults: function(data) {
                 return {
-                    results: data.results
+                    results: data.results,
+                    pagination: data.pagination
                 };
             },
             cache: true
-        },
-        placeholder: 'Search student by ID or name...',
-        minimumInputLength: 3
+        }
+    }).on('select2:select', function(e) {
+        const studentId = e.params.data.id;
+        // Fetch and display student balance
+        fetch(`{{ url('pos/student-balance') }}/${studentId}`)
+            .then(response => response.json())
+            .then(data => {
+                $('#balance-amount').text(parseFloat(data.balance).toFixed(2));
+                $('#student-balance-display').show();
+                // Enable deposit payment option
+                $('#depositPayment').prop('disabled', false);
+                // Update hidden student_id field
+                $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
+            })
+            .catch(error => {
+                console.error('Error fetching student balance:', error);
+                $('#student-balance-display').hide();
+                $('#depositPayment').prop('disabled', true);
+            });
+    }).on('select2:clear', function() {
+        // Hide balance display when student is cleared
+        $('#student-balance-display').hide();
+        // Disable deposit payment option
+        $('#depositPayment').prop('disabled', true);
+        // Switch to cash payment if deposit was selected
+        if ($('#depositPayment').prop('checked')) {
+            $('#cashPayment').prop('checked', true);
+        }
+        // Remove student_id from form
+        $('#cartData input[name="student_id"]').remove();
     });
+
+    // Initially disable deposit payment option
+    $('#depositPayment').prop('disabled', true);
 
     // Category filtering
     $('.category-btn').click(function() {
@@ -452,15 +496,36 @@ $(document).ready(function() {
     }
 
     // Handle payment method change
-    $('input[name="payment_method"]').change(function() {
-        if ($(this).val() === 'deposit' && !$('#student').val()) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Student Required',
-                text: 'Please select a student to use deposit payment.',
-                confirmButtonText: 'OK'
-            });
-            $('#cashPayment').prop('checked', true);
+    $('input[name="payment_type"]').change(function() {
+        const paymentType = $(this).val();
+        if (paymentType === 'deposit') {
+            const studentId = $('#student').val();
+            if (!studentId) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Student Required',
+                    text: 'Please select a student to use deposit payment.',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    $('#cashPayment').prop('checked', true);
+                });
+                return;
+            }
+            
+            // Check if student has sufficient balance
+            const total = parseFloat($('#total').text());
+            const balance = parseFloat($('#balance-amount').text());
+            if (balance < total) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Insufficient Balance',
+                    text: `Current balance (₱${balance.toFixed(2)}) is less than the total amount (₱${total.toFixed(2)})`,
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    $('#cashPayment').prop('checked', true);
+                });
+                return;
+            }
         }
     });
 
@@ -468,14 +533,31 @@ $(document).ready(function() {
     $('#orderForm').submit(function(e) {
         e.preventDefault();
         
-        if ($('#depositPayment').is(':checked') && !$('#student').val()) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Student Required',
-                text: 'Please select a student to use deposit payment.',
-                confirmButtonText: 'OK'
-            });
-            return;
+        const paymentType = $('input[name="payment_type"]:checked').val();
+        if (paymentType === 'deposit') {
+            const studentId = $('#student').val();
+            if (!studentId) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Student Required',
+                    text: 'Please select a student to use deposit payment.',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            // Check if student has sufficient balance
+            const total = parseFloat($('#total').text());
+            const balance = parseFloat($('#balance-amount').text());
+            if (balance < total) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Insufficient Balance',
+                    text: `Current balance (₱${balance.toFixed(2)}) is less than the total amount (₱${total.toFixed(2)})`,
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
         }
 
         // Prepare cart items data
@@ -497,8 +579,13 @@ $(document).ready(function() {
         $('#cartData').append(`<input type="hidden" name="total_amount" value="${total}">`);
         
         // Add payment type
-        const paymentType = $('input[name="payment_method"]:checked').val();
         $('#cartData').append(`<input type="hidden" name="payment_type" value="${paymentType}">`);
+
+        // If student is selected, add student_id
+        const studentId = $('#student').val();
+        if (studentId) {
+            $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
+        }
 
         Swal.fire({
             title: 'Confirm Order',

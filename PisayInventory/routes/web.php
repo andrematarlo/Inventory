@@ -25,6 +25,7 @@ use App\Http\Controllers\LaboratoryReservationController;
 use App\Http\Controllers\EquipmentBorrowingController;
 use App\Http\Controllers\POSController;
 use App\Http\Controllers\DepositController;
+use App\Http\Controllers\POSDepositController;
 
 // Add this at the top of your routes to debug
 Route::get('/debug/routes', function() {
@@ -165,42 +166,36 @@ Route::middleware('auth')->group(function () {
         Route::resource('modules', ModuleController::class);
 
         // Point of Sale Routes
-        Route::prefix('pos')->group(function () {
-            Route::get('/', [POSController::class, 'index'])->name('pos.index');
-            Route::get('/create', [POSController::class, 'create'])->name('pos.create');
-            Route::post('/store', [POSController::class, 'store'])->name('pos.store');
-            Route::get('/show/{id}', [POSController::class, 'show'])->name('pos.show');
-            Route::post('/process/{id}', [POSController::class, 'process'])->name('pos.process');
-            Route::post('/cancel/{id}', [POSController::class, 'cancel'])->name('pos.cancel');
-            Route::get('/order-details/{id}', [POSController::class, 'getOrderDetails'])->name('pos.order-details');
-            Route::post('/add-menu-item', [POSController::class, 'addMenuItem'])->name('pos.add-menu-item');
+        Route::prefix('pos')->name('pos.')->group(function () {
+            // Main POS routes
+            Route::get('/', [App\Http\Controllers\POSController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\POSController::class, 'create'])->name('create');
+            Route::post('/store', [App\Http\Controllers\POSController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [App\Http\Controllers\POSController::class, 'show'])->name('show');
+            Route::post('/process/{id}', [App\Http\Controllers\POSController::class, 'process'])->name('process');
+            Route::post('/cancel/{id}', [App\Http\Controllers\POSController::class, 'cancel'])->name('cancel');
+            Route::get('/order-details/{id}', [App\Http\Controllers\POSController::class, 'getOrderDetails'])->name('order-details');
+            Route::post('/add-menu-item', [App\Http\Controllers\POSController::class, 'addMenuItem'])->name('add-menu-item');
+            Route::get('/search-students', [App\Http\Controllers\POSController::class, 'searchStudents'])->name('search-students');
+            Route::get('/student-balance/{studentId}', [App\Http\Controllers\POSController::class, 'getStudentBalance'])->name('student-balance');
             
             // Cashiering routes
-            Route::get('/cashiering', [POSController::class, 'cashiering'])->name('pos.cashiering');
-            Route::post('/process-payment/{id}', [POSController::class, 'processPayment'])->name('pos.process-payment');
-            
-            // Cash Deposit Routes
-            Route::get('/cashdeposit', [POSController::class, 'cashDeposit'])->name('pos.cashdeposit');
-            Route::post('/cashdeposit/store', [POSController::class, 'storeDeposit'])->name('pos.cashdeposit.store');
-            Route::post('/cashdeposit/{id}/approve', [POSController::class, 'approveDeposit'])->name('pos.cashdeposit.approve');
-            Route::post('/cashdeposit/{id}/reject', [POSController::class, 'rejectDeposit'])->name('pos.cashdeposit.reject');
-            
-            // Student Select2 search
-            Route::get('/students/select2', [POSController::class, 'searchStudents'])->name('pos.students.select2');
-            
-            // Cash Deposit Routes
-            Route::get('/deposits', [DepositController::class, 'index'])->name('pos.deposits');
-            Route::post('/deposits/store', [DepositController::class, 'store'])->name('pos.deposits.store');
-            Route::get('/deposits/{id}', [DepositController::class, 'show'])->name('pos.deposits.show');
-            Route::get('/student-balance/{id}', [DepositController::class, 'getStudentBalance'])->name('pos.student-balance');
+            Route::get('/cashiering', [App\Http\Controllers\POSController::class, 'cashiering'])->name('cashiering');
+            Route::post('/process-payment/{id}', [App\Http\Controllers\POSController::class, 'processPayment'])->name('process-payment');
             
             // Category filtering
-            Route::get('/filter-by-category/{categoryId?}', [POSController::class, 'filterByCategory'])->name('pos.filter-by-category');
+            Route::get('/filter-by-category/{categoryId?}', [App\Http\Controllers\POSController::class, 'filterByCategory'])->name('filter-by-category');
             
             // Reports
-            Route::get('/reports', [POSController::class, 'reports'])->name('pos.reports');
-            Route::get('/reports/sales', [POSController::class, 'salesReport'])->name('pos.reports.sales');
-            Route::get('/reports/deposits', [POSController::class, 'depositsReport'])->name('pos.reports.deposits');
+            Route::get('/reports', [App\Http\Controllers\POSController::class, 'reports'])->name('reports');
+            Route::get('/reports/sales', [App\Http\Controllers\POSController::class, 'salesReport'])->name('reports.sales');
+            Route::get('/reports/deposits', [App\Http\Controllers\POSController::class, 'depositsReport'])->name('reports.deposits');
+            
+            // Deposits Routes
+            Route::get('/deposits', [App\Http\Controllers\POSDepositController::class, 'index'])->name('deposits.index');
+            Route::post('/deposits', [App\Http\Controllers\POSDepositController::class, 'store'])->name('deposits.store');
+            Route::get('/deposits/history/{student}', [App\Http\Controllers\POSDepositController::class, 'history'])->name('deposits.history');
+            Route::get('/students/select2', [App\Http\Controllers\POSDepositController::class, 'studentSelect2'])->name('students.select2');
         });
 
 // Laboratory Management Routes

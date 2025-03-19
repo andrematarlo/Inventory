@@ -79,6 +79,17 @@ class POSController extends Controller
                 'payment_method' => $request->payment_type,
                 'items' => $cartItems
             ]);
+
+            // If payment method is deposit, check student balance
+            if ($request->payment_type === 'deposit' && $request->student_id) {
+                $currentBalance = CashDeposit::where('student_id', $request->student_id)
+                    ->whereNull('deleted_at')
+                    ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
+
+                if ($currentBalance < $request->total_amount) {
+                    throw new \Exception('Insufficient deposit balance. Current balance: ' . number_format($currentBalance, 2));
+                }
+            }
             
             // Check stock availability for all items before proceeding
             foreach ($cartItems as $item) {
@@ -108,18 +119,15 @@ class POSController extends Controller
             
             Log::debug('Generated order number: ' . $orderNumber);
             
-            // Debug table structure
-            Log::debug('POS Orders table structure:', [
-                'columns' => DB::getSchemaBuilder()->getColumnListing('pos_orders')
-            ]);
-            
             // Create the order
             $order = POSOrder::create([
-            'student_id' => $request->student_id,
+                'student_id' => $request->student_id,
                 'TotalAmount' => $request->total_amount,
                 'PaymentMethod' => $request->payment_type,
-                'Status' => 'pending',
-                'OrderNumber' => $orderNumber
+                'Status' => $request->payment_type === 'deposit' ? 'completed' : 'pending',
+                'OrderNumber' => $orderNumber,
+                'ProcessedBy' => $request->payment_type === 'deposit' ? Auth::id() : null,
+                'ProcessedAt' => $request->payment_type === 'deposit' ? now() : null
             ]);
             
             Log::debug('Order created:', ['order_id' => $order->OrderID, 'order_data' => $order->toArray()]);
@@ -166,26 +174,31 @@ class POSController extends Controller
                             'order_item' => $orderItem->toArray(),
                             'remaining_stock' => $menuItem->StocksAvailable
                         ]);
-                    } else {
-                        // If no ID but has name and price, treat as custom item
-                        Log::debug('Processing item without ID as custom:', ['item' => $item]);
-                        
-                        // Insert custom item using DB query to bypass foreign key constraint
-                        $orderItemId = DB::table('pos_order_items')->insertGetId([
-                            'OrderID' => $order->OrderID,
-                            'ItemID' => null, // Set ItemID to null for custom items
-                            'Quantity' => $item['quantity'],
-                            'UnitPrice' => $item['price'],
-                            'Subtotal' => $item['price'] * $item['quantity'],
-                            'ItemName' => $item['name'],
-                            'IsCustomItem' => true,
-                            'created_at' => now(),
-                            'updated_at' => now()
-                        ]);
-                        
-                        Log::debug('Custom order item created:', ['order_item_id' => $orderItemId]);
                     }
                 }
+            }
+
+            // If payment method is deposit, deduct from student's balance
+            if ($request->payment_type === 'deposit' && $request->student_id) {
+                // Create a withdrawal transaction
+                CashDeposit::create([
+                    'student_id' => $request->student_id,
+                    'TransactionDate' => now(),
+                    'ReferenceNumber' => $orderNumber,
+                    'TransactionType' => 'WITHDRAWAL',
+                    'Amount' => $request->total_amount,
+                    'BalanceBefore' => $currentBalance,
+                    'BalanceAfter' => $currentBalance - $request->total_amount,
+                    'Notes' => "Payment for Order #{$orderNumber}",
+                    'Status' => 'completed'
+                ]);
+
+                Log::debug('Deposit withdrawal created for order payment', [
+                    'student_id' => $request->student_id,
+                    'amount' => $request->total_amount,
+                    'balance_before' => $currentBalance,
+                    'balance_after' => $currentBalance - $request->total_amount
+                ]);
             }
             
             DB::commit();
@@ -211,29 +224,13 @@ class POSController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            // Get database structure for debugging
-            $tableStructure = [];
-            try {
-                $tableStructure['pos_orders'] = DB::getSchemaBuilder()->getColumnListing('pos_orders');
-                $tableStructure['pos_order_items'] = DB::getSchemaBuilder()->getColumnListing('pos_order_items');
-                $tableStructure['menu_items'] = DB::getSchemaBuilder()->getColumnListing('menu_items');
-            } catch (\Exception $ex) {
-                $tableStructure['error'] = $ex->getMessage();
-            }
-            
             $responseData = [
                 'success' => false,
                 'message' => 'Error creating order: ' . $e->getMessage(),
-                'details' => $e->getTraceAsString(),
-                'debug' => [
-                    'request' => $request->all(),
-                    'table_structure' => $tableStructure
-                ],
                 'alert' => [
                     'type' => 'error',
                     'title' => 'Order Failed',
-                    'text' => 'Error: ' . $e->getMessage(),
-                    'footer' => 'Please check the console for more details'
+                    'text' => 'Error: ' . $e->getMessage()
                 ]
             ];
             
@@ -309,7 +306,7 @@ class POSController extends Controller
     {
         $balance = CashDeposit::where('student_id', $studentId)
             ->whereNull('deleted_at')
-            ->sum('Amount');
+            ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
 
         return response()->json(['balance' => $balance]);
     }
@@ -610,34 +607,41 @@ class POSController extends Controller
                     return redirect()->back()->with('error', 'Cannot use deposit payment for an order without a student');
                 }
                 
-                $balance = CashDeposit::where('student_id', $order->student_id)
+                $currentBalance = CashDeposit::where('student_id', $order->student_id)
                     ->whereNull('deleted_at')
-                    ->sum('Amount');
+                    ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
                 
-                if ($balance < $order->TotalAmount) {
-                    return redirect()->back()->with('error', 'Insufficient deposit balance');
+                if ($currentBalance < $order->TotalAmount) {
+                    return redirect()->back()->with('error', 'Insufficient deposit balance. Current balance: ₱' . number_format($currentBalance, 2));
                 }
                 
-                // Create new deposit record with negative amount
+                // Create withdrawal transaction
                 CashDeposit::create([
                     'student_id' => $order->student_id,
-                    'Amount' => -$order->TotalAmount,
-                    'ReferenceType' => 'order_payment',
-                    'ReferenceID' => $order->OrderID,
-                    'Status' => 'completed',
-                    'ProcessedBy' => Auth::id() ?? 1,
-                    'ProcessedAt' => now()
+                    'TransactionDate' => now(),
+                    'ReferenceNumber' => $order->OrderNumber,
+                    'TransactionType' => 'WITHDRAWAL',
+                    'Amount' => $order->TotalAmount,
+                    'BalanceBefore' => $currentBalance,
+                    'BalanceAfter' => $currentBalance - $order->TotalAmount,
+                    'Notes' => "Payment for Order #{$order->OrderNumber}",
+                    'Status' => 'completed'
+                ]);
+
+                Log::debug('Deposit withdrawal created for order payment', [
+                    'student_id' => $order->student_id,
+                    'amount' => $order->TotalAmount,
+                    'balance_before' => $currentBalance,
+                    'balance_after' => $currentBalance - $order->TotalAmount
                 ]);
             }
             
-            // Skip creating payment_transactions record to avoid foreign key constraint issues
-            
-            // Update order status directly
+            // Update order status
             DB::table('pos_orders')
                 ->where('OrderID', $orderId)
                 ->update([
                     'Status' => 'completed',
-                    'ProcessedBy' => Auth::id() ?? 1,
+                    'ProcessedBy' => Auth::id(),
                     'ProcessedAt' => now(),
                     'AmountTendered' => $paymentAmount,
                     'ChangeAmount' => $changeAmount,
@@ -646,10 +650,18 @@ class POSController extends Controller
                 
             DB::commit();
             
-            return redirect()->route('pos.cashiering')->with('success', 'Payment processed successfully');
+            return redirect()->route('pos.cashiering')
+                ->with('success', 'Payment processed successfully. ' . 
+                    ($validated['payment_type'] === 'deposit' ? 'Amount deducted from student deposit.' : 
+                    'Change amount: ₱' . number_format($changeAmount, 2)));
             
         } catch (\Exception $e) {
             DB::rollback();
+            Log::error('Payment processing failed:', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return redirect()->back()->with('error', 'Failed to process payment: ' . $e->getMessage());
         }
     }
@@ -777,67 +789,92 @@ class POSController extends Controller
                 ->leftJoin('students', 'pos_orders.student_id', '=', 'students.student_id')
                 ->where('pos_orders.OrderID', $orderId)
                 ->whereNull('pos_orders.deleted_at')
-                ->select('pos_orders.*', 'students.first_name as FirstName', 'students.last_name as LastName', 'students.student_id as StudentNumber')
+                ->select(
+                    'pos_orders.*',
+                    'students.first_name',
+                    'students.last_name',
+                    'students.student_id'
+                )
                 ->first();
                 
             if (!$order) {
                 return response()->json(['error' => 'Order not found'], 404);
             }
             
-            // Get order items
+            // Get order items - using pos_order_items table directly since it has all the info we need
             $items = DB::table('pos_order_items')
-                ->leftJoin('menu_items', 'pos_order_items.ItemID', '=', 'menu_items.ItemID')
-                ->where('pos_order_items.OrderID', $orderId)
+                ->where('OrderID', $orderId)
                 ->select(
-                    'pos_order_items.*',
-                    'menu_items.ItemName',
-                    'menu_items.ImagePath'
+                    'OrderItemID',
+                    'ItemID',
+                    'ItemName',
+                    'Quantity',
+                    'UnitPrice',
+                    'Subtotal',
+                    'IsCustomItem'
                 )
                 ->get();
-                
-            return response()->json([
-                'order' => $order,
-                'items' => $items
-            ]);
-            
+
+            // Format the response
+            $response = [
+                'order' => [
+                    'OrderID' => $order->OrderID,
+                    'OrderNumber' => $order->OrderNumber,
+                    'Status' => $order->Status ?? 'Unknown',
+                    'TotalAmount' => $order->TotalAmount ?? 0,
+                    'PaymentMethod' => $order->PaymentMethod ?? 'Unknown',
+                    'Notes' => $order->Notes ?? '',
+                    'created_at' => $order->created_at,
+                    'student' => $order->student_id ? [
+                        'id' => $order->student_id,
+                        'name' => trim($order->first_name . ' ' . $order->last_name)
+                    ] : null
+                ],
+                'items' => $items->map(function($item) {
+                    return [
+                        'ItemID' => $item->ItemID,
+                        'ItemName' => $item->ItemName ?? 'Unknown Item',
+                        'Description' => '',
+                        'Quantity' => $item->Quantity ?? 0,
+                        'UnitPrice' => $item->UnitPrice ?? 0,
+                        'Subtotal' => $item->Subtotal ?? 0,
+                        'IsCustomItem' => $item->IsCustomItem ?? false
+                    ];
+                })
+            ];
+
+            return response()->json($response);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to retrieve order details: ' . $e->getMessage()], 500);
+            Log::error('Failed to load order details:', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Failed to load order details: ' . $e->getMessage()], 500);
         }
     }
 
     // Search students for Select2 dropdown
     public function searchStudents(Request $request)
     {
-        $term = $request->input('term');
-        $page = $request->input('page', 1);
-        $resultsPerPage = 10;
+        $term = $request->get('term');
         
-        $query = DB::table('students')
+        $students = DB::table('students')
             ->where('status', 'Active')
             ->where(function($query) use ($term) {
-                if (!empty($term)) {
-                    $query->where('student_id', 'like', '%' . $term . '%')
-                        ->orWhere('first_name', 'like', '%' . $term . '%')
-                        ->orWhere('last_name', 'like', '%' . $term . '%');
-                }
+                $query->where('student_id', 'like', "%{$term}%")
+                    ->orWhere(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$term}%");
             })
-            ->select('student_id as id', 
-                    DB::raw("CONCAT(first_name, ' ', last_name, ' (', student_id, ')') as text"),
-                    'first_name', 'last_name', 'grade_level', 'section');
-                    
-        $total = $query->count();
-        $lastPage = ceil($total / $resultsPerPage);
-        
-        $results = $query
-            ->skip(($page - 1) * $resultsPerPage)
-            ->take($resultsPerPage)
+            ->select(
+                'student_id as id',
+                DB::raw("CONCAT(student_id, ' - ', first_name, ' ', last_name) as text")
+            )
+            ->limit(10)
             ->get();
-            
+
         return response()->json([
-            'results' => $results,
-            'pagination' => [
-                'more' => $page < $lastPage
-            ]
+            'results' => $students,
+            'pagination' => ['more' => false]
         ]);
     }
 } 

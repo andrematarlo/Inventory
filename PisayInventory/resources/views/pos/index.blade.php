@@ -53,7 +53,7 @@
                 </div>
                 <div class="col-md-6">
                     <div class="input-group">
-                        <input type="text" id="orderSearch" class="form-control" placeholder="Search by order number or status...">
+                        <input type="text" id="orderSearch" class="form-control" placeholder="Search orders...">
                         <button class="btn btn-outline-secondary" type="button">
                             <i class="bi bi-search"></i>
                         </button>
@@ -76,19 +76,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php
-                            $orders = App\Models\POSOrder::with('student')
-                                ->orderBy('created_at', 'desc')
-                                ->paginate(10);
-                        @endphp
-                        
                         @forelse($orders as $order)
-                            <tr>
+                            <tr class="order-row">
                                 <td class="ps-3 fw-medium">{{ $order->OrderNumber }}</td>
                                 <td>{{ date('M d, Y h:i A', strtotime($order->created_at)) }}</td>
                                 <td>
-                                    @if($order->StudentId)
-                                        {{ $order->student->FirstName }} {{ $order->student->LastName }}
+                                    @if($order->student_id)
+                                        {{ $order->student->first_name }} {{ $order->student->last_name }}
                                     @else
                                         <span class="text-muted fst-italic">None</span>
                                     @endif
@@ -118,7 +112,7 @@
                                             Actions
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#viewOrderModal" data-order-id="{{ $order->OrderId }}">
+                                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#viewOrderModal" data-order-id="{{ $order->OrderID }}">
                                                 <i class="bi bi-eye me-2"></i> View Details
                                             </a></li>
                                             @if($order->Status == 'pending')
@@ -126,7 +120,7 @@
                                                     <i class="bi bi-cash-coin me-2"></i> Process Payment
                                                 </a></li>
                                                 <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#cancelOrderModal" data-order-id="{{ $order->OrderId }}">
+                                                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#cancelOrderModal" data-order-id="{{ $order->OrderID }}">
                                                     <i class="bi bi-x-circle me-2"></i> Cancel Order
                                                 </a></li>
                                             @endif
@@ -173,7 +167,6 @@
                     </div>
                     <p class="mt-3">Loading order details...</p>
                 </div>
-                <!-- Order details will be loaded here via AJAX -->
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -206,174 +199,186 @@
 
 @push('scripts')
 <script>
-    $(document).ready(function() {
-        // Initialize DataTable
-        $('#ordersTable').DataTable({
-            "paging": false, // Disable DataTables paging since we're using Laravel pagination
-            "searching": true,
-            "ordering": true,
-            "info": false,
-            "autoWidth": false,
-            "responsive": true
-        });
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchInput = document.getElementById('orderSearch');
+    const orderRows = document.querySelectorAll('.order-row');
+    
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
         
-        // Search functionality
-        $('#orderSearch').on('keyup', function() {
-            $('#ordersTable').DataTable().search($(this).val()).draw();
-        });
-        
-        // Handle View Order Modal
-        $('#viewOrderModal').on('show.bs.modal', function (event) {
-            const button = $(event.relatedTarget);
-            const orderId = button.data('order-id');
-            const modal = $(this);
+        orderRows.forEach(row => {
+            const orderNumber = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+            const date = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+            const student = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+            const status = row.querySelector('td:nth-child(6)').textContent.toLowerCase();
             
-            // Show loading state
-            modal.find('.modal-body').html(`
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-3">Loading order details...</p>
+            const matchesSearch = orderNumber.includes(searchTerm) || 
+                                date.includes(searchTerm) || 
+                                student.includes(searchTerm) || 
+                                status.includes(searchTerm);
+            
+            row.style.display = matchesSearch ? '' : 'none';
+        });
+    });
+    
+    // Handle View Order Modal
+    const viewOrderModal = document.getElementById('viewOrderModal');
+    viewOrderModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const orderId = button.getAttribute('data-order-id');
+        const modal = this;
+        
+        // Show loading state
+        modal.querySelector('.modal-body').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
-            `);
-            
-            // Fetch order details using AJAX
-            $.ajax({
-                url: `/pos/order-details/${orderId}`,
-                method: 'GET',
-                success: function(response) {
-                    const order = response.order;
-                    const items = response.items;
-                    
-                    // Format status badge
-                    let statusBadge = '';
-                    if (order.Status === 'pending') {
-                        statusBadge = '<span class="badge bg-warning text-dark">Pending</span>';
-                    } else if (order.Status === 'paid') {
-                        statusBadge = '<span class="badge bg-success">Paid</span>';
-                    } else if (order.Status === 'completed') {
-                        statusBadge = '<span class="badge bg-primary">Completed</span>';
-                    } else if (order.Status === 'cancelled') {
-                        statusBadge = '<span class="badge bg-danger">Cancelled</span>';
-                    }
-                    
-                    // Format payment method badge
-                    let paymentBadge = '';
-                    if (order.PaymentMethod === 'cash') {
-                        paymentBadge = '<span class="badge bg-info text-dark">Cash</span>';
-                    } else if (order.PaymentMethod === 'deposit') {
-                        paymentBadge = '<span class="badge bg-secondary">Deposit</span>';
-                    }
-                    
-                    // Format date
-                    const orderDate = new Date(order.created_at);
-                    const formattedDate = orderDate.toLocaleString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    
-                    // Build order details HTML
-                    let html = `
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <h6 class="fw-bold mb-3">Order Information</h6>
-                                <p class="mb-1"><strong>Order #:</strong> <span>${order.OrderNumber}</span></p>
-                                <p class="mb-1"><strong>Date:</strong> <span>${formattedDate}</span></p>
-                                <p class="mb-1"><strong>Status:</strong> ${statusBadge}</p>
-                                <p class="mb-1"><strong>Payment Method:</strong> ${paymentBadge}</p>
-                            </div>
-                            <div class="col-md-6">
-                                <h6 class="fw-bold mb-3">Student Information</h6>
-                    `;
-                    
-                    // Add student information if available
-                    if (order.StudentId) {
-                        html += `
-                            <p class="mb-1"><strong>ID:</strong> <span>${order.StudentNumber}</span></p>
-                            <p class="mb-1"><strong>Name:</strong> <span>${order.FirstName} ${order.LastName}</span></p>
-                        `;
-                    } else {
-                        html += `<p class="text-muted fst-italic">No student associated with this order</p>`;
-                    }
-                    
-                    html += `
-                            </div>
-                        </div>
-                        
-                        <h6 class="fw-bold mb-3">Order Items</h6>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Item</th>
-                                        <th class="text-center">Quantity</th>
-                                        <th class="text-end">Price</th>
-                                        <th class="text-end">Subtotal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-                    
-                    // Add order items
-                    let total = 0;
-                    items.forEach(item => {
-                        const subtotal = parseFloat(item.UnitPrice) * parseInt(item.Quantity);
-                        total += subtotal;
-                        
-                        html += `
-                            <tr>
-                                <td>${item.ItemName || 'Unknown Item'}</td>
-                                <td class="text-center">${item.Quantity}</td>
-                                <td class="text-end">₱${parseFloat(item.UnitPrice).toFixed(2)}</td>
-                                <td class="text-end">₱${subtotal.toFixed(2)}</td>
-                            </tr>
-                        `;
-                    });
-                    
-                    // Add total row
-                    html += `
+                <p class="mt-3">Loading order details...</p>
+            </div>
+        `;
+        
+        // Fetch order details
+        fetch(`{{ route('pos.order-details', '') }}/${orderId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                const order = data.order;
+                const items = data.items;
+                
+                // Format status badge
+                let statusBadge = '';
+                if (order.Status === 'pending') {
+                    statusBadge = '<span class="badge bg-warning text-dark">Pending</span>';
+                } else if (order.Status === 'paid') {
+                    statusBadge = '<span class="badge bg-success">Paid</span>';
+                } else if (order.Status === 'completed') {
+                    statusBadge = '<span class="badge bg-primary">Completed</span>';
+                } else if (order.Status === 'cancelled') {
+                    statusBadge = '<span class="badge bg-danger">Cancelled</span>';
+                }
+                
+                // Format payment method badge
+                let paymentBadge = '';
+                if (order.PaymentMethod === 'cash') {
+                    paymentBadge = '<span class="badge bg-info text-dark">Cash</span>';
+                } else if (order.PaymentMethod === 'deposit') {
+                    paymentBadge = '<span class="badge bg-secondary">Deposit</span>';
+                }
+                
+                // Format date
+                const orderDate = new Date(order.created_at);
+                const formattedDate = orderDate.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                // Build order details HTML
+                const html = `
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="mb-2">Order Information</h6>
+                            <table class="table table-sm">
                                 <tr>
+                                    <th width="35%">Order Number:</th>
+                                    <td>${order.OrderNumber}</td>
+                                </tr>
+                                <tr>
+                                    <th>Date:</th>
+                                    <td>${formattedDate}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td>${statusBadge}</td>
+                                </tr>
+                                <tr>
+                                    <th>Payment Method:</th>
+                                    <td>${paymentBadge}</td>
+                                </tr>
+                                <tr>
+                                    <th>Total Amount:</th>
+                                    <td class="fw-bold">₱${parseFloat(order.TotalAmount).toFixed(2)}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-2">Student Information</h6>
+                            <table class="table table-sm">
+                                ${order.student ? `
+                                    <tr>
+                                        <th width="35%">Student ID:</th>
+                                        <td>${order.student.id}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Name:</th>
+                                        <td>${order.student.name}</td>
+                                    </tr>
+                                ` : `
+                                    <tr>
+                                        <td colspan="2" class="text-muted fst-italic">No student information</td>
+                                    </tr>
+                                `}
+                            </table>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${Array.isArray(items) ? items.map(item => `
+                                    <tr>
+                                        <td>${item.ItemName || 'Unknown Item'}</td>
+                                        <td class="text-end">${item.Quantity}</td>
+                                        <td class="text-end">₱${parseFloat(item.UnitPrice || 0).toFixed(2)}</td>
+                                        <td class="text-end">₱${parseFloat(item.Subtotal || 0).toFixed(2)}</td>
+                                    </tr>
+                                `).join('') : ''}
+                                <tr class="table-light">
                                     <td colspan="3" class="text-end fw-bold">Total:</td>
-                                    <td class="text-end fw-bold">₱${total.toFixed(2)}</td>
+                                    <td class="text-end fw-bold">₱${parseFloat(order.TotalAmount).toFixed(2)}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    `;
-                    
-                    // Update modal content
-                    modal.find('.modal-body').html(html);
-                },
-                error: function(xhr) {
-                    let errorMessage = 'Failed to load order details';
-                    if (xhr.responseJSON && xhr.responseJSON.error) {
-                        errorMessage = xhr.responseJSON.error;
-                    }
-                    
-                    modal.find('.modal-body').html(`
-                        <div class="alert alert-danger">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            ${errorMessage}
-                        </div>
-                    `);
-                }
+                `;
+                
+                // Update modal content
+                modal.querySelector('.modal-body').innerHTML = html;
+            })
+            .catch(error => {
+                modal.querySelector('.modal-body').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        ${error.message}
+                    </div>
+                `;
             });
-        });
-        
-        // Handle Cancel Order Modal
-        $('#cancelOrderModal').on('show.bs.modal', function (event) {
-            const button = $(event.relatedTarget);
-            const orderId = button.data('order-id');
-            const modal = $(this);
-            
-            // Set the form action
-            modal.find('#cancelOrderForm').attr('action', `/pos/cancel-order/${orderId}`);
-        });
     });
+    
+    // Handle Cancel Order Modal
+    const cancelOrderModal = document.getElementById('cancelOrderModal');
+    cancelOrderModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const orderId = button.getAttribute('data-order-id');
+        const form = this.querySelector('#cancelOrderForm');
+        
+        form.action = `/pos/cancel-order/${orderId}`;
+    });
+});
 </script>
 @endpush
 @endsection 
