@@ -27,6 +27,7 @@ use App\Http\Controllers\POSController;
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\POSDepositController;
 
+
 // Add this at the top of your routes to debug
 Route::get('/debug/routes', function() {
     $routes = Route::getRoutes();
@@ -319,7 +320,7 @@ Route::post('/equipment-borrowings/{id}/return', [EquipmentBorrowingController::
 // Add these routes for restoring laboratories (supporting both PUT and POST)
 Route::put('/inventory/laboratories/{laboratory}/restore', [App\Http\Controllers\LaboratoriesController::class, 'restore'])
     ->name('laboratories.restore')
-    ->where('laboratory', '.*'); // This allows any character in the ID
+    ->where('laboratory', '.*');
 
 Route::post('/inventory/laboratories/{laboratory}/restore', [App\Http\Controllers\LaboratoriesController::class, 'restore'])
     ->name('laboratories.restore.post')
@@ -353,3 +354,5 @@ Route::get('/debug/laboratory/{id}', function($id) {
         ]);
     }
 })->where('id', '.*');
+Route::resource('reservations', ReservationController::class);
+

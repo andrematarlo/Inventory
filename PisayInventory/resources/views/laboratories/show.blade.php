@@ -123,7 +123,7 @@
                                         <a href="{{ route('laboratory.reservations.show', $reservation->reservation_id) }}" 
                                            class="btn btn-info btn-sm"
                                            title="View Details">
-                                            <i class="fas fa-eye"></i>
+                                            <i class="bi bi-eye"></i> View
                                         </a>
                                         @endif
                                     </td>
@@ -137,6 +137,29 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add this modal at the bottom of your show.blade.php file -->
+<div class="modal fade" id="reservationDetailsModal" 
+     data-bs-backdrop="static" 
+     data-bs-keyboard="false" 
+     tabindex="-1" 
+     aria-labelledby="reservationDetailsModalLabel" 
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reservationDetailsModalLabel">Reservation Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Reservation details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -161,6 +184,21 @@
             "language": {
                 "emptyTable": "No recent reservations found"
             }
+        });
+
+        // Add click handler for view buttons
+        $(document).on('click', '.btn-info', function(e) {
+            e.preventDefault();
+            const url = $(this).attr('href');
+            
+            // Load reservation details via AJAX
+            $.get(url, function(response) {
+                $('#reservationDetailsModal .modal-body').html(response);
+                $('#reservationDetailsModal').modal('show');
+            }).fail(function(xhr) {
+                console.error('Error loading reservation details:', xhr);
+                alert('Error loading reservation details. Please try again.');
+            });
         });
     });
 </script>
