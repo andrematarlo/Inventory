@@ -46,7 +46,7 @@
     @endif
 
     <!-- Student Balance Card (Show if logged in user is a student) -->
-    @if(Auth::check() && Auth::user()->role === 'Student')
+    @if(Auth::check() && Auth::user()->role === 'Students')
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm border-0">
@@ -55,13 +55,14 @@
                         <div class="col-md-6">
                             <h5 class="card-title fw-bold">Your Balance</h5>
                             <p class="text-muted mb-0">Student ID: {{ Auth::user()->student_id }}</p>
+                            <input type="hidden" name="student_id" value="{{ Auth::user()->student_id }}" id="student_id_input">
                         </div>
                         <div class="col-md-6 text-end">
                             <h2 class="text-primary fw-bold mb-0" id="student-balance-header">
                                 ₱{{ number_format(App\Models\CashDeposit::where('student_id', Auth::user()->student_id)->whereNull('deleted_at')->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END')), 2) }}
                             </h2>
                             <p class="text-muted mb-0">Available Balance</p>
-                            <a href="{{ route('pos.cashdeposit') }}" class="btn btn-sm btn-outline-primary mt-2">
+                            <a href="{{ route('pos.deposits.index') }}" class="btn btn-sm btn-outline-primary mt-2">
                                 <i class="bi bi-wallet2 me-1"></i> Manage Deposits
                             </a>
                         </div>
@@ -77,30 +78,16 @@
         <div class="row g-4">
             <!-- Menu Items Section -->
             <div class="col-lg-8">
-                <!-- Student Selection Card -->
+                <!-- View Controls -->
                 <div class="card shadow-sm mb-4 border-0 rounded-3">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <label for="student" class="form-label mb-0">Student ID (Optional)</label>
-                                <select class="form-select form-select-lg" id="student" name="student_id">
-                                    <option value="">Search student...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <div id="student-balance-display" style="display: none;">
-                                    <h6 class="mb-1">Available Balance</h6>
-                                    <h3 class="text-primary mb-0">₱<span id="balance-amount">0.00</span></h3>
-                                </div>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-primary active" data-view="grid">
-                                        <i class="bi bi-grid"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary" data-view="list">
-                                        <i class="bi bi-list"></i>
-                                    </button>
-                                </div>
-                            </div>
+                    <div class="card-body d-flex justify-content-end">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                                <i class="bi bi-grid"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-view="list">
+                                <i class="bi bi-list"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -195,10 +182,6 @@
                                 <span class="text-muted">Subtotal</span>
                                 <span>₱<span id="subtotal">0.00</span></span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Tax (12%)</span>
-                                <span>₱<span id="tax">0.00</span></span>
-                            </div>
                             <div class="d-flex justify-content-between mt-3 pt-3 border-top">
                                 <span class="fw-bold fs-5">Total</span>
                                 <span class="fw-bold text-primary fs-5">₱<span id="total">0.00</span></span>
@@ -218,7 +201,7 @@
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="payment_type" 
-                                           id="depositPayment" value="deposit" disabled>
+                                           id="depositPayment" value="deposit" {{ Auth::check() && Auth::user()->role === 'Students' ? '' : 'disabled' }}>
                                     <label class="form-check-label" for="depositPayment">
                                         <i class="bi bi-wallet2 me-1"></i> Student Deposit
                                     </label>
@@ -325,76 +308,55 @@
 .menu-item-card:hover .btn-primary {
     opacity: 0.9;
 }
+.quantity-controls {
+    max-width: 150px;
+}
+.quantity-controls .form-control {
+    text-align: center;
+    background-color: #fff;
+    cursor: default;
+}
+.quantity-controls .btn {
+    padding: 0.375rem 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.quantity-controls .btn:hover {
+    background-color: #e9ecef;
+}
+.quantity-controls .btn i {
+    font-size: 1rem;
+}
+.quantity-input::-webkit-inner-spin-button,
+.quantity-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.quantity-input {
+    -moz-appearance: textfield;
+}
+.item-subtotal {
+    font-size: 1.1rem;
+    color: var(--bs-primary);
+    min-width: 100px;
+    text-align: right;
+}
+.cart-item .quantity-controls {
+    width: 120px;
+    margin-right: auto;
+}
 </style>
 @endpush
 
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Initialize student select2
-    $('#student').select2({
-        theme: 'bootstrap-5',
-        placeholder: 'Search student by ID or name...',
-        allowClear: true,
-        minimumInputLength: 1,
-        ajax: {
-            url: '{{ route("pos.search-students") }}',
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    term: params.term || '',
-                    page: params.page || 1
-                };
-            },
-            processResults: function(data) {
-                return {
-                    results: data.results,
-                    pagination: data.pagination
-                };
-            },
-            cache: true
-        }
-    }).on('select2:select', function(e) {
-        const studentId = e.params.data.id;
-        // Fetch and display student balance
-        fetch(`{{ url('pos/student-balance') }}/${studentId}`)
-            .then(response => response.json())
-            .then(data => {
-                $('#balance-amount').text(parseFloat(data.balance).toFixed(2));
-                $('#student-balance-display').show();
-                
-                // Update the balance in the header if it exists (for student users)
-                if ($('#student-balance-header').length) {
-                    $('#student-balance-header').text('₱' + parseFloat(data.balance).toFixed(2));
-                }
-                
-                // Enable deposit payment option
-                $('#depositPayment').prop('disabled', false);
-                // Update hidden student_id field
-                $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
-            })
-            .catch(error => {
-                console.error('Error fetching student balance:', error);
-                $('#student-balance-display').hide();
-                $('#depositPayment').prop('disabled', true);
-            });
-    }).on('select2:clear', function() {
-        // Hide balance display when student is cleared
-        $('#student-balance-display').hide();
-        // Disable deposit payment option
-        $('#depositPayment').prop('disabled', true);
-        // Switch to cash payment if deposit was selected
-        if ($('#depositPayment').prop('checked')) {
-            $('#cashPayment').prop('checked', true);
-        }
-        // Remove student_id from form
-        $('#cartData input[name="student_id"]').remove();
-    });
-
-    // Initially disable deposit payment option
-    $('#depositPayment').prop('disabled', true);
-
+    // Enable deposit payment option if student is logged in
+    if ($('#student_id_input').length) {
+        $('#depositPayment').prop('disabled', false);
+    }
+    
     // Category filtering
     $('.category-btn').click(function() {
         $('.category-btn').removeClass('active');
@@ -445,22 +407,27 @@ $(document).ready(function() {
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="mb-1">${itemName}</h6>
-                            <span class="text-primary">₱${price.toFixed(2)}</span>
+                            <span class="text-primary item-price" data-price="${price}">₱${price.toFixed(2)}</span>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-danger remove-item">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
-                    <div class="mt-2">
+                    <div class="mt-2 d-flex justify-content-between align-items-center">
                         <div class="input-group quantity-controls">
                             <button type="button" class="btn btn-outline-secondary quantity-decrease">
                                 <i class="bi bi-dash"></i>
                             </button>
-                            <input type="number" class="form-control quantity-input" value="1" min="1" max="${stock}">
+                            <input type="number" class="form-control quantity-input" 
+                                   value="1" 
+                                   min="1" 
+                                   max="${stock}"
+                                   readonly>
                             <button type="button" class="btn btn-outline-secondary quantity-increase">
                                 <i class="bi bi-plus"></i>
                             </button>
                         </div>
+                        <span class="ms-3 fw-bold item-subtotal">₱${price.toFixed(2)}</span>
                     </div>
                 </div>
             `;
@@ -485,30 +452,57 @@ $(document).ready(function() {
         });
     });
 
-    // Handle quantity changes
+    // Handle quantity decrease button
     $(document).on('click', '.quantity-decrease', function() {
         const input = $(this).siblings('.quantity-input');
         const currentVal = parseInt(input.val());
-        if (currentVal > 1) {
-            input.val(currentVal - 1).trigger('change');
+        const min = parseInt(input.attr('min')) || 1;
+        
+        if (currentVal > min) {
+            input.val(currentVal - 1);
+            updateItemPrice(input);
+            input.trigger('change'); // Trigger change event to update totals
         }
     });
 
+    // Handle quantity increase button
     $(document).on('click', '.quantity-increase', function() {
         const input = $(this).siblings('.quantity-input');
         const currentVal = parseInt(input.val());
         const max = parseInt(input.attr('max'));
+        
         if (currentVal < max) {
-            input.val(currentVal + 1).trigger('change');
+            input.val(currentVal + 1);
+            updateItemPrice(input);
+            input.trigger('change'); // Trigger change event to update totals
         }
     });
 
+    // Add function to update individual item price
+    function updateItemPrice(input) {
+        const cartItem = input.closest('.cart-item');
+        const quantity = parseInt(input.val());
+        const unitPrice = parseFloat(cartItem.find('.item-price').data('price'));
+        const subtotal = quantity * unitPrice;
+        
+        // Update the item's subtotal display
+        cartItem.find('.item-subtotal').text(`₱${subtotal.toFixed(2)}`);
+    }
+
+    // Handle direct input changes
     $(document).on('change', '.quantity-input', function() {
-        const cartItem = $(this).closest('.cart-item');
-        const quantity = parseInt($(this).val());
-        const price = parseFloat(cartItem.find('.text-primary').text().replace('₱', ''));
-        cartItem.find('input[name="quantities[]"]').val(quantity);
-        cartItem.find('input[name="amounts[]"]').val((price * quantity).toFixed(2));
+        const min = parseInt($(this).attr('min')) || 1;
+        const max = parseInt($(this).attr('max'));
+        let value = parseInt($(this).val()) || min;
+
+        // Enforce min/max constraints
+        if (value < min) value = min;
+        if (value > max) value = max;
+        
+        $(this).val(value);
+
+        // Update this item's price and cart totals
+        updateItemPrice($(this));
         updateTotals();
     });
 
@@ -533,16 +527,19 @@ $(document).ready(function() {
         let subtotal = 0;
         $('.cart-item').each(function() {
             const quantity = parseInt($(this).find('.quantity-input').val());
-            const price = parseFloat($(this).find('.text-primary').text().replace('₱', ''));
-            subtotal += price * quantity;
+            const price = parseFloat($(this).find('.item-price').data('price'));
+            const itemTotal = quantity * price;
+            subtotal += itemTotal;
         });
         
-        const tax = subtotal * 0.12;
-        const total = subtotal + tax;
+        const total = subtotal;
 
+        // Update the displays with animation
         animateNumber($('#subtotal'), subtotal);
-        animateNumber($('#tax'), tax);
         animateNumber($('#total'), total);
+
+        // If cash amount is entered, update the change
+        calculateChange(total);
     }
 
     function animateNumber(element, value) {
@@ -577,12 +574,12 @@ $(document).ready(function() {
         }
         
         if (paymentType === 'deposit') {
-            const studentId = $('#student').val();
-            if (!studentId) {
+            // Check if student is logged in
+            if (!$('#student_id_input').length) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Student Required',
-                    text: 'Please select a student to use deposit payment.',
+                    text: 'Only students can use deposit payment.',
                     confirmButtonText: 'OK'
                 }).then(() => {
                     $('#cashPayment').prop('checked', true);
@@ -593,15 +590,13 @@ $(document).ready(function() {
             
             // Check if student has sufficient balance
             const total = parseFloat($('#total').text());
-            const balance = parseFloat($('#balance-amount').text());
+            const balance = parseFloat($('#student-balance-header').text().replace(/[₱,]/g, ''));
             if (balance < total) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Insufficient Balance',
                     text: `Current balance (₱${balance.toFixed(2)}) is less than the total amount (₱${total.toFixed(2)})`,
                     confirmButtonText: 'OK'
-                }).then(() => {
-                    $('#cashPayment').prop('checked', true);
                 });
                 return;
             }
@@ -614,12 +609,12 @@ $(document).ready(function() {
         
         const paymentType = $('input[name="payment_type"]:checked').val();
         if (paymentType === 'deposit') {
-            const studentId = $('#student').val();
+            const studentId = $('#student_id_input').val();
             if (!studentId) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Student Required',
-                    text: 'Please select a student to use deposit payment.',
+                    text: 'Only students can use deposit payment.',
                     confirmButtonText: 'OK'
                 });
                 return;
@@ -627,7 +622,7 @@ $(document).ready(function() {
 
             // Check if student has sufficient balance
             const total = parseFloat($('#total').text());
-            const balance = parseFloat($('#balance-amount').text());
+            const balance = parseFloat($('#student-balance-header').text().replace(/[₱,]/g, ''));
             if (balance < total) {
                 Swal.fire({
                     icon: 'error',
@@ -645,7 +640,7 @@ $(document).ready(function() {
             cartItems.push({
                 id: parseInt($(this).data('item-id')),
                 quantity: parseInt($(this).find('.quantity-input').val()),
-                price: parseFloat($(this).find('.text-primary').text().replace('₱', '')),
+                price: parseFloat($(this).find('.item-price').data('price')),
                 name: $(this).find('h6').text()
             });
         });
@@ -680,9 +675,9 @@ $(document).ready(function() {
             $('#cartData').append(`<input type="hidden" name="change_amount" value="${changeAmount}">`);
         }
 
-        // If student is selected, add student_id
-        const studentId = $('#student').val();
-        if (studentId) {
+        // Add student_id if provided via hidden input
+        if ($('#student_id_input').length) {
+            const studentId = $('#student_id_input').val();
             $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
         }
 
@@ -748,7 +743,7 @@ $(document).ready(function() {
                                 updateCartCount();
                                 updateTotals();
                                 updateSubmitButton();
-                                $('#student').val(null).trigger('change');
+                                $('#student_id_input').val(null).trigger('change');
                                 $('#cashPayment').prop('checked', true);
                                 $('#cashAmount').val('');
                                 $('#changeAmount').val('');
@@ -836,46 +831,39 @@ $(document).ready(function() {
         });
     });
 
-    // Calculate change from cash amount
+    // Update the cash amount handler
     $('#cashAmount').on('input', function() {
-        calculateChange();
+        const total = parseFloat($('#total').text());
+        calculateChange(total);
     });
     
-    // Quick cash buttons
-    $('.quick-cash').click(function() {
-        const amount = $(this).data('amount');
-        
-        if (amount === 'exact') {
-            // Set exact amount
-            const total = parseFloat($('#total').text());
-            $('#cashAmount').val(total.toFixed(2));
-        } else {
-            // Set predefined amount
-            $('#cashAmount').val(amount);
-        }
-        
-        calculateChange();
-    });
-    
-    // Function to calculate change
-    function calculateChange() {
+    // Update the calculateChange function
+    function calculateChange(total) {
         const cashAmount = parseFloat($('#cashAmount').val()) || 0;
-        const totalAmount = parseFloat($('#total').text()) || 0;
+        const changeAmount = cashAmount - total;
         
-        let change = cashAmount - totalAmount;
-        
-        if (change >= 0) {
-            $('#changeAmount').val(change.toFixed(2));
-            // If we have valid change, enable the submit button if there are items
-            if ($('.cart-item').length > 0) {
-                $('button[type="submit"]').prop('disabled', false);
-            }
+        if (cashAmount >= total) {
+            $('#changeAmount').val(changeAmount.toFixed(2));
+            $('button[type="submit"]').prop('disabled', false);
         } else {
             $('#changeAmount').val('Insufficient amount');
-            // Disable the submit button if cash amount is less than total
             $('button[type="submit"]').prop('disabled', true);
         }
     }
+    
+    // Update the quick cash buttons
+    $('.quick-cash').click(function() {
+        const amount = $(this).data('amount');
+        const total = parseFloat($('#total').text());
+        
+        if (amount === 'exact') {
+            $('#cashAmount').val(total.toFixed(2));
+        } else {
+            $('#cashAmount').val(amount.toFixed(2));
+        }
+        
+        calculateChange(total);
+    });
     
     // Show cash details by default (since cash is the default payment method)
     $('#cashPaymentDetails').show();

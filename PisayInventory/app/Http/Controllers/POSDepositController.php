@@ -54,7 +54,7 @@ class POSDepositController extends Controller
     {
         $request->validate([
             'student_id' => 'required|exists:students,student_id',
-            'amount' => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0.01|max:9999999.99',
             'notes' => 'nullable|string|max:255'
         ]);
 
@@ -66,6 +66,14 @@ class POSDepositController extends Controller
                 ->where('student_id', $request->student_id)
                 ->whereNull('deleted_at')
                 ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
+
+            // Check if new balance would exceed the database limit
+            if (($currentBalance + $request->amount) > 9999999.99) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Deposit amount would cause balance to exceed the maximum limit of ₱9,999,999.99'
+                ], 422);
+            }
 
             // Generate reference number
             $referenceNumber = 'DEP-' . Carbon::now()->format('Ymd') . '-' . Str::padLeft(
