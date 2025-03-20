@@ -325,6 +325,44 @@
 .menu-item-card:hover .btn-primary {
     opacity: 0.9;
 }
+.quantity-controls {
+    max-width: 150px;
+}
+.quantity-controls .form-control {
+    text-align: center;
+    background-color: #fff;
+    cursor: default;
+}
+.quantity-controls .btn {
+    padding: 0.375rem 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.quantity-controls .btn:hover {
+    background-color: #e9ecef;
+}
+.quantity-controls .btn i {
+    font-size: 1rem;
+}
+.quantity-input::-webkit-inner-spin-button,
+.quantity-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.quantity-input {
+    -moz-appearance: textfield;
+}
+.item-subtotal {
+    font-size: 1.1rem;
+    color: var(--bs-primary);
+    min-width: 100px;
+    text-align: right;
+}
+.cart-item .quantity-controls {
+    width: 120px;
+    margin-right: auto;
+}
 </style>
 @endpush
 
@@ -445,22 +483,27 @@ $(document).ready(function() {
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="mb-1">${itemName}</h6>
-                            <span class="text-primary">₱${price.toFixed(2)}</span>
+                            <span class="text-primary item-price" data-price="${price}">₱${price.toFixed(2)}</span>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-danger remove-item">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
-                    <div class="mt-2">
+                    <div class="mt-2 d-flex justify-content-between align-items-center">
                         <div class="input-group quantity-controls">
                             <button type="button" class="btn btn-outline-secondary quantity-decrease">
                                 <i class="bi bi-dash"></i>
                             </button>
-                            <input type="number" class="form-control quantity-input" value="1" min="1" max="${stock}">
+                            <input type="number" class="form-control quantity-input" 
+                                   value="1" 
+                                   min="1" 
+                                   max="${stock}"
+                                   readonly>
                             <button type="button" class="btn btn-outline-secondary quantity-increase">
                                 <i class="bi bi-plus"></i>
                             </button>
                         </div>
+                        <span class="ms-3 fw-bold item-subtotal">₱${price.toFixed(2)}</span>
                     </div>
                 </div>
             `;
@@ -485,30 +528,57 @@ $(document).ready(function() {
         });
     });
 
-    // Handle quantity changes
+    // Handle quantity decrease button
     $(document).on('click', '.quantity-decrease', function() {
         const input = $(this).siblings('.quantity-input');
         const currentVal = parseInt(input.val());
-        if (currentVal > 1) {
-            input.val(currentVal - 1).trigger('change');
+        const min = parseInt(input.attr('min')) || 1;
+        
+        if (currentVal > min) {
+            input.val(currentVal - 1);
+            updateItemPrice(input);
+            input.trigger('change'); // Trigger change event to update totals
         }
     });
 
+    // Handle quantity increase button
     $(document).on('click', '.quantity-increase', function() {
         const input = $(this).siblings('.quantity-input');
         const currentVal = parseInt(input.val());
         const max = parseInt(input.attr('max'));
+        
         if (currentVal < max) {
-            input.val(currentVal + 1).trigger('change');
+            input.val(currentVal + 1);
+            updateItemPrice(input);
+            input.trigger('change'); // Trigger change event to update totals
         }
     });
 
+    // Add function to update individual item price
+    function updateItemPrice(input) {
+        const cartItem = input.closest('.cart-item');
+        const quantity = parseInt(input.val());
+        const unitPrice = parseFloat(cartItem.find('.item-price').data('price'));
+        const subtotal = quantity * unitPrice;
+        
+        // Update the item's subtotal display
+        cartItem.find('.item-subtotal').text(`₱${subtotal.toFixed(2)}`);
+    }
+
+    // Handle direct input changes
     $(document).on('change', '.quantity-input', function() {
-        const cartItem = $(this).closest('.cart-item');
-        const quantity = parseInt($(this).val());
-        const price = parseFloat(cartItem.find('.text-primary').text().replace('₱', ''));
-        cartItem.find('input[name="quantities[]"]').val(quantity);
-        cartItem.find('input[name="amounts[]"]').val((price * quantity).toFixed(2));
+        const min = parseInt($(this).attr('min')) || 1;
+        const max = parseInt($(this).attr('max'));
+        let value = parseInt($(this).val()) || min;
+
+        // Enforce min/max constraints
+        if (value < min) value = min;
+        if (value > max) value = max;
+        
+        $(this).val(value);
+
+        // Update this item's price and cart totals
+        updateItemPrice($(this));
         updateTotals();
     });
 
@@ -533,16 +603,21 @@ $(document).ready(function() {
         let subtotal = 0;
         $('.cart-item').each(function() {
             const quantity = parseInt($(this).find('.quantity-input').val());
-            const price = parseFloat($(this).find('.text-primary').text().replace('₱', ''));
-            subtotal += price * quantity;
+            const price = parseFloat($(this).find('.item-price').data('price'));
+            const itemTotal = quantity * price;
+            subtotal += itemTotal;
         });
         
         const tax = subtotal * 0.12;
         const total = subtotal + tax;
 
+        // Update the displays with animation
         animateNumber($('#subtotal'), subtotal);
         animateNumber($('#tax'), tax);
         animateNumber($('#total'), total);
+
+        // If cash amount is entered, update the change
+        calculateChange(total);
     }
 
     function animateNumber(element, value) {
@@ -645,7 +720,7 @@ $(document).ready(function() {
             cartItems.push({
                 id: parseInt($(this).data('item-id')),
                 quantity: parseInt($(this).find('.quantity-input').val()),
-                price: parseFloat($(this).find('.text-primary').text().replace('₱', '')),
+                price: parseFloat($(this).find('.item-price').data('price')),
                 name: $(this).find('h6').text()
             });
         });
@@ -836,46 +911,39 @@ $(document).ready(function() {
         });
     });
 
-    // Calculate change from cash amount
+    // Update the cash amount handler
     $('#cashAmount').on('input', function() {
-        calculateChange();
+        const total = parseFloat($('#total').text());
+        calculateChange(total);
     });
     
-    // Quick cash buttons
-    $('.quick-cash').click(function() {
-        const amount = $(this).data('amount');
-        
-        if (amount === 'exact') {
-            // Set exact amount
-            const total = parseFloat($('#total').text());
-            $('#cashAmount').val(total.toFixed(2));
-        } else {
-            // Set predefined amount
-            $('#cashAmount').val(amount);
-        }
-        
-        calculateChange();
-    });
-    
-    // Function to calculate change
-    function calculateChange() {
+    // Update the calculateChange function
+    function calculateChange(total) {
         const cashAmount = parseFloat($('#cashAmount').val()) || 0;
-        const totalAmount = parseFloat($('#total').text()) || 0;
+        const changeAmount = cashAmount - total;
         
-        let change = cashAmount - totalAmount;
-        
-        if (change >= 0) {
-            $('#changeAmount').val(change.toFixed(2));
-            // If we have valid change, enable the submit button if there are items
-            if ($('.cart-item').length > 0) {
-                $('button[type="submit"]').prop('disabled', false);
-            }
+        if (cashAmount >= total) {
+            $('#changeAmount').val(changeAmount.toFixed(2));
+            $('button[type="submit"]').prop('disabled', false);
         } else {
             $('#changeAmount').val('Insufficient amount');
-            // Disable the submit button if cash amount is less than total
             $('button[type="submit"]').prop('disabled', true);
         }
     }
+    
+    // Update the quick cash buttons
+    $('.quick-cash').click(function() {
+        const amount = $(this).data('amount');
+        const total = parseFloat($('#total').text());
+        
+        if (amount === 'exact') {
+            $('#cashAmount').val(total.toFixed(2));
+        } else {
+            $('#cashAmount').val(amount.toFixed(2));
+        }
+        
+        calculateChange(total);
+    });
     
     // Show cash details by default (since cash is the default payment method)
     $('#cashPaymentDetails').show();
