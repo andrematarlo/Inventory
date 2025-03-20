@@ -20,7 +20,12 @@ class POSOrder extends Model
         'TotalAmount',
         'PaymentMethod',
         'Status',
-        'OrderNumber'
+        'OrderNumber',
+        'ProcessedBy',
+        'ProcessedAt',
+        'AmountTendered',
+        'ChangeAmount',
+        'Remarks'
     ];
     
     protected $casts = [

@@ -45,6 +45,33 @@
         </div>
     @endif
 
+    <!-- Student Balance Card (Show if logged in user is a student) -->
+    @if(Auth::check() && Auth::user()->role === 'Student')
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="card-title fw-bold">Your Balance</h5>
+                            <p class="text-muted mb-0">Student ID: {{ Auth::user()->student_id }}</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <h2 class="text-primary fw-bold mb-0" id="student-balance-header">
+                                ₱{{ number_format(App\Models\CashDeposit::where('student_id', Auth::user()->student_id)->whereNull('deleted_at')->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END')), 2) }}
+                            </h2>
+                            <p class="text-muted mb-0">Available Balance</p>
+                            <a href="{{ route('pos.cashdeposit') }}" class="btn btn-sm btn-outline-primary mt-2">
+                                <i class="bi bi-wallet2 me-1"></i> Manage Deposits
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <form action="{{ route('pos.store') }}" method="POST" id="orderForm">
         @csrf
         <div class="row g-4">
@@ -81,18 +108,28 @@
                 <!-- Menu Categories -->
                 <div class="card shadow-sm border-0 rounded-3 mb-4">
                     <div class="card-body pb-0">
-                        <div class="categories-scroll">
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-primary category-btn active" data-category="all">
-                                    All Items
-                                </button>
-                                @foreach($categories as $category)
-                                    <button type="button" class="btn btn-outline-primary category-btn" 
-                                            data-category="{{ $category->ClassificationID }}">
-                                        {{ $category->ClassificationName }}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="categories-scroll">
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-primary category-btn active" data-category="all">
+                                        All Items
                                     </button>
-                                @endforeach
+                                    @foreach($categories as $category)
+                                        <button type="button" class="btn btn-outline-primary category-btn" 
+                                                data-category="{{ $category->ClassificationId }}">
+                                            {{ $category->ClassificationName }}
+                                        </button>
+                                    @endforeach
+                                </div>
                             </div>
+                            <!-- Add Item Button (only visible for Admin and Cashier roles) -->
+                            @if(Auth::check() && (Auth::user()->role === 'Admin' || Auth::user()->role === 'Cashier'))
+                            <div>
+                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                                    <i class="bi bi-plus-circle me-1"></i> Add Item
+                                </button>
+                            </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -101,7 +138,7 @@
                 <div class="menu-items-grid">
                     <div class="row g-4">
                         @foreach($menuItems as $item)
-                            <div class="col-md-4 menu-item" data-category="{{ $item->ClassificationID }}">
+                            <div class="col-md-4 menu-item" data-category="{{ $item->ClassificationId }}">
                                 <div class="card h-100 border-0 shadow-sm menu-item-card">
                                     <div class="card-body d-flex flex-column">
                                         <h5 class="card-title mb-2">{{ $item->ItemName }}</h5>
@@ -186,6 +223,33 @@
                                         <i class="bi bi-wallet2 me-1"></i> Student Deposit
                                     </label>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Cash Payment Details - Only shown when cash payment is selected -->
+                        <div id="cashPaymentDetails" class="mb-3 p-3 border rounded">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <label for="cashAmount" class="form-label">Cash Amount</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₱</span>
+                                        <input type="number" class="form-control" id="cashAmount" name="amount_tendered" step="0.01" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="changeAmount" class="form-label">Change</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₱</span>
+                                        <input type="text" class="form-control" id="changeAmount" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-between gap-1">
+                                <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="100">₱100</button>
+                                <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="200">₱200</button>
+                                <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="500">₱500</button>
+                                <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="1000">₱1000</button>
+                                <button type="button" class="quick-cash btn btn-sm btn-outline-primary" data-amount="exact">Exact</button>
                             </div>
                         </div>
 
@@ -299,6 +363,12 @@ $(document).ready(function() {
             .then(data => {
                 $('#balance-amount').text(parseFloat(data.balance).toFixed(2));
                 $('#student-balance-display').show();
+                
+                // Update the balance in the header if it exists (for student users)
+                if ($('#student-balance-header').length) {
+                    $('#student-balance-header').text('₱' + parseFloat(data.balance).toFixed(2));
+                }
+                
                 // Enable deposit payment option
                 $('#depositPayment').prop('disabled', false);
                 // Update hidden student_id field
@@ -498,6 +568,14 @@ $(document).ready(function() {
     // Handle payment method change
     $('input[name="payment_type"]').change(function() {
         const paymentType = $(this).val();
+        
+        // Show/hide cash payment details
+        if (paymentType === 'cash') {
+            $('#cashPaymentDetails').show();
+        } else {
+            $('#cashPaymentDetails').hide();
+        }
+        
         if (paymentType === 'deposit') {
             const studentId = $('#student').val();
             if (!studentId) {
@@ -508,6 +586,7 @@ $(document).ready(function() {
                     confirmButtonText: 'OK'
                 }).then(() => {
                     $('#cashPayment').prop('checked', true);
+                    $('#cashPaymentDetails').show();
                 });
                 return;
             }
@@ -581,6 +660,26 @@ $(document).ready(function() {
         // Add payment type
         $('#cartData').append(`<input type="hidden" name="payment_type" value="${paymentType}">`);
 
+        // If cash payment, add cash amount and change
+        if (paymentType === 'cash') {
+            const cashAmount = parseFloat($('#cashAmount').val()) || 0;
+            const changeAmount = cashAmount - total;
+            
+            // Validate cash amount
+            if (cashAmount < total) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Insufficient Cash Amount',
+                    text: `Cash amount (₱${cashAmount.toFixed(2)}) is less than the total (₱${total.toFixed(2)})`,
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
+            $('#cartData').append(`<input type="hidden" name="amount_tendered" value="${cashAmount}">`);
+            $('#cartData').append(`<input type="hidden" name="change_amount" value="${changeAmount}">`);
+        }
+
         // If student is selected, add student_id
         const studentId = $('#student').val();
         if (studentId) {
@@ -617,11 +716,30 @@ $(document).ready(function() {
                     contentType: false,
                     success: function(response) {
                         if (response.success) {
+                            // Prepare success message content
+                            let successContent = `<div class="text-center">
+                                <h6 class="mb-3">Order #${response.order_number || ''} completed</h6>
+                                <p class="mb-2">Total: ₱${total.toFixed(2)}</p>`;
+                            
+                            // Add payment-specific details
+                            if (paymentType === 'cash') {
+                                const cashAmount = parseFloat($('#cashAmount').val()) || 0;
+                                const changeAmount = cashAmount - total;
+                                successContent += `
+                                    <p class="mb-2">Cash: ₱${cashAmount.toFixed(2)}</p>
+                                    <p class="mb-4">Change: ₱${changeAmount.toFixed(2)}</p>`;
+                            } else {
+                                successContent += `
+                                    <p class="mb-4">Paid from student deposit</p>`;
+                            }
+                            
+                            successContent += `</div>`;
+                            
                             // Show success message
                             Swal.fire({
                                 icon: 'success',
-                                title: response.alert.title,
-                                text: response.alert.text,
+                                title: response.alert.title || 'Order Completed',
+                                html: successContent,
                                 showConfirmButton: true,
                                 confirmButtonText: 'OK'
                             }).then((result) => {
@@ -632,6 +750,8 @@ $(document).ready(function() {
                                 updateSubmitButton();
                                 $('#student').val(null).trigger('change');
                                 $('#cashPayment').prop('checked', true);
+                                $('#cashAmount').val('');
+                                $('#changeAmount').val('');
                                 $('#notes').val('');
                             });
                         } else {
@@ -657,7 +777,160 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Add Item form submission
+    $('#addItemForm').submit(function(e) {
+        e.preventDefault();
+        
+        // Show loading
+        Swal.fire({
+            title: 'Adding Item',
+            text: 'Please wait...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        // Submit form via AJAX
+        $.ajax({
+            url: $(this).attr('action'),
+            method: 'POST',
+            data: new FormData(this),
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Item Added Successfully',
+                    text: 'The menu item has been added to the inventory.',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    // Close modal and reset form
+                    $('#addItemModal').modal('hide');
+                    $('#addItemForm')[0].reset();
+                    
+                    // Reload page to show new item
+                    location.reload();
+                });
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                let errorMessage = 'Failed to add menu item.';
+                
+                if (response && response.errors) {
+                    const errors = Object.values(response.errors).flat();
+                    errorMessage = errors.join('<br>');
+                } else if (response && response.message) {
+                    errorMessage = response.message;
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    html: errorMessage,
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+    });
+
+    // Calculate change from cash amount
+    $('#cashAmount').on('input', function() {
+        calculateChange();
+    });
+    
+    // Quick cash buttons
+    $('.quick-cash').click(function() {
+        const amount = $(this).data('amount');
+        
+        if (amount === 'exact') {
+            // Set exact amount
+            const total = parseFloat($('#total').text());
+            $('#cashAmount').val(total.toFixed(2));
+        } else {
+            // Set predefined amount
+            $('#cashAmount').val(amount);
+        }
+        
+        calculateChange();
+    });
+    
+    // Function to calculate change
+    function calculateChange() {
+        const cashAmount = parseFloat($('#cashAmount').val()) || 0;
+        const totalAmount = parseFloat($('#total').text()) || 0;
+        
+        let change = cashAmount - totalAmount;
+        
+        if (change >= 0) {
+            $('#changeAmount').val(change.toFixed(2));
+            // If we have valid change, enable the submit button if there are items
+            if ($('.cart-item').length > 0) {
+                $('button[type="submit"]').prop('disabled', false);
+            }
+        } else {
+            $('#changeAmount').val('Insufficient amount');
+            // Disable the submit button if cash amount is less than total
+            $('button[type="submit"]').prop('disabled', true);
+        }
+    }
+    
+    // Show cash details by default (since cash is the default payment method)
+    $('#cashPaymentDetails').show();
 });
 </script>
 @endpush
+
+<!-- Add Item Modal -->
+<div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="addItemForm" action="{{ route('pos.add-menu-item') }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addItemModalLabel">Add New Menu Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="item_name" class="form-label">Item Name</label>
+                        <input type="text" class="form-control" id="item_name" name="item_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="price" class="form-label">Price (₱)</label>
+                            <input type="number" class="form-control" id="price" name="price" min="0.01" step="0.01" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="stocks_available" class="form-label">Initial Stock</label>
+                            <input type="number" class="form-control" id="stocks_available" name="stocks_available" min="0" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="classification_id" class="form-label">Category</label>
+                        <select class="form-select" id="classification_id" name="classification_id" required>
+                            <option value="" selected disabled>Select a category</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->ClassificationId }}">{{ $category->ClassificationName }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i> Add Item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection 

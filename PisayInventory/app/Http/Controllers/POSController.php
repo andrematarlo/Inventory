@@ -19,11 +19,26 @@ use Exception;
 
 class POSController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = POSOrder::with(['student', 'items'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        $query = POSOrder::with(['student', 'items'])
+            ->orderBy('created_at', 'desc');
+            
+        // Apply search filter
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('OrderNumber', 'LIKE', "%{$search}%")
+                  ->orWhereHas('student', function($q2) use ($search) {
+                      $q2->where('first_name', 'LIKE', "%{$search}%")
+                         ->orWhere('last_name', 'LIKE', "%{$search}%");
+                  })
+                  ->orWhere('Status', 'LIKE', "%{$search}%")
+                  ->orWhere('TotalAmount', 'LIKE', "%{$search}%");
+            });
+        }
+        
+        $orders = $query->paginate(10)->withQueryString();
 
         // Get student info if logged in user is a student
         $isStudent = Auth::check() && Auth::user()->role === 'Student';
@@ -127,7 +142,9 @@ class POSController extends Controller
                 'Status' => $request->payment_type === 'deposit' ? 'completed' : 'pending',
                 'OrderNumber' => $orderNumber,
                 'ProcessedBy' => $request->payment_type === 'deposit' ? Auth::id() : null,
-                'ProcessedAt' => $request->payment_type === 'deposit' ? now() : null
+                'ProcessedAt' => $request->payment_type === 'deposit' ? now() : null,
+                'AmountTendered' => $request->payment_type === 'cash' ? $request->amount_tendered : null,
+                'ChangeAmount' => $request->payment_type === 'cash' ? $request->change_amount : null
             ]);
             
             Log::debug('Order created:', ['order_id' => $order->OrderID, 'order_data' => $order->toArray()]);
@@ -204,18 +221,17 @@ class POSController extends Controller
             DB::commit();
             Log::debug('Order transaction committed successfully');
             
-            $responseData = [
+            return response()->json([
                 'success' => true,
-                'message' => 'Order created successfully',
-                'order' => $order,
+                'message' => 'Order created successfully!',
+                'order_number' => $orderNumber,
+                'order_id' => $order->OrderID,
                 'alert' => [
                     'type' => 'success',
-                    'title' => 'Success!',
-                    'text' => 'Order #' . $orderNumber . ' created successfully'
+                    'title' => 'Order Created!',
+                    'text' => "Order #{$orderNumber} has been created successfully."
                 ]
-            ];
-            
-            return response()->json($responseData);
+            ]);
             
         } catch (Exception $e) {
             DB::rollBack();
@@ -672,7 +688,7 @@ class POSController extends Controller
         $request->validate([
             'item_name' => 'required|string|max:100',
             'price' => 'required|numeric|min:0',
-            'category_id' => 'required|exists:classification,ClassificationID',
+            'classification_id' => 'required|exists:classification,ClassificationId',
             'stocks_available' => 'required|integer|min:0',
             'description' => 'nullable|string|max:255',
         ]);
@@ -680,15 +696,15 @@ class POSController extends Controller
         try {
             DB::beginTransaction();
             
-            // Create menu item
+            // Create menu item - ensure the field names exactly match the database table
             $menuItemId = DB::table('menu_items')->insertGetId([
                 'ItemName' => $request->item_name,
-                'Price' => $request->price,
-                'ClassificationID' => $request->category_id,
                 'Description' => $request->description,
-                'StocksAvailable' => $request->stocks_available,
+                'Price' => $request->price,
+                'ClassificationID' => $request->classification_id, // Note the exact case match to the database field
                 'IsAvailable' => true,
                 'IsDeleted' => false,
+                'StocksAvailable' => $request->stocks_available,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
@@ -696,6 +712,20 @@ class POSController extends Controller
             DB::commit();
             
             $successMessage = "Menu item '{$request->item_name}' added successfully!";
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $successMessage,
+                    'item' => [
+                        'id' => $menuItemId,
+                        'name' => $request->item_name,
+                        'price' => $request->price,
+                        'description' => $request->description,
+                        'stocks' => $request->stocks_available
+                    ]
+                ]);
+            }
             
             return redirect()->route('pos.create')
                 ->with('success', $successMessage)
@@ -709,6 +739,14 @@ class POSController extends Controller
             DB::rollBack();
             
             $errorMessage = 'Failed to add menu item: ' . $e->getMessage();
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => $e instanceof \Illuminate\Validation\ValidationException ? $e->errors() : null
+                ], 422);
+            }
             
             return redirect()->back()
                 ->with('error', $errorMessage)

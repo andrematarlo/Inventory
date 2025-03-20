@@ -239,6 +239,7 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
         <link href="{{ asset('css/app.css') }}" rel="stylesheet">
         @yield('styles')
+        @stack('styles')
 
     </head>
     <body>
@@ -277,6 +278,8 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
 
+<!-- Application JavaScript -->
+<script src="{{ asset('js/app.js') }}"></script>
 
 @if(session('sweet_alert'))
         <script>
@@ -295,7 +298,7 @@
         @stack('scripts')
 
     <!-- Scripts -->
-    <script src="{{ asset('js/app.js') }}" defer></script>
+    <!-- <script src="{{ asset('js/app.js') }}" defer></script> -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <script>

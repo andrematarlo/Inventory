@@ -168,11 +168,13 @@
                         <i class="bi bi-plus-circle"></i> New Order
                     </a>
                 </li>
+                @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
                 <li>
                     <a class="dropdown-item {{ request()->routeIs('pos.deposits.*') ? 'active' : '' }}" href="{{ route('pos.deposits.index') }}">
                         <i class="bi bi-wallet2"></i> Deposits
                     </a>
                 </li>
+                @endif
                 @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
                 <li>
                     <a class="dropdown-item {{ request()->routeIs('pos.reports') ? 'active' : '' }}" href="{{ route('pos.reports') }}">
@@ -184,7 +186,7 @@
         </li>
         @endif
 
-        @if($hasLaboratoryAccess && $isStudent)
+        @if($hasLaboratoryAccess || $isStudent)
         <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="laboratoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-building"></i>

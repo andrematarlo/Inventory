@@ -52,12 +52,20 @@
                     <h5 class="mb-0 fw-bold">All Orders</h5>
                 </div>
                 <div class="col-md-6">
-                    <div class="input-group">
-                        <input type="text" id="orderSearch" class="form-control" placeholder="Search orders...">
-                        <button class="btn btn-outline-secondary" type="button">
-                            <i class="bi bi-search"></i>
-                        </button>
-                    </div>
+                    <form action="{{ route('pos.index') }}" method="GET" class="d-flex">
+                        <div class="input-group">
+                            <input type="text" name="search" id="orderSearch" class="form-control" 
+                                placeholder="Search orders..." value="{{ request('search') }}">
+                            <button class="btn btn-outline-primary" type="submit">
+                                <i class="bi bi-search"></i>
+                            </button>
+                            @if(request('search'))
+                                <a href="{{ route('pos.index') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i>
+                                </a>
+                            @endif
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -144,8 +152,8 @@
                     <span class="fw-medium">{{ $orders->lastItem() ?? 0 }}</span> of 
                     <span class="fw-medium">{{ $orders->total() }}</span> entries
                 </div>
-                <div>
-                    {{ $orders->links() }}
+                <div class="pagination-container">
+                    {{ $orders->links('pagination::bootstrap-5') }}
                 </div>
             </div>
         </div>
@@ -200,26 +208,51 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Search functionality
+    // For client-side filtering while user types before submitting
     const searchInput = document.getElementById('orderSearch');
-    const orderRows = document.querySelectorAll('.order-row');
+    
+    // Debounce function for search input
+    let searchTimeout;
     
     searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
+        clearTimeout(searchTimeout);
         
-        orderRows.forEach(row => {
-            const orderNumber = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
-            const date = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-            const student = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
-            const status = row.querySelector('td:nth-child(6)').textContent.toLowerCase();
+        searchTimeout = setTimeout(() => {
+            // This will update the filter immediately while typing, before form submission
+            const searchTerm = this.value.toLowerCase();
+            const orderRows = document.querySelectorAll('.order-row');
+            let visibleRowCount = 0;
             
-            const matchesSearch = orderNumber.includes(searchTerm) || 
-                                date.includes(searchTerm) || 
-                                student.includes(searchTerm) || 
-                                status.includes(searchTerm);
+            if (searchTerm.length === 0) return; // Skip immediate filtering if empty
             
-            row.style.display = matchesSearch ? '' : 'none';
-        });
+            orderRows.forEach(row => {
+                const orderNumber = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+                const date = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const student = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                const status = row.querySelector('td:nth-child(6)').textContent.toLowerCase();
+                
+                const matchesSearch = orderNumber.includes(searchTerm) || 
+                                    date.includes(searchTerm) || 
+                                    student.includes(searchTerm) || 
+                                    status.includes(searchTerm);
+                
+                row.style.display = matchesSearch ? '' : 'none';
+                if (matchesSearch) visibleRowCount++;
+            });
+            
+            // Show message if no matching records
+            const tableBody = document.querySelector('#ordersTable tbody');
+            const noResultsRow = tableBody.querySelector('.no-results');
+            
+            if (visibleRowCount === 0 && !noResultsRow) {
+                const newRow = document.createElement('tr');
+                newRow.className = 'no-results';
+                newRow.innerHTML = `<td colspan="7" class="text-center py-4 text-muted">No matching records found</td>`;
+                tableBody.appendChild(newRow);
+            } else if (visibleRowCount > 0 && noResultsRow) {
+                noResultsRow.remove();
+            }
+        }, 300); // 300ms debounce
     });
     
     // Handle View Order Modal
@@ -380,5 +413,26 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+@endpush
+
+@push('styles')
+<style>
+    .pagination-container .pagination {
+        margin-bottom: 0;
+    }
+    
+    .pagination-container .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    
+    .pagination-container .page-link {
+        color: #0d6efd;
+    }
+    
+    .pagination-container .page-link:hover {
+        background-color: #e9ecef;
+    }
+</style>
 @endpush
 @endsection 
