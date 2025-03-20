@@ -139,6 +139,19 @@
                         <input type="number" step="0.01" id="paymentAmount" name="payment_amount" class="form-control" required>
                     </div>
                     <div class="mb-3">
+                        <label for="changeAmount" class="form-label">Change</label>
+                        <input type="text" id="changeAmount" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="quick-amount btn btn-sm btn-outline-secondary" data-amount="100">₱100</button>
+                            <button type="button" class="quick-amount btn btn-sm btn-outline-secondary" data-amount="200">₱200</button>
+                            <button type="button" class="quick-amount btn btn-sm btn-outline-secondary" data-amount="500">₱500</button>
+                            <button type="button" class="quick-amount btn btn-sm btn-outline-secondary" data-amount="1000">₱1000</button>
+                            <button type="button" class="quick-amount btn btn-sm btn-outline-primary" data-amount="exact">Exact</button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Payment Type</label>
                         <div class="d-flex gap-3">
                             <div class="form-check">
@@ -169,6 +182,7 @@
         const orderNumberInput = document.getElementById('orderNumber');
         const totalAmountInput = document.getElementById('totalAmount');
         const paymentAmountInput = document.getElementById('paymentAmount');
+        const changeAmountInput = document.getElementById('changeAmount');
         
         // Process Payment button click handlers
         document.querySelectorAll('.process-payment-btn').forEach(button => {
@@ -185,10 +199,50 @@
                 totalAmountInput.value = `₱${parseFloat(total).toFixed(2)}`;
                 paymentAmountInput.value = parseFloat(total).toFixed(2);
                 
+                // Calculate initial change
+                calculateChange();
+                
                 // Show modal
                 paymentModal.show();
             });
         });
+        
+        // Calculate change when payment amount changes
+        paymentAmountInput.addEventListener('input', calculateChange);
+        
+        // Quick amount buttons
+        document.querySelectorAll('.quick-amount').forEach(button => {
+            button.addEventListener('click', function() {
+                const amount = this.getAttribute('data-amount');
+                const totalText = totalAmountInput.value.replace('₱', '');
+                const total = parseFloat(totalText);
+                
+                if (amount === 'exact') {
+                    paymentAmountInput.value = total.toFixed(2);
+                } else {
+                    paymentAmountInput.value = parseFloat(amount).toFixed(2);
+                }
+                
+                calculateChange();
+            });
+        });
+        
+        // Function to calculate change
+        function calculateChange() {
+            const totalText = totalAmountInput.value.replace('₱', '');
+            const total = parseFloat(totalText);
+            const payment = parseFloat(paymentAmountInput.value) || 0;
+            
+            const change = payment - total;
+            
+            if (change >= 0) {
+                changeAmountInput.value = `₱${change.toFixed(2)}`;
+                document.querySelector('button[type="submit"]').disabled = false;
+            } else {
+                changeAmountInput.value = 'Insufficient amount';
+                document.querySelector('button[type="submit"]').disabled = true;
+            }
+        }
     });
 </script>
 @endpush

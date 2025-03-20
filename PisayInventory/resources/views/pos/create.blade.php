@@ -46,7 +46,7 @@
     @endif
 
     <!-- Student Balance Card (Show if logged in user is a student) -->
-    @if(Auth::check() && Auth::user()->role === 'Student')
+    @if(Auth::check() && Auth::user()->role === 'Students')
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm border-0">
@@ -55,13 +55,14 @@
                         <div class="col-md-6">
                             <h5 class="card-title fw-bold">Your Balance</h5>
                             <p class="text-muted mb-0">Student ID: {{ Auth::user()->student_id }}</p>
+                            <input type="hidden" name="student_id" value="{{ Auth::user()->student_id }}" id="student_id_input">
                         </div>
                         <div class="col-md-6 text-end">
                             <h2 class="text-primary fw-bold mb-0" id="student-balance-header">
                                 ₱{{ number_format(App\Models\CashDeposit::where('student_id', Auth::user()->student_id)->whereNull('deleted_at')->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END')), 2) }}
                             </h2>
                             <p class="text-muted mb-0">Available Balance</p>
-                            <a href="{{ route('pos.cashdeposit') }}" class="btn btn-sm btn-outline-primary mt-2">
+                            <a href="{{ route('pos.deposits.index') }}" class="btn btn-sm btn-outline-primary mt-2">
                                 <i class="bi bi-wallet2 me-1"></i> Manage Deposits
                             </a>
                         </div>
@@ -77,30 +78,16 @@
         <div class="row g-4">
             <!-- Menu Items Section -->
             <div class="col-lg-8">
-                <!-- Student Selection Card -->
+                <!-- View Controls -->
                 <div class="card shadow-sm mb-4 border-0 rounded-3">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <label for="student" class="form-label mb-0">Student ID (Optional)</label>
-                                <select class="form-select form-select-lg" id="student" name="student_id">
-                                    <option value="">Search student...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <div id="student-balance-display" style="display: none;">
-                                    <h6 class="mb-1">Available Balance</h6>
-                                    <h3 class="text-primary mb-0">₱<span id="balance-amount">0.00</span></h3>
-                                </div>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-primary active" data-view="grid">
-                                        <i class="bi bi-grid"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary" data-view="list">
-                                        <i class="bi bi-list"></i>
-                                    </button>
-                                </div>
-                            </div>
+                    <div class="card-body d-flex justify-content-end">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                                <i class="bi bi-grid"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-view="list">
+                                <i class="bi bi-list"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -195,10 +182,6 @@
                                 <span class="text-muted">Subtotal</span>
                                 <span>₱<span id="subtotal">0.00</span></span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Tax (12%)</span>
-                                <span>₱<span id="tax">0.00</span></span>
-                            </div>
                             <div class="d-flex justify-content-between mt-3 pt-3 border-top">
                                 <span class="fw-bold fs-5">Total</span>
                                 <span class="fw-bold text-primary fs-5">₱<span id="total">0.00</span></span>
@@ -218,7 +201,7 @@
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="payment_type" 
-                                           id="depositPayment" value="deposit" disabled>
+                                           id="depositPayment" value="deposit" {{ Auth::check() && Auth::user()->role === 'Students' ? '' : 'disabled' }}>
                                     <label class="form-check-label" for="depositPayment">
                                         <i class="bi bi-wallet2 me-1"></i> Student Deposit
                                     </label>
@@ -331,70 +314,11 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Initialize student select2
-    $('#student').select2({
-        theme: 'bootstrap-5',
-        placeholder: 'Search student by ID or name...',
-        allowClear: true,
-        minimumInputLength: 1,
-        ajax: {
-            url: '{{ route("pos.search-students") }}',
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    term: params.term || '',
-                    page: params.page || 1
-                };
-            },
-            processResults: function(data) {
-                return {
-                    results: data.results,
-                    pagination: data.pagination
-                };
-            },
-            cache: true
-        }
-    }).on('select2:select', function(e) {
-        const studentId = e.params.data.id;
-        // Fetch and display student balance
-        fetch(`{{ url('pos/student-balance') }}/${studentId}`)
-            .then(response => response.json())
-            .then(data => {
-                $('#balance-amount').text(parseFloat(data.balance).toFixed(2));
-                $('#student-balance-display').show();
-                
-                // Update the balance in the header if it exists (for student users)
-                if ($('#student-balance-header').length) {
-                    $('#student-balance-header').text('₱' + parseFloat(data.balance).toFixed(2));
-                }
-                
-                // Enable deposit payment option
-                $('#depositPayment').prop('disabled', false);
-                // Update hidden student_id field
-                $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
-            })
-            .catch(error => {
-                console.error('Error fetching student balance:', error);
-                $('#student-balance-display').hide();
-                $('#depositPayment').prop('disabled', true);
-            });
-    }).on('select2:clear', function() {
-        // Hide balance display when student is cleared
-        $('#student-balance-display').hide();
-        // Disable deposit payment option
-        $('#depositPayment').prop('disabled', true);
-        // Switch to cash payment if deposit was selected
-        if ($('#depositPayment').prop('checked')) {
-            $('#cashPayment').prop('checked', true);
-        }
-        // Remove student_id from form
-        $('#cartData input[name="student_id"]').remove();
-    });
-
-    // Initially disable deposit payment option
-    $('#depositPayment').prop('disabled', true);
-
+    // Enable deposit payment option if student is logged in
+    if ($('#student_id_input').length) {
+        $('#depositPayment').prop('disabled', false);
+    }
+    
     // Category filtering
     $('.category-btn').click(function() {
         $('.category-btn').removeClass('active');
@@ -537,11 +461,9 @@ $(document).ready(function() {
             subtotal += price * quantity;
         });
         
-        const tax = subtotal * 0.12;
-        const total = subtotal + tax;
+        const total = subtotal;
 
         animateNumber($('#subtotal'), subtotal);
-        animateNumber($('#tax'), tax);
         animateNumber($('#total'), total);
     }
 
@@ -577,12 +499,12 @@ $(document).ready(function() {
         }
         
         if (paymentType === 'deposit') {
-            const studentId = $('#student').val();
-            if (!studentId) {
+            // Check if student is logged in
+            if (!$('#student_id_input').length) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Student Required',
-                    text: 'Please select a student to use deposit payment.',
+                    text: 'Only students can use deposit payment.',
                     confirmButtonText: 'OK'
                 }).then(() => {
                     $('#cashPayment').prop('checked', true);
@@ -593,15 +515,13 @@ $(document).ready(function() {
             
             // Check if student has sufficient balance
             const total = parseFloat($('#total').text());
-            const balance = parseFloat($('#balance-amount').text());
+            const balance = parseFloat($('#student-balance-header').text().replace(/[₱,]/g, ''));
             if (balance < total) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Insufficient Balance',
                     text: `Current balance (₱${balance.toFixed(2)}) is less than the total amount (₱${total.toFixed(2)})`,
                     confirmButtonText: 'OK'
-                }).then(() => {
-                    $('#cashPayment').prop('checked', true);
                 });
                 return;
             }
@@ -614,12 +534,12 @@ $(document).ready(function() {
         
         const paymentType = $('input[name="payment_type"]:checked').val();
         if (paymentType === 'deposit') {
-            const studentId = $('#student').val();
+            const studentId = $('#student_id_input').val();
             if (!studentId) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Student Required',
-                    text: 'Please select a student to use deposit payment.',
+                    text: 'Only students can use deposit payment.',
                     confirmButtonText: 'OK'
                 });
                 return;
@@ -627,7 +547,7 @@ $(document).ready(function() {
 
             // Check if student has sufficient balance
             const total = parseFloat($('#total').text());
-            const balance = parseFloat($('#balance-amount').text());
+            const balance = parseFloat($('#student-balance-header').text().replace(/[₱,]/g, ''));
             if (balance < total) {
                 Swal.fire({
                     icon: 'error',
@@ -680,9 +600,9 @@ $(document).ready(function() {
             $('#cartData').append(`<input type="hidden" name="change_amount" value="${changeAmount}">`);
         }
 
-        // If student is selected, add student_id
-        const studentId = $('#student').val();
-        if (studentId) {
+        // Add student_id if provided via hidden input
+        if ($('#student_id_input').length) {
+            const studentId = $('#student_id_input').val();
             $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
         }
 
@@ -748,7 +668,7 @@ $(document).ready(function() {
                                 updateCartCount();
                                 updateTotals();
                                 updateSubmitButton();
-                                $('#student').val(null).trigger('change');
+                                $('#student_id_input').val(null).trigger('change');
                                 $('#cashPayment').prop('checked', true);
                                 $('#cashAmount').val('');
                                 $('#changeAmount').val('');
