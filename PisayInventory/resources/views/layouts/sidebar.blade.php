@@ -149,43 +149,6 @@
         </li>
         @endif
 
-        @if($hasPOSAccess)
-        <li class="nav-item dropdown">
-            <a href="#" class="nav-link dropdown-toggle" id="posDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-cart3"></i>
-                <span>Point of Sale</span>
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="posDropdown">
-                @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
-                <li>
-                    <a class="dropdown-item {{ request()->routeIs('pos.index') ? 'active' : '' }}" href="{{ route('pos.index') }}">
-                        <i class="bi bi-list-check"></i> Orders
-                    </a>
-                </li>
-                @endif
-                <li>
-                    <a class="dropdown-item {{ request()->routeIs('pos.create') ? 'active' : '' }}" href="{{ route('pos.create') }}">
-                        <i class="bi bi-plus-circle"></i> New Order
-                    </a>
-                </li>
-                @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
-                <li>
-                    <a class="dropdown-item {{ request()->routeIs('pos.deposits.*') ? 'active' : '' }}" href="{{ route('pos.deposits.index') }}">
-                        <i class="bi bi-wallet2"></i> Deposits
-                    </a>
-                </li>
-                @endif
-                @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
-                <li>
-                    <a class="dropdown-item {{ request()->routeIs('pos.reports') ? 'active' : '' }}" href="{{ route('pos.reports') }}">
-                        <i class="bi bi-graph-up"></i> POS Reports
-                    </a>
-                </li>
-                @endif
-            </ul>
-        </li>
-        @endif
-
         @if($hasLaboratoryAccess || $isStudent)
         <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="laboratoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
