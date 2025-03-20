@@ -652,15 +652,15 @@ class POSController extends Controller
                 ]);
             }
             
-            // Update order status
+            // Update order status to completed
             DB::table('pos_orders')
                 ->where('OrderID', $orderId)
                 ->update([
                     'Status' => 'completed',
                     'ProcessedBy' => Auth::id(),
                     'ProcessedAt' => now(),
-                    'AmountTendered' => $paymentAmount,
-                    'ChangeAmount' => $changeAmount,
+                    'AmountTendered' => $validated['payment_type'] === 'cash' ? $paymentAmount : null,
+                    'ChangeAmount' => $validated['payment_type'] === 'cash' ? $changeAmount : null,
                     'updated_at' => now()
                 ]);
                 
