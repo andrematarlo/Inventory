@@ -171,8 +171,8 @@
 }
 
 .btn-group .btn {
-    padding: 0.25rem 0.5rem;
-}
+        padding: 0.25rem 0.5rem;
+    }
 
 </style>
 @endsection
@@ -252,7 +252,7 @@ $(document).ready(function() {
     
     if (!reservations || reservations.length === 0) {
         html = '<tr><td colspan="9" class="text-center">No reservations found</td></tr>';
-    } else {
+        } else {
         reservations.forEach(function(reservation) {
             const isStudent = '{{ Auth::user()->role }}' === 'Student';
             const isTeacher = '{{ Auth::user()->role }}' === 'Teacher';
@@ -287,12 +287,13 @@ $(document).ready(function() {
                             ${/* Teacher actions */
                             isTeacher ? `
                                 ${reservation.status === 'Disapproved' ? `
-                                    <!-- Restore button for disapproved reservations -->
-                                    <button type="button" class="btn btn-success btn-sm restore-reservation" 
-                                            data-id="${reservation.reservation_id}" title="Restore">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </button>
                                     <!-- Delete button for disapproved reservations -->
+                                    <button type="button" class="btn btn-danger btn-sm delete-reservation" 
+                                            data-id="${reservation.reservation_id}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                ` : reservation.status === 'Approved' ? `
+                                    <!-- Delete button for approved reservations -->
                                     <button type="button" class="btn btn-danger btn-sm delete-reservation" 
                                             data-id="${reservation.reservation_id}" title="Delete">
                                         <i class="bi bi-trash"></i>
@@ -694,27 +695,33 @@ function disapproveReservation(id, remarks) {
             confirmButtonText: 'Yes, delete it!'
         }).then((result) => {
             if (result.isConfirmed) {
+                // Add CSRF token to headers
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
                 $.ajax({
-                    url: "{{ route('laboratory.reservations.destroy', '_id_') }}".replace('_id_', id),
+                    url: "{{ url('inventory/laboratory/reservations') }}/" + id,
                     type: 'DELETE',
-                    data: {
-                        _token: '{{ csrf_token() }}'
-                    },
                     success: function(response) {
                         Swal.fire({
                             icon: 'success',
                             title: 'Success!',
                             text: 'Reservation has been deleted.'
                         }).then(() => {
+                            // Do not change currentStatus, just reload the current view
                             loadReservations();
                             loadCounts();
                         });
                     },
                     error: function(xhr) {
+                        console.error('Delete error:', xhr);
                         Swal.fire({
                             icon: 'error',
                             title: 'Error!',
-                            text: xhr.responseJSON?.message || 'Something went wrong.'
+                            text: xhr.responseJSON?.message || 'Something went wrong while deleting the reservation.'
                         });
                     }
                 });

@@ -803,34 +803,40 @@ public function generateControlNo()
         try {
             $reservation = LaboratoryReservation::findOrFail($id);
             
-            if (!$reservation->canBeCancelled()) {
+            // Add logging to track the deletion attempt
+            \Log::info('Attempting to delete reservation:', [
+                'id' => $id,
+                'status' => $reservation->status,
+                'user' => auth()->user()->id
+            ]);
+
+            // Delete the reservation
+            $reservation->delete();
+            
+            if (request()->ajax()) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'This reservation cannot be cancelled.'
-                ], 422);
+                    'success' => true,
+                    'message' => 'Reservation deleted successfully.'
+                ]);
             }
 
-            DB::beginTransaction();
+            return redirect()->route('laboratory.reservations')
+                ->with('success', 'Reservation deleted successfully.');
             
-            $reservation->update([
-                'status' => 'Cancelled',
-                'deleted_by' => Auth::user()->UserAccountID
-            ]);
-            
-            $reservation->delete(); // This will trigger soft delete
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Reservation cancelled successfully.'
-            ]);
         } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error cancelling reservation: ' . $e->getMessage()
-            ], 500);
+            \Log::error('Error deleting reservation:', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error deleting reservation: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return back()->with('error', 'Error deleting reservation: ' . $e->getMessage());
         }
     }
 
