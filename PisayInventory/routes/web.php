@@ -162,6 +162,51 @@ Route::middleware('auth')->group(function () {
 
         // Module Management
         Route::resource('modules', ModuleController::class);
+
+        // Laboratory Reservations
+        Route::prefix('laboratory')->name('laboratory.')->group(function () {
+            // Main reservation routes
+            Route::get('/reservations', [LaboratoryReservationController::class, 'index'])
+                ->name('reservations');
+            Route::get('/reservations/create', [LaboratoryReservationController::class, 'create'])
+                ->name('reservations.create');
+            Route::post('/reservations', [LaboratoryReservationController::class, 'store'])
+                ->name('reservations.store');
+            
+            // API routes
+            Route::get('/reservations/data', [LaboratoryReservationController::class, 'getReservationsData'])
+                ->name('reservations.data');
+            Route::get('/reservations/counts', [LaboratoryReservationController::class, 'getStatusCounts'])
+                ->name('reservations.counts');
+            Route::get('/reservations/teachers', [LaboratoryReservationController::class, 'getTeachers'])
+                ->name('reservations.getTeachers');
+            Route::get('/reservations/student-info', [LaboratoryReservationController::class, 'getStudentInfo'])
+                ->name('reservations.getStudentInfo');
+            Route::get('/reservations/generate-control-no', [LaboratoryReservationController::class, 'generateControlNo'])
+                ->name('reservations.generateControlNo');
+
+            // Action routes
+            Route::post('/reservations/{id}/endorse', [LaboratoryReservationController::class, 'endorse'])
+                ->name('reservations.endorse');
+            Route::post('/reservations/{reservation}/approve', [LaboratoryReservationController::class, 'approve'])
+                ->name('reservations.approve');
+            Route::post('/reservations/{reservation}/disapprove', [LaboratoryReservationController::class, 'disapprove'])
+                ->name('reservations.disapprove');
+            Route::post('/reservations/{reservation}/reject', [LaboratoryReservationController::class, 'reject'])
+                ->name('reservations.reject');
+
+            // CRUD routes
+            Route::get('/reservations/{reservation}', [LaboratoryReservationController::class, 'show'])
+                ->name('reservations.show');
+            Route::get('/reservations/{reservation}/edit', [LaboratoryReservationController::class, 'edit'])
+                ->name('reservations.edit');
+            Route::put('/reservations/{reservation}', [LaboratoryReservationController::class, 'update'])
+                ->name('reservations.update');
+            Route::delete('/reservations/{reservation}', [LaboratoryReservationController::class, 'destroy'])
+                ->name('reservations.destroy');
+            Route::post('/reservations/{reservation}/restore', [LaboratoryReservationController::class, 'restore'])
+                ->name('reservations.restore');
+        });
     });
 });
 
@@ -206,89 +251,6 @@ Route::prefix('equipment-borrowings')->group(function () {
     Route::post('/{borrowing}/return', [EquipmentBorrowingController::class, 'return'])->name('equipment.borrowings.return');
     Route::post('/{borrowing}/restore', [EquipmentBorrowingController::class, 'restore'])->name('equipment.borrowings.restore');
 });
-
-// Laboratory Reservations
-Route::prefix('laboratory')->name('laboratory.')->group(function () {
-    // Main reservation routes (keep original names)
-    Route::get('/reservations', [LaboratoryReservationController::class, 'index'])
-            ->name('reservations');
-    Route::get('/reservations/create', [LaboratoryReservationController::class, 'create'])
-            ->name('reservations.create');
-    Route::post('/reservations', [LaboratoryReservationController::class, 'store'])
-        ->name('reservations.store');
-    Route::post('/reservations/{id}/endorse', [LaboratoryReservationController::class, 'endorse'])
-        ->name('reservations.endorse');
-    Route::post('/reservations/{reservation}/disapprove', [LaboratoryReservationController::class, 'disapprove'])
-        ->name('reservations.disapprove');
-
-    // Add these new routes
-    Route::get('/reservations/student-info', [LaboratoryReservationController::class, 'getStudentInfo'])
-    ->name('reservations.getStudentInfo');
-
-    Route::get('/reservations/search-teachers', [LaboratoryReservationController::class, 'getTeachers'])
-    ->name('reservations.searchTeachers');
-    
-    // API routes
-    Route::get('/reservations/data', [LaboratoryReservationController::class, 'getReservationsData'])
-        ->name('reservations.data');
-    Route::get('/reservations/counts', [LaboratoryReservationController::class, 'getStatusCounts'])
-        ->name('reservations.counts');
-    Route::get('/reservations/teachers', [LaboratoryReservationController::class, 'getTeachers'])
-        ->name('reservations.getTeachers');
-    Route::get('/reservations/generate-control-no', [LaboratoryReservationController::class, 'generateControlNo'])
-        ->name('reservations.generateControlNo');
-
-    // Other reservation management routes
-    Route::get('/reservations/{reservation}', [LaboratoryReservationController::class, 'show'])
-        ->name('reservations.show');
-    Route::get('/reservations/{reservation}/edit', [LaboratoryReservationController::class, 'edit'])
-        ->name('reservations.edit');
-    Route::put('/reservations/{reservation}', [LaboratoryReservationController::class, 'update'])
-        ->name('reservations.update');
-    Route::delete('/reservations/{reservation}', [LaboratoryReservationController::class, 'destroy'])
-        ->name('reservations.destroy');
-    Route::post('/reservations/{reservation}/restore', [LaboratoryReservationController::class, 'restore'])
-        ->name('reservations.restore');
-    Route::post('/reservations/{reservation}/approve', [LaboratoryReservationController::class, 'approve'])
-        ->name('reservations.approve');
-    Route::post('/reservations/{reservation}/reject', [LaboratoryReservationController::class, 'reject'])
-        ->name('reservations.reject');
-});
-
-// Role Policy routes
-Route::post('/roles/policies/create', [RoleController::class, 'createPolicy'])->name('roles.policies.create');
-
-// Equipment restore route
-Route::post('/equipment/{equipment}/restore', [EquipmentController::class, 'restore'])->name('equipment.restore');
-
-// Direct routes for equipment borrowings at root level
-Route::get('/equipment-borrowings/{id}', [EquipmentBorrowingController::class, 'show'])
-    ->name('equipment.borrowings.direct.show')
-    ->where('id', '.*');
-Route::post('/equipment-borrowings/{id}/restore', [EquipmentBorrowingController::class, 'restore'])
-    ->name('equipment.borrowings.direct.restore')
-    ->where('id', '.*');
-Route::get('/equipment-borrowings/{id}/edit', [EquipmentBorrowingController::class, 'edit'])
-    ->name('equipment.borrowings.direct.edit')
-    ->where('id', '.*');
-Route::put('/equipment-borrowings/{id}', [EquipmentBorrowingController::class, 'update'])
-    ->name('equipment.borrowings.direct.update')
-    ->where('id', '.*');
-Route::delete('/equipment-borrowings/{id}', [EquipmentBorrowingController::class, 'destroy'])
-    ->name('equipment.borrowings.direct.destroy')
-    ->where('id', '.*');
-Route::post('/equipment-borrowings/{id}/return', [EquipmentBorrowingController::class, 'return'])
-    ->name('equipment.borrowings.direct.return')
-    ->where('id', '.*');
-
-// Add these routes for restoring laboratories (supporting both PUT and POST)
-Route::put('/inventory/laboratories/{laboratory}/restore', [App\Http\Controllers\LaboratoriesController::class, 'restore'])
-    ->name('laboratories.restore')
-    ->where('laboratory', '.*');
-
-Route::post('/inventory/laboratories/{laboratory}/restore', [App\Http\Controllers\LaboratoriesController::class, 'restore'])
-    ->name('laboratories.restore.post')
-    ->where('laboratory', '.*');
 
 // Add this test route for debugging laboratory restore
 Route::get('/debug/laboratory/{id}', function($id) {
