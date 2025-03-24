@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MenuItem extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'menu_items';
     protected $primaryKey = 'MenuItemID';
     
@@ -13,7 +16,7 @@ class MenuItem extends Model
         'ItemName',
         'Description',
         'Price',
-        'ClassificationID',
+        'ClassificationId',
         'UnitOfMeasureID',
         'StocksAvailable',
         'IsAvailable',
@@ -38,7 +41,7 @@ class MenuItem extends Model
     
     public function classification()
     {
-        return $this->belongsTo(Classification::class, 'ClassificationID', 'ClassificationID');
+        return $this->belongsTo(Classification::class, 'ClassificationId', 'ClassificationId');
     }
     
     public function unitOfMeasure()

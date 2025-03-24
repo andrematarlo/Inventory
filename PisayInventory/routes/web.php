@@ -23,6 +23,11 @@ use App\Http\Controllers\LaboratoriesController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\LaboratoryReservationController;
 use App\Http\Controllers\EquipmentBorrowingController;
+use App\Http\Controllers\POS\KioskController;
+use App\Http\Controllers\POS\CashierController;
+use App\Http\Controllers\POS\DepositController;
+use App\Http\Controllers\POS\ReportController as POSReportController;
+use App\Http\Controllers\POS\OrderController;
 
 
 // Add this at the top of your routes to debug
@@ -281,4 +286,38 @@ Route::get('/debug/laboratory/{id}', function($id) {
     }
 })->where('id', '.*');
 Route::resource('reservations', ReservationController::class);
+
+// Point of Sale (POS) Routes
+Route::prefix('pos')->name('pos.')->middleware(['auth'])->group(function () {
+    // Student Kiosk (Students Only)
+    Route::middleware(['role:Students'])->group(function () {
+        Route::get('/kiosk', [KioskController::class, 'index'])->name('kiosk.index');
+        Route::post('/kiosk/order', [KioskController::class, 'store'])->name('kiosk.store');
+        Route::get('/kiosk/history', [KioskController::class, 'history'])->name('kiosk.history');
+    });
+
+    // Admin and Cashier Routes
+    Route::middleware(['role:Admin,Cashier'])->group(function () {
+        // Orders
+        Route::controller(OrderController::class)->group(function () {
+            Route::get('/orders', 'index')->name('orders.index');
+            Route::get('/orders/create', 'create')->name('orders.create');
+            Route::post('/orders', 'store')->name('orders.store');
+            Route::get('/orders/{order}', 'show')->name('orders.show');
+            Route::get('/orders/{order}/edit', 'edit')->name('orders.edit');
+            Route::put('/orders/{order}', 'update')->name('orders.update');
+            Route::delete('/orders/{order}', 'destroy')->name('orders.destroy');
+        });
+        
+        // Cashiering
+        Route::get('/cashier', [CashierController::class, 'index'])->name('cashier.index');
+        
+        // Cash Deposit
+        Route::get('/deposits', [DepositController::class, 'index'])->name('deposit.index');
+        Route::post('/deposits', [DepositController::class, 'store'])->name('deposit.store');
+        
+        // Reports
+        Route::get('/reports', [POSReportController::class, 'index'])->name('reports.index');
+    });
+});
 

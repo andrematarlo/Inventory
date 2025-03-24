@@ -4,27 +4,26 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class CheckRole
 {
     public function handle(Request $request, Closure $next, ...$roles)
     {
-        if (!Auth::check()) {
-            return redirect('login');
+        if (!$request->user()) {
+            return redirect('/login');
         }
 
-        $userRole = Auth::user()->role;
+        // Split comma-separated roles if they exist
+        $allowedRoles = [];
+        foreach ($roles as $role) {
+            $allowedRoles = array_merge($allowedRoles, explode(',', $role));
+        }
 
         // Check if user has any of the allowed roles
-        if (in_array($userRole, $roles)) {
-            // For Inventory Manager, block delete actions
-            if ($userRole === 'Inventory Manager' && $request->isMethod('delete')) {
-                return redirect()->back()->with('error', 'You do not have permission to delete records.');
-            }
+        if (in_array($request->user()->role, $allowedRoles)) {
             return $next($request);
         }
 
-        return redirect()->back()->with('error', 'You do not have permission to access this page.');
+        return redirect()->back()->with('error', 'Unauthorized access.');
     }
 } 

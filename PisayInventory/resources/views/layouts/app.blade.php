@@ -233,6 +233,43 @@
                 background: rgba(255, 255, 255, 0.7); /* white overlay with 70% opacity */
                 z-index: -1;
             }
+
+            /* Add these to your existing styles */
+            .nav-content {
+                padding-left: 2.5rem;
+                list-style: none;
+            }
+
+            .nav-content .dropdown-item {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+                color: #64748b;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                border-radius: 0.375rem;
+                transition: all 0.2s;
+            }
+
+            .nav-content .dropdown-item:hover,
+            .nav-content .dropdown-item.active {
+                background-color: #f1f5f9;
+                color: #0f172a;
+            }
+
+            .nav-content .dropdown-item i {
+                font-size: 1rem;
+                width: 1.25rem;
+                text-align: center;
+            }
+
+            .dropdown-arrow {
+                transition: transform 0.2s;
+            }
+
+            [aria-expanded="true"] .dropdown-arrow {
+                transform: rotate(-180deg);
+            }
         </style>
         @yield('additional_styles')
         <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -345,5 +382,47 @@
             @endif
         });
     </script>
+
+    <!-- POS Navigation -->
+    <div class="nav-item">
+        <a class="nav-link" data-bs-toggle="collapse" href="#posCollapse">
+            <i class="bi bi-shop"></i>
+            <span>Point of Sale</span>
+            <i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <div class="collapse" id="posCollapse">
+            <ul class="nav-content">
+                @if(Auth::user()->role === 'Students')
+                <li>
+                    <a href="{{ route('pos.kiosk.index') }}" class="{{ request()->routeIs('pos.kiosk.*') ? 'active' : '' }}">
+                        <i class="bi bi-person-workspace"></i>
+                        <span>Student Kiosk</span>
+                    </a>
+                </li>
+                @endif
+                
+                @if(in_array(Auth::user()->role, ['Admin', 'Cashier']))
+                <li>
+                    <a href="{{ route('pos.cashier.index') }}" class="{{ request()->routeIs('pos.cashier.*') ? 'active' : '' }}">
+                        <i class="bi bi-cash-register"></i>
+                        <span>Cashiering</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('pos.deposit.index') }}" class="{{ request()->routeIs('pos.deposit.*') ? 'active' : '' }}">
+                        <i class="bi bi-wallet2"></i>
+                        <span>Cash Deposit</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('pos.reports.index') }}" class="{{ request()->routeIs('pos.reports.*') ? 'active' : '' }}">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+                @endif
+            </ul>
+        </div>
+    </div>
     </body>
 </html>
