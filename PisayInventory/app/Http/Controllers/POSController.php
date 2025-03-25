@@ -16,6 +16,7 @@ use App\Models\POSOrderItem;
 use App\Models\Student;
 use App\Models\CashDeposit;
 use Exception;
+use Illuminate\Support\Facades\Storage;
 
 class POSController extends Controller
 {
@@ -691,20 +692,30 @@ class POSController extends Controller
             'classification_id' => 'required|exists:classification,ClassificationId',
             'stocks_available' => 'required|integer|min:0',
             'description' => 'nullable|string|max:255',
+            'item_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         try {
             DB::beginTransaction();
             
-            // Create menu item - ensure the field names exactly match the database table
+            // Handle image upload if present
+            $imagePath = null;
+            if ($request->hasFile('item_image')) {
+                $image = $request->file('item_image');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('menu-items', $imageName, 'public');
+            }
+            
+            // Create menu item
             $menuItemId = DB::table('menu_items')->insertGetId([
                 'ItemName' => $request->item_name,
                 'Description' => $request->description,
                 'Price' => $request->price,
-                'ClassificationID' => $request->classification_id, // Note the exact case match to the database field
+                'ClassificationID' => $request->classification_id,
                 'IsAvailable' => true,
                 'IsDeleted' => false,
                 'StocksAvailable' => $request->stocks_available,
+                'image_path' => $imagePath, // Save the image path
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
@@ -722,7 +733,8 @@ class POSController extends Controller
                         'name' => $request->item_name,
                         'price' => $request->price,
                         'description' => $request->description,
-                        'stocks' => $request->stocks_available
+                        'stocks' => $request->stocks_available,
+                        'image_path' => $imagePath ? asset('storage/' . $imagePath) : null
                     ]
                 ]);
             }
@@ -737,6 +749,11 @@ class POSController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // If image was uploaded but transaction failed, remove the image
+            if (isset($imagePath) && Storage::disk('public')->exists($imagePath)) {
+                Storage::disk('public')->delete($imagePath);
+            }
             
             $errorMessage = 'Failed to add menu item: ' . $e->getMessage();
             
@@ -914,5 +931,46 @@ class POSController extends Controller
             'results' => $students,
             'pagination' => ['more' => false]
         ]);
+    }
+
+    public function deleteMenuItem($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Find the menu item
+            $menuItem = DB::table('menu_items')->where('MenuItemID', $id)->first();
+            
+            if (!$menuItem) {
+                throw new \Exception('Menu item not found');
+            }
+
+            // Delete the image if it exists
+            if ($menuItem->image_path && Storage::disk('public')->exists($menuItem->image_path)) {
+                Storage::disk('public')->delete($menuItem->image_path);
+            }
+
+            // Soft delete the menu item
+            DB::table('menu_items')
+                ->where('MenuItemID', $id)
+                ->update([
+                    'IsDeleted' => true,
+                    'updated_at' => now()
+                ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Menu item deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete menu item: ' . $e->getMessage()
+            ], 500);
+        }
     }
 } 

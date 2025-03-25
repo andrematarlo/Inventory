@@ -140,6 +140,30 @@
                         @foreach($menuItems as $item)
                             <div class="col-md-4 menu-item" data-category="{{ $item->ClassificationId }}">
                                 <div class="card h-100 border-0 shadow-sm menu-item-card">
+                                    <!-- Add card header with delete button -->
+                                    @if(Auth::check() && (Auth::user()->role === 'Admin' || Auth::user()->role === 'Cashier'))
+                                    <div class="card-header bg-transparent border-0 d-flex justify-content-end p-2">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger delete-item-btn"
+                                                data-item-id="{{ $item->MenuItemID }}"
+                                                data-item-name="{{ $item->ItemName }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                    @endif
+
+                                    @if($item->image_path && Storage::disk('public')->exists($item->image_path))
+                                        <img src="{{ asset('storage/' . $item->image_path) }}" 
+                                             class="card-img-top" 
+                                             alt="{{ $item->ItemName }}"
+                                             style="height: 200px; object-fit: cover;">
+                                    @else
+                                        <div class="bg-light d-flex align-items-center justify-content-center" 
+                                             style="height: 200px;">
+                                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                        </div>
+                                    @endif
+                                    
                                     <div class="card-body d-flex flex-column">
                                         <h5 class="card-title mb-2">{{ $item->ItemName }}</h5>
                                         <p class="card-text text-muted small mb-3">{{ $item->Description }}</p>
@@ -879,6 +903,67 @@ $(document).ready(function() {
     
     // Show cash details by default (since cash is the default payment method)
     $('#cashPaymentDetails').show();
+
+    // Handle delete menu item
+    $('.delete-item-btn').click(function() {
+        const itemId = $(this).data('item-id');
+        const itemName = $(this).data('item-name');
+        const menuItem = $(this).closest('.menu-item');
+        
+        Swal.fire({
+            title: 'Delete Menu Item',
+            html: `Are you sure you want to delete <strong>${itemName}</strong>?<br>This action cannot be undone.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Delete',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#dc3545'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading state
+                Swal.fire({
+                    title: 'Deleting Item',
+                    text: 'Please wait...',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Send delete request
+                $.ajax({
+                    url: `/pos/menu-items/${itemId}`,
+                    type: 'DELETE',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        // Remove item from grid with animation
+                        menuItem.fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Item Deleted',
+                            text: 'The menu item has been deleted successfully.',
+                            confirmButtonText: 'OK'
+                        });
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Delete Failed',
+                            text: response?.message || 'Failed to delete the menu item.',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            }
+        });
+    });
 });
 </script>
 @endpush
@@ -887,13 +972,22 @@ $(document).ready(function() {
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="addItemForm" action="{{ route('pos.add-menu-item') }}" method="POST">
+            <form id="addItemForm" action="{{ route('pos.add-menu-item') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title" id="addItemModalLabel">Add New Menu Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="item_image" class="form-label">Item Image</label>
+                        <input type="file" class="form-control" id="item_image" name="item_image" accept="image/*">
+                        <div class="form-text">Upload an image for the menu item (optional)</div>
+                        <div class="mt-2">
+                            <img id="imagePreview" src="#" alt="Image Preview" style="display: none; max-width: 200px; max-height: 200px;" class="img-thumbnail">
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="item_name" class="form-label">Item Name</label>
                         <input type="text" class="form-control" id="item_name" name="item_name" required>

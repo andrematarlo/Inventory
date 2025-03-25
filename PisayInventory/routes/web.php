@@ -37,6 +37,20 @@ Route::get('/debug/routes', function() {
     }
 });
 
+// Add this route temporarily for debugging
+Route::get('/debug/routes', function() {
+    $routes = collect(\Route::getRoutes())->map(function ($route) {
+        return [
+            'URI' => $route->uri(),
+            'Name' => $route->getName(),
+            'Method' => implode('|', $route->methods()),
+        ];
+    });
+    dd($routes->filter(function ($route) {
+        return str_contains($route['URI'], 'menu-items');
+    })->all());
+});
+
 // Default route to inventory
 Route::get('/', function () {
     return redirect('/inventory');
@@ -196,6 +210,11 @@ Route::middleware('auth')->group(function () {
             Route::post('/deposits', [App\Http\Controllers\POSDepositController::class, 'store'])->name('deposits.store');
             Route::get('/deposits/history/{student}', [App\Http\Controllers\POSDepositController::class, 'history'])->name('deposits.history');
             Route::get('/students/select2', [App\Http\Controllers\POSDepositController::class, 'studentSelect2'])->name('students.select2');
+            
+            // Menu Items routes
+            Route::delete('/menu-items/{id}', [POSController::class, 'destroy'])
+                ->name('menu-items.destroy')
+                ->where('id', '[0-9]+');
         });
 
 // Laboratory Management Routes
