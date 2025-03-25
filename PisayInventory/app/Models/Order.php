@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
+    protected $table = 'pos_orders';
+    protected $primaryKey = 'OrderID';
+    
     protected $fillable = [
         'student_id',
         'total_amount',
@@ -18,8 +21,10 @@ class Order extends Model
 
     public function items()
     {
-        return $this->belongsToMany(MenuItem::class, 'order_items')
-                    ->withPivot('quantity', 'price');
+        return $this->belongsToMany(MenuItem::class, 'pos_order_items', 
+                                  'OrderID', 'ItemID')
+                    ->withPivot('Quantity', 'UnitPrice')
+                    ->withoutGlobalScopes();
     }
 
     public function student()

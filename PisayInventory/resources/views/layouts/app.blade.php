@@ -185,43 +185,48 @@
             }
 
             /* Main content adjustment */
-    body .main-content {
-        margin-left: 320px;
-        padding: 0 0 0 10px;
-        transition: margin-left 0.3s ease;
-    }
+            body .main-content {
+                margin-left: 320px;
+                padding: 0 0 0 10px;
+                transition: margin-left 0.3s ease;
+                width: calc(100% - 320px);
+                position: relative;
+            }
 
-    body .main-content .content-wrapper {
-        padding: 2rem 3rem;
-        margin: 0 auto;
-    }
+            body .main-content .content-wrapper {
+                padding: 2rem 3rem;
+                margin: 0 auto;
+                width: 100%;
+                overflow-x: auto;
+            }
 
-    body .container, 
-    body .container-fluid {
-        max-width: 1800px;
-        margin: 0 auto;
-    }
+            body .container, 
+            body .container-fluid {
+                max-width: 100%;
+                padding-left: 15px;
+                padding-right: 15px;
+            }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-        body .main-content {
-            margin-left: 0;
-            padding-left: 0;
-        }
-    }
+            /* Responsive */
+            @media (max-width: 768px) {
+                body .main-content {
+                    margin-left: 0;
+                    padding-left: 0;
+                }
+            }
 
-    /* Responsive styles */
-    @media (max-width: 768px) {
-        .sidebar {
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-        }
+            /* Responsive styles */
+            @media (max-width: 768px) {
+                .sidebar {
+                    transform: translateX(-100%);
+                    transition: transform 0.3s ease;
+                }
 
-        .sidebar.show {
-            transform: translateX(0);
-        }
-    }
-    
+                .sidebar.show {
+                    transform: translateX(0);
+                }
+            }
+            
             /* Add some overlay to make content more readable */
             body::before {
                 content: '';
@@ -269,6 +274,51 @@
 
             [aria-expanded="true"] .dropdown-arrow {
                 transform: rotate(-180deg);
+            }
+
+            /* Added z-index adjustment for modals to appear above sidebar */
+            .modal-backdrop {
+                z-index: 1040 !important;
+            }
+            .modal {
+                z-index: 1050 !important;
+            }
+            .modal-dialog {
+                margin: 2rem auto;
+                max-width: 95%;
+            }
+
+            /* Dashboard Styles */
+            body {
+                font-family: 'Nunito', sans-serif;
+                background-color: #f8fafc;
+            }
+            
+            /* Sidebar */
+            .sidebar {
+                min-width: 250px;
+                width: 250px;
+                min-height: 100vh;
+                background-color: #343a40;
+                color: #fff;
+                transition: all 0.3s;
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 1030;
+            }
+            
+            .content {
+                width: 100%;
+                min-height: 100vh;
+                transition: all 0.3s;
+                margin-left: 250px;
+            }
+            
+            .sidebar .nav-link {
+                color: rgba(255, 255, 255, 0.75);
+                padding: 0.75rem 1rem;
+                border-left: 3px solid transparent;
             }
         </style>
         @yield('additional_styles')

@@ -3,12 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MenuItem extends Model
 {
-    use SoftDeletes;
-
     protected $table = 'menu_items';
     protected $primaryKey = 'MenuItemID';
     
@@ -20,7 +17,8 @@ class MenuItem extends Model
         'UnitOfMeasureID',
         'StocksAvailable',
         'IsAvailable',
-        'IsDeleted'
+        'IsDeleted',
+        'image_path'
     ];
     
     protected $casts = [
@@ -29,6 +27,78 @@ class MenuItem extends Model
         'IsDeleted' => 'boolean',
         'StocksAvailable' => 'integer'
     ];
+    
+    /**
+     * Accessor for name attribute to map to ItemName column
+     */
+    public function getNameAttribute()
+    {
+        return $this->ItemName;
+    }
+    
+    /**
+     * Mutator for name attribute to map to ItemName column
+     */
+    public function setNameAttribute($value)
+    {
+        $this->attributes['ItemName'] = $value;
+    }
+    
+    /**
+     * Accessor for available attribute to map to IsAvailable column
+     */
+    public function getAvailableAttribute()
+    {
+        return $this->IsAvailable;
+    }
+    
+    /**
+     * Mutator for available attribute to map to IsAvailable column
+     */
+    public function setAvailableAttribute($value)
+    {
+        $this->attributes['IsAvailable'] = $value;
+    }
+    
+    /**
+     * Accessor for image attribute to map to image_path column
+     */
+    public function getImageAttribute()
+    {
+        return $this->image_path;
+    }
+    
+    /**
+     * Mutator for image attribute to map to image_path column
+     */
+    public function setImageAttribute($value)
+    {
+        $this->attributes['image_path'] = $value;
+    }
+    
+    /**
+     * Accessor for category attribute to map to ClassificationId column
+     */
+    public function getCategoryAttribute()
+    {
+        return $this->ClassificationId;
+    }
+    
+    /**
+     * Mutator for category attribute to map to ClassificationId column
+     */
+    public function setCategoryAttribute($value)
+    {
+        $this->attributes['ClassificationId'] = $value;
+    }
+    
+    /**
+     * Accessor for id attribute to map to MenuItemID
+     */
+    public function getIdAttribute()
+    {
+        return $this->MenuItemID;
+    }
     
     /**
      * Scope a query to only include active menu items.
