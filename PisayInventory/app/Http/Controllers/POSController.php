@@ -17,6 +17,7 @@ use App\Models\Student;
 use App\Models\CashDeposit;
 use Exception;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class POSController extends Controller
 {
@@ -52,8 +53,11 @@ class POSController extends Controller
                 ->whereNull('deleted_at')
                 ->sum('Amount');
         }
+        
+        // Get classifications for menu item modal
+        $classifications = Classification::where('IsDeleted', 0)->orderBy('ClassificationName')->get();
 
-        return view('pos.index', compact('orders', 'isStudent', 'studentBalance', 'studentId'));
+        return view('pos.orders.index', compact('orders', 'isStudent', 'studentBalance', 'studentId', 'classifications'));
     }
     
     public function create()
@@ -264,20 +268,48 @@ class POSController extends Controller
     public function process(POSOrder $order)
     {
         try {
+            // Debug log
+            Log::debug('Processing order:', [
+                'order_id' => $order->OrderID,
+                'order_number' => $order->OrderNumber,
+                'current_status' => $order->Status
+            ]);
+            
+            // Validate that we have the required fields
+            if (!$order->OrderNumber) {
+                throw new \Exception('Order is missing an order number and cannot be processed');
+            }
+            
+            if ($order->Status !== 'pending') {
+                throw new \Exception('Only pending orders can be processed.');
+            }
+            
             DB::beginTransaction();
 
+            // No need to create a new record, just update the existing one
             $order->Status = 'completed';
             $order->ProcessedBy = Auth::id();
             $order->ProcessedAt = now();
             $order->save();
 
             DB::commit();
+            
+            Log::debug('Order processed successfully', [
+                'order_id' => $order->OrderID,
+                'order_number' => $order->OrderNumber,
+                'new_status' => $order->Status
+            ]);
 
             return redirect()->route('pos.show', $order->OrderID)
                 ->with('success', 'Order processed successfully');
 
         } catch (Exception $e) {
             DB::rollBack();
+            Log::error('Order processing failed:', [
+                'order_id' => $order->OrderID ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', $e->getMessage());
         }
     }
@@ -777,46 +809,31 @@ class POSController extends Controller
     }
     
     // Cancel an order
-    public function cancelOrder($orderId)
+    public function cancelOrder($id)
     {
         try {
             DB::beginTransaction();
             
-            // Get the order
-            $order = DB::table('pos_orders')
-                ->where('OrderID', $orderId)
-                ->where('Status', 'pending') // Only pending orders can be cancelled
-                ->whereNull('deleted_at')
-                ->first();
-                
-            if (!$order) {
-                return redirect()->back()->with('error', 'Order not found or cannot be cancelled');
+            $order = POSOrder::findOrFail($id);
+            
+            if ($order->Status === 'completed' || $order->Status === 'cancelled') {
+                return redirect()->back()->with('error', 'This order is already ' . $order->Status);
             }
             
             // Update order status
-            DB::table('pos_orders')
-                ->where('OrderID', $orderId)
-                ->update([
-                    'Status' => 'cancelled',
-                    'updated_at' => now()
-                ]);
-                
-            // Restore stock for each order item
-            $orderItems = DB::table('pos_order_items')
-                ->where('OrderID', $orderId)
-                ->get();
-                
+            $order->Status = 'cancelled';
+            $order->save();
+            
+            // Return stock for menu items
+            $orderItems = POSOrderItem::where('OrderID', $order->OrderID)->get();
+            
             foreach ($orderItems as $item) {
                 if (!empty($item->ItemID) && !$item->IsCustomItem) {
                     // Only increment stock for regular menu items
                     $menuItem = MenuItem::find($item->ItemID);
                     if ($menuItem) {
-                        $menuItem->incrementStock($item->Quantity);
-                        Log::debug('Stock restored for item:', [
-                            'item_id' => $item->ItemID,
-                            'quantity_restored' => $item->Quantity,
-                            'new_stock' => $menuItem->StocksAvailable
-                        ]);
+                        $menuItem->StocksAvailable += $item->Quantity;
+                        $menuItem->save();
                     }
                 }
             }
@@ -828,7 +845,7 @@ class POSController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
             Log::error('Error cancelling order:', [
-                'order_id' => $orderId,
+                'order_id' => $id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -939,38 +956,284 @@ class POSController extends Controller
             DB::beginTransaction();
 
             // Find the menu item
-            $menuItem = DB::table('menu_items')->where('MenuItemID', $id)->first();
+            $menuItem = MenuItem::where('MenuItemID', $id)->firstOrFail();
             
-            if (!$menuItem) {
-                throw new \Exception('Menu item not found');
-            }
-
             // Delete the image if it exists
             if ($menuItem->image_path && Storage::disk('public')->exists($menuItem->image_path)) {
                 Storage::disk('public')->delete($menuItem->image_path);
             }
 
             // Soft delete the menu item
-            DB::table('menu_items')
-                ->where('MenuItemID', $id)
-                ->update([
-                    'IsDeleted' => true,
-                    'updated_at' => now()
-                ]);
+            $menuItem->IsDeleted = true;
+            $menuItem->save();
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Menu item deleted successfully'
-            ]);
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Menu item deleted successfully'
+                ]);
+            }
+
+            return redirect()->route('pos.menu-items.index')
+                ->with('success', 'Menu item deleted successfully');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete menu item: ' . $e->getMessage()
-            ], 500);
+            
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete menu item: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->with('error', 'Failed to delete menu item: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Display a listing of menu items
+     */
+    public function menuItems()
+    {
+        $menuItems = MenuItem::where('IsDeleted', false)
+            ->latest()
+            ->paginate(10);
+
+        return view('pos.menu-items.index', compact('menuItems'));
+    }
+    
+    /**
+     * Show the form for creating a new menu item
+     */
+    public function createMenuItem()
+    {
+        return view('pos.menu-items.create');
+    }
+    
+    /**
+     * Store a newly created menu item
+     */
+    public function storeMenuItem(Request $request)
+    {
+        // Explicitly handle AJAX requests to prevent order processing conflicts
+        $isAjax = $request->ajax() || $request->wantsJson() || 
+                 $request->header('X-Requested-With') === 'XMLHttpRequest' ||
+                 $request->has('ajax_request');
+        
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'category' => 'required|exists:classification,ClassificationId',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'available' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        try {
+            // Use a separate database transaction for menu items to avoid interfering with orders
+            DB::beginTransaction();
+
+            $menuItem = new MenuItem();
+            $menuItem->ItemName = $request->name;
+            $menuItem->Price = $request->price;
+            $menuItem->ClassificationId = $request->category;
+            $menuItem->Description = $request->description;
+            $menuItem->IsAvailable = $request->has('available') ? true : false;
+            $menuItem->IsDeleted = false;
+            $menuItem->StocksAvailable = 100; // Default stock value
+            
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imagePath = $image->store('menu-items', 'public');
+                $menuItem->image_path = $imagePath;
+            }
+
+            $menuItem->save();
+
+            DB::commit();
+            
+            // Log success
+            Log::info('Menu item created successfully', ['item_id' => $menuItem->MenuItemID, 'name' => $menuItem->ItemName]);
+            
+            // Generate an appropriate response
+            if ($isAjax) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Menu item created successfully',
+                    'item' => [
+                        'id' => $menuItem->MenuItemID,
+                        'name' => $menuItem->ItemName,
+                        'price' => $menuItem->Price,
+                        'category' => $menuItem->ClassificationId,
+                        'description' => $menuItem->Description,
+                        'available' => $menuItem->IsAvailable,
+                    ]
+                ]);
+            }
+            
+            return redirect()->route('pos.menu-items.index')->with('success', 'Menu item created successfully');
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating menu item: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create menu item: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', 'Failed to create menu item: ' . $e->getMessage())->withInput();
+        }
+    }
+    
+    /**
+     * Show the form for editing the specified menu item
+     */
+    public function editMenuItem($id)
+    {
+        $menuItem = MenuItem::where('MenuItemID', $id)
+            ->where('IsDeleted', false)
+            ->firstOrFail();
+            
+        return view('pos.menu-items.edit', compact('menuItem'));
+    }
+    
+    /**
+     * Update the specified menu item
+     */
+    public function updateMenuItem(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'category' => 'required|exists:classification,ClassificationId',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'available' => 'nullable|boolean',
+            'remove_image' => 'nullable|boolean',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $menuItem = MenuItem::where('MenuItemID', $id)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+                
+            $menuItem->ItemName = $request->name;
+            $menuItem->Price = $request->price;
+            $menuItem->ClassificationId = $request->category;
+            $menuItem->Description = $request->description;
+            $menuItem->IsAvailable = $request->has('available') ? true : false;
+            
+            // Handle image removal
+            if ($request->has('remove_image') && $menuItem->image_path) {
+                Storage::disk('public')->delete($menuItem->image_path);
+                $menuItem->image_path = null;
+            }
+            
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                // Delete old image if exists
+                if ($menuItem->image_path) {
+                    Storage::disk('public')->delete($menuItem->image_path);
+                }
+                $image = $request->file('image');
+                $imagePath = $image->store('menu-items', 'public');
+                $menuItem->image_path = $imagePath;
+            }
+
+            $menuItem->save();
+
+            DB::commit();
+            return redirect()->route('pos.menu-items.index')->with('success', 'Menu item updated successfully');
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating menu item: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update menu item: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    public function processById($id)
+    {
+        try {
+            DB::beginTransaction();
+            
+            $order = POSOrder::findOrFail($id);
+            
+            if ($order->Status === 'completed' || $order->Status === 'cancelled') {
+                return redirect()->back()->with('error', 'This order is already ' . $order->Status);
+            }
+            
+            // Update order status
+            $order->Status = 'completed';
+            $order->ProcessedBy = Auth::id();
+            $order->ProcessedAt = now();
+            $order->save();
+            
+            DB::commit();
+            
+            return redirect()->route('pos.show', $order->OrderID)->with('success', 'Order has been processed successfully');
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Error processing order by ID:', [
+                'order_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->with('error', 'Failed to process order: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Display the cashier interface
+     */
+    public function cashierIndex()
+    {
+        // Get the available menu items for the cashier interface
+        $menuItems = MenuItem::where('IsDeleted', false)
+            ->where('IsAvailable', true)
+            ->orderBy('ItemName')
+            ->get();
+        
+        // Get all available classifications/categories for filtering
+        $categories = Classification::where('IsDeleted', false)
+            ->orderBy('ClassificationName')
+            ->get();
+        
+        // Default to empty cart
+        $cartItems = [];
+        
+        // Check if user is a student
+        $isStudent = Auth::check() && Auth::user()->role === 'Student';
+        $studentBalance = 0;
+        $studentId = null;
+        
+        if ($isStudent) {
+            $studentId = Auth::user()->student_id;
+            $studentBalance = CashDeposit::where('student_id', $studentId)
+                ->whereNull('deleted_at')
+                ->sum('Amount');
+        }
+        
+        return view('pos.cashier', compact('menuItems', 'categories', 'cartItems', 'isStudent', 'studentBalance', 'studentId'));
     }
 } 

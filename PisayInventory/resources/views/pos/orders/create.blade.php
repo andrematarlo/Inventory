@@ -1,294 +1,214 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="row mb-4">
+<div class="container-fluid">
+    <div class="row">
         <div class="col-12">
-            <div class="card bg-primary text-white">
-                <div class="card-body d-flex justify-content-between align-items-center py-3">
-                    <div>
-                        <h1 class="fs-2 fw-bold mb-0">New Order</h1>
-                        <p class="mb-0 opacity-75">Select items to add to your order</p>
+            <div class="card bg-primary mb-4">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <h1 class="text-white h2 mb-0">Order Details:</h1>
+                    <a href="{{ route('pos.index') }}" class="btn btn-light">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Orders
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Order Information -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Order Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Order Number:</div>
+                        <div class="col-md-8" id="orderNumber">Loading...</div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Date Created:</div>
+                        <div class="col-md-8" id="dateCreated">Loading...</div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Customer:</div>
+                        <div class="col-md-8" id="customer">Loading...</div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Status:</div>
+                        <div class="col-md-8" id="status">Loading...</div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Payment Method:</div>
+                        <div class="col-md-8" id="paymentMethod">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Items -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Order Items</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Item</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orderItems">
+                                <tr>
+                                    <td colspan="5" class="text-center">Loading order items...</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="4" class="text-end">Total Amount:</th>
+                                    <th class="text-end" id="totalAmount">₱0.00</th>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="row g-4">
-        <!-- Menu Section (Left side) -->
-        <div class="col-lg-8">
-            <!-- Categories -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-lg btn-outline-primary category-btn active" data-category="all">
-                            <i class="bi bi-grid-3x3-gap me-2"></i>All Items
+    
+    <!-- Action Buttons -->
+    <div class="row mb-4" id="actionButtons">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <div class="btn-group" id="orderActions">
+                        <button class="btn btn-success" id="processOrderBtn">
+                            <i class="bi bi-check-circle"></i> Process Order
                         </button>
-                        @foreach($categories as $category)
-                            <button type="button" class="btn btn-lg btn-outline-primary category-btn" 
-                                    data-category="{{ $category->ClassificationId }}">
-                                <i class="bi bi-collection me-2"></i>{{ $category->ClassificationName }}
-                            </button>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-
-            <!-- Menu Items Grid -->
-            <div class="menu-items-grid">
-                <div class="row g-4">
-                    @foreach($menuItems as $item)
-                        <div class="col-md-4 menu-item" data-category="{{ $item->ClassificationId }}">
-                            <div class="card h-100 shadow-sm menu-item-card">
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="card-title mb-2">{{ $item->ItemName }}</h5>
-                                    <p class="card-text text-muted small mb-3">{{ $item->Description }}</p>
-                                    <div class="mt-auto">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="fw-bold text-primary fs-5">₱{{ number_format($item->Price, 2) }}</span>
-                                            <span class="badge bg-success">
-                                                Stock: {{ $item->StocksAvailable }}
-                                            </span>
-                                        </div>
-                                        <button type="button" class="btn btn-primary w-100 btn-lg add-to-cart"
-                                                data-item-id="{{ $item->MenuItemID }}"
-                                                data-item-name="{{ $item->ItemName }}"
-                                                data-item-price="{{ $item->Price }}"
-                                                data-item-stock="{{ $item->StocksAvailable }}">
-                                            <i class="bi bi-plus-circle me-2"></i>Add to Order
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-
-        <!-- Order Summary (Right side) -->
-        <div class="col-lg-4">
-            <div class="card shadow-sm sticky-top" style="top: 20px;">
-                <div class="card-header bg-primary text-white py-3">
-                    <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-cart3 me-2"></i>Your Order
-                        <span class="badge bg-light text-primary ms-2 cart-count">0</span>
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    <!-- Cart Items -->
-                    <div class="cart-items" style="max-height: 400px; overflow-y: auto;">
-                        <!-- Items will be added here dynamically -->
-                    </div>
-
-                    <!-- Empty Cart Message -->
-                    <div class="cart-empty text-center py-5">
-                        <i class="bi bi-cart text-muted" style="font-size: 3rem;"></i>
-                        <p class="text-muted mt-3">Your cart is empty</p>
-                        <p class="text-muted small">Tap items to add them to your order</p>
-                    </div>
-
-                    <!-- Order Summary -->
-                    <div class="cart-summary p-4 border-top" style="display: none;">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted fs-5">Subtotal</span>
-                            <span class="fs-5">₱<span id="subtotal">0.00</span></span>
-                        </div>
-                        <div class="d-flex justify-content-between mt-3 pt-3 border-top">
-                            <span class="fw-bold fs-4">Total</span>
-                            <span class="fw-bold text-primary fs-4">₱<span id="total">0.00</span></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Payment Section -->
-                <div class="card-footer bg-white p-4">
-                    <h5 class="mb-3">Select Payment Method</h5>
-                    
-                    <div class="d-grid gap-3">
-                        <button type="button" class="btn btn-lg btn-outline-primary payment-method-btn" data-method="cash">
-                            <i class="bi bi-cash-stack me-2"></i>Pay with Cash
+                        <button class="btn btn-danger" id="cancelOrderBtn">
+                            <i class="bi bi-x-circle"></i> Cancel Order
                         </button>
-                        
-                        @if(Auth::check() && Auth::user()->role === 'Students')
-                        <button type="button" class="btn btn-lg btn-outline-primary payment-method-btn" data-method="deposit">
-                            <i class="bi bi-wallet2 me-2"></i>Pay with Deposit
-                            <div class="small text-muted">Balance: ₱{{ number_format($studentBalance, 2) }}</div>
-                        </button>
-                        @endif
                     </div>
-
-                    <!-- Cash Payment Form (hidden by default) -->
-                    <div id="cashPaymentForm" class="mt-4" style="display: none;">
-                        <div class="mb-4">
-                            <label class="form-label fs-5">Cash Amount</label>
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text">₱</span>
-                                <input type="number" class="form-control form-control-lg" id="cashAmount" step="0.01">
-                            </div>
-                        </div>
-
-                        <div class="d-flex flex-wrap gap-2 mb-4">
-                            <button type="button" class="btn btn-lg btn-outline-secondary quick-cash" data-amount="100">₱100</button>
-                            <button type="button" class="btn btn-lg btn-outline-secondary quick-cash" data-amount="200">₱200</button>
-                            <button type="button" class="btn btn-lg btn-outline-secondary quick-cash" data-amount="500">₱500</button>
-                            <button type="button" class="btn btn-lg btn-outline-secondary quick-cash" data-amount="1000">₱1000</button>
-                            <button type="button" class="btn btn-lg btn-outline-primary quick-cash" data-amount="exact">Exact</button>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label fs-5">Change</label>
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text">₱</span>
-                                <input type="text" class="form-control form-control-lg" id="changeAmount" readonly>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button type="button" class="btn btn-primary btn-lg w-100 mt-4" id="placeOrderBtn" disabled>
-                        <i class="bi bi-check-circle me-2"></i>Place Order
-                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-@push('styles')
-<style>
-/* Touchscreen-friendly styles */
-.btn-lg {
-    padding: 1rem 1.5rem;
-    font-size: 1.1rem;
-}
+<!-- Cancel Confirmation Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelModalLabel">Cancel Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to cancel this order? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep Order</button>
+                <button type="button" class="btn btn-danger" id="confirmCancelBtn">Yes, Cancel Order</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
 
-.menu-item-card {
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.menu-item-card:hover,
-.menu-item-card:active {
-    transform: translateY(-5px);
-}
-
-.category-btn {
-    min-width: 120px;
-    text-align: center;
-}
-
-.cart-item {
-    padding: 1rem;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.quantity-controls .btn {
-    padding: 0.75rem 1rem;
-}
-
-.payment-method-btn {
-    text-align: left;
-    padding: 1.5rem;
-}
-
-.payment-method-btn.active {
-    background-color: var(--bs-primary);
-    color: white;
-}
-
-.quick-cash {
-    min-width: 100px;
-}
-
-/* Make inputs larger for touch */
-.form-control-lg {
-    height: calc(3.5rem + 2px);
-    font-size: 1.25rem;
-}
-</style>
-@endpush
-
-@push('scripts')
+@section('scripts')
 <script>
-$(document).ready(function() {
-    // Category filtering
-    $('.category-btn').click(function() {
-        $('.category-btn').removeClass('active');
-        $(this).addClass('active');
+    $(document).ready(function() {
+        const orderId = window.location.pathname.split('/').pop();
         
-        const category = $(this).data('category');
-        
-        if (category === 'all') {
-            $('.menu-item').fadeIn(300);
-        } else {
-            $('.menu-item').hide();
-            $(`.menu-item[data-category="${category}"]`).fadeIn(300);
-        }
+        // Load order details
+        $.ajax({
+            url: `/inventory/pos/orders/${orderId}/details`,
+            type: 'GET',
+            success: function(response) {
+                if (response.error) {
+                    console.error('Error loading order details:', response.error);
+                    return;
+                }
+                
+                const order = response.order;
+                const items = response.items;
+                
+                // Update order information
+                $('#orderNumber').text(order.OrderNumber);
+                $('#dateCreated').text(new Date(order.created_at).toLocaleString());
+                $('#customer').html(order.student ? `${order.student.name} <span class="badge bg-info">Student</span>` : 'Walk-in Customer');
+                
+                // Set status with appropriate badge color
+                const statusBadgeClass = order.Status === 'completed' ? 'bg-success' : 
+                                        (order.Status === 'pending' ? 'bg-warning text-dark' : 'bg-danger');
+                $('#status').html(`<span class="badge ${statusBadgeClass}">${order.Status.charAt(0).toUpperCase() + order.Status.slice(1)}</span>`);
+                
+                // Set payment method with appropriate badge color
+                const paymentBadgeClass = order.PaymentMethod === 'cash' ? 'bg-success' : 'bg-info';
+                $('#paymentMethod').html(`<span class="badge ${paymentBadgeClass}">${order.PaymentMethod.charAt(0).toUpperCase() + order.PaymentMethod.slice(1)}</span>`);
+                
+                // Update order items
+                let itemsHtml = '';
+                let total = 0;
+                
+                if (items.length === 0) {
+                    itemsHtml = '<tr><td colspan="5" class="text-center">No items found for this order</td></tr>';
+                } else {
+                    items.forEach((item, index) => {
+                        const subtotal = parseFloat(item.Subtotal);
+                        total += subtotal;
+                        
+                        itemsHtml += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${item.ItemName} ${item.IsCustomItem ? '<span class="badge bg-secondary">Custom</span>' : ''}</td>
+                                <td class="text-center">${item.Quantity}</td>
+                                <td class="text-end">₱${parseFloat(item.UnitPrice).toFixed(2)}</td>
+                                <td class="text-end">₱${subtotal.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                $('#orderItems').html(itemsHtml);
+                $('#totalAmount').text(`₱${total.toFixed(2)}`);
+                
+                // Update action buttons based on order status
+                if (order.Status !== 'pending') {
+                    $('#actionButtons').hide();
+                } else {
+                    // Set up process button
+                    $('#processOrderBtn').on('click', function() {
+                        window.location.href = `/inventory/pos/process/${orderId}`;
+                    });
+                    
+                    // Set up cancel button
+                    $('#cancelOrderBtn').on('click', function() {
+                        $('#cancelModal').modal('show');
+                    });
+                    
+                    // Set up cancel confirmation
+                    $('#confirmCancelBtn').on('click', function() {
+                        window.location.href = `/inventory/pos/cancel-order/${orderId}`;
+                    });
+                }
+            },
+            error: function(xhr) {
+                console.error('Failed to load order details', xhr);
+                alert('Failed to load order details. Please try refreshing the page.');
+            }
+        });
     });
-
-    // Payment method selection
-    $('.payment-method-btn').click(function() {
-        $('.payment-method-btn').removeClass('active');
-        $(this).addClass('active');
-        
-        const method = $(this).data('method');
-        
-        if (method === 'cash') {
-            $('#cashPaymentForm').slideDown();
-        } else {
-            $('#cashPaymentForm').slideUp();
-        }
-        
-        updatePlaceOrderButton();
-    });
-
-    // Quick cash buttons
-    $('.quick-cash').click(function() {
-        const amount = $(this).data('amount');
-        if (amount === 'exact') {
-            $('#cashAmount').val($('#total').text()).trigger('input');
-        } else {
-            $('#cashAmount').val(amount).trigger('input');
-        }
-    });
-
-    // Calculate change
-    $('#cashAmount').on('input', function() {
-        const cashAmount = parseFloat($(this).val()) || 0;
-        const total = parseFloat($('#total').text());
-        const change = cashAmount - total;
-        
-        if (change >= 0) {
-            $('#changeAmount').val(change.toFixed(2));
-        } else {
-            $('#changeAmount').val('Insufficient amount');
-        }
-        
-        updatePlaceOrderButton();
-    });
-
-    // Update place order button state
-    function updatePlaceOrderButton() {
-        const hasItems = $('.cart-item').length > 0;
-        const paymentMethod = $('.payment-method-btn.active').data('method');
-        let isValid = false;
-        
-        if (paymentMethod === 'cash') {
-            const cashAmount = parseFloat($('#cashAmount').val()) || 0;
-            const total = parseFloat($('#total').text());
-            isValid = cashAmount >= total;
-        } else if (paymentMethod === 'deposit') {
-            const balance = parseFloat('{{ $studentBalance }}');
-            const total = parseFloat($('#total').text());
-            isValid = balance >= total;
-        }
-        
-        $('#placeOrderBtn').prop('disabled', !hasItems || !isValid);
-    }
-
-    // Add other necessary cart functionality here
-});
 </script>
-@endpush 
+@endsection 

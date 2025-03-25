@@ -122,14 +122,6 @@
                                     @endforeach
                                 </div>
                             </div>
-                            <!-- Add Item Button (only visible for Admin and Cashier roles) -->
-                            @if(Auth::check() && (Auth::user()->role === 'Admin' || Auth::user()->role === 'Cashier'))
-                            <div>
-                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                                    <i class="bi bi-plus-circle me-1"></i> Add Item
-                                </button>
-                            </div>
-                            @endif
                         </div>
                     </div>
                 </div>
@@ -140,18 +132,6 @@
                         @foreach($menuItems as $item)
                             <div class="col-md-4 menu-item" data-category="{{ $item->ClassificationId }}">
                                 <div class="card h-100 border-0 shadow-sm menu-item-card">
-                                    <!-- Add card header with delete button -->
-                                    @if(Auth::check() && (Auth::user()->role === 'Admin' || Auth::user()->role === 'Cashier'))
-                                    <div class="card-header bg-transparent border-0 d-flex justify-content-end p-2">
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-danger delete-item-btn"
-                                                data-item-id="{{ $item->MenuItemID }}"
-                                                data-item-name="{{ $item->ItemName }}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                    @endif
-
                                     @if($item->image_path && Storage::disk('public')->exists($item->image_path))
                                         <img src="{{ asset('storage/' . $item->image_path) }}" 
                                              class="card-img-top" 
@@ -218,10 +198,6 @@
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted">Subtotal</span>
                                 <span>₱<span id="subtotal">0.00</span></span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Tax (12%)</span>
-                                <span>₱<span id="tax">0.00</span></span>
                             </div>
                             <div class="d-flex justify-content-between mt-3 pt-3 border-top">
                                 <span class="fw-bold fs-5">Total</span>
@@ -465,7 +441,7 @@ $(document).ready(function() {
         } else {
             // Add new item to cart
             const cartItem = `
-                <div class="cart-item p-3 border-bottom" data-item-id="${itemId}">
+                <div class="cart-item p-3 border-bottom" data-item-id="${itemId}" data-price="${price.toFixed(2)}">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="mb-1">${itemName}</h6>
@@ -530,7 +506,7 @@ $(document).ready(function() {
     $(document).on('change', '.quantity-input', function() {
         const cartItem = $(this).closest('.cart-item');
         const quantity = parseInt($(this).val());
-        const price = parseFloat(cartItem.find('.text-primary').text().replace('₱', ''));
+        const price = parseFloat(cartItem.data('price'));
         cartItem.find('input[name="quantities[]"]').val(quantity);
         cartItem.find('input[name="amounts[]"]').val((price * quantity).toFixed(2));
         updateTotals();
@@ -557,15 +533,13 @@ $(document).ready(function() {
         let subtotal = 0;
         $('.cart-item').each(function() {
             const quantity = parseInt($(this).find('.quantity-input').val());
-            const price = parseFloat($(this).find('.text-primary').text().replace('₱', ''));
+            const price = parseFloat($(this).data('price'));
             subtotal += price * quantity;
         });
         
-        const tax = subtotal * 0.12;
-        const total = subtotal + tax;
+        const total = subtotal;
 
         animateNumber($('#subtotal'), subtotal);
-        animateNumber($('#tax'), tax);
         animateNumber($('#total'), total);
     }
 
@@ -669,7 +643,7 @@ $(document).ready(function() {
             cartItems.push({
                 id: parseInt($(this).data('item-id')),
                 quantity: parseInt($(this).find('.quantity-input').val()),
-                price: parseFloat($(this).find('.text-primary').text().replace('₱', '')),
+                price: parseFloat($(this).data('price')),
                 name: $(this).find('h6').text()
             });
         });
@@ -802,64 +776,6 @@ $(document).ready(function() {
         });
     });
 
-    // Add Item form submission
-    $('#addItemForm').submit(function(e) {
-        e.preventDefault();
-        
-        // Show loading
-        Swal.fire({
-            title: 'Adding Item',
-            text: 'Please wait...',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            willOpen: () => {
-                Swal.showLoading();
-            }
-        });
-        
-        // Submit form via AJAX
-        $.ajax({
-            url: $(this).attr('action'),
-            method: 'POST',
-            data: new FormData(this),
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Item Added Successfully',
-                    text: 'The menu item has been added to the inventory.',
-                    confirmButtonText: 'OK'
-                }).then(() => {
-                    // Close modal and reset form
-                    $('#addItemModal').modal('hide');
-                    $('#addItemForm')[0].reset();
-                    
-                    // Reload page to show new item
-                    location.reload();
-                });
-            },
-            error: function(xhr) {
-                const response = xhr.responseJSON;
-                let errorMessage = 'Failed to add menu item.';
-                
-                if (response && response.errors) {
-                    const errors = Object.values(response.errors).flat();
-                    errorMessage = errors.join('<br>');
-                } else if (response && response.message) {
-                    errorMessage = response.message;
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    html: errorMessage,
-                    confirmButtonText: 'OK'
-                });
-            }
-        });
-    });
-
     // Calculate change from cash amount
     $('#cashAmount').on('input', function() {
         calculateChange();
@@ -903,128 +819,8 @@ $(document).ready(function() {
     
     // Show cash details by default (since cash is the default payment method)
     $('#cashPaymentDetails').show();
-
-    // Handle delete menu item
-    $('.delete-item-btn').click(function() {
-        const itemId = $(this).data('item-id');
-        const itemName = $(this).data('item-name');
-        const menuItem = $(this).closest('.menu-item');
-        
-        Swal.fire({
-            title: 'Delete Menu Item',
-            html: `Are you sure you want to delete <strong>${itemName}</strong>?<br>This action cannot be undone.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Delete',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#dc3545'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Show loading state
-                Swal.fire({
-                    title: 'Deleting Item',
-                    text: 'Please wait...',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                // Send delete request
-                $.ajax({
-                    url: `/pos/menu-items/${itemId}`,
-                    type: 'DELETE',
-                    data: {
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-                        // Remove item from grid with animation
-                        menuItem.fadeOut(300, function() {
-                            $(this).remove();
-                        });
-                        
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Item Deleted',
-                            text: 'The menu item has been deleted successfully.',
-                            confirmButtonText: 'OK'
-                        });
-                    },
-                    error: function(xhr) {
-                        const response = xhr.responseJSON;
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Delete Failed',
-                            text: response?.message || 'Failed to delete the menu item.',
-                            confirmButtonText: 'OK'
-                        });
-                    }
-                });
-            }
-        });
-    });
 });
 </script>
 @endpush
-
-<!-- Add Item Modal -->
-<div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="addItemForm" action="{{ route('pos.add-menu-item') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addItemModalLabel">Add New Menu Item</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="item_image" class="form-label">Item Image</label>
-                        <input type="file" class="form-control" id="item_image" name="item_image" accept="image/*">
-                        <div class="form-text">Upload an image for the menu item (optional)</div>
-                        <div class="mt-2">
-                            <img id="imagePreview" src="#" alt="Image Preview" style="display: none; max-width: 200px; max-height: 200px;" class="img-thumbnail">
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="item_name" class="form-label">Item Name</label>
-                        <input type="text" class="form-control" id="item_name" name="item_name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="price" class="form-label">Price (₱)</label>
-                            <input type="number" class="form-control" id="price" name="price" min="0.01" step="0.01" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="stocks_available" class="form-label">Initial Stock</label>
-                            <input type="number" class="form-control" id="stocks_available" name="stocks_available" min="0" required>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="classification_id" class="form-label">Category</label>
-                        <select class="form-select" id="classification_id" name="classification_id" required>
-                            <option value="" selected disabled>Select a category</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->ClassificationId }}">{{ $category->ClassificationName }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i> Add Item
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 @endsection 
