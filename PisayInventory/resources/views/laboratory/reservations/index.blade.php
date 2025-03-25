@@ -171,8 +171,8 @@
 }
 
 .btn-group .btn {
-    padding: 0.25rem 0.5rem;
-}
+        padding: 0.25rem 0.5rem;
+    }
 
 </style>
 @endsection
@@ -252,8 +252,10 @@ $(document).ready(function() {
     
     if (!reservations || reservations.length === 0) {
         html = '<tr><td colspan="9" class="text-center">No reservations found</td></tr>';
-    } else {
+        } else {
         reservations.forEach(function(reservation) {
+            const isStudent = '{{ Auth::user()->role }}' === 'Student';
+            const isTeacher = '{{ Auth::user()->role }}' === 'Teacher';
             const isOwnReservation = reservation.reserver_id === '{{ Auth::id() }}';
             const currentUserEmployeeId = {{ Auth::user()->employee?->EmployeeID ?? 'null' }};
             const isTeacherInCharge = reservation.teacher_id == currentUserEmployeeId;
@@ -276,58 +278,46 @@ $(document).ready(function() {
                 <tr>
                     <td>
                         <div class="btn-group">
-                            <!-- View button always visible -->
+                            <!-- View button - visible to all -->
                             <button type="button" class="btn btn-info btn-sm view-reservation" 
                                     data-id="${reservation.reservation_id}" title="View">
                                 <i class="bi bi-eye"></i>
                             </button>
 
-                            ${/* Only show other buttons if status is not Disapproved */
-                            reservation.status !== 'Disapproved' ? `
-                                ${/* SRS/SRA approval buttons */
-                                (isAdmin || isSRSorSRA) && !reservation.approved_by ? `
+                            ${/* Teacher actions */
+                            isTeacher ? `
+                                ${reservation.status === 'Disapproved' ? `
+                                    <!-- Delete button for disapproved reservations -->
+                                    <button type="button" class="btn btn-danger btn-sm delete-reservation" 
+                                            data-id="${reservation.reservation_id}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                ` : reservation.status === 'Approved' ? `
+                                    <!-- Delete button for approved reservations -->
+                                    <button type="button" class="btn btn-danger btn-sm delete-reservation" 
+                                            data-id="${reservation.reservation_id}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                ` : `
+                                    <!-- Approve button for pending reservations -->
                                     <button type="button" class="btn btn-success btn-sm approve-reservation" 
-                                            data-id="${reservation.reservation_id}" title="Approve">
+                                            data-id="${reservation.reservation_id}" title="Approve"
+                                            ${reservation.status !== 'For Approval' ? 'disabled' : ''}>
                                         <i class="bi bi-check-lg"></i>
                                     </button>
+                                    <!-- Disapprove button for pending reservations -->
                                     <button type="button" class="btn btn-danger btn-sm disapprove-reservation" 
-                                            data-id="${reservation.reservation_id}" title="Disapprove">
+                                            data-id="${reservation.reservation_id}" title="Disapprove"
+                                            ${reservation.status !== 'For Approval' ? 'disabled' : ''}>
                                         <i class="bi bi-x-lg"></i>
                                     </button>
-                                ` : ''}
+                                `}
+                            ` : ''}
 
-                                ${/* Teacher In-Charge endorsement for student requests */
-                                !isAdmin && !isSRSorSRA && isTeacherInCharge && 
-                                reservation.requested_by_type === 'student' && 
-                                reservation.endorsement_status === 'For Endorsement' ? `
-                                    <button type="button" class="btn btn-success btn-sm endorse-reservation" 
-                                            data-id="${reservation.reservation_id}" title="Endorse">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-sm reject-reservation" 
-                                            data-id="${reservation.reservation_id}" title="Reject">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                ` : ''}
-
-                                ${/* Unit Head endorsement for teacher requests */
-                                !isAdmin && !isSRSorSRA && userRole === 'Unit Head' && 
-                                reservation.requested_by_type === 'teacher' && 
-                                reservation.endorsement_status === 'For Endorsement' ? `
-                                    <button type="button" class="btn btn-success btn-sm endorse-reservation" 
-                                            data-id="${reservation.reservation_id}" title="Endorse">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-sm reject-reservation" 
-                                            data-id="${reservation.reservation_id}" title="Reject">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                ` : ''}
-
-                                ${/* Cancel button for own pending requests */
-                                isOwnReservation && 
-                                reservation.status !== 'Approved' && 
-                                reservation.endorsement_status === 'For Endorsement' ? `
+                            ${/* Student actions */
+                            isStudent && isOwnReservation ? `
+                                <!-- Cancel button - only for own pending reservations -->
+                                ${reservation.status === 'For Approval' ? `
                                     <button type="button" class="btn btn-danger btn-sm cancel-reservation" 
                                             data-id="${reservation.reservation_id}" title="Cancel">
                                         <i class="bi bi-x-lg"></i>
@@ -425,32 +415,30 @@ $(document).on('click', '.cancel-reservation', function() {
         confirmButtonText: 'Yes, cancel it!'
     }).then((result) => {
         if (result.isConfirmed) {
-        $.ajax({
-                url: "{{ route('laboratory.reservations.approve', '_id_') }}".replace('_id_', id),
-                type: 'POST',
+            $.ajax({
+                url: "{{ route('laboratory.reservations.destroy', '_id_') }}".replace('_id_', id),
+                type: 'DELETE',
                 data: {
-                    _token: '{{ csrf_token() }}',
-                    status: 'Cancelled',
-                    remarks: 'Cancelled by user'
+                    _token: '{{ csrf_token() }}'
                 },
-            success: function(response) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
+                success: function(response) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
                         text: 'Reservation has been cancelled.'
-                }).then(() => {
+                    }).then(() => {
                         loadReservations();
                         loadCounts();
-                });
-            },
-            error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: xhr.responseJSON?.message || 'Something went wrong.'
-                });
-            }
-        });
+                    });
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: xhr.responseJSON?.message || 'Something went wrong.'
+                    });
+                }
+            });
         }
     });
 });
@@ -651,6 +639,95 @@ function disapproveReservation(id, remarks) {
             timeout = setTimeout(later, wait);
         };
     }
+
+    // Add these new event handlers for restore and delete actions
+    $(document).on('click', '.restore-reservation', function() {
+        const id = $(this).data('id');
+        
+        Swal.fire({
+            title: 'Restore Reservation?',
+            text: "This will restore the disapproved reservation to 'For Approval' status.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, restore it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "{{ route('laboratory.reservations.restore', '_id_') }}".replace('_id_', id),
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'Reservation has been restored.'
+                        }).then(() => {
+                            loadReservations();
+                            loadCounts();
+                        });
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: xhr.responseJSON?.message || 'Something went wrong.'
+                        });
+                    }
+                });
+            }
+        });
+    });
+
+    $(document).on('click', '.delete-reservation', function() {
+        const id = $(this).data('id');
+        
+        Swal.fire({
+            title: 'Delete Reservation?',
+            text: "This action cannot be undone.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Add CSRF token to headers
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                $.ajax({
+                    url: "{{ url('inventory/laboratory/reservations') }}/" + id,
+                    type: 'DELETE',
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'Reservation has been deleted.'
+                        }).then(() => {
+                            // Do not change currentStatus, just reload the current view
+                            loadReservations();
+                            loadCounts();
+                        });
+                    },
+                    error: function(xhr) {
+                        console.error('Delete error:', xhr);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: xhr.responseJSON?.message || 'Something went wrong while deleting the reservation.'
+                        });
+                    }
+                });
+            }
+        });
+    });
 });
 </script>
 @endpush 

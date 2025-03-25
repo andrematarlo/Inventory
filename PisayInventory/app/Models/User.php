@@ -43,7 +43,10 @@ class User extends Authenticatable
         'RestoredById',
         'DateDeleted',
         'DateRestored',
-        'IsDeleted'
+        'IsDeleted',
+        'name',
+        'email',
+        'student_id'
     ];
 
     /**
@@ -117,5 +120,31 @@ class User extends Authenticatable
     public function student()
     {
         return $this->hasOne(Student::class, 'UserAccountID', 'UserAccountID');
+    }
+
+    // Helper method to check role
+    public function hasRole($role)
+    {
+        return $this->role === $role;
+    }
+
+    // Helper method to check multiple roles
+    public function hasAnyRole($roles)
+    {
+        if (is_array($roles)) {
+            return in_array($this->role, $roles);
+        }
+        return $this->role === $roles;
+    }
+
+    public function getBalance()
+    {
+        if (!$this->student_id) {
+            return 0;
+        }
+
+        return \App\Models\CashDeposit::where('student_id', $this->student_id)
+            ->whereNull('deleted_at')
+            ->sum(\DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
     }
 }

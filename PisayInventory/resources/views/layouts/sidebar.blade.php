@@ -149,43 +149,6 @@
         </li>
         @endif
 
-        @if($hasPOSAccess)
-        <li class="nav-item dropdown">
-            <a href="#" class="nav-link dropdown-toggle" id="posDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-cart3"></i>
-                <span>Point of Sale</span>
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="posDropdown">
-                @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
-                <li>
-                    <a class="dropdown-item {{ request()->routeIs('pos.index') ? 'active' : '' }}" href="{{ route('pos.index') }}">
-                        <i class="bi bi-list-check"></i> Orders
-                    </a>
-                </li>
-                @endif
-                <li>
-                    <a class="dropdown-item {{ request()->routeIs('pos.create') ? 'active' : '' }}" href="{{ route('pos.create') }}">
-                        <i class="bi bi-plus-circle"></i> New Order
-                    </a>
-                </li>
-                @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
-                <li>
-                    <a class="dropdown-item {{ request()->routeIs('pos.deposits.*') ? 'active' : '' }}" href="{{ route('pos.deposits.index') }}">
-                        <i class="bi bi-wallet2"></i> Deposits
-                    </a>
-                </li>
-                @endif
-                @if(!$isStudent && ($posPermissions && $posPermissions->CanView || $isAdmin))
-                <li>
-                    <a class="dropdown-item {{ request()->routeIs('pos.reports') ? 'active' : '' }}" href="{{ route('pos.reports') }}">
-                        <i class="bi bi-graph-up"></i> POS Reports
-                    </a>
-                </li>
-                @endif
-            </ul>
-        </li>
-        @endif
-
         @if($hasLaboratoryAccess || $isStudent)
         <li class="nav-item dropdown">
             <a href="#" class="nav-link dropdown-toggle" id="laboratoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -216,6 +179,64 @@
             </ul>
         </li>
         @endif
+
+        @if(Auth::check())
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="collapse" href="#posCollapse" role="button" aria-expanded="false" aria-controls="posCollapse">
+                <i class="bi bi-shop"></i>
+                <span class="nav-text">
+                    Point of Sale
+                    <i class="bi bi-chevron-down dropdown-arrow"></i>
+                </span>
+            </a>
+            <div class="collapse" id="posCollapse">
+                <ul class="nav-content">
+                    @if(Auth::user()->role === 'Students')
+                    <li>
+                        <a href="{{ route('pos.kiosk.index') }}" class="dropdown-item {{ request()->routeIs('pos.kiosk.*') ? 'active' : '' }}">
+                            <i class="bi bi-person-workspace"></i>
+                            <span>Student Kiosk</span>
+                        </a>
+                    </li>
+                    @endif
+                    
+                    @if(in_array(Auth::user()->role, ['Admin', 'Cashier']))
+                    <li>
+                        <a href="{{ route('pos.orders.index') }}" class="dropdown-item {{ request()->routeIs('pos.orders.index') ? 'active' : '' }}">
+                            <i class="bi bi-cart3"></i>
+                            <span>Orders</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('pos.orders.create') }}" class="dropdown-item {{ request()->routeIs('pos.orders.create') ? 'active' : '' }}">
+                            <i class="bi bi-plus-circle"></i>
+                            <span>New Order</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('pos.cashier.index') }}" class="dropdown-item {{ request()->routeIs('pos.cashier.*') ? 'active' : '' }}">
+                            <i class="bi bi-cash-register"></i>
+                            <span>Cashiering</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('pos.deposit.index') }}" class="dropdown-item {{ request()->routeIs('pos.deposit.*') ? 'active' : '' }}">
+                            <i class="bi bi-wallet2"></i>
+                            <span>Cash Deposit</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('pos.reports.index') }}" class="dropdown-item {{ request()->routeIs('pos.reports.*') ? 'active' : '' }}">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <span>Reports</span>
+                        </a>
+                    </li>
+                    @endif
+                </ul>
+            </div>
+        </li>
+        @endif
+
         <li class="nav-item mt-auto">
             <form method="POST" action="{{ route('logout') }}" onsubmit="return confirmLogout()">
                 @csrf

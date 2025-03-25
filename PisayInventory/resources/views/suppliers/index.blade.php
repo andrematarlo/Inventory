@@ -539,7 +539,7 @@
 
         // Delete supplier handler
         $('.delete-supplier-btn').on('click', function(e) {
-            e.preventDefault();
+                    e.preventDefault();
             const button = $(this);
             const supplierName = button.data('supplier-name');
             const form = button.closest('.delete-supplier-form');
