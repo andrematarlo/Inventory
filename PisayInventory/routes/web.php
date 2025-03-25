@@ -26,6 +26,7 @@ use App\Http\Controllers\EquipmentBorrowingController;
 use App\Http\Controllers\POSController;
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\POSDepositController;
+use App\Http\Controllers\POS\OrderController;
 
 // Add this at the top of your routes to debug
 Route::get('/debug/routes', function() {
@@ -182,39 +183,48 @@ Route::middleware('auth')->group(function () {
         // Point of Sale Routes
         Route::prefix('pos')->name('pos.')->group(function () {
             // Main POS routes
-            Route::get('/', [App\Http\Controllers\POSController::class, 'index'])->name('index');
-            Route::get('/create', [App\Http\Controllers\POSController::class, 'create'])->name('create');
-            Route::post('/store', [App\Http\Controllers\POSController::class, 'store'])->name('store');
-            Route::get('/show/{id}', [App\Http\Controllers\POSController::class, 'show'])->name('show');
-            Route::post('/process/{id}', [App\Http\Controllers\POSController::class, 'process'])->name('process');
-            Route::post('/cancel/{id}', [App\Http\Controllers\POSController::class, 'cancel'])->name('cancel');
-            Route::get('/order-details/{id}', [App\Http\Controllers\POSController::class, 'getOrderDetails'])->name('order-details');
-            Route::post('/add-menu-item', [App\Http\Controllers\POSController::class, 'addMenuItem'])->name('add-menu-item');
-            Route::get('/search-students', [App\Http\Controllers\POSController::class, 'searchStudents'])->name('search-students');
-            Route::get('/student-balance/{studentId}', [App\Http\Controllers\POSController::class, 'getStudentBalance'])->name('student-balance');
+            Route::get('/', [POSController::class, 'index'])->name('index');
+            Route::get('/create', [POSController::class, 'create'])->name('create');
+            Route::post('/store', [POSController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [POSController::class, 'show'])->name('show');
+            Route::post('/process/{id}', [POSController::class, 'process'])->name('process');
+            Route::post('/cancel/{id}', [POSController::class, 'cancel'])->name('cancel');
+            Route::get('/order-details/{id}', [POSController::class, 'getOrderDetails'])->name('order-details');
+            Route::post('/add-menu-item', [POSController::class, 'addMenuItem'])->name('add-menu-item');
+            Route::get('/search-students', [POSController::class, 'searchStudents'])->name('search-students');
+            Route::get('/student-balance/{studentId}', [POSController::class, 'getStudentBalance'])->name('student-balance');
             
             // Cashiering routes
-            Route::get('/cashiering', [App\Http\Controllers\POSController::class, 'cashiering'])->name('cashiering');
-            Route::post('/process-payment/{id}', [App\Http\Controllers\POSController::class, 'processPayment'])->name('process-payment');
+            Route::get('/cashiering', [POSController::class, 'cashiering'])->name('cashiering');
+            Route::post('/process-payment/{id}', [POSController::class, 'processPayment'])->name('process-payment');
             
             // Category filtering
-            Route::get('/filter-by-category/{categoryId?}', [App\Http\Controllers\POSController::class, 'filterByCategory'])->name('filter-by-category');
+            Route::get('/filter-by-category/{categoryId?}', [POSController::class, 'filterByCategory'])->name('filter-by-category');
             
             // Reports
-            Route::get('/reports', [App\Http\Controllers\POSController::class, 'reports'])->name('reports');
-            Route::get('/reports/sales', [App\Http\Controllers\POSController::class, 'salesReport'])->name('reports.sales');
-            Route::get('/reports/deposits', [App\Http\Controllers\POSController::class, 'depositsReport'])->name('reports.deposits');
+            Route::get('/reports', [POSController::class, 'reports'])->name('reports');
+            Route::get('/reports/sales', [POSController::class, 'salesReport'])->name('reports.sales');
+            Route::get('/reports/deposits', [POSController::class, 'depositsReport'])->name('reports.deposits');
             
             // Deposits Routes
-            Route::get('/deposits', [App\Http\Controllers\POSDepositController::class, 'index'])->name('deposits.index');
-            Route::post('/deposits', [App\Http\Controllers\POSDepositController::class, 'store'])->name('deposits.store');
-            Route::get('/deposits/history/{student}', [App\Http\Controllers\POSDepositController::class, 'history'])->name('deposits.history');
-            Route::get('/students/select2', [App\Http\Controllers\POSDepositController::class, 'studentSelect2'])->name('students.select2');
+            Route::get('/deposits', [POSDepositController::class, 'index'])->name('deposits.index');
+            Route::post('/deposits', [POSDepositController::class, 'store'])->name('deposits.store');
+            Route::get('/deposits/history/{student}', [POSDepositController::class, 'history'])->name('deposits.history');
+            Route::get('/students/select2', [POSDepositController::class, 'studentSelect2'])->name('students.select2');
             
             // Menu Items routes
             Route::delete('/menu-items/{id}', [POSController::class, 'destroy'])
                 ->name('menu-items.destroy')
                 ->where('id', '[0-9]+');
+
+            // Orders Routes
+            Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+            Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
+            Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+            Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+            Route::get('/orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+            Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+            Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
         });
 
 // Laboratory Management Routes
