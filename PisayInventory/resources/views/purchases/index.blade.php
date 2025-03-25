@@ -107,7 +107,9 @@
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
-                            <td>{{ $po->supplier->CompanyName }}</td>
+                            <td>
+                                {{ $po->supplier ? $po->supplier->CompanyName : 'N/A' }}
+                            </td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
                             <td>
                                 <span class="badge bg-success">
@@ -177,7 +179,9 @@
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
-                            <td>{{ $po->supplier->CompanyName }}</td>
+                            <td>
+                                {{ $po->supplier ? $po->supplier->CompanyName : 'N/A' }}
+                            </td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
                             <td>
                                 <span class="badge bg-warning">
@@ -239,7 +243,9 @@
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
-                            <td>{{ $po->supplier->CompanyName }}</td>
+                            <td>
+                                {{ $po->supplier ? $po->supplier->CompanyName : 'N/A' }}
+                            </td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
                             <td>
                                 <span class="badge bg-danger">

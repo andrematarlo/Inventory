@@ -251,274 +251,163 @@
 
 <style>
 .sidebar {
-    background-color: #2D2D2D  !important;
+    background-color: #2D2D2D !important;
     min-height: 100vh;
-    width: 320px;
+    width: 250px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     position: fixed;
     left: 0;
     top: 0;
     bottom: 0;
-    overflow-x: hidden; /* Prevent horizontal scroll */
+    overflow-x: hidden;
     overflow-y: auto;
-    transition: width 0.3s ease;
+    transition: all 0.3s ease;
+    z-index: 1030;
 }
 
 .sidebar.collapsed {
-    width: 70px;
+    width: 25px !important;
+    background-color: #222222 !important;
 }
 
-.sidebar.collapsed .sidebar-header {
-    justify-content: center;
-    padding: 0.75rem 0;
-}
-
-.sidebar.collapsed .sidebar-logo {
-    margin: 0 !important;
-    display: block;
-}
-
-.sidebar.collapsed .d-flex.align-items-center {
-    margin: 0;
-    padding: 0 5px;
-    justify-content: center;
-}
-
-.sidebar.collapsed .sidebar-toggle {
-    margin-right: 0;
-}
-
-.sidebar.collapsed .sidebar-title,
-.sidebar.collapsed .nav-link span,
-.sidebar.collapsed .dropdown-menu,
-.sidebar.collapsed .nav-item form span,
-.sidebar.collapsed .bi-chevron-down {
-    display: none;
-}
-
-.sidebar.collapsed .nav-link {
-    padding: 0.75rem;
-    justify-content: center;
-}
-
-.sidebar.collapsed .nav-link i {
-    margin: 0;
-    font-size: 1.25rem;
-}
-
-.sidebar.collapsed ~ .main-content {
-    margin-left: 70px;
-}
-
-.sidebar-toggle {
-    margin-right: 2px;
-    padding: 0;
+.sidebar-header {
     display: flex;
     align-items: center;
-    cursor: pointer;
-    transition: transform 0.3s;
-}
-
-.sidebar.collapsed .sidebar-toggle {
-    transform: rotate(180deg);
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .sidebar .nav-link {
     color: white !important;
-    padding: 0.75rem 0.5rem !important;
-    margin-left: 0.5rem;
+    padding: 0.6rem 0.6rem !important;
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    border-radius: 0;
+    margin-right: 0.25rem;
+}
+
+.sidebar .nav-link i {
+    width: 18px;
+    text-align: center;
+    font-size: 1rem;
+    min-width: 18px;
+    color: #8ba8d9;
+}
+
+.sidebar .nav-link span {
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    font-size: 0.85rem;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: 200px;
 }
 
 .sidebar .nav-link:hover {
     background-color: rgba(255,255,255,0.1);
 }
 
-/* Active state styles */
-    .sidebar .nav-link.active,
-    .sidebar .dropdown-item.active,
-    .sidebar .nav-link.dropdown-toggle.active {
-        background-color:rgb(73, 77, 87) !important;
-        font-weight: 500;
-        border-left: 4px solid #ffffff;
-        color: white !important;  
-    }
-
-/* Dropdown specific styles */
-.sidebar .dropdown-menu {
-    background-color: rgb(48, 50, 53) !important;
-    border: none !important;
-    border-radius: 0;
-    margin: 0;
-    width: 100%;
-    position: static !important;
-    padding: 0;
-    transform: none !important;
-    box-shadow: none;
-}
-.sidebar .nav-item.dropdown.show .dropdown-menu {
-    display: block;
-}
-
-
-.sidebar .dropdown-item {
-    color: white !important;
-    padding: 0.75rem 1rem;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-}
-
-.sidebar .dropdown-item:hover,
-.sidebar .dropdown-item:focus {
+/* Active state */
+.sidebar .nav-link.active {
     background-color: rgba(255,255,255,0.1) !important;
-    color: white !important;
-}
-
-.sidebar .nav-link:focus,
-.sidebar .nav-link:active {
-    color: white !important;
-    outline: none !important;
-    box-shadow: none !important;
-}
-.nav-link.dropdown-toggle,
-.dropdown-menu {
-    margin: 0 !important;
-}
-.nav-link .bi-chevron-down {
-    font-size: 10px; /* Adjust this value to your preferred size */
-}
-
-.nav-link.dropdown-toggle .bi-chevron-down {
-    transition: transform 0.3s;
-}
-
-.show .nav-link.dropdown-toggle .bi-chevron-down {
-    transform: rotate(180deg);
-}
-.sidebar .nav-item {
-    width: 100%;
-}
-
-.sidebar .nav-link {
-    white-space: nowrap;
-}
-
-.sidebar .nav.flex-column {
-    width: 100%;
-}
-.sidebar .nav-item form {
-    margin: 0;
-    padding: 0;
-}
-
-.sidebar .nav-item button.nav-link {
-    background: none;
-    border: none;
-    padding: 0.8rem 1rem;  /* Match other nav-links padding */
-    width: 100%;
-    text-align: left;
-}
-
-.sidebar .nav-item button.nav-link:hover {
-    background-color: rgba(255,255,255,0.1);
-}
-
-.sidebar-logo {
-    width: 30px;
-    height: 30px;
-    object-fit: contain;
-    margin-right: 2px !important;
-}
-
-.sidebar-header {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem 0.25rem;
-}
-
-.sidebar-header .d-flex.align-items-center {
-    gap: 2px;
-}
-
-/* Add these new styles */
-.sidebar .collapse-icon {
-    display: none;
-}
-
-.sidebar.collapsed .expand-icon {
-    display: none !important;
-}
-
-.sidebar.collapsed .collapse-icon {
-    display: inline-block !important;
-}
-
-/* Dropdown menu positioning when sidebar is collapsed */
-.sidebar.collapsed .nav-item.dropdown .dropdown-menu {
-    position: absolute !important;
-    left: 70px !important;  /* Width of collapsed sidebar */
-    top: 0 !important;
-    width: 200px;  /* Adjust width of dropdown */
-    background-color: #343a40 !important;
-    border-radius: 0 4px 4px 0;
-    box-shadow: 4px 2px 5px rgba(0,0,0,0.2);
-    padding: 0.5rem;
-    display: none;  /* Hide by default */
-    z-index: 1000;  /* Ensure it appears above other content */
-}
-
-/* Make parent position relative for absolute positioning */
-.sidebar.collapsed .nav-item.dropdown {
+    border-left: none;
     position: relative;
 }
 
-/* Ensure dropdown items are visible */
-.sidebar.collapsed .dropdown-menu .dropdown-item {
-    display: block !important;
-    color: white !important;
-    padding: 8px 16px;
-    margin: 2px 0;
+.sidebar .nav-link.active i {
+    color: #fff;
 }
 
-/* Show dropdown menu on hover in collapsed state */
-.sidebar.collapsed .nav-item.dropdown:hover > .dropdown-menu {
-    display: block !important;
+.sidebar .nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: #8ba8d9;
 }
 
-/* Style dropdown items on hover */
-.sidebar.collapsed .dropdown-menu .dropdown-item:hover {
-    background-color: rgba(255,255,255,0.1) !important;
-    border-radius: 4px;
+/* Collapsed state */
+.sidebar.collapsed {
+    width: 25px !important;
+    background-color: #222222 !important;
 }
 
-/* Remove the old hover rule that might conflict */
-/* .sidebar.collapsed .nav-item.dropdown:hover .dropdown-menu {
-    display: block;
-} */
-
-/* Add these styles */
-.sidebar-title {
-    font-size: 0.85rem;
-    white-space: nowrap;
-    letter-spacing: -0.5px;
-    margin-right: 8px;
-    padding-right: 10px;
-}
-
-/* Adjust the header layout */
-.sidebar-header > .d-flex.align-items-center {
-    flex: 1;
+.sidebar.collapsed .sidebar-header {
+    height: auto;
+    padding: 0.5rem 0;
     justify-content: center;
-    margin-right: 24px;
 }
 
-/* Remove the chevron from dropdown toggle */
-.nav-link.dropdown-toggle::after {
-    display: none !important;
+/* Make logo smaller in collapsed state */
+.sidebar.collapsed .sidebar-logo {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+    display: block;
 }
 
-/* Update dropdown styles */
+.sidebar.collapsed .sidebar-title,
+.sidebar.collapsed .nav-link span,
+.sidebar.collapsed .dropdown-menu,
+.sidebar.collapsed .nav-item form span,
+.sidebar.collapsed .dropdown-arrow {
+    display: none;
+}
+
+.sidebar.collapsed .nav-link {
+    padding: 0.75rem 0 !important;
+    justify-content: center;
+    width: 100%;
+}
+
+.sidebar.collapsed .nav-link i {
+    margin: 0;
+    font-size: 0.8rem; /* Make icons smaller */
+    color: #6b9fff;
+}
+
+.sidebar.collapsed .sidebar-toggle i {
+    font-size: 0.8rem !important; /* Make toggle icon smaller too */
+}
+
+.sidebar.collapsed .nav-item {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.sidebar.collapsed ~ .main-content {
+    margin-left: 25px;
+}
+
+.sidebar.collapsed .nav-item.dropdown .dropdown-menu {
+    left: 25px !important;
+}
+
+.main-content.sidebar-collapsed {
+    margin-left: 25px;
+}
+
+/* Hide the active indicator dot in very narrow sidebar */
+.sidebar.collapsed .nav-link.active::after {
+    display: none;
+}
+
+/* Adjust hover tooltip to work with very narrow sidebar */
+.sidebar.collapsed .nav-item:hover .nav-link::after {
+    left: 25px;
+    font-size: 0.8rem;
+    padding: 4px 8px;
+}
+
+/* Dropdown styles */
 .sidebar .dropdown-menu {
-    background-color: rgb(48, 50, 53) !important;
+    background-color: #1e1e1e !important;
     border: none !important;
     border-radius: 0;
     margin: 0;
@@ -531,261 +420,220 @@
 
 .sidebar .dropdown-item {
     color: white !important;
-    padding: 0.75rem 1rem;
+    padding: 0.6rem 0.6rem 0.6rem 2rem;
     white-space: nowrap;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem !important; /* Smaller font size for dropdown items */
+    overflow: visible;
+    text-overflow: clip;
 }
 
-.sidebar .dropdown-item:hover,
-.sidebar .dropdown-item:focus {
-    background-color: rgba(255,255,255,0.1) !important;
-    color: white !important;
-}
-
-/* Match hover effect with other nav items */
-.sidebar .nav-link:hover,
-.sidebar .dropdown-toggle:hover {
-    background-color: rgba(255,255,255,0.1);
-}
-
-/* Active state for dropdown items */
-.sidebar .dropdown-item.active,
-.sidebar .dropdown-item:active {
-    background-color: #495057 !important;
-    font-weight: 500;
-    border-left: 4px solid #ffffff;
-    color: white !important;
-}
-
-/* Add padding-left to compensate for the border */
-.sidebar .dropdown-item {
-    padding-left: calc(1rem - 4px) !important;
-}
-
-.sidebar .dropdown-item.active {
-    padding-left: 1rem !important;
-}
-
-/* Collapsed state dropdown */
-.sidebar.collapsed .nav-item.dropdown .dropdown-menu {
-    position: absolute !important;
-    left: 70px !important;
-    top: 0;
-    width: 200px;
-    background-color: #343a40 !important;
-    border-radius: 0 4px 4px 0;
-    box-shadow: 4px 2px 5px rgba(0,0,0,0.2);
-    padding: 0.5rem;
-}
-
-.sidebar.collapsed .dropdown-item {
-    padding: 0.75rem 1rem;
-}
-
-/* Remove old chevron styles */
-.nav-link .bi-chevron-down,
-.nav-link.dropdown-toggle .bi-chevron-down,
-.show .nav-link.dropdown-toggle .bi-chevron-down {
-    display: none !important;
-}
-
-/* Move regular nav links more to the left */
-.sidebar .nav-link {
-    color: white !important;
-    padding: 0.75rem 0.5rem !important;
-    margin-left: 0.5rem;
-}
-
-/* Keep Employee Management dropdown at original position */
-.sidebar .nav-item.dropdown .nav-link {
-    padding: 0.75rem 1rem !important;
-    margin-left: 0;
-}
-
-/* Adjust icon spacing for regular nav items */
-.sidebar .nav-link i {
-    margin-right: 0.75rem;
-    width: 20px;
+.sidebar .dropdown-item i {
+    color: #6b9fff;
+    width: 16px;
     text-align: center;
+    font-size: 0.9rem;
+    min-width: 16px;
 }
 
-/* Keep the collapsed state styling */
-.sidebar.collapsed .nav-link {
-    padding: 0.75rem !important;
-    margin-left: 0;
-    justify-content: center;
+.sidebar .dropdown-item:hover {
+    background-color: rgba(255,255,255,0.1) !important;
 }
 
-.sidebar.collapsed .nav-link i {
-    margin-right: 0;
-}
-
-/* Adjust the logout button to match */
-.sidebar .nav-item form button.nav-link {
-    padding: 0.75rem 0.5rem !important;
-    margin-left: 0.5rem;
-}
-
-.sidebar.collapsed .nav-item form button.nav-link {
-    padding: 0.75rem !important;
-    margin-left: 0;
-}
-/* Scrollbar styling */
+/* Scrollbar */
 .sidebar::-webkit-scrollbar {
-    width: 6px;  /* Make scrollbar thinner */
+    width: 4px;
 }
 
 .sidebar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);  /* Slightly lighter than sidebar */
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2) !important;  /* Light gray thumb */
-    border-radius: 3px;
-    transition: background 0.2s ease;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
 }
 
-.sidebar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3) !important;  /* Lighter on hover */
+/* Main content adjustment */
+.main-content {
+    margin-left: 250px;
+    transition: margin-left 0.3s ease;
 }
 
-/* For Firefox */
-.sidebar {
-    scrollbar-width: thin;  /* "auto" or "thin" */
-    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.1);  /* thumb track */
+.main-content.sidebar-collapsed {
+    margin-left: 30px;
+}
+
+/* Also adjust the sidebar-logo size for normal state */
+.sidebar-logo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    margin-right: 0.5rem !important;
+    transition: all 0.3s ease;
+}
+
+/* Fixed dropdown styles for POS submenu */
+.sidebar .nav-content {
+    list-style-type: none !important;
+    padding-left: 0.5rem !important;
+    margin-left: 0 !important;
+}
+
+.sidebar .collapse .nav-content li {
+    padding-left: 0;
+    margin-left: 0;
+    list-style: none;
+    position: relative;
+}
+
+/* Add small dot indicators for dropdown items instead of bullets */
+.sidebar .collapse .nav-content li::before {
+    display: none !important; /* Remove all bullet points */
+}
+
+/* Make submenus appear properly when collapsed */
+.sidebar.collapsed .collapse.show {
+    position: absolute;
+    left: 25px;
+    top: 0;
+    width: 180px;
+    background-color: #222222;
+    padding: 0;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+}
+
+/* Style dropdown items */
+.sidebar .collapse .dropdown-item {
+    padding-left: 1rem !important;
+    margin: 1px 0;
+}
+
+/* Make sidebar title smaller */
+.sidebar-title {
+    font-size: 0.8rem !important;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
+    margin-right: 0.25rem !important;
+}
+
+/* Hide dropdown chevron icon specifically for POS */
+.sidebar .nav-item .nav-link[href="#posCollapse"] .bi-chevron-down,
+.sidebar .nav-item .nav-link[data-bs-toggle="collapse"][href="#posCollapse"] .bi-chevron-down,
+.sidebar .nav-item .collapse-icon {
+    display: none !important;
+}
+
+/* Add extra style to make POS menu items readable but compact */
+.sidebar #posCollapse .dropdown-item {
+    font-size: 0.75rem !important;
+    padding: 0.4rem 0.6rem !important;
+    margin: 1px 0;
+}
+
+/* Fix dropdown icon alignment for laboratory dropdown */
+.sidebar .nav-item.dropdown .nav-link.dropdown-toggle::after {
+    display: none !important;
+}
+
+/* Make lab management dropdown items smaller */
+.sidebar .nav-item.dropdown .dropdown-menu .dropdown-item {
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.75rem 0.5rem 2rem !important;
+}
+
+/* Improve spacing in dropdown menus */
+.sidebar .dropdown-menu {
+    padding: 0.25rem 0 !important;
 }
 </style>
 
 <script>
-// Add confirmLogout function at the top of the script section
-function confirmLogout() {
-    return confirm('Are you sure you want to logout?');
-}
-
-/* Script for dropdowns */
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle Employee Management dropdown
-    setupDropdown('employeeDropdown', 'employees');
-
-    // Handle Laboratory Management dropdown
-    setupDropdown('laboratoryDropdown', 'laboratories');
-
-    function setupDropdown(dropdownId, pathCheck) {
-        const dropdownToggle = document.querySelector(`#${dropdownId}`);
-        if (!dropdownToggle) return; // Exit if element not found
-
-        const parentLi = dropdownToggle.closest('.nav-item');
-        const dropdownMenu = parentLi.querySelector('.dropdown-menu');
-
-        // Check if we should open the dropdown on page load
-        const shouldOpenDropdown = localStorage.getItem(`${dropdownId}Open`) === 'true' || 
-                                 window.location.pathname.includes(`/${pathCheck}`);
-        
-        if (shouldOpenDropdown && !document.querySelector('.sidebar').classList.contains('collapsed')) {
-            parentLi.classList.add('show');
-            dropdownToggle.setAttribute('aria-expanded', 'true');
-        }
-
-        dropdownToggle.addEventListener('click', function(e) {
-            const sidebar = document.querySelector('.sidebar');
-            e.preventDefault();
-            e.stopPropagation();
-           
-            if (sidebar.classList.contains('collapsed')) {
-                dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
-            } else {
-                parentLi.classList.toggle('show');
-                dropdownToggle.setAttribute('aria-expanded', 
-                    parentLi.classList.contains('show') ? 'true' : 'false'
-                );
-                // Save state to localStorage
-                localStorage.setItem(`${dropdownId}Open`, parentLi.classList.contains('show'));
-            }
-        });
-
-        // Add click handler for dropdown items to prevent closing
-        dropdownMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (!document.querySelector('.sidebar').classList.contains('collapsed')) {
-                parentLi.classList.add('show');
-                dropdownToggle.setAttribute('aria-expanded', 'true');
-                localStorage.setItem(`${dropdownId}Open`, 'true');
-            }
-        });
-
-        // Handle hover for collapsed state
-        parentLi.addEventListener('mouseenter', function() {
-            const sidebar = document.querySelector('.sidebar');
-            if (sidebar.classList.contains('collapsed')) {
-                dropdownMenu.style.display = 'block';
-                dropdownToggle.setAttribute('aria-expanded', 'true');
-            }
-        });
-
-        parentLi.addEventListener('mouseleave', function() {
-            const sidebar = document.querySelector('.sidebar');
-            if (sidebar.classList.contains('collapsed')) {
-                dropdownMenu.style.display = 'none';
-                dropdownToggle.setAttribute('aria-expanded', 'false');
-            }
-        });
-    }
-
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', function(e) {
-        const sidebar = document.querySelector('.sidebar');
-        if (!sidebar.classList.contains('collapsed')) {
-            document.querySelectorAll('.nav-item.dropdown').forEach(function(dropdown) {
-                if (!dropdown.contains(e.target)) {
-                    dropdown.classList.remove('show');
-                    const dropdownToggle = dropdown.querySelector('.dropdown-toggle');
-                    if (dropdownToggle) {
-                        dropdownToggle.setAttribute('aria-expanded', 'false');
-                        const dropdownId = dropdownToggle.id;
-                        localStorage.setItem(`${dropdownId}Open`, 'false');
-                    }
-                }
-            });
-        }
-    });
-});
-
-// Add this new code for sidebar toggle
 document.addEventListener('DOMContentLoaded', function() {
     const sidebar = document.querySelector('.sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
     const mainContent = document.querySelector('.main-content');
+    const navLinks = document.querySelectorAll('.sidebar .nav-link');
     
-    // Set initial state to expanded (not collapsed)
-    localStorage.setItem('sidebarCollapsed', 'false');
-    sidebar.classList.remove('collapsed');
-    mainContent.style.marginLeft = '320px';
-    const expandIcon = sidebarToggle.querySelector('.expand-icon');
-    const collapseIcon = sidebarToggle.querySelector('.collapse-icon');
-    expandIcon.style.display = 'inline-block';
-    collapseIcon.style.display = 'none';
+    // Add data-title attribute to all nav links for tooltip
+    navLinks.forEach(link => {
+        const spanText = link.querySelector('span')?.textContent.trim();
+        if (spanText) {
+            link.setAttribute('data-title', spanText);
+        }
+    });
+    
+    // Check for saved state
+    const sidebarState = localStorage.getItem('sidebarCollapsed');
+    if (sidebarState === 'true') {
+        sidebar.classList.add('collapsed');
+        mainContent.classList.add('sidebar-collapsed');
+        
+        // Toggle visibility of icons in collapsed state
+        document.querySelector('.expand-icon').style.display = 'none';
+        document.querySelector('.collapse-icon').style.display = 'block';
+    }
 
     sidebarToggle.addEventListener('click', function(e) {
         e.preventDefault();
         sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('sidebar-collapsed');
         
-        const expandIcon = this.querySelector('.expand-icon');
-        const collapseIcon = this.querySelector('.collapse-icon');
+        // Toggle icon visibility
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        document.querySelector('.expand-icon').style.display = isCollapsed ? 'none' : 'block';
+        document.querySelector('.collapse-icon').style.display = isCollapsed ? 'block' : 'none';
         
-        // Adjust main content margin and icons
-        if (sidebar.classList.contains('collapsed')) {
-            mainContent.style.marginLeft = '70px';
-            expandIcon.style.display = 'none';
-            collapseIcon.style.display = 'inline-block';
-        } else {
-            mainContent.style.marginLeft = '320px';
-            expandIcon.style.display = 'inline-block';
-            collapseIcon.style.display = 'none';
+        // Update logo size
+        const logo = document.querySelector('.sidebar-logo');
+        if (logo) {
+            logo.style.width = isCollapsed ? '16px' : '24px';
+            logo.style.height = isCollapsed ? '16px' : '24px';
         }
         
-        // Save the state
-        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        // Save state
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
     });
+
+    // Handle dropdowns
+    const dropdownToggles = document.querySelectorAll('.nav-link.dropdown-toggle');
+    dropdownToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            if (sidebar.classList.contains('collapsed')) {
+                e.preventDefault();
+                return;
+            }
+            
+            e.preventDefault();
+            const parent = this.closest('.nav-item.dropdown');
+            parent.classList.toggle('show');
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.nav-item.dropdown')) {
+            document.querySelectorAll('.nav-item.dropdown').forEach(dropdown => {
+                dropdown.classList.remove('show');
+            });
+        }
+    });
+
+    // Special handling for POS dropdown - remove arrow/indicator
+    const posDropdownToggle = document.querySelector('.nav-link[href="#posCollapse"]');
+    if (posDropdownToggle) {
+        const arrowIcon = posDropdownToggle.querySelector('.bi-chevron-down');
+        if (arrowIcon) {
+            arrowIcon.style.display = 'none';
+        }
+    }
 });
+
+function confirmLogout() {
+    return confirm('Are you sure you want to logout?');
+}
 </script>
