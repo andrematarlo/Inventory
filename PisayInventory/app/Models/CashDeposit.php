@@ -9,28 +9,34 @@ class CashDeposit extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'cash_deposits';
+    protected $table = 'student_deposits';
+    
+    protected $primaryKey = 'DepositID';
     
     protected $fillable = [
         'student_id',
-        'Amount',
+        'TransactionDate',
+        'ReferenceNumber',
         'TransactionType',
-        'Description',
-        'transaction_date',
-        'payment_method',
-        'reference_number'
+        'Amount',
+        'BalanceBefore',
+        'BalanceAfter',
+        'Notes',
+        'Status'
     ];
     
     protected $casts = [
         'Amount' => 'decimal:2',
-        'transaction_date' => 'datetime',
+        'BalanceBefore' => 'decimal:2',
+        'BalanceAfter' => 'decimal:2',
+        'TransactionDate' => 'datetime',
     ];
     
     protected $dates = [
         'created_at',
         'updated_at',
         'deleted_at',
-        'transaction_date'
+        'TransactionDate'
     ];
     
     /**

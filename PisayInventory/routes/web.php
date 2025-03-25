@@ -240,6 +240,10 @@ Route::middleware('auth')->group(function () {
             Route::get('/deposits/history/{student}', [POSDepositController::class, 'history'])->name('deposits.history');
             Route::get('/students/select2', [POSDepositController::class, 'studentSelect2'])->name('students.select2');
             
+            // Add missing routes for deposits functionality
+            Route::get('/deposits/approve/{id}', [POSDepositController::class, 'approveDeposit'])->name('deposits.approve');
+            Route::get('/deposits/reject/{id}', [POSDepositController::class, 'rejectDeposit'])->name('deposits.reject');
+            
             // Deposits Routes grouped
             Route::prefix('deposit')->name('deposit.')->group(function () {
                 Route::get('/', [POSDepositController::class, 'index'])->name('index');
