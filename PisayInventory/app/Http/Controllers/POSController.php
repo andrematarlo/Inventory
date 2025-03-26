@@ -501,7 +501,7 @@ class POSController extends Controller
     // Handle deposit creation
     public function storeDeposit(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'student_id' => 'required|string|exists:students,student_id',
             'amount' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string|max:255',
@@ -512,56 +512,60 @@ class POSController extends Controller
             
             // Check if student exists
             $student = DB::table('students')
-                ->where('student_id', $request->student_id)
+                ->where('student_id', $validated['student_id'])
                 ->first();
                 
             if (!$student) {
-                return redirect()->back()->with('error', 'Student not found with ID: ' . $request->student_id);
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Student not found with ID: ' . $validated['student_id']
+                    ], 404);
+                }
+                
+                return redirect()->back()->with('error', 'Student not found with ID: ' . $validated['student_id']);
             }
             
             // Get current balance
-            $currentBalance = DB::table('student_deposits')
-                ->where('student_id', $request->student_id)
-                ->whereRaw('LOWER(status) = ?', ['active'])
-                ->orderBy('created_at', 'desc')
-                ->value('balance_after') ?? 0;
+            $currentBalance = CashDeposit::where('student_id', $validated['student_id'])
+                ->whereNull('deleted_at')
+                ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount WHEN TransactionType = "WITHDRAWAL" THEN -Amount ELSE 0 END'));
                 
-            // For students, create a pending deposit
-            $isStudent = Auth::check() && Auth::user()->role === 'Student';
-            $status = $isStudent ? 'pending' : 'active';
-            
-            // If it's an admin or cashier creating the deposit, it's immediately active
-            // and the balance is updated
-            $newBalance = $status === 'active' ? $currentBalance + $request->amount : $currentBalance;
-            
             // Create deposit record
-            DB::table('student_deposits')->insert([
-                'student_id' => $request->student_id,
-                'transaction_date' => now(),
-                'reference_number' => 'DEP-' . time(),
-                'transaction_type' => 'Deposit',
-                'amount' => $request->amount,
-                'balance_before' => $currentBalance,
-                'balance_after' => $newBalance,
-                'notes' => $request->notes,
-                'created_by' => Auth::id(),
-                'created_at' => now(),
-                'updated_at' => now(),
-                'status' => $status
+            $deposit = CashDeposit::create([
+                'student_id' => $validated['student_id'],
+                'TransactionDate' => now(),
+                'ReferenceNumber' => 'DEP-' . time(),
+                'TransactionType' => 'DEPOSIT',
+                'Amount' => $validated['amount'],
+                'BalanceBefore' => $currentBalance,
+                'BalanceAfter' => $currentBalance + $validated['amount'],
+                'Notes' => $validated['notes'],
             ]);
             
             DB::commit();
             
-            if ($status === 'pending') {
-                return redirect()->route('pos.cashdeposit')
-                    ->with('success', 'Deposit request of ₱' . number_format($request->amount, 2) . ' has been submitted and is pending approval.');
-            } else {
-                return redirect()->route('pos.cashdeposit')
-                    ->with('success', 'Deposit of ₱' . number_format($request->amount, 2) . ' was successfully added for student ' . $student->first_name . ' ' . $student->last_name);
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Deposit of ₱' . number_format($validated['amount'], 2) . ' added successfully',
+                    'deposit' => $deposit
+                ]);
             }
+            
+            return redirect()->route('pos.deposits.index')
+                ->with('success', 'Deposit of ₱' . number_format($validated['amount'], 2) . ' was successfully added for student ' . $student->first_name . ' ' . $student->last_name);
                 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to process deposit: ' . $e->getMessage()
+                ], 500);
+            }
+            
             return redirect()->back()
                 ->with('error', 'Failed to process deposit: ' . $e->getMessage());
         }

@@ -158,10 +158,9 @@
                     @csrf
                     <div class="mb-4">
                         <label class="form-label">Student</label>
-                        <select class="form-select" id="student_id" name="student_id" required>
+                        <select class="form-select select2-student" name="student_id" required>
                             <option value="">Search by ID or name</option>
                         </select>
-                        <div class="invalid-feedback">Please select a student</div>
                     </div>
 
                     <div class="mb-4">
@@ -169,7 +168,6 @@
                         <div class="input-group">
                             <span class="input-group-text">₱</span>
                             <input type="number" class="form-control" name="amount" required min="0.01" step="0.01">
-                            <div class="invalid-feedback">Please enter a valid amount</div>
                         </div>
                     </div>
 
@@ -191,7 +189,6 @@
 
 @push('styles')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 <style>
 .avatar-sm {
     width: 32px;
@@ -204,20 +201,6 @@
 
 .modal-open .select2-container--open {
     z-index: 1056 !important;
-}
-
-/* Fix Select2 sizing */
-.select2-container .select2-selection--single {
-    height: 38px;
-    padding: 6px 12px;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 24px;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 36px;
 }
 </style>
 @endpush
@@ -233,13 +216,12 @@ $(document).ready(function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Initialize Select2 when the modal is shown
+    // Initialize Select2 when modal is shown
     $('#quickDepositModal').on('shown.bs.modal', function() {
-        $('#student_id').select2({
+        $('.select2-student').select2({
             theme: 'bootstrap-5',
             dropdownParent: $('#quickDepositModal'),
-            width: '100%',
-            placeholder: 'Search by ID or name',
+            placeholder: 'Search student by ID or name',
             allowClear: true,
             minimumInputLength: 1,
             ajax: {
@@ -254,7 +236,7 @@ $(document).ready(function() {
                 },
                 processResults: function(data) {
                     return {
-                        results: $.map(data.students, function(student) {
+                        results: $.map(data.students || [], function(student) {
                             return {
                                 id: student.student_id,
                                 text: student.student_id + ' - ' + student.first_name + ' ' + student.last_name
@@ -270,137 +252,78 @@ $(document).ready(function() {
     // Reset form and select2 when modal is hidden
     $('#quickDepositModal').on('hidden.bs.modal', function() {
         $('#quickDepositForm').trigger('reset');
-        $('#student_id').val(null).trigger('change');
+        $('.select2-student').val(null).trigger('change');
     });
 
-    // Form validation before submission
+    // Handle form submission
     $('#quickDepositForm').on('submit', function(e) {
         e.preventDefault();
         
-        // Basic validation
-        let isValid = true;
-        const studentId = $('#student_id').val();
+        // Validate form data
+        const studentId = $('.select2-student').val();
         const amount = $('input[name="amount"]').val();
         
         if (!studentId) {
-            $('#student_id').addClass('is-invalid');
-            isValid = false;
-        } else {
-            $('#student_id').removeClass('is-invalid');
-        }
-        
-        if (!amount || parseFloat(amount) <= 0) {
-            $('input[name="amount"]').addClass('is-invalid');
-            isValid = false;
-        } else {
-            $('input[name="amount"]').removeClass('is-invalid');
-        }
-        
-        if (!isValid) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: 'Please select a student'
+            });
             return false;
         }
         
-        // Show loading state
-        const submitBtn = $('button[type="submit"][form="quickDepositForm"]');
-        const originalText = submitBtn.html();
-        submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
-        submitBtn.prop('disabled', true);
+        if (!amount || parseFloat(amount) <= 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: 'Please enter a valid amount greater than 0'
+            });
+            return false;
+        }
         
-        // Submit the form
+        // Submit the form via AJAX
         $.ajax({
-            url: $(this).attr('action'),
+            url: this.action,
             method: 'POST',
             data: $(this).serialize(),
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
+                $('#quickDepositModal').modal('hide');
+                
                 Swal.fire({
                     icon: 'success',
                     title: 'Success!',
-                    text: 'Deposit added successfully!',
+                    text: 'Deposit added successfully',
                     showConfirmButton: false,
                     timer: 1500
-                }).then(() => {
-                    // Close modal and reload page
-                    $('#quickDepositModal').modal('hide');
+                }).then(function() {
                     location.reload();
                 });
             },
             error: function(xhr) {
-                console.error('Deposit error:', xhr);
-                const errorMessage = xhr.responseJSON?.message || 'Something went wrong. Please try again.';
+                let errorMessage = 'Something went wrong!';
+                
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
                 
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error',
+                    title: 'Error!',
                     text: errorMessage
                 });
-                
-                // Reset button state
-                submitBtn.html(originalText);
-                submitBtn.prop('disabled', false);
             }
         });
     });
-
-    // Table filters
-    $('#typeFilter').on('change', function() {
-        filterTable();
-    });
-    
-    $('#startDate, #endDate').on('change', function() {
-        filterTable();
-    });
-    
-    $('#studentSearch').on('keyup', function() {
-        filterTable();
-    });
-    
-    function filterTable() {
-        const type = $('#typeFilter').val().toUpperCase();
-        const searchTerm = $('#studentSearch').val().toLowerCase();
-        const startDate = $('#startDate').val() ? new Date($('#startDate').val()) : null;
-        const endDate = $('#endDate').val() ? new Date($('#endDate').val()) : null;
-        
-        $('#depositsTable tbody tr').each(function() {
-            let show = true;
-            const row = $(this);
-            
-            // Filter by type
-            if (type && row.find('td:nth-child(4)').text().toUpperCase().indexOf(type) === -1) {
-                show = false;
-            }
-            
-            // Filter by student
-            if (searchTerm && row.find('td:nth-child(2)').text().toLowerCase().indexOf(searchTerm) === -1) {
-                show = false;
-            }
-            
-            // Filter by date range
-            if (startDate || endDate) {
-                const dateText = row.find('td:first-child').text();
-                const rowDate = new Date(dateText);
-                
-                if (startDate && rowDate < startDate) {
-                    show = false;
-                }
-                
-                if (endDate && rowDate > endDate) {
-                    show = false;
-                }
-            }
-            
-            row.toggle(show);
-        });
-    }
 
     // Reset Filters
     $('#resetFilters').on('click', function() {
         $('#typeFilter').val('');
         $('#startDate, #endDate').val('');
         $('#studentSearch').val('');
-        filterTable();
+        location.reload();
     });
 });
 </script>
