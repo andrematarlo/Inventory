@@ -92,42 +92,41 @@ class PurchaseController extends Controller
         }
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy($id)
     {
         try {
             DB::beginTransaction();
             
-            // Get the authenticated user's ID and find the employee
-            $userAccountId = Auth::id();
-            \Log::info('Auth ID:', ['user_account_id' => $userAccountId]); // Debug log
-            
-            $employee = Employee::where('UserAccountID', $userAccountId)->first();
-            \Log::info('Employee found:', ['employee' => $employee]); // Debug log
-            
-            if (!$employee) {
-                throw new \Exception('Employee not found for UserAccountID: ' . $userAccountId);
-            }
-            
+            // Find the purchase
             $purchase = Purchase::findOrFail($id);
-            $purchase->softDelete();
+            
+            // Soft delete or mark as deleted
+            $purchase->update([
+                'is_deleted' => true,
+                'deleted_by' => Auth::id(),
+                'deleted_at' => now()
+            ]);
+            
+            // Or hard delete if appropriate
+            // $purchase->delete();
             
             DB::commit();
             
+            // Return JSON response for AJAX
             return response()->json([
                 'success' => true,
-                'message' => 'Purchase order deleted successfully'
+                'message' => 'Purchase deleted successfully'
             ]);
+            
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error deleting purchase order:', [
-                'error' => $e->getMessage(),
-                'user_id' => Auth::id(),
-                'trace' => $e->getTraceAsString()
-            ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error deleting purchase order: ' . $e->getMessage()
+                'message' => 'Failed to delete purchase: ' . $e->getMessage()
             ], 500);
         }
     }

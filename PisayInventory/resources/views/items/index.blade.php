@@ -120,10 +120,8 @@
                                             @endif
                                             @if($userPermissions && $userPermissions->CanDelete)
                                             <button type="button" 
-                                                    class="btn btn-sm btn-danger delete-item"
-                                                    data-item-id="{{ $item->ItemId }}"
-                                                    data-item-name="{{ $item->ItemName }}"
-                                                    data-stocks="{{ $item->StocksAvailable }}">
+                                                    class="btn btn-sm btn-danger"
+                                                    onclick="deleteResource('{{ route('items.destroy', $item->ItemId) }}', '{{ $item->ItemName }}')">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                             @endif
@@ -891,3 +889,70 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 @endsection
+
+@push('scripts')
+<script>
+// Add the deleteResource function
+function deleteResource(url, resourceName) {
+    Swal.fire({
+        title: 'Delete Item?',
+        html: `Are you sure you want to delete <strong>${resourceName}</strong>?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Create and submit form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            form.style.display = 'none';
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            
+            const method = document.createElement('input');
+            method.type = 'hidden';
+            method.name = '_method';
+            method.value = 'DELETE';
+            
+            form.appendChild(csrfToken);
+            form.appendChild(method);
+            document.body.appendChild(form);
+            
+            // Show loading state
+            Swal.fire({
+                title: 'Deleting...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            form.submit();
+        }
+    });
+}
+
+// Run this when document is ready
+$(document).ready(function() {
+    // Remove the old delete confirmation handler
+    $('.delete-item').off('click');
+    
+    // Add new delete handler using the global function
+    $('.delete-item').on('click', function(e) {
+        e.preventDefault();
+        const itemId = $(this).data('item-id');
+        const itemName = $(this).data('item-name');
+        deleteResource('{{ url('/inventory/items') }}/' + itemId, itemName);
+    });
+});
+</script>
+@endpush

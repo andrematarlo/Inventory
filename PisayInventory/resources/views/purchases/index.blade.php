@@ -96,7 +96,7 @@
                                     @if($userPermissions && $userPermissions->CanDelete)
                                         <button type="button" 
                                                 class="btn btn-sm btn-danger" 
-                                                onclick="deletePurchase('{{ $po->PurchaseOrderID }}')"
+                                                onclick="deleteResource('{{ route('purchases.destroy', $po->PurchaseOrderID) }}', 'Purchase #{{ $po->PONumber }}')"
                                                 title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -168,7 +168,7 @@
                                     @if($userPermissions && $userPermissions->CanDelete)
                                         <button type="button" 
                                                 class="btn btn-sm btn-danger" 
-                                                onclick="deletePurchase('{{ $po->PurchaseOrderID }}')"
+                                                onclick="deleteResource('{{ route('purchases.destroy', $po->PurchaseOrderID) }}', 'Purchase #{{ $po->PONumber }}')"
                                                 title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>

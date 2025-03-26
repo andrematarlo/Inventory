@@ -102,11 +102,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/items/import', [ItemController::class, 'import'])->name('items.import');
         Route::post('/items/export', [ItemController::class, 'export'])->name('items.export');
         Route::get('/items/search', [ItemController::class, 'search'])->name('items.search');
+        Route::delete('/inventory/items/{id}', [ItemController::class, 'destroy'])->name('items.destroy');
 
         // Inventory Management
         Route::resource('inventory', InventoryController::class);
         Route::put('inventory/{id}/restore', [InventoryController::class, 'restore'])->name('inventory.restore');
         Route::post('/inventory/{id}/stockout', [InventoryController::class, 'stockout'])->name('inventory.stockout');
+        Route::delete('/inventory/inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
 
         // Suppliers Management
         Route::prefix('suppliers')->group(function () {

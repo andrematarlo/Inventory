@@ -152,11 +152,10 @@
                                     {{-- Show Delete button only for users with Delete permission --}}
                                     @if($userPermissions && $userPermissions->CanDelete)
                                         <button type="button" 
-                                                class="btn btn-danger delete-inventory"
-                                                data-inventory-id="{{ $inventory->InventoryId }}"
-                                                data-item-name="{{ $inventory->item->ItemName }}">
-                                            <i class="bi bi-trash me-1"></i>
-                                            Delete
+                                                class="btn btn-sm btn-danger delete-inventory-item"
+                                                data-id="{{ $inventory->InventoryId }}" 
+                                                data-name="{{ $inventory->item->ItemName }}">
+                                            <i class="bi bi-trash"></i> Delete
                                         </button>
                                     @endif
                                 </div>
@@ -519,39 +518,6 @@ $(document).ready(function() {
         deletedRecordsBtn.removeClass('btn-outline-danger').addClass('btn-danger');
     });
 
-    // Delete confirmation handler
-    $('.delete-inventory').click(function(e) {
-        e.preventDefault();
-        const inventoryId = $(this).data('inventory-id');
-        const itemName = $(this).data('item-name');
-        
-        // Update modal content
-        $('#deleteInventoryModal .modal-body p:first').html(
-            `Are you sure you want to delete the inventory record for: <strong>${itemName}</strong>?`
-        );
-        
-        // Store the ID for use in confirmation
-        $('#confirmDeleteBtn').attr('data-inventory-id', inventoryId);
-        
-        // Show the modal
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteInventoryModal'));
-        deleteModal.show();
-    });
-
-    // Handle delete confirmation
-    $('#confirmDeleteBtn').click(function() {
-        const inventoryId = $(this).attr('data-inventory-id');
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = "{{ route('inventory.index') }}/" + inventoryId;
-        form.innerHTML = `
-            @csrf
-            @method('DELETE')
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    });
-
     // Restore inventory handler
     $('.restore-inventory').click(function(e) {
         e.preventDefault();
@@ -616,6 +582,59 @@ $(document).ready(function() {
         const searchText = $(this).val().toLowerCase();
         $('#deletedTableBody tr').filter(function() {
             $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+        });
+    });
+
+    // Initialize SweetAlert for delete confirmations
+    $('.delete-inventory-item').on('click', function(e) {
+        e.preventDefault();
+        
+        const itemId = $(this).data('id');
+        const itemName = $(this).data('name');
+        
+        Swal.fire({
+            title: 'Delete Inventory Item?',
+            html: `Are you sure you want to delete <strong>${itemName}</strong> from inventory?<br><small class="text-danger">This action can be undone later.</small>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading indicator
+                Swal.fire({
+                    title: 'Deleting...',
+                    text: 'Please wait',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    willOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Create and submit form for delete
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ url("/inventory/inventory") }}/' + itemId;
+                form.style.display = 'none';
+                
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                
+                const method = document.createElement('input');
+                method.type = 'hidden';
+                method.name = '_method';
+                method.value = 'DELETE';
+                
+                form.appendChild(csrfToken);
+                form.appendChild(method);
+                document.body.appendChild(form);
+                form.submit();
+            }
         });
     });
 });

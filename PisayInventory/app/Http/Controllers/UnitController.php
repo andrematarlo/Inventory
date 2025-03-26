@@ -152,48 +152,68 @@ class UnitController extends Controller
     public function destroy($id)
     {
         try {
-            DB::beginTransaction();
+            // Check permissions first
+            $userPermissions = $this->getUserPermissions();
+            if (!$userPermissions || !$userPermissions->CanDelete) {
+                return redirect()->back()->with('error', 'You do not have permission to delete units.');
+            }
 
-            // Find the unit
-            $unit = UnitOfMeasure::where('UnitOfMeasureId', $id)->first();
+            DB::beginTransaction();
+            
+            // Find the unit using the correct table name - unitofmeasure
+            $unit = DB::table('unitofmeasure')->where('UnitOfMeasureId', $id)->first();
+            
             if (!$unit) {
                 throw new \Exception('Unit not found');
             }
-
-            // Check permissions
-            $userPermissions = $this->getUserPermissions();
-            if (!$userPermissions || !$userPermissions->CanDelete) {
-                throw new \Exception('You do not have permission to delete units.');
-            }
-
-            // Check if unit is being used by any items
-            $itemCount = Item::where('UnitOfMeasureId', $id)
-                ->where('IsDeleted', false)
+            
+            // Check if the unit is associated with any items
+            // Update the table name for items if needed
+            $itemsCount = DB::table('menu_items')
+                ->where('UnitOfMeasureID', $id)
                 ->count();
             
-            if ($itemCount > 0) {
-                throw new \Exception("Cannot delete unit because it is being used by {$itemCount} items.");
+            if ($itemsCount > 0) {
+                // Soft delete if used in items
+                DB::table('unitofmeasure')
+                    ->where('UnitOfMeasureId', $id)
+                    ->update([
+                        'IsDeleted' => true,
+                        'DeletedById' => Auth::id(),
+                        'DateDeleted' => now()
+                    ]);
+            } else {
+                // Hard delete if no items are associated
+                DB::table('unitofmeasure')
+                    ->where('UnitOfMeasureId', $id)
+                    ->delete();
             }
-
-            // Perform soft delete
-            $unit->update([
-                'IsDeleted' => true,
-                'DeletedById' => Auth::id(),
-                'DateDeleted' => now()
-            ]);
-
+            
             DB::commit();
+            
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Unit deleted successfully'
+                ]);
+            }
+            
             return redirect()->route('units.index')
-                ->with('success', 'Unit moved to trash successfully');
-
+                ->with('success', 'Unit deleted successfully');
+            
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error deleting unit:', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return back()->with('error', 'Error deleting unit: ' . $e->getMessage());
+            \Log::error('Error deleting unit: ' . $e->getMessage());
+            
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete unit: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->route('units.index')
+                ->with('error', 'Failed to delete unit: ' . $e->getMessage());
         }
     }
 

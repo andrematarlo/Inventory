@@ -71,10 +71,10 @@
                                         @endif
                                         @if($userPermissions->CanDelete)
                                         <button type="button" 
-                                                class="btn btn-danger delete-unit"
-                                                data-unit-id="{{ $unit->UnitOfMeasureId }}"
-                                                data-unit-name="{{ $unit->UnitName }}">
-                                            <i class="bi bi-trash"></i>
+                                                class="btn btn-sm btn-danger delete-unit"
+                                                data-id="{{ $unit->UnitOfMeasureId }}"
+                                                data-name="{{ $unit->UnitName }}">
+                                            <i class="bi bi-trash"></i> Delete
                                         </button>
                                         @endif
                                     </div>
@@ -223,52 +223,6 @@
         </div>
     </div>
 </div>
-
-<!-- Delete Modal Template -->
-<div class="modal fade" 
-     id="deleteUnitModal" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
-     tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Delete Unit</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this unit?</p>
-                <p class="text-danger mt-3"><small>This action can be undone later.</small></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Restore Modal -->
-<div class="modal fade" id="restoreUnitModal" tabindex="-1" aria-labelledby="restoreUnitModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="restoreUnitModalLabel">Restore Unit</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to restore this unit?</p>
-                <p id="unitNameToRestore" class="fw-bold text-success"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="confirmRestoreBtn">
-                    <i class="bi bi-arrow-counterclockwise"></i> Restore
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 @endforeach
 @endsection
 
@@ -312,36 +266,55 @@
         });
 
         // Delete confirmation handler
-        $('.delete-unit').click(function(e) {
+        $('.delete-unit').on('click', function(e) {
             e.preventDefault();
-            const unitId = $(this).data('unit-id');
-            const unitName = $(this).data('unit-name');
-
-            // Update modal content
-            $('#deleteUnitModal .modal-body p:first').html(
-                `Are you sure you want to delete unit: <strong>${unitName}</strong>?`
-            );
             
-            // Store the ID for use in confirmation
-            $('#confirmDeleteBtn').data('unit-id', unitId);
+            const unitId = $(this).data('id');
+            const unitName = $(this).data('name');
             
-            // Show the modal
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteUnitModal'));
-            deleteModal.show();
-        });
-
-        // Handle delete confirmation
-        $('#confirmDeleteBtn').click(function() {
-            const unitId = $(this).data('unit-id');
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/inventory/units/${unitId}`;
-            form.innerHTML = `
-                @csrf
-                @method('DELETE')
-            `;
-            document.body.appendChild(form);
-            form.submit();
+            Swal.fire({
+                title: 'Delete Unit?',
+                html: `Are you sure you want to delete <strong>${unitName}</strong>?<br><small class="text-danger">This action cannot be undone.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Deleting...',
+                        text: 'Please wait',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Create a form manually and submit it
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/inventory/units/' + unitId;
+                    
+                    const csrfToken = document.createElement('input');
+                    csrfToken.type = 'hidden';
+                    csrfToken.name = '_token';
+                    csrfToken.value = '{{ csrf_token() }}';
+                    
+                    const method = document.createElement('input');
+                    method.type = 'hidden';
+                    method.name = '_method';
+                    method.value = 'DELETE';
+                    
+                    form.appendChild(csrfToken);
+                    form.appendChild(method);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
         });
 
         // Restore unit handling

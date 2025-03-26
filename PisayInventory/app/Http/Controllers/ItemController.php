@@ -476,67 +476,77 @@ public function export(Request $request)
         }
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy($id)
     {
         try {
-            DB::beginTransaction();
-
-            // Debug logging
-            Log::info('Attempting to delete item:', ['id' => $id]);
-
-            // Extract ID from object if needed
-            if (is_object($id) || is_array($id)) {
-                if (isset($id->ItemId)) {
-                    $id = $id->ItemId;
-                } elseif (is_array($id) && isset($id['ItemId'])) {
-                    $id = $id['ItemId'];
-                }
-            }
-
-            // If it's a string containing JSON, try to decode it
-            if (is_string($id) && strpos($id, '{') !== false) {
-                $decoded = json_decode($id, true);
-                if (isset($decoded['ItemId'])) {
-                    $id = $decoded['ItemId'];
-                }
-            }
-
-            // Final validation
-            if (!is_numeric($id)) {
-                throw new \Exception('Invalid item ID');
-            }
-
-            // Find the item
-            $item = Item::where('ItemId', $id)->first();
-            if (!$item) {
-                throw new \Exception('Item not found');
-            }
-
             // Check permissions
             $userPermissions = $this->getUserPermissions();
             if (!$userPermissions || !$userPermissions->CanDelete) {
-                throw new \Exception('You do not have permission to delete items.');
+                return redirect()->back()->with('error', 'You do not have permission to delete items.');
             }
 
-            // Perform soft delete
-            $item->update([
-                'IsDeleted' => true,
-                'DeletedById' => Auth::id(),
-                'DateDeleted' => now()
-            ]);
-
+            DB::beginTransaction();
+            
+            // Find the item
+            $item = Item::findOrFail($id);
+            
+            // Check for dependencies in the correct table
+            // Instead of checking 'order_items', check if item is used in POS orders
+            $hasOrders = false;
+            
+            // Check if we have the pos_order_items table
+            try {
+                $hasOrders = DB::table('pos_order_items')
+                    ->where('menu_item_id', $id)
+                    ->exists();
+            } catch (\Exception $e) {
+                // Table might not exist, log it but continue
+                Log::warning('Could not check pos_order_items table: ' . $e->getMessage());
+            }
+            
+            // If the first check didn't work, try another possible table structure
+            if (!$hasOrders) {
+                try {
+                    $hasOrders = DB::table('menu_item_order')
+                        ->where('menu_item_id', $id)
+                        ->exists();
+                } catch (\Exception $e) {
+                    // Table might not exist, log it but continue
+                    Log::warning('Could not check menu_item_order table: ' . $e->getMessage());
+                }
+            }
+            
+            // If neither table exists, just do a soft delete to be safe
+            if ($hasOrders) {
+                // Soft delete if used in orders
+                $item->update([
+                    'IsDeleted' => true,
+                    'DeletedById' => Auth::id(),
+                    'DateDeleted' => now()
+                ]);
+            } else {
+                // Just do soft delete for safety
+                $item->update([
+                    'IsDeleted' => true,
+                    'DeletedById' => Auth::id(),
+                    'DateDeleted' => now()
+                ]);
+            }
+            
             DB::commit();
+            
             return redirect()->route('items.index')
-                ->with('success', 'Item moved to trash successfully');
-
+                ->with('success', 'Item deleted successfully.');
+            
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error deleting item:', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return back()->with('error', 'Error deleting item: ' . $e->getMessage());
+            Log::error('Error in item delete: ' . $e->getMessage());
+            
+            return redirect()->route('items.index')
+                ->with('error', 'Failed to delete item: ' . $e->getMessage());
         }
     }
 

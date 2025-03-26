@@ -104,6 +104,8 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
         <link href="{{ asset('css/app.css') }}" rel="stylesheet">
         @stack('styles')
+        <!-- Make sure SweetAlert2 is loaded globally -->
+        <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     </head>
     <body>
         @include('layouts.sidebar')
@@ -216,6 +218,78 @@
                     });
                 @endif
             });
+        </script>
+
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            // Set up CSRF token for all AJAX requests
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                }
+            });
+            
+            // Global delete function that can be used in all modules
+            function deleteResource(url, resourceName, redirectUrl = null) {
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: `Do you want to delete ${resourceName}? This action cannot be undone.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Show loading state
+                        Swal.fire({
+                            title: 'Deleting...',
+                            text: 'Please wait',
+                            allowOutsideClick: false,
+                            showConfirmButton: false,
+                            willOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                        
+                        $.ajax({
+                            url: url,
+                            type: 'POST',
+                            data: {
+                                _method: 'DELETE'
+                            },
+                            success: function(response) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted!',
+                                    text: response.message || `${resourceName} has been deleted.`,
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                }).then(() => {
+                                    if (redirectUrl) {
+                                        window.location.href = redirectUrl;
+                                    } else {
+                                        window.location.reload();
+                                    }
+                                });
+                            },
+                            error: function(xhr) {
+                                let errorMessage = 'An error occurred during the delete operation.';
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    errorMessage = xhr.responseJSON.message;
+                                }
+                                
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    text: errorMessage
+                                });
+                            }
+                        });
+                    }
+                });
+            }
         </script>
 
         @stack('scripts')

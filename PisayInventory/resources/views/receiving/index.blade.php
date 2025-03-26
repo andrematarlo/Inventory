@@ -101,7 +101,7 @@
                                     @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            onclick="deleteReceivingRecord('{{ $record->ReceivingID }}')"
+                                            onclick="deleteResource('{{ route('receiving.destroy', $record->ReceivingID) }}', 'Receiving Record #{{ $record->ReceivingID }}')"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
