@@ -220,7 +220,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('pos.deposit.index') }}" class="dropdown-item {{ request()->routeIs('pos.deposit.*') ? 'active' : '' }}">
+                        <a href="{{ route('pos.deposits.index') }}" class="dropdown-item {{ request()->routeIs('pos.deposits.*') ? 'active' : '' }}">
                             <i class="bi bi-wallet2"></i>
                             <span>Cash Deposit</span>
                         </a>
@@ -266,7 +266,7 @@
 }
 
 .sidebar.collapsed {
-    width: 25px !important;
+    width: 90px !important;
     background-color: #222222 !important;
 }
 
@@ -293,7 +293,7 @@
     text-align: center;
     font-size: 1rem;
     min-width: 18px;
-    color: #8ba8d9;
+    color: #ffffff;
 }
 
 .sidebar .nav-link span {
@@ -333,7 +333,7 @@
 
 /* Collapsed state */
 .sidebar.collapsed {
-    width: 25px !important;
+    width: 90px !important;
     background-color: #222222 !important;
 }
 
@@ -360,15 +360,15 @@
 }
 
 .sidebar.collapsed .nav-link {
-    padding: 0.75rem 0 !important;
+    padding: 0.85rem 0 !important;
     justify-content: center;
     width: 100%;
 }
 
 .sidebar.collapsed .nav-link i {
     margin: 0;
-    font-size: 0.8rem; /* Make icons smaller */
-    color: #6b9fff;
+    font-size: 1.3rem;
+    color: #ffffff;
 }
 
 .sidebar.collapsed .sidebar-toggle i {
@@ -382,15 +382,15 @@
 }
 
 .sidebar.collapsed ~ .main-content {
-    margin-left: 25px;
+    margin-left: 90px;
 }
 
 .sidebar.collapsed .nav-item.dropdown .dropdown-menu {
-    left: 25px !important;
+    left: 90px !important;
 }
 
 .main-content.sidebar-collapsed {
-    margin-left: 25px;
+    margin-left: 90px;
 }
 
 /* Hide the active indicator dot in very narrow sidebar */
@@ -400,7 +400,7 @@
 
 /* Adjust hover tooltip to work with very narrow sidebar */
 .sidebar.collapsed .nav-item:hover .nav-link::after {
-    left: 25px;
+    left: 90px;
     font-size: 0.8rem;
     padding: 4px 8px;
 }
@@ -432,7 +432,7 @@
 }
 
 .sidebar .dropdown-item i {
-    color: #6b9fff;
+    color: #ffffff;
     width: 16px;
     text-align: center;
     font-size: 0.9rem;
@@ -498,7 +498,7 @@
 /* Make submenus appear properly when collapsed */
 .sidebar.collapsed .collapse.show {
     position: absolute;
-    left: 25px;
+    left: 90px;
     top: 0;
     width: 180px;
     background-color: #222222;
