@@ -7,23 +7,32 @@ use Illuminate\Http\Request;
 
 class CheckRole
 {
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @param  string|null  ...$roles
+     * @return mixed
+     */
     public function handle(Request $request, Closure $next, ...$roles)
     {
+        // If the user doesn't have auth, redirect to login
         if (!$request->user()) {
-            return redirect('/login');
+            return redirect()->route('login');
         }
 
-        // Split comma-separated roles if they exist
-        $allowedRoles = [];
+        // Get the user's role (modify this according to how your roles are stored)
+        $userRole = $request->user()->role;
+        
+        // Check if the user has one of the required roles
         foreach ($roles as $role) {
-            $allowedRoles = array_merge($allowedRoles, explode(',', $role));
+            if ($userRole === $role) {
+                return $next($request);
+            }
         }
 
-        // Check if user has any of the allowed roles
-        if (in_array($request->user()->role, $allowedRoles)) {
-            return $next($request);
-        }
-
-        return redirect()->back()->with('error', 'Unauthorized access.');
+        // Redirect or abort if user doesn't have the required role
+        return redirect()->route('dashboard')->with('error', 'You do not have permission to access this area.');
     }
 } 

@@ -21,8 +21,7 @@ class CashDeposit extends Model
         'Amount',
         'BalanceBefore',
         'BalanceAfter',
-        'Notes',
-        'Status'
+        'Notes'
     ];
     
     protected $casts = [
@@ -33,10 +32,10 @@ class CashDeposit extends Model
     ];
     
     protected $dates = [
+        'TransactionDate',
         'created_at',
         'updated_at',
-        'deleted_at',
-        'TransactionDate'
+        'deleted_at'
     ];
     
     /**

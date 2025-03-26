@@ -28,7 +28,9 @@ use App\Http\Controllers\DepositController;
 use App\Http\Controllers\POS\OrderController;
 use App\Http\Controllers\POS\DepositController as POSDepositController;
 use App\Http\Controllers\POS\CashierController;
-use App\Http\Controllers\KioskController;
+use App\Http\Controllers\MenuItemController;
+use App\Models\MenuItem;
+use App\Models\Classification;
 
 // Add this at the top of your routes to debug
 Route::get('/debug/routes', function() {
@@ -183,57 +185,92 @@ Route::middleware('auth')->group(function () {
         Route::resource('modules', ModuleController::class);
 
         // Point of Sale Routes
-        Route::prefix('pos')->name('pos.')->middleware(['auth'])->group(function () {
-            // Student Kiosk (Students Only)
-            Route::middleware(['role:Students'])->group(function () {
-                Route::get('/kiosk', [KioskController::class, 'index'])->name('kiosk.index');
-                Route::post('/kiosk/order', [KioskController::class, 'store'])->name('kiosk.store');
-                Route::get('/kiosk/history', [KioskController::class, 'history'])->name('kiosk.history');
-            });
-
-            // Admin and Cashier Routes
-            Route::middleware(['role:Admin,Cashier'])->group(function () {
-                // Orders Resource Routes
-                Route::resource('orders', OrderController::class);
+        Route::prefix('pos')->name('pos.')->group(function () {
+            // Main POS routes
+            Route::get('/', [POSController::class, 'index'])->name('index');
+            Route::get('/create', [POSController::class, 'create'])->name('create');
+            Route::post('/store', [POSController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [POSController::class, 'show'])->name('show');
+            Route::match(['post', 'patch'], '/process/{order}', [POSController::class, 'process'])->name('process');
+            Route::match(['post', 'patch'], '/process-by-id/{id}', [POSController::class, 'processById'])->name('process.by.id');
+            Route::post('/cancel/{id}', [POSController::class, 'cancel'])->name('cancel');
+            Route::get('/order-details/{id}', [POSController::class, 'getOrderDetails'])->name('order-details');
+            Route::post('/add-menu-item', [POSController::class, 'addMenuItem'])->name('add-menu-item');
+            Route::get('/search-students', [POSController::class, 'searchStudents'])->name('search-students');
+            Route::get('/student-balance/{studentId}', [POSController::class, 'getStudentBalance'])->name('student-balance');
+            
+            // Orders routes
+            Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+            Route::get('/orders/create', function() {
+                $menuItems = MenuItem::where('IsDeleted', false)
+                    ->where('IsAvailable', true)
+                    ->with('classification')
+                    ->get();
                 
-                // Cashiering Routes
-                Route::get('/cashier', [CashierController::class, 'index'])->name('cashier.index');
-                Route::get('/cashier/create', [CashierController::class, 'create'])->name('cashier.create');
-                Route::get('/cashier/{order}', [CashierController::class, 'show'])->name('cashier.show');
+                $categories = Classification::all();
                 
-                // Cash Deposits Routes
-                Route::prefix('deposits')->name('deposits.')->group(function () {
-                    Route::get('/', [POSDepositController::class, 'index'])->name('index');
-                    Route::post('/', [POSDepositController::class, 'store'])->name('store');
-                    Route::get('/history/{student}', [POSDepositController::class, 'history'])->name('history');
-                    Route::get('/approve/{id}', [POSDepositController::class, 'approveDeposit'])->name('approve');
-                    Route::get('/reject/{id}', [POSDepositController::class, 'rejectDeposit'])->name('reject');
-                });
-
-                // Menu Items Routes
-                Route::prefix('menu-items')->name('menu-items.')->group(function () {
-                    Route::get('/', [POSController::class, 'menuItems'])->name('index');
-                    Route::get('/create', [POSController::class, 'createMenuItem'])->name('create');
-                    Route::post('/', [POSController::class, 'storeMenuItem'])->name('store');
-                    Route::get('/{id}/edit', [POSController::class, 'editMenuItem'])->name('edit');
-                    Route::put('/{id}', [POSController::class, 'updateMenuItem'])->name('update');
-                    Route::delete('/{id}', [POSController::class, 'deleteMenuItem'])->name('delete');
-                });
-
-                // Reports Routes
-                Route::prefix('reports')->name('reports.')->group(function () {
-                    Route::get('/', [POSController::class, 'reports'])->name('index');
-                    Route::get('/sales', [POSController::class, 'salesReport'])->name('sales');
-                    Route::get('/deposits', [POSController::class, 'depositsReport'])->name('deposits');
-                });
-
-                // Order Processing Routes
-                Route::post('/process/{order}', [POSController::class, 'process'])->name('process');
-                Route::post('/process-by-id/{id}', [POSController::class, 'processById'])->name('process.by.id');
-                Route::post('/cancel/{id}', [POSController::class, 'cancel'])->name('cancel');
-                Route::get('/order-details/{id}', [POSController::class, 'getOrderDetails'])->name('order-details');
-                Route::get('/student-balance/{studentId}', [POSController::class, 'getStudentBalance'])->name('student-balance');
+                return view('pos.create', compact('menuItems', 'categories'));
+            })->name('orders.create');
+            Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+            Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+            Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
+            Route::get('/orders/{id}/items', [OrderController::class, 'getItems'])->name('orders.items');
+            Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+            
+            // Cashier routes
+            Route::prefix('cashier')->name('cashier.')->group(function () {
+                Route::get('/', [CashierController::class, 'index'])->name('index');
+                Route::get('/create', [CashierController::class, 'create'])->name('create');
+                Route::get('/{order}', [CashierController::class, 'show'])->name('show');
             });
+            
+            // Cashiering routes
+            Route::get('/cashiering', [POSController::class, 'cashiering'])->name('cashiering');
+            Route::get('/orders/{id}/process-payment', [POSController::class, 'processPayment'])->name('process-payment');
+            Route::post('/orders/{id}/process-payment', [POSController::class, 'postProcessPayment'])->name('post-payment');
+            Route::get('/cancel-order/{id}', [POSController::class, 'cancelOrder'])->name('cancel-order');
+            Route::get('/orders/{id}/details', [OrderController::class, 'getDetails'])->name('order.details');
+            Route::get('/student-balance/{id}', [StudentController::class, 'getBalance'])->name('student.balance');
+            
+            // Add cashier routes
+            Route::get('/cashier', [POSController::class, 'cashiering'])->name('cashier.index');
+            
+            // Category filtering
+            Route::get('/filter-by-category/{categoryId?}', [POSController::class, 'filterByCategory'])->name('filter-by-category');
+            
+            // Reports
+            Route::get('/reports', [POSController::class, 'reports'])->name('reports');
+            Route::get('/reports/sales', [POSController::class, 'salesReport'])->name('reports.sales');
+            Route::get('/reports/deposits', [POSController::class, 'depositsReport'])->name('reports.deposits');
+            
+            // Reports grouped properly
+            Route::prefix('reports')->name('reports.')->group(function () {
+                Route::get('/', [POSController::class, 'reports'])->name('index');
+                Route::get('/sales', [POSController::class, 'salesReport'])->name('sales');
+                Route::get('/deposits', [POSController::class, 'depositsReport'])->name('deposits');
+            });
+            
+            // Deposits routes
+            Route::get('/deposits', [POSController::class, 'index'])->name('deposits.index');
+            Route::post('/deposits/store', [POSController::class, 'storeDeposit'])->name('deposits.store');
+            Route::post('/deposits/{id}/approve', [POSController::class, 'approveDeposit'])->name('deposits.approve');
+            Route::post('/deposits/{id}/reject', [POSController::class, 'rejectDeposit'])->name('deposits.reject');
+            
+            // Menu Items Management Routes
+            Route::get('/menu-items', [MenuItemController::class, 'index'])->name('menu-items.index');
+            Route::get('/menu-items/create', [MenuItemController::class, 'create'])->name('menu-items.create');
+            Route::post('/menu-items', [MenuItemController::class, 'store'])->name('menu-items.store');
+            Route::get('/menu-items/{id}/edit', [MenuItemController::class, 'edit'])->name('menu-items.edit');
+            Route::put('/menu-items/{id}', [MenuItemController::class, 'update'])->name('menu-items.update');
+            Route::delete('/menu-items/{id}', [MenuItemController::class, 'destroy'])->name('menu-items.delete');
+
+            // Add these routes for edit and delete functionality
+            Route::get('/orders/{id}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+            Route::put('/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
+            Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+
+            // New route for checking stock levels
+            Route::get('/check-stock/{id}', [POSController::class, 'checkStock'])->name('check-stock');
         });
 
 // Laboratory Management Routes
@@ -391,3 +428,5 @@ Route::get('/debug/laboratory/{id}', function($id) {
         ]);
     }
 })->where('id', '.*');
+
+Route::get('/pos/search-students', [POSController::class, 'searchStudents'])->name('pos.search-students');

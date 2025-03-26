@@ -182,12 +182,16 @@
 
         @if(Auth::check())
         <li class="nav-item">
+            <a href="{{ route('pos.orders.create') }}" class="nav-link text-white {{ request()->routeIs('pos.orders.create') ? 'active bg-primary' : '' }}">
+                <i class="bi bi-person-workspace"></i>
+                <span>Student Kiosk</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
             <a class="nav-link" data-bs-toggle="collapse" href="#posCollapse" role="button" aria-expanded="false" aria-controls="posCollapse">
                 <i class="bi bi-shop"></i>
-                <span class="nav-text">
-                    Point of Sale
-                    <i class="bi bi-chevron-down dropdown-arrow"></i>
-                </span>
+                <span class="nav-text">Point of Sale</span>
             </a>
             <div class="collapse" id="posCollapse">
                 <ul class="nav-content">
@@ -202,21 +206,16 @@
                     
                     @if(in_array(Auth::user()->role, ['Admin', 'Cashier']))
                     <li>
-                        <a href="{{ route('pos.orders.index') }}" class="dropdown-item {{ request()->routeIs('pos.orders.index') ? 'active' : '' }}">
+                        <a href="{{ route('pos.menu-items.index') }}" class="dropdown-item {{ request()->routeIs('pos.menu-items.*') ? 'active' : '' }}">
+                            <i class="bi bi-list-check"></i>
+                            <span>Manage Menu Items</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="{{ route('pos.orders.index') }}" class="dropdown-item {{ request()->routeIs('pos.orders.*') ? 'active' : '' }}">
                             <i class="bi bi-cart3"></i>
                             <span>Orders</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('pos.orders.create') }}" class="dropdown-item {{ request()->routeIs('pos.orders.create') ? 'active' : '' }}">
-                            <i class="bi bi-plus-circle"></i>
-                            <span>New Order</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('pos.cashier.index') }}" class="dropdown-item {{ request()->routeIs('pos.cashier.*') ? 'active' : '' }}">
-                            <i class="bi bi-cash-register"></i>
-                            <span>Cashiering</span>
                         </a>
                     </li>
                     <li>
@@ -266,7 +265,7 @@
 }
 
 .sidebar.collapsed {
-    width: 90px !important;
+    width: 25px !important;
     background-color: #222222 !important;
 }
 
@@ -293,7 +292,7 @@
     text-align: center;
     font-size: 1rem;
     min-width: 18px;
-    color: #ffffff;
+    color: #8ba8d9;
 }
 
 .sidebar .nav-link span {
@@ -333,7 +332,7 @@
 
 /* Collapsed state */
 .sidebar.collapsed {
-    width: 90px !important;
+    width: 25px !important;
     background-color: #222222 !important;
 }
 
@@ -360,15 +359,15 @@
 }
 
 .sidebar.collapsed .nav-link {
-    padding: 0.85rem 0 !important;
+    padding: 0.75rem 0 !important;
     justify-content: center;
     width: 100%;
 }
 
 .sidebar.collapsed .nav-link i {
     margin: 0;
-    font-size: 1.3rem;
-    color: #ffffff;
+    font-size: 0.8rem; /* Make icons smaller */
+    color: #6b9fff;
 }
 
 .sidebar.collapsed .sidebar-toggle i {
@@ -382,15 +381,15 @@
 }
 
 .sidebar.collapsed ~ .main-content {
-    margin-left: 90px;
+    margin-left: 25px;
 }
 
 .sidebar.collapsed .nav-item.dropdown .dropdown-menu {
-    left: 90px !important;
+    left: 25px !important;
 }
 
 .main-content.sidebar-collapsed {
-    margin-left: 90px;
+    margin-left: 25px;
 }
 
 /* Hide the active indicator dot in very narrow sidebar */
@@ -400,7 +399,7 @@
 
 /* Adjust hover tooltip to work with very narrow sidebar */
 .sidebar.collapsed .nav-item:hover .nav-link::after {
-    left: 90px;
+    left: 25px;
     font-size: 0.8rem;
     padding: 4px 8px;
 }
@@ -432,7 +431,7 @@
 }
 
 .sidebar .dropdown-item i {
-    color: #ffffff;
+    color: #6b9fff;
     width: 16px;
     text-align: center;
     font-size: 0.9rem;
@@ -498,7 +497,7 @@
 /* Make submenus appear properly when collapsed */
 .sidebar.collapsed .collapse.show {
     position: absolute;
-    left: 90px;
+    left: 25px;
     top: 0;
     width: 180px;
     background-color: #222222;
