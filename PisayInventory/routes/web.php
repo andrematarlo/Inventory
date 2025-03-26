@@ -250,22 +250,11 @@ Route::middleware('auth')->group(function () {
                 Route::get('/deposits', [POSController::class, 'depositsReport'])->name('deposits');
             });
             
-            // Deposits Routes
-            Route::get('/deposits', [POSDepositController::class, 'index'])->name('deposits.index');
-            Route::post('/deposits', [POSDepositController::class, 'store'])->name('deposits.store');
-            Route::get('/deposits/history/{student}', [POSDepositController::class, 'history'])->name('deposits.history');
-            Route::get('/students/select2', [POSDepositController::class, 'studentSelect2'])->name('students.select2');
-            
-            // Add missing routes for deposits functionality
-            Route::get('/deposits/approve/{id}', [POSDepositController::class, 'approveDeposit'])->name('deposits.approve');
-            Route::get('/deposits/reject/{id}', [POSDepositController::class, 'rejectDeposit'])->name('deposits.reject');
-            
-            // Deposits Routes grouped
-            Route::prefix('deposit')->name('deposit.')->group(function () {
-                Route::get('/', [POSDepositController::class, 'index'])->name('index');
-                Route::post('/', [POSDepositController::class, 'store'])->name('store');
-                Route::get('/history/{student}', [POSDepositController::class, 'history'])->name('history');
-            });
+            // Deposits routes
+            Route::get('/deposits', [POSController::class, 'index'])->name('deposits.index');
+            Route::post('/deposits/store', [POSController::class, 'storeDeposit'])->name('deposits.store');
+            Route::post('/deposits/{id}/approve', [POSController::class, 'approveDeposit'])->name('deposits.approve');
+            Route::post('/deposits/{id}/reject', [POSController::class, 'rejectDeposit'])->name('deposits.reject');
             
             // Menu Items Management Routes
             Route::get('/menu-items', [MenuItemController::class, 'index'])->name('menu-items.index');
@@ -439,3 +428,7 @@ Route::get('/debug/laboratory/{id}', function($id) {
         ]);
     }
 })->where('id', '.*');
+
+Route::get('/pos/search-students', [POSController::class, 'searchStudents'])->name('pos.search-students');
+
+Route::post('/pos/deposits/store', [POSController::class, 'storeDeposit'])->name('pos.deposits.store');

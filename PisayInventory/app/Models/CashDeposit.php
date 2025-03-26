@@ -21,8 +21,7 @@ class CashDeposit extends Model
         'Amount',
         'BalanceBefore',
         'BalanceAfter',
-        'Notes',
-        'Status'
+        'Notes'
     ];
     
     protected $casts = [
@@ -33,10 +32,10 @@ class CashDeposit extends Model
     ];
     
     protected $dates = [
+        'TransactionDate',
         'created_at',
         'updated_at',
-        'deleted_at',
-        'TransactionDate'
+        'deleted_at'
     ];
     
     /**
@@ -44,6 +43,6 @@ class CashDeposit extends Model
      */
     public function student()
     {
-        return $this->belongsTo(Student::class, 'student_id');
+        return $this->belongsTo(Student::class, 'student_id', 'student_id');
     }
 } 

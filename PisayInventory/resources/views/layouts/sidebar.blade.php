@@ -219,7 +219,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('pos.deposit.index') }}" class="dropdown-item {{ request()->routeIs('pos.deposit.*') ? 'active' : '' }}">
+                        <a href="{{ route('pos.deposits.index') }}" class="dropdown-item {{ request()->routeIs('pos.deposits.*') ? 'active' : '' }}">
                             <i class="bi bi-wallet2"></i>
                             <span>Cash Deposit</span>
                         </a>

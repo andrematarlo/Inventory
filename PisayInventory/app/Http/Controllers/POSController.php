@@ -23,6 +23,52 @@ class POSController extends Controller
 {
     public function index(Request $request)
     {
+        // For deposits view
+        if ($request->route()->getName() === 'pos.deposits.index') {
+            $today = now()->startOfDay();
+            
+            // Today's deposits (no status check since there's no Status column)
+            $todayDeposits = CashDeposit::where('TransactionDate', '>=', $today)
+                ->where('TransactionType', 'DEPOSIT')
+                ->whereNull('deleted_at')
+                ->sum('Amount');
+            
+            $todayDepositCount = CashDeposit::where('TransactionDate', '>=', $today)
+                ->where('TransactionType', 'DEPOSIT')
+                ->whereNull('deleted_at')
+                ->count();
+            
+            // All active deposits (assuming all non-deleted deposits are active)
+            $activeDeposits = CashDeposit::where('TransactionType', 'DEPOSIT')
+                ->whereNull('deleted_at')
+                ->sum('Amount');
+            
+            $activeDepositCount = CashDeposit::where('TransactionType', 'DEPOSIT')
+                ->whereNull('deleted_at')
+                ->count();
+            
+            // Since there's no Status column, we'll set these to 0
+            $pendingDeposits = 0;
+            $pendingDepositCount = 0;
+            
+            // Get all deposits with student information
+            $deposits = CashDeposit::with('student')
+                ->whereNull('deleted_at')
+                ->latest('TransactionDate')
+                ->paginate(15);
+            
+            return view('pos.deposits.index', compact(
+                'deposits',
+                'todayDeposits',
+                'todayDepositCount',
+                'activeDeposits',
+                'activeDepositCount',
+                'pendingDeposits',
+                'pendingDepositCount'
+            ));
+        }
+
+        // For orders view (existing functionality)
         $query = POSOrder::with(['student', 'items'])
             ->orderBy('created_at', 'desc');
             
@@ -370,7 +416,7 @@ class POSController extends Controller
     {
         $balance = CashDeposit::where('student_id', $studentId)
             ->whereNull('deleted_at')
-            ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
+            ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END'));
 
         return response()->json(['balance' => $balance]);
     }
@@ -455,69 +501,66 @@ class POSController extends Controller
     // Handle deposit creation
     public function storeDeposit(Request $request)
     {
-        $request->validate([
-            'student_id' => 'required|string|exists:students,student_id',
-            'amount' => 'required|numeric|min:0.01',
-            'notes' => 'nullable|string|max:255',
-        ]);
-
         try {
             DB::beginTransaction();
-            
-            // Check if student exists
-            $student = DB::table('students')
-                ->where('student_id', $request->student_id)
-                ->first();
-                
-            if (!$student) {
-                return redirect()->back()->with('error', 'Student not found with ID: ' . $request->student_id);
-            }
-            
-            // Get current balance
-            $currentBalance = DB::table('student_deposits')
-                ->where('student_id', $request->student_id)
-                ->whereRaw('LOWER(status) = ?', ['active'])
-                ->orderBy('created_at', 'desc')
-                ->value('balance_after') ?? 0;
-                
-            // For students, create a pending deposit
-            $isStudent = Auth::check() && Auth::user()->role === 'Student';
-            $status = $isStudent ? 'pending' : 'active';
-            
-            // If it's an admin or cashier creating the deposit, it's immediately active
-            // and the balance is updated
-            $newBalance = $status === 'active' ? $currentBalance + $request->amount : $currentBalance;
-            
-            // Create deposit record
-            DB::table('student_deposits')->insert([
-                'student_id' => $request->student_id,
-                'transaction_date' => now(),
-                'reference_number' => 'DEP-' . time(),
-                'transaction_type' => 'Deposit',
-                'amount' => $request->amount,
-                'balance_before' => $currentBalance,
-                'balance_after' => $newBalance,
-                'notes' => $request->notes,
-                'created_by' => Auth::id(),
-                'created_at' => now(),
-                'updated_at' => now(),
-                'status' => $status
+
+            $request->validate([
+                'student_id' => 'required|string|exists:students,student_id',
+                'amount' => 'required|numeric|min:0.01',
+                'notes' => 'nullable|string|max:255',
             ]);
-            
+
+            // Get current balance
+            $currentBalance = CashDeposit::where('student_id', $request->student_id)
+                ->whereNull('deleted_at')
+                ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END'));
+
+            // Generate reference number
+            $referenceNumber = 'DEP-' . date('Ymd') . '-' . str_pad(
+                CashDeposit::whereDate('TransactionDate', today())->count() + 1, 
+                4, 
+                '0', 
+                STR_PAD_LEFT
+            );
+
+            // Create deposit record
+            $deposit = CashDeposit::create([
+                'student_id' => $request->student_id,
+                'TransactionDate' => now(),
+                'ReferenceNumber' => $referenceNumber,
+                'TransactionType' => 'DEPOSIT',
+                'Amount' => $request->amount,
+                'BalanceBefore' => $currentBalance,
+                'BalanceAfter' => $currentBalance + $request->amount,
+                'Notes' => $request->notes,
+            ]);
+
             DB::commit();
-            
-            if ($status === 'pending') {
-                return redirect()->route('pos.cashdeposit')
-                    ->with('success', 'Deposit request of ₱' . number_format($request->amount, 2) . ' has been submitted and is pending approval.');
-            } else {
-                return redirect()->route('pos.cashdeposit')
-                    ->with('success', 'Deposit of ₱' . number_format($request->amount, 2) . ' was successfully added for student ' . $student->first_name . ' ' . $student->last_name);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Deposit added successfully!',
+                    'deposit' => $deposit
+                ]);
             }
-                
+
+            return redirect()->route('pos.deposits.index')
+                ->with('success', 'Deposit added successfully!');
+
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to add deposit: ' . $e->getMessage()
+                ], 500);
+            }
+
             return redirect()->back()
-                ->with('error', 'Failed to process deposit: ' . $e->getMessage());
+                ->with('error', 'Failed to add deposit: ' . $e->getMessage())
+                ->withInput();
         }
     }
     
@@ -669,6 +712,17 @@ class POSController extends Controller
                 'amount_tendered' => 'required_if:payment_type,cash|numeric|min:' . $order->TotalAmount,
             ]);
 
+            // Get current balance if using deposit
+            if ($validated['payment_type'] === 'deposit' && $order->student_id) {
+                $currentBalance = CashDeposit::where('student_id', $order->student_id)
+                    ->whereNull('deleted_at')
+                    ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END'));
+
+                if ($currentBalance < $order->TotalAmount) {
+                    throw new \Exception('Insufficient student deposit balance');
+                }
+            }
+
             $order->PaymentMethod = $validated['payment_type'];
             $order->Status = 'completed';
             $order->ProcessedAt = now();
@@ -677,23 +731,16 @@ class POSController extends Controller
                 $order->AmountTendered = $validated['amount_tendered'];
                 $order->ChangeAmount = $validated['amount_tendered'] - $order->TotalAmount;
             } elseif ($validated['payment_type'] === 'deposit' && $order->student_id) {
-                // Handle deposit payment
-                $student = Student::findOrFail($order->student_id);
-                $balance = CashDeposit::where('student_id', $order->student_id)
-                    ->whereNull('deleted_at')
-                    ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
-
-                if ($balance < $order->TotalAmount) {
-                    throw new \Exception('Insufficient student deposit balance');
-                }
-
                 // Create withdrawal transaction
                 CashDeposit::create([
                     'student_id' => $order->student_id,
-                    'Amount' => $order->TotalAmount,
+                    'TransactionDate' => now(),
+                    'ReferenceNumber' => "PAY-{$order->OrderNumber}",
                     'TransactionType' => 'WITHDRAWAL',
-                    'Description' => "Payment for Order #{$order->OrderNumber}",
-                    'ProcessedBy' => auth()->id()
+                    'Amount' => $order->TotalAmount,
+                    'BalanceBefore' => $currentBalance,
+                    'BalanceAfter' => $currentBalance - $order->TotalAmount,
+                    'Notes' => "Payment for Order #{$order->OrderNumber}"
                 ]);
             }
 
@@ -941,24 +988,20 @@ class POSController extends Controller
     // Search students for Select2 dropdown
     public function searchStudents(Request $request)
     {
-        $term = $request->get('term');
+        $term = $request->input('term');
         
         $students = DB::table('students')
             ->where('status', 'Active')
             ->where(function($query) use ($term) {
                 $query->where('student_id', 'like', "%{$term}%")
-                    ->orWhere(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$term}%");
+                      ->orWhere(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$term}%");
             })
-            ->select(
-                'student_id as id',
-                DB::raw("CONCAT(student_id, ' - ', first_name, ' ', last_name) as text")
-            )
+            ->select('student_id', 'first_name', 'last_name')
             ->limit(10)
             ->get();
 
         return response()->json([
-            'results' => $students,
-            'pagination' => ['more' => false]
+            'students' => $students
         ]);
     }
 
