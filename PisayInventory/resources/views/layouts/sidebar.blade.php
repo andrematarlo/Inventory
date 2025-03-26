@@ -24,18 +24,26 @@
             $studentPermissions = $controller->getUserPermissions('Students');
             $laboratoryPermissions = $controller->getUserPermissions('Laboratory Management');
             $posPermissions = $controller->getUserPermissions('Point of Sale');
+            // Check for kiosk permissions specifically
+            $kioskPermissions = $controller->getUserPermissions('Kiosk');
         }
         
         // Check permissions for each module
         $isAdmin = Auth::check() && Auth::user()->role === 'Admin';
         $isStudent = Auth::check() && Auth::user()->role === 'Students';
+        $isCashier = Auth::check() && Auth::user()->role === 'Cashier';
+        
         $hasHRAccess = $hrPermissions && $hrPermissions->CanView;
         $hasPurchasingAccess = $purchasingPermissions && $purchasingPermissions->CanView;
         $hasReceivingAccess = $receivingPermissions && $receivingPermissions->CanView;
         $hasInventoryAccess = $inventoryPermissions && $inventoryPermissions->CanView;
-        $hasStudentAccess = $studentPermissions && $studentPermissions->CanView || $isAdmin;
-        $hasLaboratoryAccess = $laboratoryPermissions && $laboratoryPermissions->CanView || $isAdmin;
-        $hasPOSAccess = $posPermissions && $posPermissions->CanView || $isAdmin || $isStudent;
+        $hasStudentAccess = ($studentPermissions && $studentPermissions->CanView) || $isAdmin;
+        $hasLaboratoryAccess = ($laboratoryPermissions && $laboratoryPermissions->CanView) || $isAdmin;
+        $hasPOSAccess = ($posPermissions && $posPermissions->CanView) || $isAdmin || $isCashier;
+        $hasKioskAccess = ($kioskPermissions && $kioskPermissions->CanView) || $isAdmin || $isStudent;
+        
+        $canManagePOS = ($posPermissions && $posPermissions->CanAdd) || $isAdmin || $isCashier;
+        $canViewReports = ($posPermissions && $posPermissions->CanView) || $isAdmin;
     @endphp
 
     <ul class="nav flex-column py-2">
@@ -156,6 +164,7 @@
                 <span>Laboratory Management</span>
             </a>
             <ul class="dropdown-menu" aria-labelledby="laboratoryDropdown">
+                @if($hasLaboratoryAccess && !$isStudent)
                 <li>
                     <a class="dropdown-item" href="{{ route('laboratories.index') }}">
                         <i class="bi bi-building"></i> Laboratories
@@ -166,6 +175,7 @@
                         <i class="bi bi-tools"></i> Equipment
                     </a>
                 </li>
+                @endif
                 <li>
                     <a class="dropdown-item" href="{{ route('laboratory.reservations') }}">
                         <i class="bi bi-calendar-check"></i> Reservations
@@ -180,14 +190,16 @@
         </li>
         @endif
 
-        @if(Auth::check())
+        @if($hasKioskAccess)
         <li class="nav-item">
             <a href="{{ route('pos.orders.create') }}" class="nav-link text-white {{ request()->routeIs('pos.orders.create') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-person-workspace"></i>
                 <span>Student Kiosk</span>
             </a>
         </li>
+        @endif
 
+        @if($hasPOSAccess)
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="collapse" href="#posCollapse" role="button" aria-expanded="false" aria-controls="posCollapse">
                 <i class="bi bi-shop"></i>
@@ -195,16 +207,16 @@
             </a>
             <div class="collapse" id="posCollapse">
                 <ul class="nav-content">
-                    @if(Auth::user()->role === 'Students')
+                    @if($isStudent)
                     <li>
-                        <a href="{{ route('pos.kiosk.index') }}" class="dropdown-item {{ request()->routeIs('pos.kiosk.*') ? 'active' : '' }}">
+                        <a href="{{ route('pos.orders.create') }}" class="dropdown-item {{ request()->routeIs('pos.orders.create') ? 'active' : '' }}">
                             <i class="bi bi-person-workspace"></i>
                             <span>Student Kiosk</span>
                         </a>
                     </li>
                     @endif
                     
-                    @if(in_array(Auth::user()->role, ['Admin', 'Cashier']))
+                    @if($canManagePOS)
                     <li>
                         <a href="{{ route('pos.menu-items.index') }}" class="dropdown-item {{ request()->routeIs('pos.menu-items.*') ? 'active' : '' }}">
                             <i class="bi bi-list-check"></i>
@@ -224,6 +236,9 @@
                             <span>Cash Deposit</span>
                         </a>
                     </li>
+                    @endif
+                    
+                    @if($canViewReports)
                     <li>
                         <a href="{{ route('pos.reports.index') }}" class="dropdown-item {{ request()->routeIs('pos.reports.*') ? 'active' : '' }}">
                             <i class="bi bi-file-earmark-text"></i>
