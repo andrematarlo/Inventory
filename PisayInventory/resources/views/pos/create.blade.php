@@ -130,7 +130,9 @@
                 <div class="menu-items-grid">
                     <div class="row g-4">
                         @foreach($menuItems as $item)
-                            <div class="col-md-4 menu-item" data-category="{{ $item->ClassificationId }}">
+                            <div class="col-md-4 menu-item {{ $item->StocksAvailable <= 0 ? 'out-of-stock' : '' }} {{ $item->StocksAvailable <= 5 ? 'low-stock' : '' }}" 
+                                 data-category="{{ $item->ClassificationId }}"
+                                 data-item-id="{{ $item->MenuItemID }}">
                                 <div class="card h-100 border-0 shadow-sm menu-item-card">
                                     @if($item->image_path && Storage::disk('public')->exists($item->image_path))
                                         <img src="{{ asset('storage/' . $item->image_path) }}" 
@@ -150,7 +152,7 @@
                                         <div class="mt-auto">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
                                                 <span class="fw-bold text-primary">₱{{ number_format($item->Price, 2) }}</span>
-                                                <span class="badge bg-{{ $item->StocksAvailable > 0 ? 'success' : 'danger' }}">
+                                                <span class="badge stock-badge bg-{{ $item->StocksAvailable > 5 ? 'success' : ($item->StocksAvailable > 0 ? 'warning' : 'danger') }}">
                                                     {{ $item->StocksAvailable > 0 ? 'In Stock: ' . $item->StocksAvailable : 'Out of Stock' }}
                                                 </span>
                                             </div>
@@ -325,6 +327,14 @@
 .menu-item-card:hover .btn-primary {
     opacity: 0.9;
 }
+.menu-item.out-of-stock {
+    display: none; /* Hide out of stock items */
+}
+
+/* Optional: Add a visual indicator for low stock items */
+.menu-item.low-stock .card {
+    opacity: 0.7;
+}
 </style>
 @endpush
 
@@ -402,10 +412,20 @@ $(document).ready(function() {
         
         const category = $(this).data('category');
         if (category === 'all') {
-            $('.menu-item').show();
+            $('.menu-item').each(function() {
+                // Only show items that are not out of stock
+                if (!$(this).hasClass('out-of-stock')) {
+                    $(this).show();
+                }
+            });
         } else {
             $('.menu-item').hide();
-            $('.menu-item[data-category="' + category + '"]').show();
+            $(`.menu-item[data-category="${category}"]`).each(function() {
+                // Only show items that are not out of stock
+                if (!$(this).hasClass('out-of-stock')) {
+                    $(this).show();
+                }
+            });
         }
     });
 
@@ -439,20 +459,24 @@ $(document).ready(function() {
                 existingItem.find('.quantity-input').val(currentQty + 1).trigger('change');
             }
         } else {
-            // Add new item to cart
+            // Add new item to cart with subtotal display
             const cartItem = `
                 <div class="cart-item p-3 border-bottom" data-item-id="${itemId}" data-price="${price.toFixed(2)}">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <h6 class="mb-1">${itemName}</h6>
-                            <span class="text-primary">₱${price.toFixed(2)}</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-primary">₱${price.toFixed(2)}</span>
+                                <span class="text-muted">×</span>
+                                <span class="quantity-display">1</span>
+                            </div>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-danger remove-item">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
                     <div class="mt-2">
-                        <div class="input-group quantity-controls">
+                        <div class="input-group quantity-controls mb-2">
                             <button type="button" class="btn btn-outline-secondary quantity-decrease">
                                 <i class="bi bi-dash"></i>
                             </button>
@@ -460,6 +484,10 @@ $(document).ready(function() {
                             <button type="button" class="btn btn-outline-secondary quantity-increase">
                                 <i class="bi bi-plus"></i>
                             </button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Subtotal:</span>
+                            <span class="fw-bold item-subtotal">₱${price.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
@@ -507,8 +535,18 @@ $(document).ready(function() {
         const cartItem = $(this).closest('.cart-item');
         const quantity = parseInt($(this).val());
         const price = parseFloat(cartItem.data('price'));
+        const subtotal = price * quantity;
+        
+        // Update the quantity display
+        cartItem.find('.quantity-display').text(quantity);
+        
+        // Update the subtotal display
+        cartItem.find('.item-subtotal').text(`₱${subtotal.toFixed(2)}`);
+        
+        // Update hidden inputs
         cartItem.find('input[name="quantities[]"]').val(quantity);
-        cartItem.find('input[name="amounts[]"]').val((price * quantity).toFixed(2));
+        cartItem.find('input[name="amounts[]"]').val(subtotal.toFixed(2));
+        
         updateTotals();
     });
 
@@ -541,6 +579,11 @@ $(document).ready(function() {
 
         animateNumber($('#subtotal'), subtotal);
         animateNumber($('#total'), total);
+        
+        // Also update any quick-cash buttons that need the total
+        if ($('.quick-cash[data-amount="exact"]').length) {
+            $('.quick-cash[data-amount="exact"]').data('amount', total.toFixed(2));
+        }
     }
 
     function animateNumber(element, value) {
@@ -676,6 +719,9 @@ $(document).ready(function() {
             
             $('#cartData').append(`<input type="hidden" name="amount_tendered" value="${cashAmount}">`);
             $('#cartData').append(`<input type="hidden" name="change_amount" value="${changeAmount}">`);
+            
+            // Store the amount in session storage for the payment page
+            sessionStorage.setItem('lastAmountTendered', cashAmount);
         }
 
         // If student is selected, add student_id
@@ -714,7 +760,39 @@ $(document).ready(function() {
                     contentType: false,
                     success: function(response) {
                         if (response.success) {
-                            // Prepare success message content
+                            // Update stock levels immediately for ordered items
+                            const cartItems = JSON.parse($('#cartData input[name="cart_items"]').val());
+                            cartItems.forEach(item => {
+                                const menuItem = $(`.menu-item[data-item-id="${item.id}"]`);
+                                const stockBadge = menuItem.find('.stock-badge');
+                                const addButton = menuItem.find('.add-to-cart');
+                                
+                                // Calculate new stock level
+                                const newStock = parseInt(addButton.data('item-stock')) - item.quantity;
+                                
+                                // Update stock display
+                                if (newStock <= 0) {
+                                    stockBadge.removeClass('bg-success bg-warning').addClass('bg-danger')
+                                        .text('Out of Stock');
+                                    addButton.prop('disabled', true);
+                                    menuItem.addClass('out-of-stock').removeClass('low-stock');
+                                } else if (newStock <= 5) {
+                                    stockBadge.removeClass('bg-success bg-danger').addClass('bg-warning')
+                                        .text(`Low Stock: ${newStock}`);
+                                    addButton.prop('disabled', false);
+                                    menuItem.removeClass('out-of-stock').addClass('low-stock');
+                                } else {
+                                    stockBadge.removeClass('bg-warning bg-danger').addClass('bg-success')
+                                        .text(`In Stock: ${newStock}`);
+                                    addButton.prop('disabled', false);
+                                    menuItem.removeClass('out-of-stock low-stock');
+                                }
+                                
+                                // Update data attribute
+                                addButton.data('item-stock', newStock);
+                            });
+
+                            // Replace the success message content section with this simplified version
                             let successContent = `<div class="text-center">
                                 <h6 class="mb-3">Order #${response.order_number || ''} completed</h6>
                                 <p class="mb-2">Total: ₱${total.toFixed(2)}</p>`;
@@ -751,6 +829,12 @@ $(document).ready(function() {
                                 $('#cashAmount').val('');
                                 $('#changeAmount').val('');
                                 $('#notes').val('');
+                                
+                                // Update category display if needed
+                                const currentCategory = $('.category-btn.active').data('category');
+                                if (currentCategory && currentCategory !== 'all') {
+                                    $('.category-btn.active').trigger('click');
+                                }
                             });
                         } else {
                             Swal.fire({
@@ -819,6 +903,137 @@ $(document).ready(function() {
     
     // Show cash details by default (since cash is the default payment method)
     $('#cashPaymentDetails').show();
+
+    // Function to check stock levels
+    function checkStockLevels() {
+        $('.menu-item').each(function() {
+            const menuItem = $(this);
+            const itemId = menuItem.data('item-id');
+            
+            $.get(`{{ url('pos/check-stock') }}/${itemId}`)
+                .done(function(response) {
+                    if (response.success) {
+                        const stock = response.stock;
+                        const stockBadge = menuItem.find('.stock-badge');
+                        const addButton = menuItem.find('.add-to-cart');
+                        
+                        // Update stock display
+                        if (stock <= 0) {
+                            stockBadge.removeClass('bg-success bg-warning').addClass('bg-danger')
+                                .text('Out of Stock');
+                            addButton.prop('disabled', true);
+                            menuItem.addClass('out-of-stock').removeClass('low-stock');
+                        } else if (stock <= 5) {
+                            stockBadge.removeClass('bg-success bg-danger').addClass('bg-warning')
+                                .text(`Low Stock: ${stock}`);
+                            addButton.prop('disabled', false);
+                            menuItem.removeClass('out-of-stock').addClass('low-stock');
+                        } else {
+                            stockBadge.removeClass('bg-warning bg-danger').addClass('bg-success')
+                                .text(`In Stock: ${stock}`);
+                            addButton.prop('disabled', false);
+                            menuItem.removeClass('out-of-stock low-stock');
+                        }
+                        
+                        // Update data attribute for stock checking
+                        addButton.data('item-stock', stock);
+                    }
+                });
+        });
+    }
+
+    // Check stock levels every 30 seconds
+    setInterval(checkStockLevels, 30000);
+
+    // Modify the add-to-cart click handler to check stock before adding
+    $('.add-to-cart').click(function() {
+        const button = $(this);
+        const itemId = button.data('item-id');
+        
+        // Check stock before adding
+        $.get(`{{ url('pos/check-stock') }}/${itemId}`)
+            .done(function(response) {
+                if (response.success) {
+                    const currentStock = response.stock;
+                    const cartItem = $(`.cart-item[data-item-id="${itemId}"]`);
+                    const currentQty = cartItem.length ? parseInt(cartItem.find('.quantity-input').val()) : 0;
+                    
+                    if (currentStock <= 0) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Out of Stock',
+                            text: 'This item is currently out of stock.'
+                        });
+                        return;
+                    }
+                    
+                    if (currentQty >= currentStock) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Stock Limit Reached',
+                            text: `Only ${currentStock} items available in stock.`
+                        });
+                        return;
+                    }
+                    
+                    // Update the button's stock data
+                    button.data('item-stock', currentStock);
+                    
+                    // Proceed with adding to cart (your existing add-to-cart logic)
+                    const itemName = button.data('item-name');
+                    const price = parseFloat(button.data('item-price'));
+                    
+                    // Your existing add-to-cart code here...
+                    // Make sure to keep the existing cart addition logic
+                }
+            });
+    });
+
+    // Modify the quantity increase handler to check stock
+    $(document).on('click', '.quantity-increase', function() {
+        const input = $(this).siblings('.quantity-input');
+        const currentVal = parseInt(input.val());
+        const itemId = $(this).closest('.cart-item').data('item-id');
+        
+        $.get(`{{ url('pos/check-stock') }}/${itemId}`)
+            .done(function(response) {
+                if (response.success) {
+                    const availableStock = response.stock;
+                    if (currentVal < availableStock) {
+                        input.val(currentVal + 1).trigger('change');
+                    } else {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Stock Limit Reached',
+                            text: `Only ${availableStock} items available in stock.`
+                        });
+                    }
+                }
+            });
+    });
+
+    // Modify the quantity input change handler to validate against stock
+    $(document).on('change', '.quantity-input', function() {
+        const input = $(this);
+        const itemId = input.closest('.cart-item').data('item-id');
+        const newValue = parseInt(input.val());
+        
+        $.get(`{{ url('pos/check-stock') }}/${itemId}`)
+            .done(function(response) {
+                if (response.success) {
+                    const availableStock = response.stock;
+                    if (newValue > availableStock) {
+                        input.val(availableStock);
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Stock Limit Reached',
+                            text: `Only ${availableStock} items available in stock.`
+                        });
+                    }
+                    input.trigger('change'); // Trigger update of subtotals
+                }
+            });
+    });
 });
 </script>
 @endpush

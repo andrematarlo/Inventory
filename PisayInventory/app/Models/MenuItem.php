@@ -156,4 +156,9 @@ class MenuItem extends Model
     {
         $this->increment('StocksAvailable', $quantity);
     }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class, 'menu_item_id', 'MenuItemID');
+    }
 } 

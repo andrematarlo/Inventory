@@ -8,31 +8,77 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\Classification;
 use Auth;
+use App\Models\OrderItem;
 
 class OrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::with(['items', 'student'])
-                      ->orderBy('created_at', 'desc')
-                      ->paginate(15);
+        $orders = Order::with(['items', 'customer'])
+            ->withCount('items')
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
         return view('pos.orders.index', compact('orders'));
+    }
+
+    public function show($id)
+    {
+        $order = Order::with(['items.menuItem', 'customer'])
+            ->findOrFail($id);
+            
+        return view('pos.orders.show', compact('order'));
+    }
+
+    public function getItems($id)
+    {
+        try {
+            $order = Order::with('items')->findOrFail($id);
+            return view('pos.orders.partials.items', compact('order'));
+        } catch (\Exception $e) {
+            return response()->view('pos.orders.partials.items', [
+                'error' => 'Error loading order items'
+            ], 500);
+        }
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        try {
+            $order = Order::findOrFail($id);
+            $order->Status = $request->status;
+            $order->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order status updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating order status'
+            ], 500);
+        }
+    }
+
+    public function print($id)
+    {
+        $order = Order::with(['items.menuItem', 'customer'])
+            ->findOrFail($id);
+            
+        return view('pos.orders.print', compact('order'));
     }
 
     public function create()
     {
-        $menuItems = MenuItem::where('IsDeleted', 0)
-                           ->where('StocksAvailable', '>', 0)
-                           ->get();
-        $categories = Classification::where('IsDeleted', 0)->get();
+        $menuItems = MenuItem::where('IsDeleted', false)
+            ->where('IsAvailable', true)
+            ->with('classification')
+            ->get();
         
-        // Get student balance if authenticated user is a student
-        $studentBalance = 0;
-        if (Auth::check() && Auth::user()->role === 'Students') {
-            $studentBalance = Auth::user()->getBalance();
-        }
+        $categories = Classification::all();
         
-        return view('pos.orders.create', compact('menuItems', 'categories', 'studentBalance'));
+        return view('pos.create', compact('menuItems', 'categories'));
     }
 
     public function store(Request $request)
@@ -79,6 +125,83 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to process order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function edit($id)
+    {
+        $order = Order::with(['items.menuItem'])->findOrFail($id);
+        return view('pos.orders.edit', compact('order'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $order = Order::findOrFail($id);
+            
+            $validated = $request->validate([
+                'Status' => 'required|in:pending,completed,cancelled',
+                'PaymentMethod' => 'required|in:cash,deposit',
+                'AmountTendered' => 'nullable|numeric|min:0',
+                'Remarks' => 'nullable|string'
+            ]);
+
+            $order->Status = $validated['Status'];
+            $order->PaymentMethod = $validated['PaymentMethod'];
+            $order->AmountTendered = $validated['AmountTendered'];
+            $order->Remarks = $validated['Remarks'];
+            
+            if ($order->PaymentMethod === 'cash' && $order->AmountTendered > 0) {
+                $order->ChangeAmount = $order->AmountTendered - $order->TotalAmount;
+            }
+
+            $order->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $order = Order::findOrFail($id);
+            $order->delete();  // This will soft delete since we're using SoftDeletes
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getDetails($id)
+    {
+        try {
+            $order = Order::with(['items', 'customer'])->findOrFail($id);
+            
+            return response()->json([
+                'error' => false,
+                'order' => $order,
+                'items' => $order->items
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => 'Error loading order details'
             ], 500);
         }
     }

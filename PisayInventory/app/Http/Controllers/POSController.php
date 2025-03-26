@@ -179,6 +179,7 @@ class POSController extends Controller
                         $menuItem = MenuItem::findOrFail($item['id']);
                         Log::debug('Processing menu item:', ['menu_item' => $menuItem->toArray(), 'quantity' => $item['quantity']]);
                         
+                        // Create order item
                         $orderItem = POSOrderItem::create([
                             'OrderID' => $order->OrderID,
                             'ItemID' => $menuItem->MenuItemID,
@@ -189,12 +190,16 @@ class POSController extends Controller
                             'IsCustomItem' => false
                         ]);
                         
-                        // Decrement stock
-                        $menuItem->decrementStock($item['quantity']);
+                        // Update stock in menu_items table
+                        $menuItem->StocksAvailable -= $item['quantity'];
+                        $menuItem->save();
                         
-                        Log::debug('Order item created and stock updated:', [
-                            'order_item' => $orderItem->toArray(),
-                            'remaining_stock' => $menuItem->StocksAvailable
+                        Log::debug('Stock updated:', [
+                            'item_id' => $menuItem->MenuItemID,
+                            'item_name' => $menuItem->ItemName,
+                            'previous_stock' => $menuItem->StocksAvailable + $item['quantity'],
+                            'quantity_ordered' => $item['quantity'],
+                            'new_stock' => $menuItem->StocksAvailable
                         ]);
                     }
                 }
@@ -234,8 +239,18 @@ class POSController extends Controller
                 'alert' => [
                     'type' => 'success',
                     'title' => 'Order Created!',
-                    'text' => "Order #{$orderNumber} has been created successfully."
-                ]
+                    'text' => "Order #{$orderNumber} has been created successfully.",
+                    'footer' => 'Stock levels have been updated automatically.'
+                ],
+                'updated_stocks' => collect($cartItems)->map(function($item) {
+                    if (!empty($item['id']) && empty($item['isCustom'])) {
+                        $menuItem = MenuItem::find($item['id']);
+                        return [
+                            'item_name' => $menuItem->ItemName,
+                            'new_stock' => $menuItem->StocksAvailable
+                        ];
+                    }
+                })->filter()
             ]);
             
         } catch (Exception $e) {
@@ -618,100 +633,97 @@ class POSController extends Controller
     }
     
     // For payment transactions
-    public function processPayment($orderId, Request $request)
+    public function processPayment($id)
+    {
+        try {
+            $order = Order::with(['items', 'customer'])->findOrFail($id);
+            
+            if ($order->Status === 'completed') {
+                return redirect()->route('pos.orders.index')
+                    ->with('error', 'Order has already been processed.');
+            }
+            
+            return view('pos.processpayment', compact('order'));
+        } catch (\Exception $e) {
+            return redirect()->route('pos.orders.index')
+                ->with('error', 'Error loading order: ' . $e->getMessage());
+        }
+    }
+
+    public function postProcessPayment(Request $request, $id)
     {
         try {
             DB::beginTransaction();
+
+            $order = Order::findOrFail($id);
             
-            // Validate inputs
+            if ($order->Status === 'completed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order has already been processed'
+                ]);
+            }
+
             $validated = $request->validate([
-                'payment_amount' => 'required|numeric|min:0',
-                'payment_type' => 'required|in:cash,deposit'
+                'payment_type' => 'required|in:cash,deposit',
+                'amount_tendered' => 'required_if:payment_type,cash|numeric|min:' . $order->TotalAmount,
             ]);
-            
-            // Get the order
-            $order = DB::table('pos_orders')
-                ->where('OrderID', $orderId)
-                ->where('Status', 'pending') // Only pending orders can be processed
-                ->whereNull('deleted_at')
-                ->first();
-                
-            if (!$order) {
-                return redirect()->back()->with('error', 'Order not found or cannot be processed');
-            }
-            
-            // Verify payment amount
-            $paymentAmount = $validated['payment_amount'];
-            if ($paymentAmount < $order->TotalAmount) {
-                return redirect()->back()->with('error', 'Payment amount cannot be less than the order total');
-            }
-            
-            // Calculate change
-            $changeAmount = $paymentAmount - $order->TotalAmount;
-            
-            // Process payment based on type
-            if ($validated['payment_type'] === 'deposit') {
-                // Check student deposit balance
-                if (!$order->student_id) {
-                    return redirect()->back()->with('error', 'Cannot use deposit payment for an order without a student');
-                }
-                
-                $currentBalance = CashDeposit::where('student_id', $order->student_id)
+
+            $order->PaymentMethod = $validated['payment_type'];
+            $order->Status = 'completed';
+            $order->ProcessedAt = now();
+
+            if ($validated['payment_type'] === 'cash') {
+                $order->AmountTendered = $validated['amount_tendered'];
+                $order->ChangeAmount = $validated['amount_tendered'] - $order->TotalAmount;
+            } elseif ($validated['payment_type'] === 'deposit' && $order->student_id) {
+                // Handle deposit payment
+                $student = Student::findOrFail($order->student_id);
+                $balance = CashDeposit::where('student_id', $order->student_id)
                     ->whereNull('deleted_at')
                     ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
-                
-                if ($currentBalance < $order->TotalAmount) {
-                    return redirect()->back()->with('error', 'Insufficient deposit balance. Current balance: ₱' . number_format($currentBalance, 2));
+
+                if ($balance < $order->TotalAmount) {
+                    throw new \Exception('Insufficient student deposit balance');
                 }
-                
+
                 // Create withdrawal transaction
                 CashDeposit::create([
                     'student_id' => $order->student_id,
-                    'TransactionDate' => now(),
-                    'ReferenceNumber' => $order->OrderNumber,
-                    'TransactionType' => 'WITHDRAWAL',
                     'Amount' => $order->TotalAmount,
-                    'BalanceBefore' => $currentBalance,
-                    'BalanceAfter' => $currentBalance - $order->TotalAmount,
-                    'Notes' => "Payment for Order #{$order->OrderNumber}",
-                    'Status' => 'completed'
-                ]);
-
-                Log::debug('Deposit withdrawal created for order payment', [
-                    'student_id' => $order->student_id,
-                    'amount' => $order->TotalAmount,
-                    'balance_before' => $currentBalance,
-                    'balance_after' => $currentBalance - $order->TotalAmount
+                    'TransactionType' => 'WITHDRAWAL',
+                    'Description' => "Payment for Order #{$order->OrderNumber}",
+                    'ProcessedBy' => auth()->id()
                 ]);
             }
-            
-            // Update order status
-            DB::table('pos_orders')
-                ->where('OrderID', $orderId)
-                ->update([
-                    'Status' => 'completed',
-                    'ProcessedBy' => Auth::id(),
-                    'ProcessedAt' => now(),
-                    'AmountTendered' => $paymentAmount,
-                    'ChangeAmount' => $changeAmount,
-                    'updated_at' => now()
-                ]);
-                
+
+            $order->save();
+
+            // Update stock levels
+            foreach ($order->items as $item) {
+                $menuItem = MenuItem::find($item->ItemID);
+                if ($menuItem) {
+                    $menuItem->StocksAvailable -= $item->Quantity;
+                    $menuItem->save();
+                }
+            }
+
             DB::commit();
-            
-            return redirect()->route('pos.cashiering')
-                ->with('success', 'Payment processed successfully. ' . 
-                    ($validated['payment_type'] === 'deposit' ? 'Amount deducted from student deposit.' : 
-                    'Change amount: ₱' . number_format($changeAmount, 2)));
-            
-        } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Payment processing failed:', [
-                'order_id' => $orderId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment processed successfully',
+                'order_number' => $order->OrderNumber,
+                'order_id' => $order->OrderID
             ]);
-            return redirect()->back()->with('error', 'Failed to process payment: ' . $e->getMessage());
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process payment: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -1235,5 +1247,21 @@ class POSController extends Controller
         }
         
         return view('pos.cashier', compact('menuItems', 'categories', 'cartItems', 'isStudent', 'studentBalance', 'studentId'));
+    }
+
+    public function checkStock($id)
+    {
+        try {
+            $menuItem = MenuItem::findOrFail($id);
+            return response()->json([
+                'success' => true,
+                'stock' => $menuItem->StocksAvailable
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error checking stock'
+            ], 500);
+        }
     }
 } 
