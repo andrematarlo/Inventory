@@ -36,7 +36,7 @@ class ClassificationSeeder extends Seeder
         ];
 
         foreach ($classifications as $classification) {
-            DB::table('classifications')->insert($classification);
+            DB::table('classification')->insert($classification);
         }
     }
 } 

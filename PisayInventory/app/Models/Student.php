@@ -123,6 +123,16 @@ class Student extends Model
             ->withDefault(['FirstName' => 'Unknown', 'LastName' => 'User']);
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'UserAccountID', 'UserAccountID');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'student_id', 'student_id');
+    }
+
     // Helper methods
     public function getFullNameWithMiddleAttribute()
     {

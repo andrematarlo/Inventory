@@ -1,107 +1,138 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">Edit Menu Item: {{ $menuItem->name }}</h3>
-                    <a href="{{ route('pos.menu-items.index') }}" class="btn btn-sm btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Menu Items
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <h1 class="fs-2 fw-bold mb-0">Edit Menu Item</h1>
+                        <p class="mb-0 opacity-75">Update menu item details</p>
+                    </div>
+                    <a href="{{ route('pos.menu-items.index') }}" class="btn btn-light">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Menu Items
                     </a>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
                 <div class="card-body">
-                    <form action="{{ route('pos.menu-items.update', $menuItem->id) }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('pos.menu-items.update', $menuItem->MenuItemID) }}" 
+                          method="POST" 
+                          enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
-                        <div class="row">
+
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="name">Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name', $menuItem->name) }}" required>
-                                    @error('name')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
+                                <div class="mb-3">
+                                    <label for="ItemName" class="form-label">Item Name *</label>
+                                    <input type="text" 
+                                           class="form-control @error('ItemName') is-invalid @enderror" 
+                                           id="ItemName" 
+                                           name="ItemName" 
+                                           value="{{ old('ItemName', $menuItem->ItemName) }}" 
+                                           required>
+                                    @error('ItemName')
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                
-                                <div class="form-group">
-                                    <label for="price">Price <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text">₱</span>
-                                        </div>
-                                        <input type="number" step="0.01" class="form-control @error('price') is-invalid @enderror" id="price" name="price" value="{{ old('price', $menuItem->price) }}" required>
-                                    </div>
-                                    @error('price')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
+
+                                <div class="mb-3">
+                                    <label for="Description" class="form-label">Description</label>
+                                    <textarea class="form-control @error('Description') is-invalid @enderror" 
+                                              id="Description" 
+                                              name="Description" 
+                                              rows="3">{{ old('Description', $menuItem->Description) }}</textarea>
+                                    @error('Description')
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                
-                                <div class="form-group">
-                                    <label for="category">Category <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('category') is-invalid @enderror" id="category" name="category" value="{{ old('category', $menuItem->category) }}" required>
-                                    @error('category')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
+
+                                <div class="mb-3">
+                                    <label for="ClassificationId" class="form-label">Category *</label>
+                                    <select class="form-select @error('ClassificationId') is-invalid @enderror" 
+                                            id="ClassificationId" 
+                                            name="ClassificationId" 
+                                            required>
+                                        <option value="">Select Category</option>
+                                        @foreach($categories as $category)
+                                            <option value="{{ $category->ClassificationId }}" 
+                                                    {{ old('ClassificationId', $menuItem->ClassificationId) == $category->ClassificationId ? 'selected' : '' }}>
+                                                {{ $category->ClassificationName }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('ClassificationId')
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
-                            
+
                             <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="description">Description</label>
-                                    <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="3">{{ old('description', $menuItem->description) }}</textarea>
-                                    @error('description')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
+                                <div class="mb-3">
+                                    <label for="Price" class="form-label">Price (₱) *</label>
+                                    <input type="number" 
+                                           class="form-control @error('Price') is-invalid @enderror" 
+                                           id="Price" 
+                                           name="Price" 
+                                           value="{{ old('Price', $menuItem->Price) }}" 
+                                           step="0.01" 
+                                           min="0" 
+                                           required>
+                                    @error('Price')
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                
-                                <div class="form-group">
-                                    <label for="image">Menu Item Image</label>
-                                    
-                                    @if($menuItem->image)
-                                    <div class="mb-2">
-                                        <img src="{{ asset('storage/' . $menuItem->image) }}" alt="{{ $menuItem->name }}" class="img-thumbnail" style="max-height: 150px;">
-                                        <div class="custom-control custom-checkbox mt-2">
-                                            <input type="checkbox" class="custom-control-input" id="removeImage" name="remove_image">
-                                            <label class="custom-control-label" for="removeImage">Remove current image</label>
+
+                                <div class="mb-3">
+                                    <label for="StocksAvailable" class="form-label">Stock *</label>
+                                    <input type="number" 
+                                           class="form-control @error('StocksAvailable') is-invalid @enderror" 
+                                           id="StocksAvailable" 
+                                           name="StocksAvailable" 
+                                           value="{{ old('StocksAvailable', $menuItem->StocksAvailable) }}" 
+                                           min="0" 
+                                           required>
+                                    @error('StocksAvailable')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="image" class="form-label">Item Image</label>
+                                    @if($menuItem->image_path)
+                                        <div class="mb-2">
+                                            <img src="{{ asset('storage/' . $menuItem->image_path) }}" 
+                                                 alt="{{ $menuItem->ItemName }}"
+                                                 class="img-thumbnail"
+                                                 style="max-height: 100px;">
                                         </div>
-                                    </div>
                                     @endif
-                                    
-                                    <div class="custom-file">
-                                        <input type="file" class="custom-file-input @error('image') is-invalid @enderror" id="image" name="image">
-                                        <label class="custom-file-label" for="image">Choose new image</label>
-                                    </div>
-                                    <small class="form-text text-muted">Upload a square image for best results. Maximum size: 2MB</small>
+                                    <input type="file" 
+                                           class="form-control @error('image') is-invalid @enderror" 
+                                           id="image" 
+                                           name="image" 
+                                           accept="image/*">
+                                    <div class="form-text">Leave empty to keep current image. Maximum file size: 2MB</div>
                                     @error('image')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                </div>
-                                
-                                <div class="form-group">
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" id="available" name="available" value="1" {{ old('available', $menuItem->available) ? 'checked' : '' }}>
-                                        <label class="custom-control-label" for="available">Available for ordering</label>
-                                    </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="form-group text-right mt-4">
+
+                        <div class="mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Update Menu Item
+                                <i class="bi bi-save me-1"></i> Update Menu Item
                             </button>
+                            <a href="{{ route('pos.menu-items.index') }}" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>
@@ -109,27 +140,4 @@
         </div>
     </div>
 </div>
-@endsection
-
-@section('scripts')
-<script>
-    // Update file input label to show selected filename
-    $(document).ready(function() {
-        $(".custom-file-input").on("change", function() {
-            var fileName = $(this).val().split("\\").pop();
-            $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
-        });
-        
-        // Disable file input if remove image is checked
-        $("#removeImage").on("change", function() {
-            if($(this).is(":checked")) {
-                $("#image").prop("disabled", true);
-                $(".custom-file-label").text("Current image will be removed");
-            } else {
-                $("#image").prop("disabled", false);
-                $(".custom-file-label").text("Choose new image");
-            }
-        });
-    });
-</script>
 @endsection 

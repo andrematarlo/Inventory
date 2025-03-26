@@ -147,4 +147,9 @@ class User extends Authenticatable
             ->whereNull('deleted_at')
             ->sum(\DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
     }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'student_id', 'UserAccountID');
+    }
 }
