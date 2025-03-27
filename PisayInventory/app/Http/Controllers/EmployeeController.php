@@ -308,7 +308,6 @@ class EmployeeController extends Controller
                     'Gender' => $request->Gender,
                     'Address' => $request->Address,
                     'UserAccountID' => $newUserAccount->UserAccountID,
-                    'Role' => $roleNames,
                     'IsDeleted' => false,
                     'DateCreated' => now(),
                     'CreatedById' => $currentEmployee->EmployeeID,
@@ -322,6 +321,11 @@ class EmployeeController extends Controller
                     'modified_by_id' => $employee->ModifiedById,
                     'creator_employee' => $currentEmployee->toArray()
                 ]);
+
+                // Verify we have an EmployeeID before proceeding
+                if (!$employee->EmployeeID) {
+                    throw new \Exception('Failed to get EmployeeID after creation');
+                }
 
                 // Attach roles to the employee in the pivot table
                 foreach ($request->roles as $roleId) {

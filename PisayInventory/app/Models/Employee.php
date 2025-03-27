@@ -13,7 +13,7 @@ class Employee extends Model
     protected $table = 'employee';
     protected $primaryKey = 'EmployeeID';
     public $timestamps = false;
-    public $incrementing = false;
+    public $incrementing = true;
 
     // Remove automatic eager loading as it conflicts with our optimized queries
     // protected $with = ['userAccount', 'createdBy', 'modifiedBy'];
@@ -27,6 +27,19 @@ class Employee extends Model
         'ContactNumber',
         'Department',
         'Position',
+        'UserAccountID',
+        'Gender',
+        'Address',
+        'Role',
+        'IsDeleted',
+        'DateCreated',
+        'CreatedByID',
+        'ModifiedByID',
+        'DateModified',
+        'DeletedByID',
+        'DateDeleted',
+        'RestoredById',
+        'DateRestored',
         'created_by',
         'updated_by'
     ];
