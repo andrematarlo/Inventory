@@ -208,6 +208,14 @@
                         </div>
                     </div>
                     <div class="card-footer bg-white p-3">
+                        <!-- Add Total Amount section -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-bold">Total Amount</h5>
+                                <h5 class="mb-0 text-primary fw-bold">₱<span id="footer-total">0.00</span></h5>
+                            </div>
+                        </div>
+                        <hr class="my-3">
                         <div class="mb-3">
                             <label class="d-block mb-2">Payment Method</label>
                             <div class="d-flex gap-3">
@@ -335,6 +343,71 @@
 .menu-item.low-stock .card {
     opacity: 0.7;
 }
+
+.quantity-wrapper {
+    position: relative;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-left: none;
+    border-right: none;
+}
+
+/* Consolidated quantity control styles */
+.quantity-controls {
+    display: inline-flex !important;
+    width: 100px;
+}
+
+.quantity-controls .form-control {
+    text-align: center;
+    background-color: #fff !important;
+    border-radius: 0;
+    width: 40px !important;
+    padding: 0.25rem 0.1rem;
+    border-left: 0;
+    border-right: 0;
+    -moz-appearance: textfield;
+    font-size: 0.875rem;
+}
+
+.quantity-controls .btn {
+    border-radius: 0;
+    padding: 0.25rem 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa !important;
+    font-size: 0.875rem;
+}
+
+.quantity-controls .btn:active,
+.quantity-controls .btn:focus {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    box-shadow: none !important;
+}
+
+.quantity-controls .btn-outline-secondary:hover {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #6c757d !important;
+}
+
+.quantity-controls .quantity-decrease {
+    border-top-left-radius: 0.25rem;
+    border-bottom-left-radius: 0.25rem;
+}
+
+.quantity-controls .quantity-increase {
+    border-top-right-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.quantity-input::-webkit-inner-spin-button,
+.quantity-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
 </style>
 @endpush
 
@@ -411,22 +484,29 @@ $(document).ready(function() {
         $(this).addClass('active');
         
         const category = $(this).data('category');
-        if (category === 'all') {
-            $('.menu-item').each(function() {
-                // Only show items that are not out of stock
-                if (!$(this).hasClass('out-of-stock')) {
-                    $(this).show();
-                }
-            });
-        } else {
-            $('.menu-item').hide();
-            $(`.menu-item[data-category="${category}"]`).each(function() {
-                // Only show items that are not out of stock
-                if (!$(this).hasClass('out-of-stock')) {
-                    $(this).show();
-                }
-            });
-        }
+        const menuItems = $('.menu-item');
+        
+        // Add loading state
+        menuItems.fadeOut(200);
+        
+        setTimeout(() => {
+            if (category === 'all') {
+                menuItems.each(function() {
+                    // Only show items that are not out of stock
+                    if (!$(this).hasClass('out-of-stock')) {
+                        $(this).fadeIn(200);
+                    }
+                });
+            } else {
+                menuItems.each(function() {
+                    const itemCategory = $(this).data('category');
+                    // Show items that match the selected category and are not out of stock
+                    if (itemCategory == category && !$(this).hasClass('out-of-stock')) {
+                        $(this).fadeIn(200);
+                    }
+                });
+            }
+        }, 200);
     });
 
     // View switching (grid/list)
@@ -467,8 +547,6 @@ $(document).ready(function() {
                             <h6 class="mb-1">${itemName}</h6>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="text-primary">₱${price.toFixed(2)}</span>
-                                <span class="text-muted">×</span>
-                                <span class="quantity-display">1</span>
                             </div>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-danger remove-item">
@@ -476,16 +554,17 @@ $(document).ready(function() {
                         </button>
                     </div>
                     <div class="mt-2">
-                        <div class="input-group quantity-controls mb-2">
+                        <div class="input-group quantity-controls">
                             <button type="button" class="btn btn-outline-secondary quantity-decrease">
                                 <i class="bi bi-dash"></i>
                             </button>
-                            <input type="number" class="form-control quantity-input" value="1" min="1" max="${stock}">
+                            <input type="number" class="form-control quantity-input" 
+                                   value="1" min="1" max="${stock}">
                             <button type="button" class="btn btn-outline-secondary quantity-increase">
                                 <i class="bi bi-plus"></i>
                             </button>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex justify-content-between align-items-center mt-2">
                             <span class="text-muted">Subtotal:</span>
                             <span class="fw-bold item-subtotal">₱${price.toFixed(2)}</span>
                         </div>
@@ -515,7 +594,7 @@ $(document).ready(function() {
 
     // Handle quantity changes
     $(document).on('click', '.quantity-decrease', function() {
-        const input = $(this).siblings('.quantity-input');
+        const input = $(this).closest('.quantity-controls').find('.quantity-input');
         const currentVal = parseInt(input.val());
         if (currentVal > 1) {
             input.val(currentVal - 1).trigger('change');
@@ -523,7 +602,7 @@ $(document).ready(function() {
     });
 
     $(document).on('click', '.quantity-increase', function() {
-        const input = $(this).siblings('.quantity-input');
+        const input = $(this).closest('.quantity-controls').find('.quantity-input');
         const currentVal = parseInt(input.val());
         const max = parseInt(input.attr('max'));
         if (currentVal < max) {
@@ -537,15 +616,8 @@ $(document).ready(function() {
         const price = parseFloat(cartItem.data('price'));
         const subtotal = price * quantity;
         
-        // Update the quantity display
-        cartItem.find('.quantity-display').text(quantity);
-        
         // Update the subtotal display
         cartItem.find('.item-subtotal').text(`₱${subtotal.toFixed(2)}`);
-        
-        // Update hidden inputs
-        cartItem.find('input[name="quantities[]"]').val(quantity);
-        cartItem.find('input[name="amounts[]"]').val(subtotal.toFixed(2));
         
         updateTotals();
     });
@@ -579,6 +651,7 @@ $(document).ready(function() {
 
         animateNumber($('#subtotal'), subtotal);
         animateNumber($('#total'), total);
+        animateNumber($('#footer-total'), total);  // Update the new total display
         
         // Also update any quick-cash buttons that need the total
         if ($('.quick-cash[data-amount="exact"]').length) {

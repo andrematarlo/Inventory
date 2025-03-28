@@ -280,7 +280,7 @@
 }
 
 .sidebar.collapsed {
-    width: 25px !important;
+    width: 90px !important;
     background-color: #222222 !important;
 }
 
@@ -307,7 +307,7 @@
     text-align: center;
     font-size: 1rem;
     min-width: 18px;
-    color: #8ba8d9;
+    color: #fff;
 }
 
 .sidebar .nav-link span {
@@ -347,7 +347,7 @@
 
 /* Collapsed state */
 .sidebar.collapsed {
-    width: 25px !important;
+    width: 90px !important;
     background-color: #222222 !important;
 }
 
@@ -359,8 +359,8 @@
 
 /* Make logo smaller in collapsed state */
 .sidebar.collapsed .sidebar-logo {
-    width: 16px !important;
-    height: 16px !important;
+    width: 24px !important;
+    height: 24px !important;
     margin: 0 !important;
     display: block;
 }
@@ -381,12 +381,12 @@
 
 .sidebar.collapsed .nav-link i {
     margin: 0;
-    font-size: 0.8rem; /* Make icons smaller */
-    color: #6b9fff;
+    font-size: 1rem !important;
+    color: #fff;
 }
 
 .sidebar.collapsed .sidebar-toggle i {
-    font-size: 0.8rem !important; /* Make toggle icon smaller too */
+    font-size: 1rem !important;
 }
 
 .sidebar.collapsed .nav-item {
@@ -396,15 +396,15 @@
 }
 
 .sidebar.collapsed ~ .main-content {
-    margin-left: 25px;
+    margin-left: 90px;
 }
 
 .sidebar.collapsed .nav-item.dropdown .dropdown-menu {
-    left: 25px !important;
+    left: 90px !important;
 }
 
 .main-content.sidebar-collapsed {
-    margin-left: 25px;
+    margin-left: 90px;
 }
 
 /* Hide the active indicator dot in very narrow sidebar */
@@ -414,14 +414,14 @@
 
 /* Adjust hover tooltip to work with very narrow sidebar */
 .sidebar.collapsed .nav-item:hover .nav-link::after {
-    left: 25px;
+    left: 90px;
     font-size: 0.8rem;
     padding: 4px 8px;
 }
 
 /* Dropdown styles */
 .sidebar .dropdown-menu {
-    background-color: #1e1e1e !important;
+    background-color: #000000 !important;
     border: none !important;
     border-radius: 0;
     margin: 0;
@@ -446,7 +446,7 @@
 }
 
 .sidebar .dropdown-item i {
-    color: #6b9fff;
+    color: #fff;
     width: 16px;
     text-align: center;
     font-size: 0.9rem;
@@ -512,13 +512,14 @@
 /* Make submenus appear properly when collapsed */
 .sidebar.collapsed .collapse.show {
     position: absolute;
-    left: 25px;
-    top: 0;
-    width: 180px;
-    background-color: #222222;
-    padding: 0;
+    left: 90px;
+    background-color: #000000;
+    padding: 0.5rem 0;
     border-radius: 0 4px 4px 0;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    min-width: 200px;
+    z-index: 1031;
+    top: auto;
 }
 
 /* Style dropdown items */
@@ -542,11 +543,26 @@
     display: none !important;
 }
 
-/* Add extra style to make POS menu items readable but compact */
+/* Add specific styles for POS dropdown items */
 .sidebar #posCollapse .dropdown-item {
     font-size: 0.75rem !important;
     padding: 0.4rem 0.6rem !important;
     margin: 1px 0;
+}
+
+.sidebar #posCollapse .dropdown-item.active {
+    background-color: transparent !important;
+}
+
+.sidebar #posCollapse .dropdown-item:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+}
+
+/* Override any Bootstrap active states */
+.sidebar .dropdown-item.active,
+.sidebar .dropdown-item:active {
+    background-color: transparent !important;
+    color: white !important;
 }
 
 /* Fix dropdown icon alignment for laboratory dropdown */
@@ -563,6 +579,23 @@
 /* Improve spacing in dropdown menus */
 .sidebar .dropdown-menu {
     padding: 0.25rem 0 !important;
+}
+
+/* Add position relative to the parent nav-item */
+.sidebar .nav-item {
+    position: relative;
+}
+
+/* Ensure the dropdown appears next to its parent */
+.sidebar.collapsed .nav-item .collapse {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    display: none;
+}
+
+.sidebar.collapsed .nav-item .collapse.show {
+    display: block;
 }
 </style>
 
