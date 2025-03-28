@@ -109,14 +109,14 @@ class POSController extends Controller
     public function create()
     {
         $menuItems = MenuItem::active()
-                        ->with(['classification', 'unitOfMeasure'])
-                        ->get();
+            ->with('classification')
+            ->get();
                         
-        $categories = Classification::where('IsDeleted', false)
+        $classifications = Classification::where('IsDeleted', false)
                       ->orderBy('ClassificationName')
                       ->get();
         
-        return view('pos.create', compact('menuItems', 'categories'));
+        return view('pos.create', compact('menuItems', 'classifications'));
     }
     
     public function store(Request $request)
@@ -1062,6 +1062,7 @@ class POSController extends Controller
     public function menuItems()
     {
         $menuItems = MenuItem::where('IsDeleted', false)
+            ->with('classification')
             ->latest()
             ->paginate(10);
 
@@ -1073,7 +1074,11 @@ class POSController extends Controller
      */
     public function createMenuItem()
     {
-        return view('pos.menu-items.create');
+        $classifications = Classification::where('IsDeleted', false)
+                      ->orderBy('ClassificationName')
+                      ->get();
+                      
+        return view('pos.menu-items.create', compact('classifications'));
     }
     
     /**
@@ -1081,39 +1086,32 @@ class POSController extends Controller
      */
     public function storeMenuItem(Request $request)
     {
-        // Explicitly handle AJAX requests to prevent order processing conflicts
-        $isAjax = $request->ajax() || $request->wantsJson() || 
-                 $request->header('X-Requested-With') === 'XMLHttpRequest' ||
-                 $request->has('ajax_request');
-        
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'category' => 'required|exists:classification,ClassificationId',
-            'description' => 'nullable|string',
+            'ItemName' => 'required|string|max:255',
+            'Price' => 'required|numeric|min:0',
+            'ClassificationId' => 'required|exists:classification,ClassificationId',
+            'Description' => 'nullable|string',
+            'StocksAvailable' => 'required|integer|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'available' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
-            if ($isAjax) {
-                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
-            }
-            return redirect()->back()->withErrors($validator)->withInput();
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
         }
 
         try {
-            // Use a separate database transaction for menu items to avoid interfering with orders
             DB::beginTransaction();
 
             $menuItem = new MenuItem();
-            $menuItem->ItemName = $request->name;
-            $menuItem->Price = $request->price;
-            $menuItem->ClassificationId = $request->category;
-            $menuItem->Description = $request->description;
-            $menuItem->IsAvailable = $request->has('available') ? true : false;
+            $menuItem->ItemName = $request->ItemName;
+            $menuItem->Price = $request->Price;
+            $menuItem->ClassificationId = $request->ClassificationId;
+            $menuItem->Description = $request->Description;
+            $menuItem->StocksAvailable = $request->StocksAvailable;
+            $menuItem->IsAvailable = true;
             $menuItem->IsDeleted = false;
-            $menuItem->StocksAvailable = 100; // Default stock value
             
             // Handle image upload
             if ($request->hasFile('image')) {
@@ -1126,42 +1124,15 @@ class POSController extends Controller
 
             DB::commit();
             
-            // Log success
-            Log::info('Menu item created successfully', ['item_id' => $menuItem->MenuItemID, 'name' => $menuItem->ItemName]);
-            
-            // Generate an appropriate response
-            if ($isAjax) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Menu item created successfully',
-                    'item' => [
-                        'id' => $menuItem->MenuItemID,
-                        'name' => $menuItem->ItemName,
-                        'price' => $menuItem->Price,
-                        'category' => $menuItem->ClassificationId,
-                        'description' => $menuItem->Description,
-                        'available' => $menuItem->IsAvailable,
-                    ]
-                ]);
-            }
-            
-            return redirect()->route('pos.menu-items.index')->with('success', 'Menu item created successfully');
+            return redirect()->route('pos.menu-items.index')
+                ->with('success', 'Menu item created successfully');
+                
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Error creating menu item: ' . $e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all()
-            ]);
-            
-            if ($isAjax) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to create menu item: ' . $e->getMessage()
-                ], 500);
-            }
-            
-            return redirect()->back()->with('error', 'Failed to create menu item: ' . $e->getMessage())->withInput();
+            Log::error('Error creating menu item: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Failed to create menu item: ' . $e->getMessage())
+                ->withInput();
         }
     }
     

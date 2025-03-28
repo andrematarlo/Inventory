@@ -79,7 +79,7 @@
                                 <br>
                                 <small class="text-muted">{{ Str::limit($item->Description, 50) }}</small>
                             </td>
-                            <td>{{ $item->classification->ClassificationName ?? 'N/A' }}</td>
+                            <td>{{ $item->classification ? $item->classification->ClassificationName : 'N/A' }}</td>
                             <td>₱{{ number_format($item->Price, 2) }}</td>
                             <td>{{ $item->StocksAvailable }}</td>
                             <td>

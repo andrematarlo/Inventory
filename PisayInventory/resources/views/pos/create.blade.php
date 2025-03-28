@@ -131,7 +131,7 @@
                     <div class="row g-4">
                         @foreach($menuItems as $item)
                             <div class="col-md-4 menu-item {{ $item->StocksAvailable <= 0 ? 'out-of-stock' : '' }} {{ $item->StocksAvailable <= 5 ? 'low-stock' : '' }}" 
-                                 data-category="{{ $item->ClassificationId }}"
+                                 data-category="{{ $item->ClassificationID }}"
                                  data-item-id="{{ $item->MenuItemID }}">
                                 <div class="card h-100 border-0 shadow-sm menu-item-card">
                                     @if($item->image_path && Storage::disk('public')->exists($item->image_path))
@@ -148,6 +148,11 @@
                                     
                                     <div class="card-body d-flex flex-column">
                                         <h5 class="card-title mb-2">{{ $item->ItemName }}</h5>
+                                        <p class="card-text text-muted small mb-2">
+                                            <span class="badge bg-secondary">
+                                                {{ $item->classification ? $item->classification->ClassificationName : 'Uncategorized' }}
+                                            </span>
+                                        </p>
                                         <p class="card-text text-muted small mb-3">{{ $item->Description }}</p>
                                         <div class="mt-auto">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -483,29 +488,31 @@ $(document).ready(function() {
         $('.category-btn').removeClass('active');
         $(this).addClass('active');
         
-        const category = $(this).data('category');
-        const menuItems = $('.menu-item');
+        const categoryId = $(this).data('category');
         
         // Add loading state
-        menuItems.fadeOut(200);
+        $('.menu-items-grid').fadeOut(200);
         
         setTimeout(() => {
-            if (category === 'all') {
-                menuItems.each(function() {
-                    // Only show items that are not out of stock
+            if (categoryId === 'all') {
+                // Show all items that are in stock
+                $('.menu-item').each(function() {
                     if (!$(this).hasClass('out-of-stock')) {
-                        $(this).fadeIn(200);
+                        $(this).show();
                     }
                 });
             } else {
-                menuItems.each(function() {
+                // Show only items from selected classification that are in stock
+                $('.menu-item').each(function() {
                     const itemCategory = $(this).data('category');
-                    // Show items that match the selected category and are not out of stock
-                    if (itemCategory == category && !$(this).hasClass('out-of-stock')) {
-                        $(this).fadeIn(200);
+                    if (itemCategory == categoryId && !$(this).hasClass('out-of-stock')) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
                     }
                 });
             }
+            $('.menu-items-grid').fadeIn(200);
         }, 200);
     });
 

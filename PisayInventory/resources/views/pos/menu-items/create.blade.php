@@ -58,16 +58,16 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="ClassificationId" class="form-label">Category *</label>
+                            <label for="ClassificationId" class="form-label">Classification *</label>
                             <select class="form-select @error('ClassificationId') is-invalid @enderror" 
                                     id="ClassificationId" 
                                     name="ClassificationId" 
                                     required>
-                                <option value="">Select Category</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->ClassificationId }}" 
-                                            {{ old('ClassificationId') == $category->ClassificationId ? 'selected' : '' }}>
-                                        {{ $category->ClassificationName }}
+                                <option value="">Select Classification</option>
+                                @foreach($classifications as $classification)
+                                    <option value="{{ $classification->ClassificationId }}" 
+                                            {{ old('ClassificationId') == $classification->ClassificationId ? 'selected' : '' }}>
+                                        {{ $classification->ClassificationName }}
                                     </option>
                                 @endforeach
                             </select>

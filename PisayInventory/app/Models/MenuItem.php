@@ -111,7 +111,7 @@ class MenuItem extends Model
     
     public function classification()
     {
-        return $this->belongsTo(Classification::class, 'ClassificationId', 'ClassificationId');
+        return $this->belongsTo(Classification::class, 'ClassificationID', 'ClassificationId');
     }
     
     public function unitOfMeasure()
