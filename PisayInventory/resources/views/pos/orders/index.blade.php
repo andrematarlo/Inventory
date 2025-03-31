@@ -34,7 +34,9 @@
                     <select class="form-select" id="statusFilter">
                         <option value="">All Statuses</option>
                         <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
+                        <option value="paid">Paid</option>
+                        <option value="preparing">Preparing</option>
+                        <option value="ready">Ready to Serve</option>
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                     </select>
@@ -67,19 +69,7 @@
                             </td>
                             <td>{{ \Carbon\Carbon::parse($order->OrderDate)->format('M d, Y h:ia') }}</td>
                             <td>
-                                @if($order->student_id)
-                                    @if($order->customer)
-                                        {{ $order->customer->FirstName . ' ' . $order->customer->LastName }}
-                                        <br>
-                                        <small class="text-muted">ID: {{ $order->student_id }}</small>
-                                    @else
-                                        <span class="text-muted">Student ID: {{ $order->student_id }}</span>
-                                        <br>
-                                        <small class="text-danger">(Student not found)</small>
-                                    @endif
-                                @else
-                                    <span class="text-muted">Walk-in Customer</span>
-                                @endif
+                                {{ $order->customer_name ?? 'Walk-in Customer' }}
                             </td>
                             <td>
                                 <button class="btn btn-sm btn-link view-items" 
@@ -91,19 +81,16 @@
                             </td>
                             <td>₱{{ number_format($order->TotalAmount, 2) }}</td>
                             <td>
-                                <span class="badge bg-{{ $order->Status === 'completed' ? 'success' : 
-                                    ($order->Status === 'pending' ? 'warning' : 
-                                    ($order->Status === 'cancelled' ? 'danger' : 'info')) }}">
+                                <span class="badge bg-{{ 
+                                    $order->Status === 'ready' ? 'success' : 
+                                    ($order->Status === 'paid' ? 'primary' : 
+                                    ($order->Status === 'preparing' ? 'warning' : 
+                                    ($order->Status === 'completed' ? 'info' : 'danger'))) }}">
                                     {{ ucfirst($order->Status) }}
                                 </span>
                             </td>
                             <td>
                                 <div class="btn-group">
-                                    <a href="{{ route('pos.process-payment', $order->OrderID) }}" 
-                                       class="btn btn-sm btn-primary"
-                                       title="Process Payment">
-                                        <i class="bi bi-cash-register"></i> Process
-                                    </a>
                                     <a href="{{ route('pos.orders.show', $order->OrderID) }}" 
                                        class="btn btn-sm btn-outline-primary"
                                        title="View Order">
@@ -184,7 +171,9 @@
                         <label for="newStatus" class="form-label">New Status</label>
                         <select class="form-select" id="newStatus" name="status" required>
                             <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
+                            <option value="paid">Paid</option>
+                            <option value="preparing">Preparing</option>
+                            <option value="ready">Ready to Serve</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
                         </select>

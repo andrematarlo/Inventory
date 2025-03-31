@@ -225,6 +225,13 @@
                     </li>
                     
                     <li>
+                        <a href="{{ route('pos.dashboard') }}" class="dropdown-item {{ request()->routeIs('pos.dashboard') ? 'active' : '' }}">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Orders Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li>
                         <a href="{{ route('pos.orders.index') }}" class="dropdown-item {{ request()->routeIs('pos.orders.*') ? 'active' : '' }}">
                             <i class="bi bi-cart3"></i>
                             <span>Orders</span>

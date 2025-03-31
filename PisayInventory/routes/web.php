@@ -215,9 +215,10 @@ Route::middleware('auth')->group(function () {
             })->name('orders.create');
             Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
             Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
-            Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
             Route::get('/orders/{id}/items', [OrderController::class, 'getItems'])->name('orders.items');
             Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+            Route::post('/orders/{id}/claim', [OrderController::class, 'claim'])->name('orders.claim');
+            Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
             
             // Cashier routes
             Route::prefix('cashier')->name('cashier.')->group(function () {
@@ -432,3 +433,8 @@ Route::get('/debug/laboratory/{id}', function($id) {
 })->where('id', '.*');
 
 Route::get('/pos/search-students', [POSController::class, 'searchStudents'])->name('pos.search-students');
+
+// Orders Dashboard
+Route::get('/pos/dashboard', [OrderController::class, 'dashboard'])->name('pos.dashboard');
+Route::get('/pos/orders/{id}/items', [OrderController::class, 'getOrderItems'])->name('pos.orders.items');
+Route::post('/pos/orders/{id}/process', [OrderController::class, 'processById'])->name('pos.process.byid');

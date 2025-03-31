@@ -10,7 +10,11 @@
                     <div>
                         <h1 class="fs-2 fw-bold mb-0">Order Details: {{ $order->OrderNumber }}</h1>
                         <p class="mb-0 opacity-75">
-                            <span class="badge {{ $order->Status == 'completed' ? 'bg-success' : ($order->Status == 'pending' ? 'bg-warning text-dark' : 'bg-danger') }}">
+                            <span class="badge {{ 
+                                $order->Status == 'ready' ? 'bg-success' : 
+                                ($order->Status == 'paid' ? 'bg-primary' : 
+                                ($order->Status == 'preparing' ? 'bg-warning text-dark' : 
+                                'bg-danger')) }}">
                                 {{ ucfirst($order->Status) }}
                             </span>
                         </p>
@@ -20,9 +24,9 @@
                             <i class="bi bi-arrow-left"></i> Back to Orders
                         </a>
                         
-                        @if($order->Status == 'pending')
+                        @if($order->Status != 'ready' && $order->Status != 'cancelled')
                         <a href="{{ route('pos.process.byid', $order->OrderID) }}" class="btn btn-success ms-2">
-                            <i class="bi bi-check-circle"></i> Process Order
+                            <i class="bi bi-check-circle"></i> {{ $order->Status == 'paid' ? 'Start Preparing' : 'Mark as Ready' }}
                         </a>
                         
                         <a href="{{ route('pos.cancel-order', $order->OrderID) }}" 
@@ -86,7 +90,11 @@
                     <div class="row mb-3">
                         <div class="col-md-5 fw-bold">Status:</div>
                         <div class="col-md-7">
-                            <span class="badge {{ $order->Status == 'completed' ? 'bg-success' : ($order->Status == 'pending' ? 'bg-warning text-dark' : 'bg-danger') }}">
+                            <span class="badge {{ 
+                                $order->Status == 'ready' ? 'bg-success' : 
+                                ($order->Status == 'paid' ? 'bg-primary' : 
+                                ($order->Status == 'preparing' ? 'bg-warning text-dark' : 
+                                'bg-danger')) }}">
                                 {{ ucfirst($order->Status) }}
                             </span>
                         </div>

@@ -16,10 +16,11 @@ class Order extends Model
         'OrderNumber',
         'TotalAmount',
         'PaymentMethod',
-        'student_id',
-        'Status',
         'AmountTendered',
         'ChangeAmount',
+        'Status',
+        'student_id',
+        'customer_name',
         'ProcessedBy',
         'ProcessedAt',
         'Remarks'
@@ -30,23 +31,41 @@ class Order extends Model
         'AmountTendered' => 'decimal:2',
         'ChangeAmount' => 'decimal:2',
         'ProcessedAt' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'Status' => 'string',
+        'student_id' => 'string'
     ];
 
     protected $attributes = [
         'Status' => 'pending'
     ];
 
+    const STATUS_PENDING = 'pending';
+    const STATUS_PAID = 'paid';
+    const STATUS_PREPARING = 'preparing';
+    const STATUS_READY = 'ready';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_CANCELLED = 'cancelled';
+
+    public static function getValidStatuses()
+    {
+        return [
+            self::STATUS_PENDING,
+            self::STATUS_PAID,
+            self::STATUS_PREPARING,
+            self::STATUS_READY,
+            self::STATUS_COMPLETED,
+            self::STATUS_CANCELLED
+        ];
+    }
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class, 'student_id', 'student_id');
+    }
+
     public function items()
     {
         return $this->hasMany(OrderItem::class, 'OrderID', 'OrderID');
-    }
-
-    public function customer()
-    {
-        return $this->belongsTo(Student::class, 'student_id', 'student_id');
     }
 
     public function processor()

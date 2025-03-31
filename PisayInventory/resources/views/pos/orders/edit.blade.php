@@ -42,7 +42,9 @@
                             <label for="Status" class="form-label">Status</label>
                             <select class="form-select @error('Status') is-invalid @enderror" id="Status" name="Status">
                                 <option value="pending" {{ $order->Status === 'pending' ? 'selected' : '' }}>Pending</option>
-                                <option value="completed" {{ $order->Status === 'completed' ? 'selected' : '' }}>Completed</option>
+                                <option value="paid" {{ $order->Status === 'paid' ? 'selected' : '' }}>Paid</option>
+                                <option value="preparing" {{ $order->Status === 'preparing' ? 'selected' : '' }}>Preparing</option>
+                                <option value="ready" {{ $order->Status === 'ready' ? 'selected' : '' }}>Ready to Serve</option>
                                 <option value="cancelled" {{ $order->Status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                             </select>
                             @error('Status')
@@ -160,12 +162,13 @@ $(document).ready(function() {
             data: $(this).serialize(),
             success: function(response) {
                 if (response.success) {
+                    // Show success message with SweetAlert2
                     Swal.fire({
                         icon: 'success',
                         title: 'Success',
-                        text: 'Order updated successfully'
-                    }).then(() => {
-                        window.location.href = "{{ route('pos.orders.index') }}";
+                        text: response.message || 'Order updated successfully',
+                        showConfirmButton: false,
+                        timer: 1500
                     });
                 } else {
                     Swal.fire({
@@ -176,14 +179,36 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
+                let errorMessage = 'Error updating order';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Error updating order'
+                    text: errorMessage
                 });
             }
         });
     });
+
+    // Add visual feedback when status changes to paid
+    $('#Status').change(function() {
+        if ($(this).val() === 'paid') {
+            $(this).addClass('bg-success text-white');
+        } else {
+            $(this).removeClass('bg-success text-white');
+        }
+    });
 });
 </script>
+@endpush
+
+@push('styles')
+<style>
+.form-select.bg-success {
+    background-color: #28a745 !important;
+    color: white !important;
+}
+</style>
 @endpush 

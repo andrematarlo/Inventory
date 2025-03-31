@@ -77,34 +77,6 @@
         <div class="row g-4">
             <!-- Menu Items Section -->
             <div class="col-lg-8">
-                <!-- Student Selection Card -->
-                <div class="card shadow-sm mb-4 border-0 rounded-3">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <label for="student" class="form-label mb-0">Student ID (Optional)</label>
-                                <select class="form-select form-select-lg" id="student" name="student_id">
-                                    <option value="">Search student...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <div id="student-balance-display" style="display: none;">
-                                    <h6 class="mb-1">Available Balance</h6>
-                                    <h3 class="text-primary mb-0">₱<span id="balance-amount">0.00</span></h3>
-                                </div>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-primary active" data-view="grid">
-                                        <i class="bi bi-grid"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary" data-view="list">
-                                        <i class="bi bi-list"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Menu Categories -->
                 <div class="card shadow-sm border-0 rounded-3 mb-4">
                     <div class="card-body pb-0">
@@ -221,6 +193,11 @@
                             </div>
                         </div>
                         <hr class="my-3">
+                        <!-- Add Customer Name Input -->
+                        <div class="mb-3">
+                            <label for="customerName" class="form-label">Customer Name</label>
+                            <input type="text" class="form-control" id="customerName" name="customer_name" required>
+                        </div>
                         <div class="mb-3">
                             <label class="d-block mb-2">Payment Method</label>
                             <div class="d-flex gap-3">
@@ -231,17 +208,10 @@
                                         <i class="bi bi-cash me-1"></i> Cash
                                     </label>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="payment_type" 
-                                           id="depositPayment" value="deposit" disabled>
-                                    <label class="form-check-label" for="depositPayment">
-                                        <i class="bi bi-wallet2 me-1"></i> Student Deposit
-                                    </label>
-                                </div>
                             </div>
                         </div>
 
-                        <!-- Cash Payment Details - Only shown when cash payment is selected -->
+                        <!-- Cash Payment Details -->
                         <div id="cashPaymentDetails" class="mb-3 p-3 border rounded">
                             <div class="row g-2 mb-2">
                                 <div class="col-md-6">
@@ -419,70 +389,6 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Initialize student select2
-    $('#student').select2({
-        theme: 'bootstrap-5',
-        placeholder: 'Search student by ID or name...',
-        allowClear: true,
-        minimumInputLength: 1,
-        ajax: {
-            url: '{{ route("pos.search-students") }}',
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    term: params.term || '',
-                    page: params.page || 1
-                };
-            },
-            processResults: function(data) {
-                return {
-                    results: data.results,
-                    pagination: data.pagination
-                };
-            },
-            cache: true
-        }
-    }).on('select2:select', function(e) {
-        const studentId = e.params.data.id;
-        // Fetch and display student balance
-        fetch(`{{ url('pos/student-balance') }}/${studentId}`)
-            .then(response => response.json())
-            .then(data => {
-                $('#balance-amount').text(parseFloat(data.balance).toFixed(2));
-                $('#student-balance-display').show();
-                
-                // Update the balance in the header if it exists (for student users)
-                if ($('#student-balance-header').length) {
-                    $('#student-balance-header').text('₱' + parseFloat(data.balance).toFixed(2));
-                }
-                
-                // Enable deposit payment option
-                $('#depositPayment').prop('disabled', false);
-                // Update hidden student_id field
-                $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
-            })
-            .catch(error => {
-                console.error('Error fetching student balance:', error);
-                $('#student-balance-display').hide();
-                $('#depositPayment').prop('disabled', true);
-            });
-    }).on('select2:clear', function() {
-        // Hide balance display when student is cleared
-        $('#student-balance-display').hide();
-        // Disable deposit payment option
-        $('#depositPayment').prop('disabled', true);
-        // Switch to cash payment if deposit was selected
-        if ($('#depositPayment').prop('checked')) {
-            $('#cashPayment').prop('checked', true);
-        }
-        // Remove student_id from form
-        $('#cartData input[name="student_id"]').remove();
-    });
-
-    // Initially disable deposit payment option
-    $('#depositPayment').prop('disabled', true);
-
     // Category filtering
     $('.category-btn').click(function() {
         $('.category-btn').removeClass('active');
@@ -760,6 +666,18 @@ $(document).ready(function() {
             }
         }
 
+        // Get customer name first
+        const customerName = $('#customerName').val();
+        if (!customerName) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Customer Name Required',
+                text: 'Please enter the customer name before placing the order.',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
         // Prepare cart items data
         const cartItems = [];
         $('.cart-item').each(function() {
@@ -780,6 +698,9 @@ $(document).ready(function() {
         
         // Add payment type
         $('#cartData').append(`<input type="hidden" name="payment_type" value="${paymentType}">`);
+
+        // Add customer name
+        $('#cartData').append(`<input type="hidden" name="customer_name" value="${encodeURIComponent(customerName)}">`);
 
         // If cash payment, add cash amount and change
         if (paymentType === 'cash') {
@@ -804,12 +725,6 @@ $(document).ready(function() {
             sessionStorage.setItem('lastAmountTendered', cashAmount);
         }
 
-        // If student is selected, add student_id
-        const studentId = $('#student').val();
-        if (studentId) {
-            $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
-        }
-
         Swal.fire({
             title: 'Confirm Order',
             text: 'Are you sure you want to place this order?',
@@ -819,25 +734,11 @@ $(document).ready(function() {
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Show loading state
-                Swal.fire({
-                    title: 'Processing Order',
-                    text: 'Please wait...',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                // Submit form via AJAX
+                // Submit the form
                 $.ajax({
                     url: $(this).attr('action'),
                     method: 'POST',
-                    data: new FormData(this),
-                    processData: false,
-                    contentType: false,
+                    data: $(this).serialize(),
                     success: function(response) {
                         if (response.success) {
                             // Update stock levels immediately for ordered items
@@ -868,30 +769,20 @@ $(document).ready(function() {
                                     menuItem.removeClass('out-of-stock low-stock');
                                 }
                                 
-                                // Update data attribute
+                                // Update data attribute for stock checking
                                 addButton.data('item-stock', newStock);
                             });
-
-                            // Replace the success message content section with this simplified version
-                            let successContent = `<div class="text-center">
-                                <h6 class="mb-3">Order #${response.order_number || ''} completed</h6>
-                                <p class="mb-2">Total: ₱${total.toFixed(2)}</p>`;
-                            
-                            // Add payment-specific details
-                            if (paymentType === 'cash') {
-                                const cashAmount = parseFloat($('#cashAmount').val()) || 0;
-                                const changeAmount = cashAmount - total;
-                                successContent += `
-                                    <p class="mb-2">Cash: ₱${cashAmount.toFixed(2)}</p>
-                                    <p class="mb-4">Change: ₱${changeAmount.toFixed(2)}</p>`;
-                            } else {
-                                successContent += `
-                                    <p class="mb-4">Paid from student deposit</p>`;
-                            }
-                            
-                            successContent += `</div>`;
                             
                             // Show success message
+                            const successContent = `
+                                <div class="text-center">
+                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                                    <h4 class="mt-3">Order #${response.order_number}</h4>
+                                    <p class="text-muted">Your order has been placed successfully!</p>
+                                    ${response.alert.footer ? `<p class="text-muted small">${response.alert.footer}</p>` : ''}
+                                </div>
+                            `;
+                            
                             Swal.fire({
                                 icon: 'success',
                                 title: response.alert.title || 'Order Completed',
@@ -909,6 +800,7 @@ $(document).ready(function() {
                                 $('#cashAmount').val('');
                                 $('#changeAmount').val('');
                                 $('#notes').val('');
+                                $('#customerName').val(''); // Clear customer name
                                 
                                 // Update category display if needed
                                 const currentCategory = $('.category-btn.active').data('category');
@@ -926,12 +818,10 @@ $(document).ready(function() {
                         }
                     },
                     error: function(xhr) {
-                        const response = xhr.responseJSON;
                         Swal.fire({
                             icon: 'error',
-                            title: response.alert?.title || 'Order Failed',
-                            text: response.alert?.text || response.message || 'Failed to create order',
-                            footer: response.alert?.footer,
+                            title: 'Error',
+                            text: xhr.responseJSON?.message || 'An error occurred while processing your order.',
                             confirmButtonText: 'OK'
                         });
                     }

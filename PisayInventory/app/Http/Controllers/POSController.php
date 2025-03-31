@@ -188,12 +188,13 @@ class POSController extends Controller
             // Create the order
             $order = POSOrder::create([
                 'student_id' => $request->student_id,
+                'customer_name' => $request->customer_name,
                 'TotalAmount' => $request->total_amount,
                 'PaymentMethod' => $request->payment_type,
-                'Status' => $request->payment_type === 'deposit' ? 'completed' : 'pending',
+                'Status' => 'pending',
                 'OrderNumber' => $orderNumber,
-                'ProcessedBy' => $request->payment_type === 'deposit' ? Auth::id() : null,
-                'ProcessedAt' => $request->payment_type === 'deposit' ? now() : null,
+                'ProcessedBy' => Auth::id(),
+                'ProcessedAt' => now(),
                 'AmountTendered' => $request->payment_type === 'cash' ? $request->amount_tendered : null,
                 'ChangeAmount' => $request->payment_type === 'cash' ? $request->change_amount : null
             ]);
@@ -1211,19 +1212,24 @@ class POSController extends Controller
             
             $order = POSOrder::findOrFail($id);
             
-            if ($order->Status === 'completed' || $order->Status === 'cancelled') {
+            if ($order->Status === 'ready' || $order->Status === 'cancelled') {
                 return redirect()->back()->with('error', 'This order is already ' . $order->Status);
             }
             
-            // Update order status
-            $order->Status = 'completed';
+            // Update order status based on current status
+            if ($order->Status === 'paid') {
+                $order->Status = 'preparing';
+            } else if ($order->Status === 'preparing') {
+                $order->Status = 'ready';
+            }
+            
             $order->ProcessedBy = Auth::id();
             $order->ProcessedAt = now();
             $order->save();
             
             DB::commit();
             
-            return redirect()->route('pos.show', $order->OrderID)->with('success', 'Order has been processed successfully');
+            return redirect()->route('pos.show', $order->OrderID)->with('success', 'Order status has been updated successfully');
             
         } catch (\Exception $e) {
             DB::rollback();
