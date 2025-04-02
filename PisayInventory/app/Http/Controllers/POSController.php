@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Carbon\Carbon;
 
 class POSController extends Controller
 {
@@ -1583,6 +1584,275 @@ class POSController extends Controller
 
             return redirect()->back()
                 ->with('error', 'Failed to restore menu item: ' . $e->getMessage());
+        }
+    }
+
+    public function salesReport(Request $request)
+    {
+        try {
+            // Get date range from request or default to last 30 days
+            $dateRange = $request->get('date_range', 'last30days');
+            $startDate = null;
+            $endDate = null;
+
+            switch ($dateRange) {
+                case 'today':
+                    $startDate = now()->startOfDay();
+                    $endDate = now()->endOfDay();
+                    break;
+                case 'yesterday':
+                    $startDate = now()->subDay()->startOfDay();
+                    $endDate = now()->subDay()->endOfDay();
+                    break;
+                case 'last7days':
+                    $startDate = now()->subDays(7)->startOfDay();
+                    $endDate = now()->endOfDay();
+                    break;
+                case 'last30days':
+                    $startDate = now()->subDays(30)->startOfDay();
+                    $endDate = now()->endOfDay();
+                    break;
+                case 'custom':
+                    $startDate = $request->get('date_from') ? Carbon::parse($request->get('date_from'))->startOfDay() : now()->subDays(30)->startOfDay();
+                    $endDate = $request->get('date_to') ? Carbon::parse($request->get('date_to'))->endOfDay() : now()->endOfDay();
+                    break;
+            }
+
+            // Get total sales and items for the period
+            $totals = DB::table('pos_order_items')
+                ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
+                ->whereBetween('pos_order_items.created_at', [$startDate, $endDate])
+                ->whereNull('pos_order_items.deleted_at')
+                ->whereNull('pos_orders.deleted_at')
+                ->where('pos_orders.Status', 'completed')
+                ->select(
+                    DB::raw('COUNT(DISTINCT pos_order_items.OrderID) as total_orders'),
+                    DB::raw('SUM(pos_order_items.Quantity) as total_items'),
+                    DB::raw('SUM(pos_order_items.Subtotal) as total_sales')
+                )
+                ->first();
+
+            // Get sales data from pos_order_items
+            $sales = DB::table('pos_order_items')
+                ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
+                ->whereBetween('pos_order_items.created_at', [$startDate, $endDate])
+                ->whereNull('pos_order_items.deleted_at')
+                ->whereNull('pos_orders.deleted_at')
+                ->where('pos_orders.Status', 'completed')
+                ->select(
+                    'pos_order_items.OrderItemID',
+                    'pos_order_items.OrderID',
+                    'pos_order_items.ItemName',
+                    'pos_order_items.Quantity',
+                    'pos_order_items.UnitPrice',
+                    'pos_order_items.Subtotal',
+                    'pos_order_items.created_at',
+                    'pos_orders.PaymentMethod',
+                    'pos_orders.Status',
+                    'pos_orders.student_id',
+                    'pos_orders.customer_name',
+                    'pos_orders.OrderNumber'
+                )
+                ->orderBy('pos_order_items.created_at', 'desc')
+                ->paginate(15);
+
+            // Get top selling items
+            $topItems = DB::table('pos_order_items')
+                ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
+                ->whereBetween('pos_order_items.created_at', [$startDate, $endDate])
+                ->whereNull('pos_order_items.deleted_at')
+                ->whereNull('pos_orders.deleted_at')
+                ->where('pos_orders.Status', 'completed')
+                ->select(
+                    'pos_order_items.ItemName',
+                    DB::raw('SUM(pos_order_items.Quantity) as total_quantity'),
+                    DB::raw('SUM(pos_order_items.Subtotal) as total_revenue')
+                )
+                ->groupBy('pos_order_items.ItemName')
+                ->orderByDesc('total_revenue')
+                ->limit(10)
+                ->get();
+
+            // Prepare chart data
+            $chartData = DB::table('pos_order_items')
+                ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
+                ->whereBetween('pos_order_items.created_at', [$startDate, $endDate])
+                ->whereNull('pos_order_items.deleted_at')
+                ->whereNull('pos_orders.deleted_at')
+                ->where('pos_orders.Status', 'completed')
+                ->select(
+                    DB::raw('DATE(pos_order_items.created_at) as date'),
+                    DB::raw('COUNT(DISTINCT pos_order_items.OrderID) as transaction_count'),
+                    DB::raw('SUM(pos_order_items.Subtotal) as total_sales')
+                )
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
+
+            $chartDataFormatted = [
+                'labels' => $chartData->pluck('date')->map(function($date) {
+                    return Carbon::parse($date)->format('M d');
+                }),
+                'data' => $chartData->pluck('total_sales')
+            ];
+
+            // Get payment methods distribution
+            $paymentMethods = DB::table('pos_order_items')
+                ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
+                ->whereBetween('pos_order_items.created_at', [$startDate, $endDate])
+                ->whereNull('pos_order_items.deleted_at')
+                ->whereNull('pos_orders.deleted_at')
+                ->where('pos_orders.Status', 'completed')
+                ->select(
+                    'pos_orders.PaymentMethod',
+                    DB::raw('COUNT(DISTINCT pos_order_items.OrderID) as count'),
+                    DB::raw('SUM(pos_order_items.Subtotal) as total_amount')
+                )
+                ->groupBy('pos_orders.PaymentMethod')
+                ->get();
+
+            return view('pos.reports.sales', compact(
+                'sales',
+                'topItems',
+                'chartDataFormatted',
+                'paymentMethods',
+                'dateRange',
+                'startDate',
+                'endDate',
+                'totals'
+            ));
+
+        } catch (\Exception $e) {
+            Log::error('Error generating sales report: ' . $e->getMessage());
+            return back()->with('error', 'Failed to generate sales report. Please try again.');
+        }
+    }
+
+    public function depositsReport(Request $request)
+    {
+        try {
+            // Get date range from request or default to last 30 days
+            $dateRange = $request->get('date_range', 'last30days');
+            $startDate = null;
+            $endDate = null;
+
+            switch ($dateRange) {
+                case 'today':
+                    $startDate = now()->startOfDay();
+                    $endDate = now()->endOfDay();
+                    break;
+                case 'yesterday':
+                    $startDate = now()->subDay()->startOfDay();
+                    $endDate = now()->subDay()->endOfDay();
+                    break;
+                case 'last7days':
+                    $startDate = now()->subDays(7)->startOfDay();
+                    $endDate = now()->endOfDay();
+                    break;
+                case 'last30days':
+                    $startDate = now()->subDays(30)->startOfDay();
+                    $endDate = now()->endOfDay();
+                    break;
+                case 'custom':
+                    $startDate = $request->get('date_from') ? Carbon::parse($request->get('date_from'))->startOfDay() : now()->subDays(30)->startOfDay();
+                    $endDate = $request->get('date_to') ? Carbon::parse($request->get('date_to'))->endOfDay() : now()->endOfDay();
+                    break;
+            }
+
+            // Get deposits data
+            $deposits = DB::table('student_deposits')
+                ->join('students', 'student_deposits.student_id', '=', 'students.student_id')
+                ->whereBetween('student_deposits.TransactionDate', [$startDate, $endDate])
+                ->whereNull('student_deposits.deleted_at')
+                ->select(
+                    'student_deposits.DepositID',
+                    'student_deposits.student_id',
+                    'student_deposits.Amount',
+                    'student_deposits.TransactionType',
+                    'student_deposits.TransactionDate',
+                    'student_deposits.ReferenceNumber',
+                    'student_deposits.BalanceBefore',
+                    'student_deposits.BalanceAfter',
+                    'student_deposits.Notes',
+                    DB::raw('CONCAT(students.first_name, " ", students.last_name) as StudentName')
+                )
+                ->orderBy('student_deposits.TransactionDate', 'desc')
+                ->paginate(15);
+
+            // Calculate totals
+            $totals = DB::table('student_deposits')
+                ->whereBetween('TransactionDate', [$startDate, $endDate])
+                ->whereNull('deleted_at')
+                ->select(
+                    DB::raw('COUNT(*) as total_transactions'),
+                    DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE 0 END) as total_deposits'),
+                    DB::raw('SUM(CASE WHEN TransactionType = "WITHDRAWAL" THEN Amount ELSE 0 END) as total_withdrawals')
+                )
+                ->first();
+
+            // Get student balances
+            $studentBalances = DB::table('student_deposits')
+                ->whereNull('deleted_at')
+                ->select(
+                    'student_id',
+                    DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END) as current_balance')
+                )
+                ->groupBy('student_id')
+                ->orderByDesc('current_balance')
+                ->limit(10)
+                ->get();
+
+            // Prepare chart data for deposits/withdrawals over time
+            $chartData = DB::table('student_deposits')
+                ->whereBetween('TransactionDate', [$startDate, $endDate])
+                ->whereNull('deleted_at')
+                ->select(
+                    DB::raw('DATE(TransactionDate) as date'),
+                    DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE 0 END) as deposits'),
+                    DB::raw('SUM(CASE WHEN TransactionType = "WITHDRAWAL" THEN Amount ELSE 0 END) as withdrawals')
+                )
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
+
+            $chartDataFormatted = [
+                'labels' => $chartData->pluck('date')->map(function($date) {
+                    return Carbon::parse($date)->format('M d');
+                }),
+                'deposits' => $chartData->pluck('deposits'),
+                'withdrawals' => $chartData->pluck('withdrawals')
+            ];
+
+            // Get top students with their transaction details
+            $topStudents = DB::table('student_deposits')
+                ->join('students', 'student_deposits.student_id', '=', 'students.student_id')
+                ->whereNull('student_deposits.deleted_at')
+                ->select(
+                    'student_deposits.student_id',
+                    DB::raw('CONCAT(students.first_name, " ", students.last_name) as StudentName'),
+                    DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE 0 END) as total_deposits'),
+                    DB::raw('SUM(CASE WHEN TransactionType = "WITHDRAWAL" THEN Amount ELSE 0 END) as total_withdrawals'),
+                    DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END) as current_balance')
+                )
+                ->groupBy('student_deposits.student_id', 'students.first_name', 'students.last_name')
+                ->orderByDesc('current_balance')
+                ->limit(10)
+                ->get();
+
+            return view('pos.reports.deposits', compact(
+                'deposits',
+                'totals',
+                'studentBalances',
+                'chartDataFormatted',
+                'dateRange',
+                'startDate',
+                'endDate',
+                'topStudents'
+            ));
+
+        } catch (\Exception $e) {
+            Log::error('Error generating deposits report: ' . $e->getMessage());
+            return back()->with('error', 'Failed to generate deposits report. Please try again.');
         }
     }
 } 

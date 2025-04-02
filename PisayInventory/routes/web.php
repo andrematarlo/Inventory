@@ -445,3 +445,8 @@ Route::get('/pos/search-students', [POSController::class, 'searchStudents'])->na
 Route::get('/pos/dashboard', [OrderController::class, 'dashboard'])->name('pos.dashboard');
 Route::get('/pos/orders/{id}/items', [OrderController::class, 'getOrderItems'])->name('pos.orders.items');
 Route::post('/pos/orders/{id}/process', [OrderController::class, 'processById'])->name('pos.process.byid');
+
+// POS Reports Routes
+Route::get('/pos/reports', [POSController::class, 'reports'])->name('pos.reports');
+Route::get('/pos/reports/sales', [POSController::class, 'salesReport'])->name('pos.reports.sales');
+Route::get('/pos/reports/deposits', [POSController::class, 'depositsReport'])->name('pos.reports.deposits');

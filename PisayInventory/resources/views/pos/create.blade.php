@@ -251,7 +251,7 @@
                                 <label for="student_id" class="form-label">Student ID *</label>
                                 <div class="input-group">
                                     <input type="text" class="form-control" id="student_id" name="student_id" 
-                                           placeholder="Enter student ID" required>
+                                           placeholder="Enter student ID">
                                     <button type="button" class="btn btn-outline-primary" id="checkBalance">
                                         <i class="bi bi-search"></i> Check Balance
                                     </button>

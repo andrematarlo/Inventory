@@ -4,7 +4,7 @@
 <div class="container-fluid px-4">
     <h1 class="mt-4">Deposits Report</h1>
     <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="{{ route('reports') }}">Reports</a></li>
+        <li class="breadcrumb-item"><a href="{{ route('pos.reports') }}">Reports</a></li>
         <li class="breadcrumb-item active">Deposits</li>
     </ol>
 
@@ -15,7 +15,7 @@
             Filter Options
         </div>
         <div class="card-body">
-            <form method="GET" action="{{ route('reports.deposits') }}" class="row g-3">
+            <form method="GET" action="{{ route('pos.reports.deposits') }}" class="row g-3">
                 <div class="col-md-4">
                     <label for="date_range" class="form-label">Date Range</label>
                     <select name="date_range" id="date_range" class="form-select" onchange="toggleCustomDateInputs()">
@@ -55,7 +55,7 @@
                 </div>
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">Apply Filters</button>
-                    <a href="{{ route('reports.deposits') }}" class="btn btn-secondary">Reset</a>
+                    <a href="{{ route('pos.reports.deposits') }}" class="btn btn-secondary">Reset</a>
                 </div>
             </form>
         </div>
@@ -225,8 +225,8 @@
                             <td>{{ $deposit->DepositID }}</td>
                             <td>{{ \Carbon\Carbon::parse($deposit->TransactionDate)->format('M d, Y g:i A') }}</td>
                             <td>
-                                @if($deposit->student)
-                                    {{ $deposit->student->StudentName }}
+                                @if($deposit->StudentName)
+                                    {{ $deposit->StudentName }}
                                 @else
                                     <span class="text-muted">Unknown</span>
                                 @endif
