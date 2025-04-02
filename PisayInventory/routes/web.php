@@ -268,6 +268,8 @@ Route::middleware('auth')->group(function () {
                 Route::get('/{id}/edit', [POSController::class, 'editMenuItem'])->name('edit');
                 Route::put('/{id}', [POSController::class, 'updateMenuItem'])->name('update');
                 Route::delete('/{id}', [POSController::class, 'deleteMenuItem'])->name('destroy');
+                Route::post('/{id}/toggle-availability', [POSController::class, 'toggleMenuItemAvailability'])->name('toggle-availability');
+                Route::post('/{id}/restore', [POSController::class, 'restoreMenuItem'])->name('restore');
             });
 
             // Add these routes for edit and delete functionality

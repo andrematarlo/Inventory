@@ -1064,17 +1064,22 @@ class POSController extends Controller
      */
     public function menuItems()
     {
-        $menuItems = MenuItem::where('IsDeleted', false)
-            ->with('classification')
-            ->latest()
-            ->paginate(10);
+        try {
+            // Get all menu items including deleted ones
+            $menuItems = MenuItem::with(['classification', 'unitOfMeasure'])
+                ->orderBy('ItemName')
+                ->get();
 
-        $categories = DB::table('classification')
-            ->where('IsDeleted', 0)
-            ->orderBy('ClassificationName')
-            ->get();
+            // Get all classifications for the filter dropdown
+            $categories = Classification::orderBy('ClassificationName')->get();
 
-        return view('pos.menu-items.index', compact('menuItems', 'categories'));
+            return view('pos.menu-items.index', compact('menuItems', 'categories'));
+
+        } catch (\Exception $e) {
+            Log::error('Error loading menu items: ' . $e->getMessage());
+            
+            return redirect()->back()->with('error', 'Failed to load menu items: ' . $e->getMessage());
+        }
     }
     
     /**
@@ -1494,6 +1499,90 @@ class POSController extends Controller
                 'message' => 'An error occurred while checking the student balance.',
                 'debug_message' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function toggleMenuItemAvailability($id)
+    {
+        try {
+            $menuItem = MenuItem::findOrFail($id);
+            $menuItem->IsAvailable = !$menuItem->IsAvailable;
+            $menuItem->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Menu item availability updated successfully.',
+                'is_available' => $menuItem->IsAvailable
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error toggling menu item availability: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update menu item availability.'
+            ], 500);
+        }
+    }
+
+    public function restoreMenuItem($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Find the menu item
+            $menuItem = MenuItem::where('MenuItemID', $id)
+                ->where('IsDeleted', true)
+                ->firstOrFail();
+
+            // Restore the menu item
+            $menuItem->IsDeleted = false;
+            $menuItem->save();
+
+            DB::commit();
+
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Menu item restored successfully'
+                ]);
+            }
+
+            return redirect()->route('pos.menu-items.index')
+                ->with('success', 'Menu item restored successfully');
+
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            Log::error('Menu item not found for restore:', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Menu item not found'
+                ], 404);
+            }
+
+            return redirect()->back()
+                ->with('error', 'Menu item not found');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to restore menu item:', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to restore menu item: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->with('error', 'Failed to restore menu item: ' . $e->getMessage());
         }
     }
 } 

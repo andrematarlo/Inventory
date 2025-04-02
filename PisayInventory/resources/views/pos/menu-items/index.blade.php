@@ -11,9 +11,15 @@
                         <h1 class="fs-2 fw-bold mb-0">Menu Items</h1>
                         <p class="mb-0 opacity-75">Manage menu items for the POS system</p>
                     </div>
-                    <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#createMenuItemModal">
-                        <i class="bi bi-plus-circle me-1"></i> Add Menu Item
-                    </button>
+                    <div class="d-flex gap-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showDeletedToggle">
+                            <label class="form-check-label text-white" for="showDeletedToggle">Show Deleted Items</label>
+                        </div>
+                        <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#createMenuItemModal">
+                            <i class="bi bi-plus-circle me-1"></i> Add Menu Item
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -46,7 +52,7 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle" id="menuItemsTable">
                     <thead>
                         <tr>
                             <th>Image</th>
@@ -55,12 +61,13 @@
                             <th>Price</th>
                             <th>Stock</th>
                             <th>Status</th>
+                            <th>Available</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($menuItems as $item)
-                        <tr>
+                        <tr class="{{ $item->IsDeleted ? 'table-danger' : '' }}">
                             <td>
                                 @if($item->image_path)
                                     <img src="{{ asset('storage/' . $item->image_path) }}" 
@@ -80,6 +87,15 @@
                                     {{ $item->StocksAvailable > 0 ? 'In Stock' : 'Out of Stock' }}
                                 </span>
                             </td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-availability" 
+                                           type="checkbox" 
+                                           data-id="{{ $item->MenuItemID }}"
+                                           {{ $item->IsAvailable ? 'checked' : '' }}
+                                           {{ $item->IsDeleted ? 'disabled' : '' }}>
+                                </div>
+                            </td>
                             <td class="text-end">
                                 <div class="btn-group">
                                     <button type="button" 
@@ -89,19 +105,28 @@
                                         <i class="fas fa-eye"></i> View
                                     </button>
                                     
-                                    <button type="button" 
-                                            class="btn btn-sm btn-primary" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#editMenuItemModal{{ $item->MenuItemID }}">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
-                                    
-                                    <button type="button" 
-                                            class="btn btn-sm btn-danger delete-menu-item" 
-                                            data-id="{{ $item->MenuItemID }}"
-                                            data-name="{{ $item->ItemName }}">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
+                                    @if(!$item->IsDeleted)
+                                        <button type="button" 
+                                                class="btn btn-sm btn-primary" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editMenuItemModal{{ $item->MenuItemID }}">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        
+                                        <button type="button" 
+                                                class="btn btn-sm btn-danger delete-menu-item" 
+                                                data-id="{{ $item->MenuItemID }}"
+                                                data-name="{{ $item->ItemName }}">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    @else
+                                        <button type="button" 
+                                                class="btn btn-sm btn-success restore-menu-item" 
+                                                data-id="{{ $item->MenuItemID }}"
+                                                data-name="{{ $item->ItemName }}">
+                                            <i class="fas fa-undo"></i> Restore
+                                        </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -135,7 +160,41 @@ $(document).ready(function() {
     const table = $('#menuItemsTable').DataTable({
         order: [[1, 'asc']], // Sort by name by default
         pageLength: 10,
-        responsive: true
+        responsive: true,
+        columnDefs: [
+            {
+                targets: 7, // Actions column
+                orderable: false,
+                searchable: true
+            }
+        ],
+        createdRow: function(row, data, dataIndex) {
+            // Add a data attribute to identify deleted items
+            if ($(row).hasClass('table-danger')) {
+                $(row).attr('data-deleted', 'true');
+            } else {
+                $(row).attr('data-deleted', 'false');
+            }
+        }
+    });
+
+    // Show/Hide deleted items
+    $('#showDeletedToggle').on('change', function() {
+        const showDeleted = $(this).prop('checked');
+        if (showDeleted) {
+            // Show all items
+            table.rows().every(function() {
+                $(this.node()).show();
+            });
+        } else {
+            // Hide deleted items
+            table.rows().every(function() {
+                if ($(this.node()).attr('data-deleted') === 'true') {
+                    $(this.node()).hide();
+                }
+            });
+        }
+        table.draw();
     });
 
     // Category filter
@@ -213,79 +272,115 @@ $(document).ready(function() {
         });
     });
 
-    // Create menu item form submission
-    let isSubmitting = false;
-    $('#createMenuItemForm').on('submit', function(e) {
-        e.preventDefault();
+    // Restore menu item functionality
+    $('.restore-menu-item').on('click', function() {
+        const itemId = $(this).data('id');
+        const itemName = $(this).data('name');
         
-        // Prevent double submission
-        if (isSubmitting) {
-            return;
-        }
-        
-        // Set submitting flag
-        isSubmitting = true;
-        
-        // Reset previous error states
-        $('.is-invalid').removeClass('is-invalid');
-        $('#errorAlert').hide();
+        Swal.fire({
+            title: 'Restore Menu Item?',
+            html: `Are you sure you want to restore <strong>${itemName}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, restore it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading state
+                Swal.fire({
+                    title: 'Restoring...',
+                    html: 'Please wait...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Send restore request
+                $.ajax({
+                    url: `{{ url('inventory/pos/menu-items') }}/${itemId}/restore`,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Restored!',
+                                text: response.message || 'Menu item has been restored.',
+                            }).then(() => {
+                                // Reload the page
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: response.message || 'Failed to restore menu item.'
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Restore error:', xhr);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: 'Failed to restore menu item. Please try again.'
+                        });
+                    }
+                });
+            }
+        });
+    });
+
+    // Toggle availability functionality
+    $('.toggle-availability').on('change', function() {
+        const itemId = $(this).data('id');
+        const isAvailable = $(this).prop('checked');
         
         // Show loading state
-        const submitBtn = $(this).find('button[type="submit"]');
-        const originalBtnText = submitBtn.html();
-        submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...');
-        submitBtn.prop('disabled', true);
-
-        let formData = new FormData(this);
-
+        $(this).prop('disabled', true);
+        
         $.ajax({
-            url: $(this).attr('action'),
+            url: `{{ url('inventory/pos/menu-items') }}/${itemId}/toggle-availability`,
             type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            data: {
+                is_available: isAvailable,
+                _token: '{{ csrf_token() }}'
             },
             success: function(response) {
                 if (response.success) {
-                    // Close modal
-                    $('#createMenuItemModal').modal('hide');
-                    
-                    // Show success message
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
-                        text: response.message,
-                    }).then((result) => {
-                        location.reload();
+                        text: response.message || 'Availability updated successfully.',
+                        timer: 1500,
+                        showConfirmButton: false
                     });
                 } else {
-                    $('#errorAlert').text(response.message).show();
+                    // Revert the toggle if failed
+                    $(this).prop('checked', !isAvailable);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: response.message || 'Failed to update availability.'
+                    });
                 }
             },
             error: function(xhr) {
-                console.error('Error response:', xhr.responseText);
-                let errorMessage = 'An error occurred while creating the menu item.';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                $('#errorAlert').text(errorMessage).show();
-                
-                // Show validation errors
-                if (xhr.responseJSON && xhr.responseJSON.errors) {
-                    Object.keys(xhr.responseJSON.errors).forEach(field => {
-                        const input = $(`#${field}`);
-                        input.addClass('is-invalid');
-                        input.next('.invalid-feedback').text(xhr.responseJSON.errors[field][0]);
-                    });
-                }
+                // Revert the toggle if failed
+                $(this).prop('checked', !isAvailable);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Failed to update availability. Please try again.'
+                });
             },
             complete: function() {
-                // Reset button state and submission flag
-                submitBtn.html(originalBtnText);
-                submitBtn.prop('disabled', false);
-                isSubmitting = false;
+                $(this).prop('disabled', false);
             }
         });
     });

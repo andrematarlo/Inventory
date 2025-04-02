@@ -639,20 +639,20 @@ $(document).ready(function() {
             $('#depositPaymentDetails').show();
         }
     });
-
+        
     // Check student balance
     $('#checkBalance').click(function() {
         const studentId = $('#student_id').val();
-        if (!studentId) {
-            Swal.fire({
+            if (!studentId) {
+                Swal.fire({
                 icon: 'error',
                 title: 'Student ID Required',
                 text: 'Please enter a student ID to check balance.',
-                confirmButtonText: 'OK'
-            });
-            return;
-        }
-
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
         // Show loading state
         $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Checking...');
 
@@ -678,11 +678,11 @@ $(document).ready(function() {
                         $('button[type="submit"]').prop('disabled', false);
                     } else {
                         $('button[type="submit"]').prop('disabled', true);
-                        Swal.fire({
+                Swal.fire({
                             icon: 'warning',
-                            title: 'Insufficient Balance',
+                    title: 'Insufficient Balance',
                             text: `Student balance (₱${balance.toFixed(2)}) is less than the order total (₱${orderTotal.toFixed(2)})`,
-                            confirmButtonText: 'OK'
+                    confirmButtonText: 'OK'
                         });
                     }
                 } else {
@@ -813,52 +813,52 @@ $(document).ready(function() {
             $('#cartData').append(`<input type="hidden" name="notes" value="${encodeURIComponent(notes)}">`);
         }
 
-        // Show loading state
+                // Show loading state
         const submitButton = $('button[type="submit"]');
         submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
 
         // Submit the form
-        $.ajax({
-            url: $(this).attr('action'),
+                $.ajax({
+                    url: $(this).attr('action'),
             type: 'POST',
             data: $(this).serialize(),
-            success: function(response) {
-                if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
                         title: 'Order Placed Successfully!',
                         text: 'Your order has been processed.',
-                        confirmButtonText: 'OK'
-                    }).then((result) => {
+                                confirmButtonText: 'OK'
+                            }).then((result) => {
                         if (result.isConfirmed) {
                             window.location.href = "{{ route('pos.index') }}";
-                        }
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
                         title: 'Error',
                         text: response.message || 'Failed to place order. Please try again.',
-                        confirmButtonText: 'OK'
-                    });
-                }
-            },
-            error: function(xhr) {
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    },
+                    error: function(xhr) {
                 let errorMessage = 'Failed to place order. Please try again.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
                 }
-                Swal.fire({
-                    icon: 'error',
+                        Swal.fire({
+                            icon: 'error',
                     title: 'Error',
                     text: errorMessage,
-                    confirmButtonText: 'OK'
-                });
+                            confirmButtonText: 'OK'
+                        });
             },
             complete: function() {
                 submitButton.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>Place Order');
-            }
-        });
+                }
+            });
     });
 });
 </script>
