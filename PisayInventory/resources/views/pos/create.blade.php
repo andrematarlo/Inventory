@@ -208,6 +208,13 @@
                                         <i class="bi bi-cash me-1"></i> Cash
                                     </label>
                                 </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_type" 
+                                           id="depositPayment" value="deposit">
+                                    <label class="form-check-label" for="depositPayment">
+                                        <i class="bi bi-wallet2 me-1"></i> Cash Deposit
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -235,6 +242,33 @@
                                 <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="500">₱500</button>
                                 <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="1000">₱1000</button>
                                 <button type="button" class="quick-cash btn btn-sm btn-outline-primary" data-amount="exact">Exact</button>
+                            </div>
+                        </div>
+
+                        <!-- Cash Deposit Details -->
+                        <div id="depositPaymentDetails" class="mb-3 p-3 border rounded" style="display: none;">
+                            <div class="mb-3">
+                                <label for="student_id" class="form-label">Student ID *</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="student_id" name="student_id" 
+                                           placeholder="Enter student ID" required>
+                                    <button type="button" class="btn btn-outline-primary" id="checkBalance">
+                                        <i class="bi bi-search"></i> Check Balance
+                                    </button>
+                                </div>
+                                <div id="studentInfo" class="mt-2" style="display: none;">
+                                    <div class="alert alert-info mb-0">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>Student Name:</strong> <span id="studentName"></span><br>
+                                                <strong>Current Balance:</strong> <span id="studentBalance"></span>
+                                            </div>
+                                            <div>
+                                                <strong>Order Total:</strong> <span id="orderTotal"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -596,43 +630,93 @@ $(document).ready(function() {
     $('input[name="payment_type"]').change(function() {
         const paymentType = $(this).val();
         
-        // Show/hide cash payment details
+        // Show/hide payment details
         if (paymentType === 'cash') {
             $('#cashPaymentDetails').show();
+            $('#depositPaymentDetails').hide();
         } else {
             $('#cashPaymentDetails').hide();
+            $('#depositPaymentDetails').show();
         }
-        
-        if (paymentType === 'deposit') {
-            const studentId = $('#student').val();
-            if (!studentId) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Student Required',
-                    text: 'Please select a student to use deposit payment.',
-                    confirmButtonText: 'OK'
-                }).then(() => {
-                    $('#cashPayment').prop('checked', true);
-                    $('#cashPaymentDetails').show();
-                });
-                return;
-            }
-            
-            // Check if student has sufficient balance
-            const total = parseFloat($('#total').text());
-            const balance = parseFloat($('#balance-amount').text());
-            if (balance < total) {
+    });
+
+    // Check student balance
+    $('#checkBalance').click(function() {
+        const studentId = $('#student_id').val();
+        if (!studentId) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Student ID Required',
+                text: 'Please enter a student ID to check balance.',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
+        // Show loading state
+        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Checking...');
+
+        // Get student balance
+        $.ajax({
+            url: `{{ route('pos.check-student-balance', '') }}/${studentId}`,
+            type: 'GET',
+            success: function(response) {
+                console.log('Balance check response:', response); // Debug log
+                if (response.success) {
+                    const student = response.student;
+                    const balance = parseFloat(response.balance);
+                    const orderTotal = parseFloat($('#total').text());
+
+                    // Update student info display
+                    $('#studentName').text(student.name);
+                    $('#studentBalance').text(`₱${balance.toFixed(2)}`);
+                    $('#orderTotal').text(`₱${orderTotal.toFixed(2)}`);
+                    $('#studentInfo').show();
+
+                    // Enable/disable submit button based on balance
+                    if (balance >= orderTotal) {
+                        $('button[type="submit"]').prop('disabled', false);
+                    } else {
+                        $('button[type="submit"]').prop('disabled', true);
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Insufficient Balance',
+                            text: `Student balance (₱${balance.toFixed(2)}) is less than the order total (₱${orderTotal.toFixed(2)})`,
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Could not find student with the provided ID.',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Balance check error:', {xhr, status, error}); // Debug log
+                let errorMessage = 'Failed to check student balance. Please try again.';
+                
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                
+                if (xhr.responseJSON && xhr.responseJSON.debug_message) {
+                    console.error('Debug message:', xhr.responseJSON.debug_message);
+                }
+
                 Swal.fire({
                     icon: 'error',
-                    title: 'Insufficient Balance',
-                    text: `Current balance (₱${balance.toFixed(2)}) is less than the total amount (₱${total.toFixed(2)})`,
+                    title: 'Error',
+                    text: errorMessage,
                     confirmButtonText: 'OK'
-                }).then(() => {
-                    $('#cashPayment').prop('checked', true);
                 });
-                return;
+            },
+            complete: function() {
+                $('#checkBalance').prop('disabled', false).html('<i class="bi bi-search"></i> Check Balance');
             }
-        }
+        });
     });
 
     // Form submission
@@ -640,33 +724,46 @@ $(document).ready(function() {
         e.preventDefault();
         
         const paymentType = $('input[name="payment_type"]:checked').val();
+        
+        // Validate payment method specific requirements
         if (paymentType === 'deposit') {
-            const studentId = $('#student').val();
+            const studentId = $('#student_id').val();
             if (!studentId) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Student Required',
-                    text: 'Please select a student to use deposit payment.',
+                    text: 'Please enter a student ID for deposit payment.',
                     confirmButtonText: 'OK'
                 });
                 return;
             }
 
-            // Check if student has sufficient balance
-            const total = parseFloat($('#total').text());
-            const balance = parseFloat($('#balance-amount').text());
-            if (balance < total) {
+            // Check if balance was verified
+            if ($('#studentInfo').is(':hidden')) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Insufficient Balance',
-                    text: `Current balance (₱${balance.toFixed(2)}) is less than the total amount (₱${total.toFixed(2)})`,
+                    title: 'Balance Not Verified',
+                    text: 'Please check the student balance before proceeding.',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+        } else if (paymentType === 'cash') {
+            const cashAmount = parseFloat($('#cashAmount').val()) || 0;
+            const total = parseFloat($('#total').text());
+            
+            if (cashAmount < total) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Insufficient Cash Amount',
+                    text: `Cash amount (₱${cashAmount.toFixed(2)}) is less than the total (₱${total.toFixed(2)})`,
                     confirmButtonText: 'OK'
                 });
                 return;
             }
         }
 
-        // Get customer name first
+        // Get customer name
         const customerName = $('#customerName').val();
         if (!customerName) {
             Swal.fire({
@@ -696,313 +793,72 @@ $(document).ready(function() {
         const total = parseFloat($('#total').text());
         $('#cartData').append(`<input type="hidden" name="total_amount" value="${total}">`);
         
-        // Add payment type
+        // Add payment type and details
         $('#cartData').append(`<input type="hidden" name="payment_type" value="${paymentType}">`);
-
-        // Add customer name
         $('#cartData').append(`<input type="hidden" name="customer_name" value="${encodeURIComponent(customerName)}">`);
 
-        // If cash payment, add cash amount and change
         if (paymentType === 'cash') {
             const cashAmount = parseFloat($('#cashAmount').val()) || 0;
             const changeAmount = cashAmount - total;
-            
-            // Validate cash amount
-            if (cashAmount < total) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Insufficient Cash Amount',
-                    text: `Cash amount (₱${cashAmount.toFixed(2)}) is less than the total (₱${total.toFixed(2)})`,
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
-            
             $('#cartData').append(`<input type="hidden" name="amount_tendered" value="${cashAmount}">`);
             $('#cartData').append(`<input type="hidden" name="change_amount" value="${changeAmount}">`);
-            
-            // Store the amount in session storage for the payment page
-            sessionStorage.setItem('lastAmountTendered', cashAmount);
+        } else {
+            const studentId = $('#student_id').val();
+            $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
         }
 
-        Swal.fire({
-            title: 'Confirm Order',
-            text: 'Are you sure you want to place this order?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Place Order',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Submit the form
-                $.ajax({
-                    url: $(this).attr('action'),
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    success: function(response) {
-                        if (response.success) {
-                            // Update stock levels immediately for ordered items
-                            const cartItems = JSON.parse($('#cartData input[name="cart_items"]').val());
-                            cartItems.forEach(item => {
-                                const menuItem = $(`.menu-item[data-item-id="${item.id}"]`);
-                                const stockBadge = menuItem.find('.stock-badge');
-                                const addButton = menuItem.find('.add-to-cart');
-                                
-                                // Calculate new stock level
-                                const newStock = parseInt(addButton.data('item-stock')) - item.quantity;
-                                
-                                // Update stock display
-                                if (newStock <= 0) {
-                                    stockBadge.removeClass('bg-success bg-warning').addClass('bg-danger')
-                                        .text('Out of Stock');
-                                    addButton.prop('disabled', true);
-                                    menuItem.addClass('out-of-stock').removeClass('low-stock');
-                                } else if (newStock <= 5) {
-                                    stockBadge.removeClass('bg-success bg-danger').addClass('bg-warning')
-                                        .text(`Low Stock: ${newStock}`);
-                                    addButton.prop('disabled', false);
-                                    menuItem.removeClass('out-of-stock').addClass('low-stock');
-                                } else {
-                                    stockBadge.removeClass('bg-warning bg-danger').addClass('bg-success')
-                                        .text(`In Stock: ${newStock}`);
-                                    addButton.prop('disabled', false);
-                                    menuItem.removeClass('out-of-stock low-stock');
-                                }
-                                
-                                // Update data attribute for stock checking
-                                addButton.data('item-stock', newStock);
-                            });
-                            
-                            // Show success message
-                            const successContent = `
-                                <div class="text-center">
-                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-                                    <h4 class="mt-3">Order #${response.order_number}</h4>
-                                    <p class="text-muted">Your order has been placed successfully!</p>
-                                    ${response.alert.footer ? `<p class="text-muted small">${response.alert.footer}</p>` : ''}
-                                </div>
-                            `;
-                            
-                            Swal.fire({
-                                icon: 'success',
-                                title: response.alert.title || 'Order Completed',
-                                html: successContent,
-                                showConfirmButton: true,
-                                confirmButtonText: 'OK'
-                            }).then((result) => {
-                                // Reset form and cart
-                                $('.cart-items').empty();
-                                updateCartCount();
-                                updateTotals();
-                                updateSubmitButton();
-                                $('#student').val(null).trigger('change');
-                                $('#cashPayment').prop('checked', true);
-                                $('#cashAmount').val('');
-                                $('#changeAmount').val('');
-                                $('#notes').val('');
-                                $('#customerName').val(''); // Clear customer name
-                                
-                                // Update category display if needed
-                                const currentCategory = $('.category-btn.active').data('category');
-                                if (currentCategory && currentCategory !== 'all') {
-                                    $('.category-btn.active').trigger('click');
-                                }
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Order Failed',
-                                text: response.message || 'Failed to create order',
-                                confirmButtonText: 'OK'
-                            });
+        // Add notes if any
+        const notes = $('#notes').val();
+        if (notes) {
+            $('#cartData').append(`<input type="hidden" name="notes" value="${encodeURIComponent(notes)}">`);
+        }
+
+        // Show loading state
+        const submitButton = $('button[type="submit"]');
+        submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+
+        // Submit the form
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Order Placed Successfully!',
+                        text: 'Your order has been processed.',
+                        confirmButtonText: 'OK'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = "{{ route('pos.index') }}";
                         }
-                    },
-                    error: function(xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: xhr.responseJSON?.message || 'An error occurred while processing your order.',
-                            confirmButtonText: 'OK'
-                        });
-                    }
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to place order. Please try again.',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Failed to place order. Please try again.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMessage,
+                    confirmButtonText: 'OK'
                 });
+            },
+            complete: function() {
+                submitButton.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>Place Order');
             }
         });
-    });
-
-    // Calculate change from cash amount
-    $('#cashAmount').on('input', function() {
-        calculateChange();
-    });
-    
-    // Quick cash buttons
-    $('.quick-cash').click(function() {
-        const amount = $(this).data('amount');
-        
-        if (amount === 'exact') {
-            // Set exact amount
-            const total = parseFloat($('#total').text());
-            $('#cashAmount').val(total.toFixed(2));
-        } else {
-            // Set predefined amount
-            $('#cashAmount').val(amount);
-        }
-        
-        calculateChange();
-    });
-    
-    // Function to calculate change
-    function calculateChange() {
-        const cashAmount = parseFloat($('#cashAmount').val()) || 0;
-        const totalAmount = parseFloat($('#total').text()) || 0;
-        
-        let change = cashAmount - totalAmount;
-        
-        if (change >= 0) {
-            $('#changeAmount').val(change.toFixed(2));
-            // If we have valid change, enable the submit button if there are items
-            if ($('.cart-item').length > 0) {
-                $('button[type="submit"]').prop('disabled', false);
-            }
-        } else {
-            $('#changeAmount').val('Insufficient amount');
-            // Disable the submit button if cash amount is less than total
-            $('button[type="submit"]').prop('disabled', true);
-        }
-    }
-    
-    // Show cash details by default (since cash is the default payment method)
-    $('#cashPaymentDetails').show();
-
-    // Function to check stock levels
-    function checkStockLevels() {
-        $('.menu-item').each(function() {
-            const menuItem = $(this);
-            const itemId = menuItem.data('item-id');
-            
-            $.get(`{{ url('pos/check-stock') }}/${itemId}`)
-                .done(function(response) {
-                    if (response.success) {
-                        const stock = response.stock;
-                        const stockBadge = menuItem.find('.stock-badge');
-                        const addButton = menuItem.find('.add-to-cart');
-                        
-                        // Update stock display
-                        if (stock <= 0) {
-                            stockBadge.removeClass('bg-success bg-warning').addClass('bg-danger')
-                                .text('Out of Stock');
-                            addButton.prop('disabled', true);
-                            menuItem.addClass('out-of-stock').removeClass('low-stock');
-                        } else if (stock <= 5) {
-                            stockBadge.removeClass('bg-success bg-danger').addClass('bg-warning')
-                                .text(`Low Stock: ${stock}`);
-                            addButton.prop('disabled', false);
-                            menuItem.removeClass('out-of-stock').addClass('low-stock');
-                        } else {
-                            stockBadge.removeClass('bg-warning bg-danger').addClass('bg-success')
-                                .text(`In Stock: ${stock}`);
-                            addButton.prop('disabled', false);
-                            menuItem.removeClass('out-of-stock low-stock');
-                        }
-                        
-                        // Update data attribute for stock checking
-                        addButton.data('item-stock', stock);
-                    }
-                });
-        });
-    }
-
-    // Check stock levels every 30 seconds
-    setInterval(checkStockLevels, 30000);
-
-    // Modify the add-to-cart click handler to check stock before adding
-    $('.add-to-cart').click(function() {
-        const button = $(this);
-        const itemId = button.data('item-id');
-        
-        // Check stock before adding
-        $.get(`{{ url('pos/check-stock') }}/${itemId}`)
-            .done(function(response) {
-                if (response.success) {
-                    const currentStock = response.stock;
-                    const cartItem = $(`.cart-item[data-item-id="${itemId}"]`);
-                    const currentQty = cartItem.length ? parseInt(cartItem.find('.quantity-input').val()) : 0;
-                    
-                    if (currentStock <= 0) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Out of Stock',
-                            text: 'This item is currently out of stock.'
-                        });
-                        return;
-                    }
-                    
-                    if (currentQty >= currentStock) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Stock Limit Reached',
-                            text: `Only ${currentStock} items available in stock.`
-                        });
-                        return;
-                    }
-                    
-                    // Update the button's stock data
-                    button.data('item-stock', currentStock);
-                    
-                    // Proceed with adding to cart (your existing add-to-cart logic)
-                    const itemName = button.data('item-name');
-                    const price = parseFloat(button.data('item-price'));
-                    
-                    // Your existing add-to-cart code here...
-                    // Make sure to keep the existing cart addition logic
-                }
-            });
-    });
-
-    // Modify the quantity increase handler to check stock
-    $(document).on('click', '.quantity-increase', function() {
-        const input = $(this).siblings('.quantity-input');
-        const currentVal = parseInt(input.val());
-        const itemId = $(this).closest('.cart-item').data('item-id');
-        
-        $.get(`{{ url('pos/check-stock') }}/${itemId}`)
-            .done(function(response) {
-                if (response.success) {
-                    const availableStock = response.stock;
-                    if (currentVal < availableStock) {
-                        input.val(currentVal + 1).trigger('change');
-                    } else {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Stock Limit Reached',
-                            text: `Only ${availableStock} items available in stock.`
-                        });
-                    }
-                }
-            });
-    });
-
-    // Modify the quantity input change handler to validate against stock
-    $(document).on('change', '.quantity-input', function() {
-        const input = $(this);
-        const itemId = input.closest('.cart-item').data('item-id');
-        const newValue = parseInt(input.val());
-        
-        $.get(`{{ url('pos/check-stock') }}/${itemId}`)
-            .done(function(response) {
-                if (response.success) {
-                    const availableStock = response.stock;
-                    if (newValue > availableStock) {
-                        input.val(availableStock);
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Stock Limit Reached',
-                            text: `Only ${availableStock} items available in stock.`
-                        });
-                    }
-                    input.trigger('change'); // Trigger update of subtotals
-                }
-            });
     });
 });
 </script>

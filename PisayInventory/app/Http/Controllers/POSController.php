@@ -18,6 +18,8 @@ use App\Models\CashDeposit;
 use Exception;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class POSController extends Controller
 {
@@ -1067,7 +1069,12 @@ class POSController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('pos.menu-items.index', compact('menuItems'));
+        $categories = DB::table('classification')
+            ->where('IsDeleted', 0)
+            ->orderBy('ClassificationName')
+            ->get();
+
+        return view('pos.menu-items.index', compact('menuItems', 'categories'));
     }
     
     /**
@@ -1087,22 +1094,27 @@ class POSController extends Controller
      */
     public function storeMenuItem(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'ItemName' => 'required|string|max:255',
-            'Price' => 'required|numeric|min:0',
-            'ClassificationId' => 'required|exists:classification,ClassificationId',
-            'Description' => 'nullable|string',
-            'StocksAvailable' => 'required|integer|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
         try {
+            Log::info('Creating menu item:', ['request_data' => $request->all()]);
+
+            $validator = Validator::make($request->all(), [
+                'ItemName' => 'required|string|max:255',
+                'Price' => 'required|numeric|min:0',
+                'ClassificationId' => 'required|exists:classification,ClassificationId',
+                'Description' => 'nullable|string',
+                'StocksAvailable' => 'required|integer|min:0',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('Validation failed:', ['errors' => $validator->errors()]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
             DB::beginTransaction();
 
             $menuItem = new MenuItem();
@@ -1125,15 +1137,25 @@ class POSController extends Controller
 
             DB::commit();
             
-            return redirect()->route('pos.menu-items.index')
-                ->with('success', 'Menu item created successfully');
-                
+            Log::info('Menu item created successfully:', ['menu_item' => $menuItem->toArray()]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Menu item created successfully',
+                'data' => $menuItem
+            ]);
+            
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Error creating menu item: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'Failed to create menu item: ' . $e->getMessage())
-                ->withInput();
+            Log::error('Error creating menu item:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create menu item: ' . $e->getMessage()
+            ], 500);
         }
     }
     
@@ -1146,7 +1168,12 @@ class POSController extends Controller
             ->where('IsDeleted', false)
             ->firstOrFail();
             
-        return view('pos.menu-items.edit', compact('menuItem'));
+        $categories = DB::table('classification')
+            ->where('IsDeleted', 0)  // Using 0 instead of false for bit field
+            ->orderBy('ClassificationName')
+            ->get();
+            
+        return view('pos.menu-items.edit', compact('menuItem', 'categories'));
     }
     
     /**
@@ -1154,54 +1181,104 @@ class POSController extends Controller
      */
     public function updateMenuItem(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'category' => 'required|exists:classification,ClassificationId',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'available' => 'nullable|boolean',
-            'remove_image' => 'nullable|boolean',
-        ]);
-
         try {
+            // Log the incoming request data
+            Log::info('Update menu item request:', [
+                'id' => $id,
+                'request_data' => $request->all()
+            ]);
+
+            $validator = Validator::make($request->all(), [
+                'ItemName' => 'required|string|max:255',
+                'Price' => 'required|numeric|min:0',
+                'ClassificationID' => 'required|exists:classification,ClassificationId',
+                'Description' => 'nullable|string',
+                'StocksAvailable' => 'required|integer|min:0',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('Validation failed:', [
+                    'id' => $id,
+                    'errors' => $validator->errors()->toArray()
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
             DB::beginTransaction();
 
             $menuItem = MenuItem::where('MenuItemID', $id)
                 ->where('IsDeleted', false)
                 ->firstOrFail();
+
+            // Log the current state
+            Log::info('Current menu item state:', [
+                'id' => $id,
+                'current_data' => $menuItem->toArray()
+            ]);
                 
-            $menuItem->ItemName = $request->name;
-            $menuItem->Price = $request->price;
-            $menuItem->ClassificationId = $request->category;
-            $menuItem->Description = $request->description;
-            $menuItem->IsAvailable = $request->has('available') ? true : false;
-            
-            // Handle image removal
-            if ($request->has('remove_image') && $menuItem->image_path) {
-                Storage::disk('public')->delete($menuItem->image_path);
-                $menuItem->image_path = null;
-            }
+            $menuItem->ItemName = $request->ItemName;
+            $menuItem->Price = $request->Price;
+            $menuItem->ClassificationID = $request->ClassificationID;
+            $menuItem->Description = $request->Description;
+            $menuItem->StocksAvailable = $request->StocksAvailable;
             
             // Handle image upload
             if ($request->hasFile('image')) {
+                Log::info('Processing image upload for menu item:', ['id' => $id]);
                 // Delete old image if exists
-                if ($menuItem->image_path) {
+                if ($menuItem->image_path && Storage::disk('public')->exists($menuItem->image_path)) {
                     Storage::disk('public')->delete($menuItem->image_path);
                 }
-                $image = $request->file('image');
-                $imagePath = $image->store('menu-items', 'public');
+                $imagePath = $request->file('image')->store('menu-items', 'public');
                 $menuItem->image_path = $imagePath;
             }
 
             $menuItem->save();
 
             DB::commit();
-            return redirect()->route('pos.menu-items.index')->with('success', 'Menu item updated successfully');
-        } catch (Exception $e) {
+            
+            // Log the final state
+            Log::info('Menu item updated successfully:', [
+                'id' => $id,
+                'updated_data' => $menuItem->toArray()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Menu item updated successfully',
+                'data' => $menuItem
+            ]);
+
+        } catch (ModelNotFoundException $e) {
             DB::rollBack();
-            Log::error('Error updating menu item: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to update menu item: ' . $e->getMessage())->withInput();
+            Log::error('Menu item not found:', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Menu item not found'
+            ], 404);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update menu item:', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update menu item: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -1288,6 +1365,134 @@ class POSController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error checking stock'
+            ], 500);
+        }
+    }
+
+    public function updateOrder(Request $request, $id)
+    {
+        try {
+            Log::info('Updating order', ['id' => $id, 'request_data' => $request->all()]);
+            
+            $validator = Validator::make($request->all(), [
+                'customer_name' => 'required|string|max:255',
+                'status' => 'required|in:pending,paid,preparing,ready,completed,cancelled'
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('Validation failed', ['errors' => $validator->errors()]);
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $order = POSOrder::findOrFail($id);
+            Log::info('Found order', ['order' => $order->toArray()]);
+            
+            DB::beginTransaction();
+            
+            $order->customer_name = $request->customer_name;
+            $order->Status = $request->status;
+            $order->save();
+            
+            DB::commit();
+            Log::info('Order updated successfully', ['order_id' => $id]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order updated successfully'
+            ]);
+
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            Log::error('Order not found', ['id' => $id, 'error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            Log::error('Validation error', ['id' => $id, 'error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating order', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while updating the order'
+            ], 500);
+        }
+    }
+
+    public function checkStudentBalance($studentId)
+    {
+        try {
+            Log::info('Checking balance for student ID: ' . $studentId);
+
+            // Get the latest balance for the student
+            $latestDeposit = DB::table('student_deposits')
+                ->where('student_id', $studentId)
+                ->whereNull('deleted_at')
+                ->orderBy('TransactionDate', 'desc')
+                ->first();
+
+            Log::info('Latest deposit record:', ['deposit' => $latestDeposit]);
+
+            if (!$latestDeposit) {
+                Log::warning('No deposit records found for student ID: ' . $studentId);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No deposit records found for this student.'
+                ]);
+            }
+
+            // Get student information
+            $student = DB::table('students')
+                ->where('student_id', $studentId)
+                ->first();
+
+            Log::info('Student record:', ['student' => $student]);
+
+            if (!$student) {
+                Log::warning('Student not found with ID: ' . $studentId);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not found.'
+                ]);
+            }
+
+            $response = [
+                'success' => true,
+                'student' => [
+                    'id' => $student->student_id,
+                    'name' => $student->first_name . ' ' . $student->last_name
+                ],
+                'balance' => $latestDeposit->BalanceAfter
+            ];
+
+            Log::info('Balance check response:', $response);
+            return response()->json($response);
+
+        } catch (\Exception $e) {
+            Log::error('Error checking student balance: ' . $e->getMessage(), [
+                'student_id' => $studentId,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while checking the student balance.',
+                'debug_message' => $e->getMessage()
             ], 500);
         }
     }

@@ -69,7 +69,7 @@
                             </td>
                             <td>{{ \Carbon\Carbon::parse($order->OrderDate)->format('M d, Y h:ia') }}</td>
                             <td>
-                                {{ $order->customer_name ?? 'Walk-in Customer' }}
+                                {{ $order->customer_name ? urldecode($order->customer_name) : 'Walk-in Customer' }}
                             </td>
                             <td>
                                 <button class="btn btn-sm btn-link view-items" 
@@ -91,22 +91,28 @@
                             </td>
                             <td>
                                 <div class="btn-group">
-                                    <a href="{{ route('pos.orders.show', $order->OrderID) }}" 
-                                       class="btn btn-sm btn-outline-primary"
-                                       title="View Order">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a href="{{ route('pos.orders.edit', $order->OrderID) }}" 
-                                       class="btn btn-sm btn-outline-warning"
-                                       title="Edit Order">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
                                     <button type="button" 
-                                            class="btn btn-sm btn-outline-danger delete-order"
+                                            class="btn btn-sm btn-info view-order" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#viewOrderModal{{ $order->OrderID }}"
+                                            title="View Order">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                    
+                                    <button type="button" 
+                                            class="btn btn-sm btn-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editOrderModal{{ $order->OrderID }}"
+                                            title="Edit Order">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger delete-order"
                                             data-order-id="{{ $order->OrderID }}"
                                             data-order-number="{{ $order->OrderNumber }}"
                                             title="Delete Order">
-                                        <i class="bi bi-trash"></i>
+                                        <i class="fas fa-trash"></i> Delete
                                     </button>
                                 </div>
                             </td>
@@ -207,6 +213,134 @@
         </div>
     </div>
 </div>
+
+<!-- View Order Modal -->
+@foreach($orders as $order)
+<div class="modal fade" id="viewOrderModal{{ $order->OrderID }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Order #{{ $order->OrderNumber }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <!-- Order Details -->
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3">Order Information</h6>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Order Date</dt>
+                            <dd class="col-sm-8">{{ \Carbon\Carbon::parse($order->OrderDate)->format('M d, Y h:ia') }}</dd>
+                            
+                            <dt class="col-sm-4">Customer</dt>
+                            <dd class="col-sm-8">{{ $order->customer_name ? urldecode($order->customer_name) : 'Walk-in Customer' }}</dd>
+                            
+                            <dt class="col-sm-4">Status</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-{{ 
+                                    $order->Status === 'ready' ? 'success' : 
+                                    ($order->Status === 'paid' ? 'primary' : 
+                                    ($order->Status === 'preparing' ? 'warning' : 
+                                    ($order->Status === 'completed' ? 'info' : 'danger'))) }}">
+                                    {{ ucfirst($order->Status) }}
+                                </span>
+                            </dd>
+                            
+                            <dt class="col-sm-4">Total Amount</dt>
+                            <dd class="col-sm-8">₱{{ number_format($order->TotalAmount, 2) }}</dd>
+                        </dl>
+                    </div>
+                    
+                    <!-- Order Items -->
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3">Order Items</h6>
+                        <div class="table-responsive" style="max-height: 200px;">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th class="text-end">Price</th>
+                                        <th class="text-end">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($order->items as $item)
+                                    <tr>
+                                        <td>{{ $item->ItemName }}</td>
+                                        <td>{{ $item->Quantity }}</td>
+                                        <td class="text-end">₱{{ number_format($item->UnitPrice, 2) }}</td>
+                                        <td class="text-end">₱{{ number_format($item->Subtotal, 2) }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" 
+                        class="btn btn-primary" 
+                        data-bs-dismiss="modal" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#editOrderModal{{ $order->OrderID }}">
+                    <i class="fas fa-edit"></i> Edit Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Order Modal -->
+<div class="modal fade" id="editOrderModal{{ $order->OrderID }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Edit Order #{{ $order->OrderNumber }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editOrderForm{{ $order->OrderID }}">
+                    @csrf
+                    
+                    <div class="alert alert-danger" id="editErrorAlert{{ $order->OrderID }}" style="display: none;"></div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Customer Name</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="customer_name" 
+                                   value="{{ $order->customer_name }}"
+                                   placeholder="Walk-in Customer">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status" required>
+                                <option value="pending" {{ $order->Status === 'pending' ? 'selected' : '' }}>Pending</option>
+                                <option value="paid" {{ $order->Status === 'paid' ? 'selected' : '' }}>Paid</option>
+                                <option value="preparing" {{ $order->Status === 'preparing' ? 'selected' : '' }}>Preparing</option>
+                                <option value="ready" {{ $order->Status === 'ready' ? 'selected' : '' }}>Ready to Serve</option>
+                                <option value="completed" {{ $order->Status === 'completed' ? 'selected' : '' }}>Completed</option>
+                                <option value="cancelled" {{ $order->Status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary update-order" data-order-id="{{ $order->OrderID }}">
+                    Update Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
 @endsection
 
 @push('styles')
@@ -315,6 +449,73 @@ $(document).ready(function() {
                     alert('Error updating status');
                 }
             });
+        });
+    });
+
+    // Update order functionality
+    $('.update-order').on('click', function() {
+        const orderId = $(this).data('order-id');
+        const form = $(`#editOrderForm${orderId}`);
+        const submitBtn = $(this);
+        const originalBtnText = submitBtn.html();
+        
+        // Show loading state
+        submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
+        submitBtn.prop('disabled', true);
+        
+        // Reset error states
+        form.find('.is-invalid').removeClass('is-invalid');
+        $(`#editErrorAlert${orderId}`).hide();
+        
+        $.ajax({
+            url: `/inventory/pos/orders/${orderId}`,
+            type: 'POST',
+            data: form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    // Close modal
+                    $(`#editOrderModal${orderId}`).modal('hide');
+                    
+                    // Show success message
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: response.message || 'Order updated successfully',
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    $(`#editErrorAlert${orderId}`)
+                        .text(response.message || 'Failed to update order')
+                        .show();
+                }
+            },
+            error: function(xhr) {
+                console.error('Error response:', xhr.responseText); // Add this line for debugging
+                if (xhr.status === 422) {
+                    // Validation errors
+                    const errors = xhr.responseJSON.errors;
+                    let errorMessage = '<ul class="mb-0">';
+                    
+                    Object.keys(errors).forEach(field => {
+                        const input = form.find(`[name="${field}"]`);
+                        input.addClass('is-invalid');
+                        errorMessage += `<li>${errors[field][0]}</li>`;
+                    });
+                    
+                    errorMessage += '</ul>';
+                    $(`#editErrorAlert${orderId}`).html(errorMessage).show();
+                } else {
+                    $(`#editErrorAlert${orderId}`)
+                        .text('An error occurred while updating the order')
+                        .show();
+                }
+            },
+            complete: function() {
+                // Reset button state
+                submitBtn.html(originalBtnText);
+                submitBtn.prop('disabled', false);
+            }
         });
     });
 

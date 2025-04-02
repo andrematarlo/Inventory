@@ -197,9 +197,10 @@ Route::middleware('auth')->group(function () {
             Route::match(['post', 'patch'], '/process-by-id/{id}', [POSController::class, 'processById'])->name('process.by.id');
             Route::post('/cancel/{id}', [POSController::class, 'cancel'])->name('cancel');
             Route::get('/order-details/{id}', [POSController::class, 'getOrderDetails'])->name('order-details');
-            Route::post('/add-menu-item', [POSController::class, 'addMenuItem'])->name('add-menu-item');
             Route::get('/search-students', [POSController::class, 'searchStudents'])->name('search-students');
             Route::get('/student-balance/{studentId}', [POSController::class, 'getStudentBalance'])->name('student-balance');
+            Route::get('/check-stock/{id}', [POSController::class, 'checkStock'])->name('check-stock');
+            Route::get('/check-student-balance/{studentId}', [POSController::class, 'checkStudentBalance'])->name('check-student-balance');
             
             // Orders routes
             Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
@@ -260,12 +261,14 @@ Route::middleware('auth')->group(function () {
             Route::post('/deposits/{id}/reject', [POSController::class, 'rejectDeposit'])->name('deposits.reject');
             
             // Menu Items Management Routes
-            Route::get('/menu-items', [MenuItemController::class, 'index'])->name('menu-items.index');
-            Route::get('/menu-items/create', [MenuItemController::class, 'create'])->name('menu-items.create');
-            Route::post('/menu-items', [MenuItemController::class, 'store'])->name('menu-items.store');
-            Route::get('/menu-items/{id}/edit', [MenuItemController::class, 'edit'])->name('menu-items.edit');
-            Route::put('/menu-items/{id}', [MenuItemController::class, 'update'])->name('menu-items.update');
-            Route::delete('/menu-items/{id}', [MenuItemController::class, 'destroy'])->name('menu-items.delete');
+            Route::prefix('menu-items')->name('menu-items.')->group(function () {
+                Route::get('/', [POSController::class, 'menuItems'])->name('index');
+                Route::get('/create', [POSController::class, 'createMenuItem'])->name('create');
+                Route::post('/', [POSController::class, 'storeMenuItem'])->name('store');
+                Route::get('/{id}/edit', [POSController::class, 'editMenuItem'])->name('edit');
+                Route::put('/{id}', [POSController::class, 'updateMenuItem'])->name('update');
+                Route::delete('/{id}', [POSController::class, 'deleteMenuItem'])->name('destroy');
+            });
 
             // Add these routes for edit and delete functionality
             Route::get('/orders/{id}/edit', [OrderController::class, 'edit'])->name('orders.edit');
@@ -274,6 +277,8 @@ Route::middleware('auth')->group(function () {
 
             // New route for checking stock levels
             Route::get('/check-stock/{id}', [POSController::class, 'checkStock'])->name('check-stock');
+
+            Route::post('/orders/{id}', [POSController::class, 'updateOrder'])->name('pos.orders.update');
         });
 
 // Laboratory Management Routes
