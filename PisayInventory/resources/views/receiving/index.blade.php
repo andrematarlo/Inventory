@@ -35,6 +35,19 @@
         background-color: #ffc107;
         color: #000;
     }
+
+    .toggle-btn {
+        margin-right: 5px;
+    }
+
+    .toggle-btn.active {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .table-container {
+        margin-top: 20px;
+    }
 </style>
 @endsection
 
@@ -101,26 +114,26 @@
                                     @if($userPermissions->CanDelete)
                                     <button type="button" 
                                             class="btn btn-sm btn-danger" 
-                                            onclick="deleteResource('{{ route('receiving.destroy', $record->ReceivingID) }}', 'Receiving Record #{{ $record->ReceivingID }}')"
+                                            onclick="deleteReceivingRecord('{{ $record->ReceivingID }}')"
                                             title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                     @endif
                                 </div>
                             </td>
-                            <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
-                            <td>{{ $record->purchaseOrder->supplier->CompanyName ?? 'N/A' }}</td>
-                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'N/A' }}</td>
+                            <td>{{ optional($record->purchaseOrder)->PONumber }}</td>
+                            <td>{{ optional($record->purchaseOrder)->supplier->CompanyName ?? 'No Supplier' }}</td>
+                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'Not Set' }}</td>
                             <td>
                                 <span class="badge bg-{{ $record->Status === 'Pending' ? 'warning' : 'success' }}">
-                                    {{ $record->Status }}
+                                    {{ $record->Status ?? 'Unknown' }}
                                 </span>
                             </td>
                             <td>₱{{ number_format($record->getTotalAmountAttribute(), 2) }}</td>
-                            <td>{{ $record->createdBy->FirstName ?? 'N/A' }} {{ $record->createdBy->LastName ?? '' }}</td>
-                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'N/A' }}</td>
-                            <td>{{ $record->modifiedBy->FirstName ?? 'N/A' }} {{ $record->modifiedBy->LastName ?? '' }}</td>
-                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'N/A' }}</td>
+                            <td>{{ optional($record->createdBy)->FirstName }} {{ optional($record->createdBy)->LastName }}</td>
+                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'Not Set' }}</td>
+                            <td>{{ optional($record->modifiedBy)->FirstName }} {{ optional($record->modifiedBy)->LastName }}</td>
+                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'Not Set' }}</td>
                         </tr>
                         @empty
                         <tr>
@@ -172,19 +185,19 @@
                                     @endif
                                 </div>
                             </td>
-                            <td>{{ $record->PONumber }}</td>
-                            <td>{{ $record->supplier->CompanyName }}</td>
-                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'N/A' }}</td>
+                            <td>{{ optional($record)->PONumber }}</td>
+                            <td>{{ optional($record->supplier)->CompanyName ?? 'No Supplier' }}</td>
+                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'Not Set' }}</td>
                             <td>
                                 <span class="badge bg-warning">
-                                    {{ $record->Status }}
+                                    {{ $record->Status ?? 'Unknown' }}
                                 </span>
                             </td>
                             <td>₱{{ number_format($record->getTotalAmount(), 2) }}</td>
-                            <td>{{ $record->createdBy->FirstName ?? 'N/A' }} {{ $record->createdBy->LastName ?? '' }}</td>
-                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'N/A' }}</td>
-                            <td>{{ $record->modifiedBy->FirstName ?? 'N/A' }} {{ $record->modifiedBy->LastName ?? '' }}</td>
-                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'N/A' }}</td>
+                            <td>{{ optional($record->createdBy)->FirstName }} {{ optional($record->createdBy)->LastName }}</td>
+                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'Not Set' }}</td>
+                            <td>{{ optional($record->modifiedBy)->FirstName }} {{ optional($record->modifiedBy)->LastName }}</td>
+                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'Not Set' }}</td>
                         </tr>
                         @empty
                         @endforelse
@@ -223,7 +236,7 @@
                             <td>
                                 <div class="btn-group" role="group">
                                     @if($userPermissions->CanEdit)
-                                    <a href="{{ route('receiving.create', ['po_id' => $record->purchaseOrder->PurchaseOrderID]) }}" 
+                                    <a href="{{ route('receiving.create', ['po_id' => optional($record->purchaseOrder)->PurchaseOrderID]) }}" 
                                        class="btn btn-sm btn-success" 
                                        title="Continue Receiving">
                                         <i class="bi bi-arrow-repeat"></i>
@@ -239,19 +252,19 @@
                                     @endif
                                 </div>
                             </td>
-                            <td>{{ $record->purchaseOrder->PONumber }}</td>
-                            <td>{{ $record->purchaseOrder->supplier->CompanyName }}</td>
-                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'N/A' }}</td>
+                            <td>{{ optional($record->purchaseOrder)->PONumber }}</td>
+                            <td>{{ optional($record->purchaseOrder)->supplier->CompanyName ?? 'No Supplier' }}</td>
+                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'Not Set' }}</td>
                             <td>
                                 <span class="badge bg-partial">
-                                    {{ $record->Status }}
+                                    {{ $record->Status ?? 'Unknown' }}
                                 </span>
                             </td>
                             <td>₱{{ number_format($record->getTotalAmountAttribute(), 2) }}</td>
-                            <td>{{ $record->createdBy->FirstName ?? 'N/A' }} {{ $record->createdBy->LastName ?? '' }}</td>
-                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'N/A' }}</td>
-                            <td>{{ $record->modifiedBy->FirstName ?? 'N/A' }} {{ $record->modifiedBy->LastName ?? '' }}</td>
-                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'N/A' }}</td>
+                            <td>{{ optional($record->createdBy)->FirstName }} {{ optional($record->createdBy)->LastName }}</td>
+                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'Not Set' }}</td>
+                            <td>{{ optional($record->modifiedBy)->FirstName }} {{ optional($record->modifiedBy)->LastName }}</td>
+                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'Not Set' }}</td>
                         </tr>
                         @empty
                         <tr>
@@ -295,21 +308,21 @@
                                 </button>
                                 @endif
                             </td>
-                            <td>{{ $record->purchaseOrder->PONumber ?? 'N/A' }}</td>
-                            <td>{{ $record->purchaseOrder->supplier->CompanyName ?? 'N/A' }}</td>
-                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'N/A' }}</td>
+                            <td>{{ optional($record->purchaseOrder)->PONumber }}</td>
+                            <td>{{ optional($record->purchaseOrder)->supplier->CompanyName ?? 'No Supplier' }}</td>
+                            <td>{{ $record->DateReceived ? date('M d, Y', strtotime($record->DateReceived)) : 'Not Set' }}</td>
                             <td>
                                 <span class="badge bg-{{ $record->Status === 'Pending' ? 'warning' : 'success' }}">
-                                    {{ $record->Status }}
+                                    {{ $record->Status ?? 'Unknown' }}
                                 </span>
                             </td>
                             <td>₱{{ number_format($record->getTotalAmountAttribute(), 2) }}</td>
-                            <td>{{ $record->createdBy->FirstName ?? 'N/A' }} {{ $record->createdBy->LastName ?? '' }}</td>
-                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'N/A' }}</td>
-                            <td>{{ $record->modifiedBy->FirstName ?? 'N/A' }} {{ $record->modifiedBy->LastName ?? '' }}</td>
-                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'N/A' }}</td>
-                            <td>{{ $record->deletedBy->FirstName ?? 'N/A' }} {{ $record->deletedBy->LastName ?? '' }}</td>
-                            <td>{{ $record->DateDeleted ? date('Y-m-d H:i:s', strtotime($record->DateDeleted)) : 'N/A' }}</td>
+                            <td>{{ optional($record->createdBy)->FirstName }} {{ optional($record->createdBy)->LastName }}</td>
+                            <td>{{ $record->DateCreated ? date('Y-m-d H:i:s', strtotime($record->DateCreated)) : 'Not Set' }}</td>
+                            <td>{{ optional($record->modifiedBy)->FirstName }} {{ optional($record->modifiedBy)->LastName }}</td>
+                            <td>{{ $record->DateModified ? date('Y-m-d H:i:s', strtotime($record->DateModified)) : 'Not Set' }}</td>
+                            <td>{{ optional($record->deletedBy)->FirstName }} {{ optional($record->deletedBy)->LastName }}</td>
+                            <td>{{ $record->DateDeleted ? date('Y-m-d H:i:s', strtotime($record->DateDeleted)) : 'Not Set' }}</td>
                         </tr>
                         @empty
                         <tr>
@@ -360,144 +373,148 @@
 
 @section('scripts')
 <script>
-$(document).ready(function() {
-    // Basic DataTable configuration
-    var config = {
-        pageLength: 10,
-        order: [[1, 'desc']],
-        columnDefs: [
-            { orderable: false, targets: 0 }
-        ],
-        searching: true,
-        info: true,
-        paging: true
-    };
+    $(document).ready(function() {
+        // Initialize DataTables
+        const receivingTable = $('#receivingTable').DataTable({
+            responsive: true,
+            order: [[7, 'desc']] // Order by DateCreated by default
+        });
 
-    // Only initialize tables that have data
-    var activeRows = $('#receivingTable tbody tr').length;
-    var pendingRows = $('#pendingReceivingTable tbody tr').length;
-    var partialRows = $('#partialReceivingTable tbody tr').length;
-    var deletedRows = $('#deletedReceivingTable tbody tr').length;
+        const pendingTable = $('#pendingReceivingTable').DataTable({
+            responsive: true,
+            order: [[7, 'desc']]
+        });
 
-    // Initialize only if there are rows and not showing "No data" message
-    if (activeRows > 0 && !$('#receivingTable tbody tr td').hasClass('text-center')) {
-        $('#receivingTable').DataTable(config);
+        const partialTable = $('#partialReceivingTable').DataTable({
+            responsive: true,
+            order: [[7, 'desc']]
+        });
+
+        const deletedTable = $('#deletedReceivingTable').DataTable({
+            responsive: true,
+            order: [[7, 'desc']]
+        });
+
+        // Hide all tables initially
+        $('.table-container').hide();
+        
+        // Show active records by default
+        $('#receivingTable').closest('.table-container').show();
+        $('#activeRecordsBtn').addClass('active');
+
+        // Toggle button click handlers
+        $('#activeRecordsBtn').click(function() {
+            $('.table-container').hide();
+            $('#receivingTable').closest('.table-container').show();
+            $('.toggle-btn').removeClass('active');
+            $(this).addClass('active');
+        });
+
+        $('#pendingRecordsBtn').click(function() {
+            $('.table-container').hide();
+            $('#pendingReceivingTable').closest('.table-container').show();
+            $('.toggle-btn').removeClass('active');
+            $(this).addClass('active');
+        });
+
+        $('#partialRecordsBtn').click(function() {
+            $('.table-container').hide();
+            $('#partialReceivingTable').closest('.table-container').show();
+            $('.toggle-btn').removeClass('active');
+            $(this).addClass('active');
+        });
+
+        $('#showDeletedBtn').click(function() {
+            $('.table-container').hide();
+            $('#deletedReceivingTable').closest('.table-container').show();
+            $('.toggle-btn').removeClass('active');
+            $(this).addClass('active');
+        });
+
+        // Add active class to buttons
+        $('.toggle-btn').click(function() {
+            $('.toggle-btn').removeClass('active');
+            $(this).addClass('active');
+        });
+    });
+
+    function deleteReceivingRecord(id) {
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteReceivingModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        
+        // Store the ID for use in confirmation
+        document.getElementById('confirmDeleteBtn').setAttribute('data-receiving-id', id);
+        
+        // Show the modal
+        deleteModal.show();
     }
 
-    if (pendingRows > 0 && !$('#pendingReceivingTable tbody tr td').hasClass('text-center')) {
-        $('#pendingReceivingTable').DataTable(config);
-    }
-
-    if (partialRows > 0 && !$('#partialReceivingTable tbody tr td').hasClass('text-center')) {
-        $('#partialReceivingTable').DataTable(config);
-    }
-
-    if (deletedRows > 0 && !$('#deletedReceivingTable tbody tr td').hasClass('text-center')) {
-        $('#deletedReceivingTable').DataTable(config);
-    }
-
-    // Hide other sections initially
-    $('#pendingReceiving, #partialReceiving, #deletedReceiving').hide();
-
-    // Button click handlers
-    $('#activeRecordsBtn').click(function() {
-        $('#activeReceiving').show();
-        $('#pendingReceiving, #partialReceiving, #deletedReceiving').hide();
-    });
-
-    $('#pendingRecordsBtn').click(function() {
-        $('#pendingReceiving').show();
-        $('#activeReceiving, #partialReceiving, #deletedReceiving').hide();
-    });
-
-    $('#partialRecordsBtn').click(function() {
-        $('#partialReceiving').show();
-        $('#activeReceiving, #pendingReceiving, #deletedReceiving').hide();
-    });
-
-    $('#showDeletedBtn').click(function() {
-        $('#deletedReceiving').show();
-        $('#activeReceiving, #pendingReceiving, #partialReceiving').hide();
-    });
-});
-
-function deleteReceivingRecord(id) {
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteReceivingModal'), {
-        backdrop: 'static',
-        keyboard: false
-    });
-    
-    // Store the ID for use in confirmation
-    document.getElementById('confirmDeleteBtn').setAttribute('data-receiving-id', id);
-    
-    // Show the modal
-    deleteModal.show();
-}
-
-// Add event listener for delete confirmation
-document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-    const id = this.getAttribute('data-receiving-id');
-    
-    $.ajax({
-        url: `/inventory/receiving/${id}`,
-        type: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        },
-        success: function(response) {
-            if (response.success) {
-                bootstrap.Modal.getInstance(document.getElementById('deleteReceivingModal')).hide();
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Deleted!',
-                    text: 'Receiving record has been deleted successfully.',
-                    showConfirmButton: false,
-                    timer: 1500
-                }).then(() => {
-                    window.location.reload();
-                });
-            } else {
-                alert(response.message || 'Failed to delete receiving record.');
-            }
-        },
-        error: function(xhr) {
-            console.error('Delete error:', xhr);
-            alert('Failed to delete receiving record.');
-        }
-    });
-});
-
-function restoreReceivingRecord(id) {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "Do you want to restore this receiving record?",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, restore it!'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            $.ajax({
-                url: `/inventory/receiving/${id}/restore`,
-                type: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.success) {
-                        Swal.fire('Restored!', 'Receiving record has been restored.', 'success')
-                            .then(() => window.location.reload());
-                    } else {
-                        Swal.fire('Error!', response.message || 'Failed to restore receiving record.', 'error');
-                    }
-                },
-                error: function(xhr) {
-                    Swal.fire('Error!', 'Failed to restore receiving record.', 'error');
+    // Add event listener for delete confirmation
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        const id = this.getAttribute('data-receiving-id');
+        
+        $.ajax({
+            url: `/inventory/receiving/${id}`,
+            type: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('deleteReceivingModal')).hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: 'Receiving record has been deleted successfully.',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    alert(response.message || 'Failed to delete receiving record.');
                 }
-            });
-        }
+            },
+            error: function(xhr) {
+                console.error('Delete error:', xhr);
+                alert('Failed to delete receiving record.');
+            }
+        });
     });
-}
+
+    function restoreReceivingRecord(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Do you want to restore this receiving record?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, restore it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/inventory/receiving/${id}/restore`,
+                    type: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire('Restored!', 'Receiving record has been restored.', 'success')
+                                .then(() => window.location.reload());
+                        } else {
+                            Swal.fire('Error!', response.message || 'Failed to restore receiving record.', 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error!', 'Failed to restore receiving record.', 'error');
+                    }
+                });
+            }
+        });
+    }
 </script>
 @endsection 
