@@ -31,19 +31,21 @@
 
         <!-- Sales Report -->
         <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100 border-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#salesReportModal">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h5 class="card-title mb-3">Sales Analysis</h5>
-                            <p class="card-text text-muted">View sales performance and trends</p>
-                        </div>
-                        <div class="rounded-circle bg-success bg-opacity-10 p-3">
-                            <i class="bi bi-graph-up text-success fs-4"></i>
+            <a href="{{ route('pos.reports.sales') }}" class="text-decoration-none">
+                <div class="card report-card h-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="card-title mb-3">Sales Analysis</h5>
+                                <p class="card-text text-muted">View sales performance and trends</p>
+                            </div>
+                            <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                                <i class="bi bi-graph-up text-success fs-4"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- Low Stock Report -->
@@ -105,44 +107,6 @@
                             <i class="bi bi-x-lg"></i> Cancel
                         </button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-file-earmark-text"></i> Generate Report
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sales Report Modal -->
-    <div class="modal fade" 
-         id="salesReportModal" 
-         data-bs-backdrop="static" 
-         data-bs-keyboard="false" 
-         tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-graph-up"></i> Generate Sales Report
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="{{ route('reports.sales') }}" method="GET">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Start Date</label>
-                            <input type="date" class="form-control" name="start_date" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">End Date</label>
-                            <input type="date" class="form-control" name="end_date" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="bi bi-x-lg"></i> Cancel
-                        </button>
-                        <button type="submit" class="btn btn-success">
                             <i class="bi bi-file-earmark-text"></i> Generate Report
                         </button>
                     </div>

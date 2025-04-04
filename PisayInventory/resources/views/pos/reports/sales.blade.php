@@ -4,7 +4,7 @@
 <div class="container-fluid px-4">
     <h1 class="mt-4">Sales Report</h1>
     <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="{{ route('pos.reports') }}">Reports</a></li>
+        <li class="breadcrumb-item"><a href="{{ route('pos.reports.deposits') }}">Deposit Reports</a></li>
         <li class="breadcrumb-item active">Sales</li>
     </ol>
 
@@ -114,25 +114,135 @@
 
     <!-- Charts -->
     <div class="row mb-4">
-        <div class="col-lg-8">
+        <div class="col-lg-6">
             <div class="card">
                 <div class="card-header">
                     <i class="fas fa-chart-bar me-1"></i>
-                    Sales Trend
+                    Top Selling Items
                 </div>
                 <div class="card-body">
-                    <canvas id="salesChart" height="225"></canvas>
+                    <div id="topItemsCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            @foreach($topItems->take(3) as $key => $item)
+                                <div class="carousel-item {{ $key === 0 ? 'active' : '' }}">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            @if($item->image_path)
+                                                <img src="{{ asset('storage/' . $item->image_path) }}" 
+                                                     class="d-block w-100 rounded" 
+                                                     alt="{{ $item->ItemName }}"
+                                                     style="height: 300px; object-fit: cover;">
+                                            @else
+                                                <div class="d-block w-100 rounded bg-light d-flex align-items-center justify-content-center" 
+                                                     style="height: 300px;">
+                                                    <i class="fas fa-image fa-4x text-muted"></i>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h3 class="mb-3">{{ $item->ItemName }}</h3>
+                                            <div class="mb-3">
+                                                <span class="badge bg-primary fs-5">{{ $item->total_quantity }} units sold</span>
+                                            </div>
+                                            <div class="mb-3">
+                                                <h4 class="text-success">₱{{ number_format($item->total_revenue, 2) }}</h4>
+                                                <p class="text-muted">Total Revenue</p>
+                                            </div>
+                                            <div class="progress mb-3">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                     style="width: {{ ($item->total_revenue / ($totals->total_sales ?: 1)) * 100 }}%">
+                                                    {{ number_format(($item->total_revenue / ($totals->total_sales ?: 1)) * 100, 1) }}% of total sales
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#topItemsCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#topItemsCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-4">
+        <div class="col-lg-6">
             <div class="card">
                 <div class="card-header">
-                    <i class="fas fa-chart-pie me-1"></i>
-                    Payment Methods
+                    <i class="fas fa-chart-line me-1"></i>
+                    Sales Trend
                 </div>
                 <div class="card-body">
-                    <canvas id="paymentMethodsChart" height="225"></canvas>
+                    <div class="btn-group mb-3 w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary active" onclick="showSalesData('daily')">Daily</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="showSalesData('weekly')">Weekly</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="showSalesData('monthly')">Monthly</button>
+                    </div>
+                    <div id="dailySales" class="sales-data">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th class="text-end">Sales</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($chartData['daily']['labels'] as $key => $label)
+                                        <tr>
+                                            <td>{{ $label }}</td>
+                                            <td class="text-end fw-bold">₱{{ number_format($chartData['daily']['data'][$key], 2) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="weeklySales" class="sales-data" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Week</th>
+                                        <th class="text-end">Sales</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($chartData['weekly']['labels'] as $key => $label)
+                                        <tr>
+                                            <td>{{ $label }}</td>
+                                            <td class="text-end fw-bold">₱{{ number_format($chartData['weekly']['data'][$key], 2) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="monthlySales" class="sales-data" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Month</th>
+                                        <th class="text-end">Sales</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($chartData['monthly']['labels'] as $key => $label)
+                                        <tr>
+                                            <td>{{ $label }}</td>
+                                            <td class="text-end fw-bold">₱{{ number_format($chartData['monthly']['data'][$key], 2) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -250,18 +360,22 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Pass PHP data to JavaScript
-    const salesData = {
-        labels: {!! json_encode($chartDataFormatted['labels']) !!},
-        data: {!! json_encode($chartDataFormatted['data']) !!}
-    };
-    
-    const paymentData = {
-        labels: {!! json_encode($paymentMethods->pluck('PaymentMethod')) !!},
-        data: {!! json_encode($paymentMethods->pluck('total_amount')) !!}
-    };
+    function showSalesData(type) {
+        // Hide all sales data
+        document.querySelectorAll('.sales-data').forEach(el => {
+            el.style.display = 'none';
+        });
+        
+        // Show selected sales data
+        document.getElementById(type + 'Sales').style.display = 'block';
+        
+        // Update button states
+        document.querySelectorAll('.btn-group .btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+    }
 
     function toggleCustomDateInputs() {
         const dateRange = document.getElementById('date_range').value;
@@ -275,83 +389,23 @@
     }
     
     document.addEventListener('DOMContentLoaded', function() {
-        // Sales Chart
-        const salesCtx = document.getElementById('salesChart').getContext('2d');
-        new Chart(salesCtx, {
-            type: 'line',
-            data: {
-                labels: salesData.labels,
-                datasets: [{
-                    label: 'Daily Sales',
-                    data: salesData.data,
-                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                    borderColor: 'rgba(13, 110, 253, 1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '₱' + value.toLocaleString();
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return '₱' + context.raw.toLocaleString();
-                            }
-                        }
-                    }
-                }
-            }
+        // Initialize the carousel with auto-play
+        const carouselElement = document.getElementById('topItemsCarousel');
+        const carousel = new bootstrap.Carousel(carouselElement, {
+            interval: 4000,
+            pause: 'hover',
+            wrap: true
         });
+        
+        // Start the carousel
+        carousel.cycle();
 
-        // Payment Methods Chart
-        const paymentCtx = document.getElementById('paymentMethodsChart').getContext('2d');
-        new Chart(paymentCtx, {
-            type: 'doughnut',
-            data: {
-                labels: paymentData.labels,
-                datasets: [{
-                    data: paymentData.data,
-                    backgroundColor: [
-                        'rgba(13, 110, 253, 0.8)',
-                        'rgba(25, 135, 84, 0.8)',
-                        'rgba(255, 193, 7, 0.8)',
-                        'rgba(220, 53, 69, 0.8)',
-                        'rgba(108, 117, 125, 0.8)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.raw;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `₱${value.toLocaleString()} (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
+        // Add click event listeners to the buttons
+        document.querySelectorAll('.btn-group .btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const type = this.getAttribute('onclick').match(/'([^']+)'/)[1];
+                showSalesData(type);
+            });
         });
     });
 </script>

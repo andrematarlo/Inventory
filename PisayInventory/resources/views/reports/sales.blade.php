@@ -25,7 +25,7 @@
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="info-box">
+                            <div class="info-box">  
                                 <span class="info-box-icon bg-success"><i class="fas fa-box"></i></span>
                                 <div class="info-box-content">
                                     <span class="info-box-text">Unique Items Sold</span>
