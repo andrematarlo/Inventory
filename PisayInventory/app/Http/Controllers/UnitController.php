@@ -16,7 +16,7 @@ class UnitController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $userPermissions = $this->getUserPermissions();
         
@@ -31,8 +31,34 @@ class UnitController extends Controller
         $trashedUnits = UnitOfMeasure::where('IsDeleted', true)
             ->orderBy('UnitName')
             ->get();
+            
+        $showDeleted = $request->has('deleted') || $request->segment(3) === 'trash';
 
-        return view('units.index', compact('units', 'trashedUnits', 'userPermissions'));
+        return view('units.index', compact('units', 'trashedUnits', 'userPermissions', 'showDeleted'));
+    }
+
+    /**
+     * Display a listing of trashed resources.
+     */
+    public function trash()
+    {
+        $userPermissions = $this->getUserPermissions();
+        
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->back()->with('error', 'You do not have permission to view units.');
+        }
+
+        $units = UnitOfMeasure::where('IsDeleted', false)
+            ->orderBy('UnitName')
+            ->get();
+
+        $trashedUnits = UnitOfMeasure::where('IsDeleted', true)
+            ->orderBy('UnitName')
+            ->get();
+            
+        $showDeleted = true;
+
+        return view('units.index', compact('units', 'trashedUnits', 'userPermissions', 'showDeleted'));
     }
 
     /**
@@ -56,18 +82,43 @@ class UnitController extends Controller
                 'UnitName' => 'required|unique:UnitOfMeasure,UnitName'
             ]);
 
-            // Find the last UnitOfMeasureId
-            $lastUnit = UnitOfMeasure::orderBy('UnitOfMeasureId', 'desc')->first();
-            $nextId = $lastUnit ? $lastUnit->UnitOfMeasureId + 1 : 1;
+            try {
+                // Find the max UnitOfMeasureId directly with DB query to be more reliable
+                $maxId = DB::table('unitofmeasure')->max('UnitOfMeasureId');
+            } catch (\Exception $dbEx) {
+                // Try with exact case matching if the first attempt fails
+                Log::warning('First DB query failed, trying with exact case: ' . $dbEx->getMessage());
+                $maxId = DB::table('UnitOfMeasure')->max('UnitOfMeasureId');
+            }
+            
+            $nextId = $maxId ? $maxId + 1 : 1;
 
-            // Create new unit
-            UnitOfMeasure::create([
-                'UnitOfMeasureId' => $nextId,
-                'UnitName' => $request->UnitName,
-                'CreatedById' => Auth::id(),
-                'DateCreated' => now(),
-                'IsDeleted' => false
+            // Log the generated ID for debugging
+            Log::info('Creating new unit with ID: ' . $nextId, [
+                'max_found_id' => $maxId,
+                'unit_name' => $request->UnitName
             ]);
+
+            try {
+                // Use direct DB insert instead of Eloquent create
+                DB::table('unitofmeasure')->insert([
+                    'UnitOfMeasureId' => $nextId,
+                    'UnitName' => $request->UnitName,
+                    'CreatedById' => Auth::id(),
+                    'DateCreated' => now(),
+                    'IsDeleted' => false
+                ]);
+            } catch (\Exception $insertEx) {
+                // Try with exact case matching if the first attempt fails
+                Log::warning('Insert failed, trying with exact case: ' . $insertEx->getMessage());
+                DB::table('UnitOfMeasure')->insert([
+                    'UnitOfMeasureId' => $nextId,
+                    'UnitName' => $request->UnitName,
+                    'CreatedById' => Auth::id(),
+                    'DateCreated' => now(),
+                    'IsDeleted' => false
+                ]);
+            }
 
             DB::commit();
             return redirect()->route('units.index')
@@ -77,7 +128,8 @@ class UnitController extends Controller
             DB::rollBack();
             Log::error('Error creating unit:', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
             ]);
             return back()->with('error', 'Error creating unit: ' . $e->getMessage());
         }
@@ -160,59 +212,43 @@ class UnitController extends Controller
 
             DB::beginTransaction();
             
-            // Find the unit using the correct table name - unitofmeasure
-            $unit = DB::table('unitofmeasure')->where('UnitOfMeasureId', $id)->first();
+            // Find the unit using Eloquent model
+            $unit = UnitOfMeasure::where('UnitOfMeasureId', $id)->first();
             
             if (!$unit) {
                 throw new \Exception('Unit not found');
             }
             
             // Check if the unit is associated with any items
-            // Update the table name for items if needed
-            $itemsCount = DB::table('menu_items')
-                ->where('UnitOfMeasureID', $id)
+            $itemsCount = DB::table('items')
+                ->where('UnitOfMeasureId', $id)
+                ->where('IsDeleted', false)
                 ->count();
             
-            if ($itemsCount > 0) {
-                // Soft delete if used in items
-                DB::table('unitofmeasure')
-                    ->where('UnitOfMeasureId', $id)
-                    ->update([
-                        'IsDeleted' => true,
-                        'DeletedById' => Auth::id(),
-                        'DateDeleted' => now()
-                    ]);
-            } else {
-                // Hard delete if no items are associated
-                DB::table('unitofmeasure')
-                    ->where('UnitOfMeasureId', $id)
-                    ->delete();
-            }
+            // Always use soft delete for consistency
+            $unit->update([
+                'IsDeleted' => true,
+                'DeletedById' => Auth::id(),
+                'DateDeleted' => now()
+            ]);
             
             DB::commit();
             
-            if (request()->ajax() || request()->wantsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Unit deleted successfully'
-                ]);
+            // Redirect to the units page with the deleted tab active
+            $redirectUrl = route('units.index') . '#deleted';
+            
+            if ($itemsCount > 0) {
+                return redirect($redirectUrl)
+                    ->with('success', 'Unit was moved to trash. It is being used by ' . $itemsCount . ' items.');
+            } else {
+                return redirect($redirectUrl)
+                    ->with('success', 'Unit moved to trash successfully.');
             }
-            
-            return redirect()->route('units.index')
-                ->with('success', 'Unit deleted successfully');
-            
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error deleting unit: ' . $e->getMessage());
+            Log::error('Error deleting unit: ' . $e->getMessage());
             
-            if (request()->ajax() || request()->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to delete unit: ' . $e->getMessage()
-                ], 500);
-            }
-            
-            return redirect()->route('units.index')
+            return redirect(route('units.index') . '#deleted')
                 ->with('error', 'Failed to delete unit: ' . $e->getMessage());
         }
     }
@@ -249,7 +285,16 @@ class UnitController extends Controller
             ]);
 
             DB::commit();
-            return redirect()->route('units.index')
+            
+            // Check for redirect hash
+            $redirectHash = request('redirect_hash', '');
+            
+            $redirectUrl = route('units.index');
+            if (!empty($redirectHash)) {
+                $redirectUrl .= $redirectHash;
+            }
+            
+            return redirect($redirectUrl)
                 ->with('success', 'Unit restored successfully');
 
         } catch (\Exception $e) {

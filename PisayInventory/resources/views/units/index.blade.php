@@ -3,6 +3,10 @@
 @section('title', 'Units')
 
 @section('content')
+<div id="pageData" 
+     data-has-errors="{{ $errors->any() ? 'true' : 'false' }}"
+     data-show-deleted="{{ request()->has('show_deleted') || Str::contains(request()->url(), '#deleted') ? 'true' : 'false' }}">
+
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Units Management</h2>
@@ -14,17 +18,17 @@
     </div>
 
     <!-- Tab buttons -->
-    <div class="btn-group mb-4" role="group">
-        <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
-            Active Records
-        </button>
-        <button class="btn btn-danger" type="button" id="showDeletedBtn">
-            <i class="bi bi-archive"></i> Show Deleted Records
-        </button>
+    <div class="mb-4">
+        <a href="{{ route('units.index') }}" class="btn {{ !$showDeleted ? 'btn-primary' : 'btn-outline-primary' }} me-2">
+            <i class="bi bi-list-check me-1"></i> Active Units ({{ count($units) }})
+        </a>
+        <a href="{{ route('units.trash') }}" class="btn {{ $showDeleted ? 'btn-danger' : 'btn-outline-danger' }}">
+            <i class="bi bi-archive me-1"></i> Deleted Units ({{ count($trashedUnits) }})
+        </a>
     </div>
 
     <!-- Active Units Section -->
-    <div id="activeUnits">
+    <div id="activeUnits" @if($showDeleted) style="display: none;" @endif>
         <div class="card mb-4">
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
@@ -45,7 +49,7 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle" id="activeUnitsTable">
                         <thead>
                             <tr>
                                 @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
@@ -70,12 +74,18 @@
                                         </button>
                                         @endif
                                         @if($userPermissions->CanDelete)
-                                        <button type="button" 
-                                                class="btn btn-sm btn-danger delete-unit"
-                                                data-id="{{ $unit->UnitOfMeasureId }}"
-                                                data-name="{{ $unit->UnitName }}">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </button>
+                                        <form action="{{ route('units.destroy', $unit->UnitOfMeasureId) }}" 
+                                              method="POST" 
+                                              style="display:inline-block"
+                                              class="delete-unit-form">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-danger"
+                                                    data-name="{{ $unit->UnitName }}">
+                                                <i class="bi bi-trash"></i> Move to Trash
+                                            </button>
+                                        </form>
                                         @endif
                                     </div>
                                 </td>
@@ -88,7 +98,17 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ ($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete)) ? '6' : '5' }}" class="text-center">No units found</td>
+                                <td colspan="{{ ($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete)) ? '6' : '5' }}" class="text-center py-4">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="bi bi-clipboard-x text-muted mb-2" style="font-size: 2rem;"></i>
+                                        <p class="mb-0 text-muted">No active units found</p>
+                                        @if($userPermissions && $userPermissions->CanAdd)
+                                        <button type="button" class="btn btn-sm btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addUnitModal">
+                                            <i class="bi bi-plus-lg"></i> Add New Unit
+                                        </button>
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                             @endforelse
                         </tbody>
@@ -99,7 +119,7 @@
     </div>
 
     <!-- Deleted Units Section -->
-    <div id="deletedUnits" style="display: none;">
+    <div id="deletedUnits" @if(!$showDeleted) style="display: none;" @endif>
         <div class="card mb-4">
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
@@ -134,10 +154,11 @@
                             <tr>
                                 <td>
                                     @if($userPermissions->CanEdit)
-                                    <form action="{{ route('units.restore', $unit->UnitOfMeasureId) }}" method="POST" class="d-inline">
+                                    <form action="{{ route('units.restore', $unit->UnitOfMeasureId) }}" method="POST" class="d-inline restore-unit-form">
                                         @csrf
-                                        <button type="submit" class="btn btn-sm btn-success" title="Restore">
-                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        <input type="hidden" name="redirect_hash" value="#deleted">
+                                        <button type="submit" class="btn btn-sm btn-success" title="Restore" data-name="{{ $unit->UnitName }}">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Restore
                                         </button>
                                     </form>
                                     @endif
@@ -148,7 +169,12 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4" class="text-center">No deleted units found</td>
+                                <td colspan="4" class="text-center py-4">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="bi bi-archive text-muted mb-2" style="font-size: 2rem;"></i>
+                                        <p class="mb-0 text-muted">No deleted units found</p>
+                                    </div>
+                                </td>
                             </tr>
                             @endforelse
                         </tbody>
@@ -175,9 +201,18 @@
             <form action="{{ route('units.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
+                    @if($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
                     <div class="mb-3">
                         <label for="UnitName" class="form-label">Unit Name</label>
-                        <input type="text" class="form-control" id="UnitName" name="UnitName" required>
+                        <input type="text" class="form-control" id="UnitName" name="UnitName" value="{{ old('UnitName') }}" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -224,249 +259,14 @@
     </div>
 </div>
 @endforeach
+</div>
+
 @endsection
 
-@section('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-
-<script>
-    $(document).ready(function() {
-        // Initialize DataTable
-        if (!$.fn.DataTable.isDataTable('#unitsTable')) {
-            $('#unitsTable').DataTable({
-                pageLength: 10,
-                responsive: true,
-                dom: '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center"ip>',
-                language: {
-                    search: "Search:",
-                    searchPlaceholder: "Search units..."
-                }
-            });
-        }
-
-        // Initialize all modals with static backdrop
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            const bsModal = new bootstrap.Modal(modal, {
-                backdrop: 'static',
-                keyboard: false
-            });
-
-            // Prevent modal from closing when clicking outside
-            $(modal).on('mousedown', function(e) {
-                if ($(e.target).is('.modal')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-            });
-        });
-
-        // Delete confirmation handler
-        $('.delete-unit').on('click', function(e) {
-            e.preventDefault();
-            
-            const unitId = $(this).data('id');
-            const unitName = $(this).data('name');
-            
-            Swal.fire({
-                title: 'Delete Unit?',
-                html: `Are you sure you want to delete <strong>${unitName}</strong>?<br><small class="text-danger">This action cannot be undone.</small>`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Show loading state
-                    Swal.fire({
-                        title: 'Deleting...',
-                        text: 'Please wait',
-                        allowOutsideClick: false,
-                        showConfirmButton: false,
-                        willOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-                    
-                    // Create a form manually and submit it
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '/inventory/units/' + unitId;
-                    
-                    const csrfToken = document.createElement('input');
-                    csrfToken.type = 'hidden';
-                    csrfToken.name = '_token';
-                    csrfToken.value = '{{ csrf_token() }}';
-                    
-                    const method = document.createElement('input');
-                    method.type = 'hidden';
-                    method.name = '_method';
-                    method.value = 'DELETE';
-                    
-                    form.appendChild(csrfToken);
-                    form.appendChild(method);
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-        });
-
-        // Restore unit handling
-        $('.restore-unit').click(function(e) {
-            e.preventDefault();
-            const form = $(this).closest('form');
-            const unitName = $(this).closest('tr').find('td:eq(1)').text(); // Get unit name from the table
-            
-            // Update modal content
-            $('#unitNameToRestore').text(unitName);
-            
-            // Store the form for use in confirmation
-            $('#confirmRestoreBtn').data('form', form);
-            
-            // Show the modal
-            $('#restoreUnitModal').modal('show');
-        });
-
-        // Handle restore confirmation
-        $('#confirmRestoreBtn').click(function() {
-            const form = $(this).data('form');
-            
-            // Hide the modal
-            $('#restoreUnitModal').modal('hide');
-            
-            // Show loading state
-            Swal.fire({
-                title: 'Restoring...',
-                text: 'Please wait while we process your request',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                allowEnterKey: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            // Submit the form using AJAX
-            $.ajax({
-                url: form.attr('action'),
-                type: 'POST',
-                data: form.serialize(),
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: 'Unit has been restored successfully.',
-                        confirmButtonColor: '#198754',
-                        showConfirmButton: true
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.reload();
-                        }
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error('Restore Error:', xhr.responseText);
-                    let errorMessage = 'Something went wrong while restoring the unit.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: errorMessage,
-                        confirmButtonColor: '#dc3545'
-                    });
-                }
-            });
-        });
-    });
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const activeRecordsBtn = document.getElementById('activeRecordsBtn');
-    const showDeletedBtn = document.getElementById('showDeletedBtn');
-    const activeUnits = document.getElementById('activeUnits');
-    const deletedUnits = document.getElementById('deletedUnits');
-    const activeSearchInput = document.getElementById('activeSearchInput');
-    const deletedSearchInput = document.getElementById('deletedSearchInput');
-
-    function filterTable(tableBody, searchTerm) {
-        const rows = tableBody.getElementsByTagName('tr');
-        
-        for (let row of rows) {
-            const cells = row.getElementsByTagName('td');
-            let shouldShow = false;
-            
-            // Skip header row or empty message row
-            if (cells.length <= 1) continue;
-
-            for (let cell of cells) {
-                const text = cell.textContent.toLowerCase();
-                if (text.includes(searchTerm.toLowerCase())) {
-                    shouldShow = true;
-                    break;
-                }
-            }
-            
-            row.style.display = shouldShow ? '' : 'none';
-        }
-    }
-
-    activeSearchInput.addEventListener('input', (e) => {
-        const activeTableBody = activeUnits.querySelector('tbody');
-        filterTable(activeTableBody, e.target.value);
-    });
-
-    deletedSearchInput.addEventListener('input', (e) => {
-        const deletedTableBody = deletedUnits.querySelector('tbody');
-        filterTable(deletedTableBody, e.target.value);
-    });
-
-    function toggleRecords(showActive) {
-        if (showActive) {
-            activeUnits.style.display = 'block';
-            deletedUnits.style.display = 'none';
-            activeRecordsBtn.classList.add('active');
-            activeRecordsBtn.classList.remove('btn-outline-primary');
-            activeRecordsBtn.classList.add('btn-primary');
-            showDeletedBtn.classList.remove('active');
-            showDeletedBtn.classList.add('btn-outline-danger');
-            showDeletedBtn.classList.remove('btn-danger');
-            // Clear deleted search when switching
-            deletedSearchInput.value = '';
-        } else {
-            activeUnits.style.display = 'none';
-            deletedUnits.style.display = 'block';
-            showDeletedBtn.classList.add('active');
-            showDeletedBtn.classList.remove('btn-outline-danger');
-            showDeletedBtn.classList.add('btn-danger');
-            activeRecordsBtn.classList.remove('active');
-            activeRecordsBtn.classList.add('btn-outline-primary');
-            activeRecordsBtn.classList.remove('btn-primary');
-            // Clear active search when switching
-            activeSearchInput.value = '';
-        }
-    }
-
-    activeRecordsBtn.addEventListener('click', () => toggleRecords(true));
-    showDeletedBtn.addEventListener('click', () => toggleRecords(false));
-
-    // Initialize view
-    toggleRecords(true);
-});
-</script>
-@endsection
+@push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+@endpush
 
 @section('styles')
 <style>
@@ -545,45 +345,6 @@ document.addEventListener('DOMContentLoaded', function() {
         border-color: #146c43;
     }
 
-    /* Restore Modal Styles */
-    #restoreUnitModal .modal-header {
-        background-color: #198754;
-        color: white;
-    }
-
-    #restoreUnitModal .btn-close-white {
-        filter: brightness(0) invert(1);
-    }
-
-    #restoreUnitModal .modal-body {
-        padding: 1.5rem;
-    }
-
-    #restoreUnitModal #unitNameToRestore {
-        color: #198754;
-        font-size: 1.1rem;
-        margin-top: 0.5rem;
-        padding: 0.5rem;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        text-align: center;
-    }
-
-    #restoreUnitModal .modal-footer {
-        padding: 1rem;
-        border-top: 1px solid #dee2e6;
-    }
-
-    #restoreUnitModal .btn-success {
-        background-color: #198754;
-        border-color: #198754;
-    }
-
-    #restoreUnitModal .btn-success:hover {
-        background-color: #157347;
-        border-color: #146c43;
-    }
-
     /* SweetAlert2 Custom Styles */
     .swal2-popup {
         font-size: 0.9rem;
@@ -603,21 +364,96 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 @endsection
 
-@push('styles')
-<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-@endpush
+@section('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-@endpush
+<script>
+$(document).ready(function() {
+    // Initialize DataTables
+    var activeTable = $('#activeUnitsTable').DataTable({
+        pageLength: 10,
+        responsive: true
+    });
 
-<!-- Add error message display if exists in session -->
+    var deletedTable = $('#deletedUnitsTable').DataTable({
+        pageLength: 10,
+        responsive: true
+    });
+
+    // Make sure DataTables are properly sized
+    $('.table-responsive table').each(function() {
+        $(this).DataTable().columns.adjust().draw();
+    });
+
+    // Delete confirmation
+    $('.delete-unit-form').submit(function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var unitName = form.find('button').data('name');
+        
+        Swal.fire({
+            title: 'Move Unit to Trash?',
+            html: `Are you sure you want to move <strong>${unitName}</strong> to trash?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, move to trash',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.off('submit').submit();
+            }
+        });
+    });
+
+    // Restore confirmation
+    $('.restore-unit-form').submit(function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var unitName = form.find('button').data('name');
+        
+        Swal.fire({
+            title: 'Restore Unit?',
+            html: `Are you sure you want to restore <strong>${unitName}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, restore it',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.off('submit').submit();
+            }
+        });
+    });
+});
+</script>
+
+@if(session('success'))
+<script>
+    Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: "{{ session('success') }}",
+        showConfirmButton: true
+    });
+</script>
+@endif
+
 @if(session('error'))
+<script>
     Swal.fire({
         icon: 'error',
         title: 'Error!',
-        text: '{{ session('error') }}',
+        text: "{{ session('error') }}",
         showConfirmButton: true
     });
-@endif 
+</script>
+@endif
+@endsection 

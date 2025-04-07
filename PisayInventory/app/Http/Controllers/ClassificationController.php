@@ -59,6 +59,9 @@ class ClassificationController extends Controller
             ->orderBy('ClassificationName')
             ->paginate(10);
 
+        // Make sure $trashedClassifications is being created properly
+        \Illuminate\Support\Facades\Log::info('Trashed classifications count: ' . $trashedClassifications->count());
+
         return view('classifications.index', compact('classifications', 'trashedClassifications', 'userPermissions'));
     }
 
@@ -193,38 +196,22 @@ class ClassificationController extends Controller
 
         try {
             DB::beginTransaction();
-
-            // If $id is an object, extract the ClassificationId
-            if (is_object($id)) {
-                $id = $id->ClassificationId;
-            } else if (is_string($id) && strpos($id, '{') !== false) {
-                // If it's a JSON string, decode it and get ClassificationId
-                $data = json_decode($id, true);
-                $id = $data['ClassificationId'] ?? null;
-            }
-
-            // Verify we have a valid ID
-            if (!$id) {
-                throw new \Exception('Invalid Classification ID');
-            }
-
-            $classification = Classification::where('ClassificationId', $id)->first();
             
-            if (!$classification) {
-                throw new \Exception('Classification not found');
-            }
-
+            // Find the classification first
+            $classification = Classification::findOrFail($id);
+            
+            // Now perform the soft delete
             $classification->update([
                 'IsDeleted' => true,
-                'DeletedById' => Auth::user()->UserAccountID,
-                'DateDeleted' => Carbon::now()->format('Y-m-d H:i:s')
+                'DeletedById' => Auth::id(),
+                'DateDeleted' => now()
             ]);
-
+            
             DB::commit();
-            return back()->with('success', 'Classification moved to trash successfully');
+            return redirect()->route('classifications.index')
+                ->with('success', 'Classification successfully moved to trash');
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Classification deletion failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to delete classification: ' . $e->getMessage());
         }
     }

@@ -40,20 +40,21 @@ Route::get('/debug/routes', function() {
             dump($route->uri() . ' - ' . $route->getName());
         }
     }
-});
-
-// Add this route temporarily for debugging
-Route::get('/debug/routes', function() {
-    $routes = collect(\Route::getRoutes())->map(function ($route) {
+    
+    // Debugging menu-items routes
+    $menuItemRoutes = collect(Route::getRoutes())->map(function ($route) {
         return [
             'URI' => $route->uri(),
             'Name' => $route->getName(),
             'Method' => implode('|', $route->methods()),
         ];
-    });
-    dd($routes->filter(function ($route) {
+    })->filter(function ($route) {
         return str_contains($route['URI'], 'menu-items');
-    })->all());
+    })->all();
+    
+    dump($menuItemRoutes);
+    
+    return "Routes debugging completed";
 });
 
 // Default route to inventory
@@ -96,6 +97,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('items', ItemController::class);
         Route::get('/items/manage', [ItemController::class, 'manage'])->name('items.manage');
         Route::post('items/{id}/restore', [ItemController::class, 'restore'])->name('items.restore');
+        Route::get('items/{id}/restore', [ItemController::class, 'restore']);
         Route::post('items/{id}/stock-in', [ItemController::class, 'stockIn'])->name('items.stock-in');
         Route::post('items/{id}/stock-out', [ItemController::class, 'stockOut'])->name('items.stock-out');
         Route::post('/items/preview-columns', [ItemController::class, 'previewColumns'])->name('items.preview-columns');
@@ -108,7 +110,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('inventory', InventoryController::class);
         Route::put('inventory/{id}/restore', [InventoryController::class, 'restore'])->name('inventory.restore');
         Route::post('/inventory/{id}/stockout', [InventoryController::class, 'stockout'])->name('inventory.stockout');
-        Route::delete('/inventory/inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+        Route::delete('inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
 
         // Suppliers Management
         Route::prefix('suppliers')->group(function () {
@@ -120,13 +122,14 @@ Route::middleware('auth')->group(function () {
         });
 
         // Classifications Management
-        Route::resource('classifications', ClassificationController::class);
-        Route::get('classifications/trash', [ClassificationController::class, 'trash'])->name('classifications.trash');
         Route::post('classifications/{id}/restore', [ClassificationController::class, 'restore'])->name('classifications.restore');
+        Route::delete('classifications/{id}', [ClassificationController::class, 'destroy'])->name('classifications.destroy');
+        Route::resource('classifications', ClassificationController::class);
 
         // Units Management
         Route::controller(UnitController::class)->group(function () {
             Route::get('/units', 'index')->name('units.index');
+            Route::get('/units/trash', 'trash')->name('units.trash');
             Route::post('/units', 'store')->name('units.store');
             Route::put('/units/{id}', 'update')->name('units.update');
             Route::delete('/units/{id}', 'destroy')->name('units.destroy');
@@ -234,7 +237,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/orders/{id}/process-payment', [POSController::class, 'postProcessPayment'])->name('post-payment');
             Route::get('/cancel-order/{id}', [POSController::class, 'cancelOrder'])->name('cancel-order');
             Route::get('/orders/{id}/details', [OrderController::class, 'getDetails'])->name('order.details');
-            Route::get('/student-balance/{id}', [StudentController::class, 'getBalance'])->name('student.balance');
+            Route::get('/student-balance/{id}', [StudentsController::class, 'getBalance'])->name('student.balance');
             
             // Add cashier routes
             Route::get('/cashier', [POSController::class, 'cashiering'])->name('cashier.index');

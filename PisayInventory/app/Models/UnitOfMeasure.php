@@ -11,8 +11,10 @@ class UnitOfMeasure extends Model
     protected $table = 'unitofmeasure';
     protected $primaryKey = 'UnitOfMeasureId';
     public $timestamps = false;
+    public $incrementing = false;
 
     protected $fillable = [
+        'UnitOfMeasureId',
         'UnitName',
         'CreatedById',
         'DateCreated',
@@ -21,6 +23,7 @@ class UnitOfMeasure extends Model
         'DeletedById',
         'DateDeleted',
         'RestoredById',
+        'DateRestored',
         'IsDeleted'
     ];
 
@@ -60,6 +63,12 @@ class UnitOfMeasure extends Model
     public function restored_By()
     {
         return $this->belongsTo(UserAccount::class, 'RestoredById', 'UserAccountID');
+    }
+
+    // Relationship for items that use this unit of measure
+    public function items()
+    {
+        return $this->hasMany(Item::class, 'UnitOfMeasureId', 'UnitOfMeasureId');
     }
 
     // Safe fetching method

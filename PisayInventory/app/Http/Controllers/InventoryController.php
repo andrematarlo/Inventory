@@ -37,7 +37,7 @@ class InventoryController extends Controller
             ->where('IsDeleted', false)
             ->orderBy('DateCreated', 'desc')
             ->paginate(10);
-
+            
             $trashedInventories = Inventory::with([
                 'item',
                 'item.classification',

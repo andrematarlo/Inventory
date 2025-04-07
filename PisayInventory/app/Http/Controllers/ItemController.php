@@ -233,9 +233,23 @@ public function export(Request $request)
 
             // Handle image upload
             if ($request->hasFile('image')) {
+                // Delete old image
+                if ($item->ImagePath) {
+                    Storage::delete('public/' . $item->ImagePath);
+                }
+                
                 $file = $request->file('image');
                 $filename = time() . '_' . $file->getClientOriginalName();
                 $path = $file->storeAs('public/items', $filename);
+                
+                // Add debug logging
+                Log::info('Stored image file:', [
+                    'original_filename' => $file->getClientOriginalName(),
+                    'stored_filename' => $filename,
+                    'full_path' => $path,
+                    'stripped_path' => str_replace('public/', '', $path)
+                ]);
+                
                 $item->ImagePath = str_replace('public/', '', $path); // Store relative path
             }
 
@@ -351,6 +365,15 @@ public function export(Request $request)
                 $file = $request->file('image');
                 $filename = time() . '_' . $file->getClientOriginalName();
                 $path = $file->storeAs('public/items', $filename);
+                
+                // Add debug logging
+                Log::info('Stored image file:', [
+                    'original_filename' => $file->getClientOriginalName(),
+                    'stored_filename' => $filename,
+                    'full_path' => $path,
+                    'stripped_path' => str_replace('public/', '', $path)
+                ]);
+                
                 $item->ImagePath = str_replace('public/', '', $path); // Store relative path
             }
 
@@ -555,14 +578,39 @@ public function export(Request $request)
     public function restore($id)
     {
         try {
+            // Add detailed logging
+            Log::info('Starting item restore process', [
+                'item_id' => $id,
+                'user' => Auth::user()->UserAccountID ?? 'Unknown'
+            ]);
+            
             DB::beginTransaction();
 
+            // Find the item, using findOrFail to throw an exception if not found
             $item = Item::findOrFail($id);
+            Log::info('Item found for restore', [
+                'item_id' => $item->ItemId,
+                'item_name' => $item->ItemName
+            ]);
             
+            // Get current employee
             $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
                 ->where('IsDeleted', false)
-                ->firstOrFail();
+                ->first();
+                
+            if (!$currentEmployee) {
+                Log::error('Failed to find employee record for current user', [
+                    'user_id' => Auth::user()->UserAccountID ?? 'Unknown'
+                ]);
+                throw new \Exception('Employee record not found for the current user.');
+            }
+                
+            Log::info('Found employee for restore operation', [
+                'employee_id' => $currentEmployee->EmployeeID,
+                'user_account_id' => $currentEmployee->UserAccountID
+            ]);
 
+            // Update the item to restore it
             $item->update([
                 'IsDeleted' => false,
                 'RestoredById' => $currentEmployee->EmployeeID,
@@ -570,12 +618,23 @@ public function export(Request $request)
                 'DeletedById' => null,
                 'DateDeleted' => null
             ]);
+            
+            Log::info('Item updated successfully', [
+                'item_id' => $item->ItemId,
+                'restored_by' => $currentEmployee->EmployeeID
+            ]);
 
             DB::commit();
+            Log::info('Item restore transaction committed');
+            
             return redirect()->route('items.index')->with('success', 'Item restored successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error restoring item: ' . $e->getMessage());
+            Log::error('Error restoring item', [
+                'item_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', 'Error restoring item: ' . $e->getMessage());
         }
     }

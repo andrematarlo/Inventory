@@ -3,6 +3,11 @@
 @section('title', 'Items')
 
 @section('content')
+{{-- Add hidden success/error data for JavaScript --}}
+<div id="session-data" 
+     data-success="{{ Session::has('success') ? Session::get('success') : '' }}"
+     data-error="{{ Session::has('error') ? Session::get('error') : '' }}"
+     class="d-none"></div>
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Items Management</h2>
@@ -120,8 +125,9 @@
                                             @endif
                                             @if($userPermissions && $userPermissions->CanDelete)
                                             <button type="button" 
-                                                    class="btn btn-sm btn-danger"
-                                                    onclick="deleteResource('{{ route('items.destroy', $item->ItemId) }}', '{{ $item->ItemName }}')">
+                                                    class="btn btn-sm btn-danger delete-btn" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteModal{{ $item->ItemId }}">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                             @endif
@@ -168,7 +174,7 @@
     <div id="deletedItems" style="display: none;">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Deleted Items</h5>
+                <h5 class="mb-0">Deleted Items (Total: {{ $deletedItems->total() }})</h5>
                 <div class="input-group" style="width: 250px;">
                     <input type="text" id="searchDeletedItems" class="form-control" placeholder="Search...">
                     <button class="btn btn-outline-secondary" type="button">
@@ -219,12 +225,11 @@
                             @forelse($deletedItems as $item)
                                 <tr>
                                     <td>
-                                        <button type="button" 
-                                                class="btn btn-sm btn-success restore-item"
-                                                data-item-id="{{ $item->ItemId }}"
-                                                data-item-name="{{ $item->ItemName }}">
-                                                <i class="bi bi-arrow-counterclockwise"></i>
-                                            </button>
+                                        <a href="{{ url('inventory/items/'.$item->ItemId.'/restore') }}" 
+                                           class="btn btn-sm btn-success"
+                                           onclick="return confirm('Are you sure you want to restore this item?')">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </a>
                                     </td>
                                     <td>
                                         @if($item->ImagePath)
@@ -475,11 +480,11 @@
                         </div>
                         <h4 class="mb-3">Are you sure?</h4>
                         <p class="mb-4">You won't be able to revert this!</p>
-                        <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline">
+                        <form action="{{ route('items.destroy', $item->ItemId) }}" method="POST" class="d-inline delete-form">
                             @csrf
                             @method('DELETE')
                             <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-danger">Yes, delete it!</button>
+                            <button type="submit" class="btn btn-danger delete-submit-btn">Yes, delete it!</button>
                         </form>
                     </div>
                 </div>
@@ -493,185 +498,39 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
+    /**
+     * @ignore
+     * NOTE: This file contains Laravel Blade syntax that may trigger linter errors.
+     * These errors can be safely ignored, as Blade templates are processed server-side.
+     * @blade-mixed
+     */
     $(document).ready(function() {
+        // Make sure we initialize the UI correctly on page load
+        const showActiveItems = function() {
+            $('#activeItems').show();
+            $('#deletedItems').hide();
+            $('#activeRecordsBtn').addClass('active');
+            $('#showDeletedBtn').removeClass('active');
+        };
+        
+        const showDeletedItems = function() {
+            $('#activeItems').hide();
+            $('#deletedItems').show();
+            $('#activeRecordsBtn').removeClass('active');
+            $('#showDeletedBtn').addClass('active');
+        };
+        
+        // Run initialization to ensure UI is correct
+        showActiveItems();
+        
         // Toggle between active and deleted items
-        $('#activeRecordsBtn, #showDeletedBtn').on('click', function() {
-            const activeDiv = $('#activeItems');
-            const deletedDiv = $('#deletedItems');
-            const activeBtn = $('#activeRecordsBtn');
-            const deletedBtn = $('#showDeletedBtn');
-
-            if ($(this).attr('id') === 'showDeletedBtn') {
-                activeDiv.hide();
-                deletedDiv.show();
-                activeBtn.removeClass('active');
-                deletedBtn.addClass('active');
-            } else {
-                deletedDiv.hide();
-                activeDiv.show();
-                deletedBtn.removeClass('active');
-                activeBtn.addClass('active');
-            }
+        $('#activeRecordsBtn').on('click', function() {
+            showActiveItems();
         });
-
-        // Initialize import modal
-        const importModal = document.getElementById('importExcelModal');
-        if (importModal) {
-            const bsModal = new bootstrap.Modal(importModal, {
-                backdrop: 'static',
-                keyboard: false
-            });
-
-            // Prevent modal from closing when clicking outside
-            $(importModal).on('mousedown', function(e) {
-                if ($(e.target).is('.modal')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-            });
-
-            // Preview button click handler
-            $('#previewBtn').click(function() {
-                const fileInput = document.getElementById('excel_file');
-                if (!fileInput.files.length) {
-                    alert('Please select a file first');
-                    return;
-                }
-
-                const formData = new FormData();
-                formData.append('excel_file', fileInput.files[0]);
-                formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
-
-                // Show loading state
-                $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Loading...');
-
-                $.ajax({
-                    url: "{{ route('items.preview-columns') }}",
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        // Reset all dropdowns first
-                        const columnSelects = $('select[name^="column_mapping"]');
-                        columnSelects.empty().append('<option value="">Select Column</option>');
-                        
-                        // Add the columns to all dropdowns
-                        response.columns.forEach(column => {
-                            columnSelects.append(`<option value="${column}">${column}</option>`);
-                        });
-
-                        // Auto-map columns based on similar names
-                        response.columns.forEach(column => {
-                            const lowerColumn = column.toLowerCase();
-                            if (lowerColumn.includes('name')) {
-                                $('select[name="column_mapping[ItemName]"]').val(column);
-                            }
-                            if (lowerColumn.includes('desc')) {
-                                $('select[name="column_mapping[Description]"]').val(column);
-                            }
-                            if (lowerColumn.includes('stock') || lowerColumn.includes('qty')) {
-                                $('select[name="column_mapping[StocksAvailable]"]').val(column);
-                            }
-                            if (lowerColumn.includes('reorder') || lowerColumn.includes('minimum')) {
-                                $('select[name="column_mapping[ReorderPoint]"]').val(column);
-                            }
-                        });
-
-                        // Show step 2
-                        $('#step1').hide();
-                        $('#step2').show();
-                    },
-                    error: function(xhr) {
-                        const errorMessage = xhr.responseJSON?.error || 'An error occurred while previewing columns';
-                        alert('Preview failed: ' + errorMessage);
-                    },
-                    complete: function() {
-                        // Reset button state
-                        $('#previewBtn').prop('disabled', false).text('Preview Columns');
-                    }
-                });
-            });
-
-            // Replace your existing import form submission handler with this:
-            $('#importForm').on('submit', function(e) {
-                e.preventDefault();
-                
-                // Check if file is selected
-                if (!$('#excel_file').val()) {
-                    Toast.fire({
-                        icon: 'error',
-                        title: 'Please select an Excel file'
-                    });
-                    return;
-                }
-
-                // Check if required field (Name) is mapped
-                if (!$('select[name="column_mapping[ItemName]"]').val()) {
-                    Toast.fire({
-                        icon: 'error',
-                        title: 'Please map the Name field'
-                    });
-                    return;
-                }
-
-                // Show loading state on the import button
-                const importBtn = $('#importBtn');
-                importBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importing...');
-                
-                const formData = new FormData(this);
-                
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        $('#importExcelModal').modal('hide');
-                        
-                        let message = '';
-                        if (response.import_result) {
-                            const successCount = parseInt(response.import_result.message.match(/\d+/)[0]);
-                            const skippedCount = response.import_result.skipped ? response.import_result.skipped.length : 0;
-                            
-                            message += 'Successfully imported ' + successCount + ' ' + (successCount === 1 ? 'item' : 'items') + '.' + ' ';
-                            
-                            if (skippedCount > 0) {
-                                message += '<br>Skipped ' + skippedCount + ' ' + (skippedCount === 1 ? 'item' : 'items') + ' ' + '(already exist in the system)' + ':<br><br>';
-                                
-                                message += '<div style="text-align: left; margin-left: 20px;">'; // Add div for left alignment with indent
-                                response.import_result.skipped.forEach(skip => {
-                                    message += `Row ${skip.row}: ${skip.itemName}` + 
-                                            (skip.description ? ` -- Description: ${skip.description}` : '') + 
-                                            '<br>';
-                                });
-                                message += '</div>';
-                            }
-                        }
-                        
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Import Successful!',
-                            html: message,
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#198754' // Bootstrap's btn-success color
-                        }).then(() => {
-                            window.location.reload();
-                        });
-                    },
-                    error: function(xhr) {
-                        const errorMessage = xhr.responseJSON?.error || 'An error occurred during import';
-                        Toast.fire({
-                            icon: 'error',
-                            title: errorMessage
-                        });
-                        importBtn.prop('disabled', false).text('Import Data');
-                    }
-                });
-            });
-        }
+        
+        $('#showDeletedBtn').on('click', function() {
+            showDeletedItems();
+        });
 
         // Real-time search for active items
         $('#searchActiveItems').on('keyup', function() {
@@ -731,23 +590,6 @@
             $('#deletedItems .card-body .d-flex:first-child div:first-child').text(counterText);
         }
 
-        // Clear search and reset view when switching between active and deleted
-        $('#activeRecordsBtn').on('click', function() {
-            $('#searchActiveItems').val('').trigger('keyup');
-            $('#activeItems').show();
-            $('#deletedItems').hide();
-            $(this).addClass('active');
-            $('#showDeletedBtn').removeClass('active');
-        });
-
-        $('#showDeletedBtn').on('click', function() {
-            $('#searchDeletedItems').val('').trigger('keyup');
-            $('#deletedItems').show();
-            $('#activeItems').hide();
-            $(this).addClass('active');
-            $('#activeRecordsBtn').removeClass('active');
-        });
-
         // Success/Error messages with Toast
         const Toast = Swal.mixin({
             toast: true,
@@ -757,19 +599,26 @@
             timerProgressBar: true
         });
 
-        @if(Session::has('success'))
-            Toast.fire({
-                icon: 'success',
-                title: @json(Session::get('success'))
-            });
-        @endif
-
-        @if(Session::has('error'))
-            Toast.fire({
-                icon: 'error',
-                title: @json(Session::get('error'))
-            });
-        @endif
+        // Get session messages from data attributes
+        const sessionData = document.getElementById('session-data');
+        if (sessionData) {
+            const successMessage = sessionData.getAttribute('data-success');
+            const errorMessage = sessionData.getAttribute('data-error');
+            
+            if (successMessage && successMessage.length > 0) {
+                Toast.fire({
+                    icon: 'success',
+                    title: successMessage
+                });
+            }
+            
+            if (errorMessage && errorMessage.length > 0) {
+                Toast.fire({
+                    icon: 'error',
+                    title: errorMessage
+                });
+            }
+        }
 
         // Initialize delete modals with static backdrop
         const deleteModals = document.querySelectorAll('[id^="deleteModal"]');
@@ -789,22 +638,34 @@
             });
         });
 
-        // Delete confirmation handler
-        $('.delete-item').click(function(e) {
-            e.preventDefault();
-            const itemId = $(this).data('item-id');
-            const itemName = $(this).data('item-name');
-            const stocksAvailable = $(this).data('stocks');
-
-            // Show the static delete modal instead of SweetAlert
-            $(`#deleteModal${itemId}`).modal('show');
+        // Add handler for delete form submission
+        $('.delete-form').on('submit', function(e) {
+            console.log('Delete form submitted');
+            
+            // Show loading indicator
+            Swal.fire({
+                title: 'Deleting...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Form will continue to submit
         });
 
-        // Restore confirmation handler
+        // Restore confirmation handler - FIXED VERSION
         $('.restore-item').click(function(e) {
             e.preventDefault();
             const itemId = $(this).data('item-id');
             const itemName = $(this).data('item-name');
+            // Find the parent form
+            const form = $(this).closest('form');
+            
+            console.log('Restore button clicked for item:', itemName);
+            console.log('Form action:', form.attr('action'));
 
             Swal.fire({
                 title: 'Restore Item?',
@@ -818,14 +679,19 @@
                 reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = "{{ url('/inventory/items') }}/" + itemId + "/restore";
-                    form.innerHTML = `
-                        @csrf
-                    `;
-                    document.body.appendChild(form);
-                    form.submit();
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Restoring item...',
+                        html: `Restoring <strong>${itemName}</strong>. Please wait...`,
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                            // Submit the form
+                            console.log('Submitting form...');
+                            form.submit();
+                        }
+                    });
                 }
             });
         });
@@ -892,66 +758,57 @@
 
 @push('scripts')
 <script>
-// Add the deleteResource function
-function deleteResource(url, resourceName) {
-    Swal.fire({
-        title: 'Delete Item?',
-        html: `Are you sure you want to delete <strong>${resourceName}</strong>?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Create and submit form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = url;
-            form.style.display = 'none';
-            
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            
-            const method = document.createElement('input');
-            method.type = 'hidden';
-            method.name = '_method';
-            method.value = 'DELETE';
-            
-            form.appendChild(csrfToken);
-            form.appendChild(method);
-            document.body.appendChild(form);
-            
-            // Show loading state
-            Swal.fire({
-                title: 'Deleting...',
-                text: 'Please wait',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                willOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            form.submit();
-        }
-    });
-}
-
-// Run this when document is ready
-$(document).ready(function() {
-    // Remove the old delete confirmation handler
-    $('.delete-item').off('click');
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the buttons and divs
+    const showDeletedBtn = document.getElementById('showDeletedBtn');
+    const activeRecordsBtn = document.getElementById('activeRecordsBtn');
+    const deletedItemsDiv = document.getElementById('deletedItems');
+    const activeItemsDiv = document.getElementById('activeItems');
     
-    // Add new delete handler using the global function
-    $('.delete-item').on('click', function(e) {
-        e.preventDefault();
-        const itemId = $(this).data('item-id');
-        const itemName = $(this).data('item-name');
-        deleteResource('{{ url('/inventory/items') }}/' + itemId, itemName);
+    // Function to show deleted items
+    function showDeletedItems() {
+        console.log('Showing deleted items');
+        activeItemsDiv.style.display = 'none';
+        deletedItemsDiv.style.display = 'block';
+        activeRecordsBtn.classList.remove('active');
+        showDeletedBtn.classList.add('active');
+    }
+    
+    // Function to show active items
+    function showActiveItems() {
+        console.log('Showing active items');
+        deletedItemsDiv.style.display = 'none';
+        activeItemsDiv.style.display = 'block';
+        showDeletedBtn.classList.remove('active');
+        activeRecordsBtn.classList.add('active');
+    }
+    
+    // Check URL parameters for tab
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    
+    if (tabParam === 'deleted') {
+        showDeletedItems();
+    } else {
+        showActiveItems();
+    }
+    
+    // Show deleted items when clicking the button
+    showDeletedBtn.addEventListener('click', function() {
+        showDeletedItems();
+        // Update URL without refreshing page
+        const url = new URL(window.location);
+        url.searchParams.set('tab', 'deleted');
+        window.history.pushState({}, '', url);
+    });
+    
+    // Show active items when clicking the button
+    activeRecordsBtn.addEventListener('click', function() {
+        showActiveItems();
+        // Update URL without refreshing page
+        const url = new URL(window.location);
+        url.searchParams.delete('tab');
+        window.history.pushState({}, '', url);
     });
 });
 </script>

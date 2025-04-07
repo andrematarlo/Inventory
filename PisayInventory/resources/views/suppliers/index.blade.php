@@ -11,6 +11,22 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 
 <style>
+    /* Toggle Cards */
+    #activeSuppliers {
+        display: block;
+    }
+    #deletedSuppliers {
+        display: none;
+    }
+
+    /* Force the display property */
+    .force-block {
+        display: block !important;
+    }
+    .force-none {
+        display: none !important;
+    }
+
     /* Custom styles for suppliers table */
     .suppliers-table {
         margin-top: 1rem;
@@ -157,6 +173,38 @@
 <!-- Add CSRF Token meta tag -->
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
+<!-- JavaScript to handle record display toggle -->
+<script>
+// Define toggle functions globally so they're available immediately
+function showActiveRecords() {
+    console.log('Showing active records');
+    document.getElementById('activeSuppliers').style.display = 'block';
+    document.getElementById('deletedSuppliers').style.display = 'none';
+    
+    document.getElementById('activeRecordsBtn').classList.add('active');
+    document.getElementById('activeRecordsBtn').classList.remove('btn-outline-primary');
+    document.getElementById('activeRecordsBtn').classList.add('btn-primary');
+    
+    document.getElementById('showDeletedBtn').classList.remove('active');
+    document.getElementById('showDeletedBtn').classList.add('btn-outline-danger');
+    document.getElementById('showDeletedBtn').classList.remove('btn-danger');
+}
+
+function showDeletedRecords() {
+    console.log('Showing deleted records');
+    document.getElementById('activeSuppliers').style.display = 'none';
+    document.getElementById('deletedSuppliers').style.display = 'block';
+    
+    document.getElementById('showDeletedBtn').classList.add('active');
+    document.getElementById('showDeletedBtn').classList.remove('btn-outline-danger');
+    document.getElementById('showDeletedBtn').classList.add('btn-danger');
+    
+    document.getElementById('activeRecordsBtn').classList.remove('active');
+    document.getElementById('activeRecordsBtn').classList.add('btn-outline-primary');
+    document.getElementById('activeRecordsBtn').classList.remove('btn-primary');
+}
+</script>
+
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Suppliers Management</h2>
@@ -168,11 +216,11 @@
     </div>
 
     <div class="btn-group mb-4" role="group">
-        <button class="btn btn-primary active" type="button" id="activeRecordsBtn">
-            Active Records
+        <button class="btn btn-primary active" type="button" id="activeRecordsBtn" onclick="showActiveRecords()">
+            <i class="bi bi-list-ul"></i> Active Records
         </button>
-        <button class="btn btn-danger" type="button" id="showDeletedBtn">
-            <i class="bi bi-archive"></i> Show Deleted Records
+        <button class="btn btn-outline-danger" type="button" id="showDeletedBtn" onclick="showDeletedRecords()">
+            <i class="bi bi-trash"></i> Show Deleted Records
         </button>
     </div>
 
@@ -181,8 +229,8 @@
     @endif
 
     <!-- Active Suppliers Section -->
-    <div class="card">
-        <div id="activeSuppliers" class="card-body">
+    <div class="card" id="activeSuppliers">
+        <div class="card-body">
             <!-- Search Box -->
             <div class="search-box">
                 <input type="text" id="activeSearchInput" class="form-control" placeholder="Search suppliers...">
@@ -236,6 +284,7 @@
                     </thead>
                     <tbody>
                         @forelse($activeSuppliers as $supplier)
+                            @if(!$supplier->IsDeleted)
                             <tr>
                                 @if($userPermissions && ($userPermissions->CanEdit || $userPermissions->CanDelete))
                                 <td>
@@ -254,12 +303,11 @@
                                               class="d-inline delete-supplier-form">
                                             @csrf
                                             @method('DELETE')
-                                        <button type="button" 
+                                            <button type="submit" 
                                                     class="btn btn-danger btn-sm delete-supplier-btn" 
-                                                data-supplier-id="{{ $supplier->SupplierID }}"
-                                                data-supplier-name="{{ $supplier->CompanyName }}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                                    onclick="return confirm('Are you sure you want to delete this supplier?');">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </form>
                                         @endif
                                     </div>
@@ -289,6 +337,7 @@
                                     <span class="badge bg-success">Active</span>
                                 </td>
                             </tr>
+                            @endif
                         @empty
                             <tr>
                                 <td colspan="12" class="text-center">No suppliers found</td>
@@ -301,72 +350,73 @@
     </div>
 
     <!-- Deleted Suppliers Section -->
-    <div id="deletedSuppliers" class="card-body" style="display: none;">
-        <!-- Search Box -->
-        <div class="search-box">
-            <input type="text" id="deletedSearchInput" class="form-control" placeholder="Search deleted suppliers...">
-        </div>
+    <div class="card" id="deletedSuppliers" style="display: none;">
+        <div class="card-body">
+            <!-- Search Box -->
+            <div class="search-box">
+                <input type="text" id="deletedSearchInput" class="form-control" placeholder="Search deleted suppliers...">
+            </div>
 
-        <!-- Deleted Suppliers Table -->
-        <div class="table-responsive">
-            <table class="table table-hover" id="deletedSuppliersTable">
-                <thead>
-                    <tr>
-                        <th>Action</th>
-                        <th>Company Name</th>
-                        <th>Contact Person</th>
-                        <th>Telephone</th>
-                        <th>Contact Number</th>
-                        <th>Address</th>
-                        <th>Items Supplied</th>
-                        <th>Deleted Date</th>
-                        <th>Created By</th>
-                        <th>Modified By</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($deletedSuppliers as $supplier)
+            <!-- Deleted Suppliers Table -->
+            <div class="table-responsive">
+                <table class="table table-hover" id="deletedSuppliersTable">
+                    <thead>
                         <tr>
-                            <td>
-                                <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
-                                      method="POST" 
-                                      class="d-inline restore-supplier-form">
-                                    @csrf
-                                    <button type="button" 
-                                            class="btn btn-success btn-sm restore-supplier-btn"
-                                            data-supplier-id="{{ $supplier->SupplierID }}"
-                                            data-supplier-name="{{ $supplier->CompanyName }}">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </button>
-                                </form>
-                            </td>
-                            <td>{{ $supplier->CompanyName }}</td>
-                            <td>{{ $supplier->ContactPerson }}</td>
-                            <td>{{ $supplier->TelephoneNumber }}</td>
-                            <td>{{ $supplier->ContactNum }}</td>
-                            <td>{{ $supplier->Address }}</td>
-                            <td>
-                                @if($supplier->items->count() > 0)
-                                    <ul class="list-unstyled mb-0">
-                                        @foreach($supplier->items as $item)
-                                            <li>{{ $item->ItemName }}</li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <span class="text-muted">No items</span>
-                                @endif
-                            </td>
-                            <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i:s', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
-                            <td>{{ $supplier->created_by_user->Username ?? 'N/A' }}</td>
-                            <td>{{ $supplier->modified_by_user->Username ?? 'N/A' }}</td>
+                            <th>Action</th>
+                            <th>Company Name</th>
+                            <th>Contact Person</th>
+                            <th>Telephone</th>
+                            <th>Contact Number</th>
+                            <th>Address</th>
+                            <th>Items Supplied</th>
+                            <th>Deleted Date</th>
+                            <th>Created By</th>
+                            <th>Modified By</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="10" class="text-center">No deleted suppliers found</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse($deletedSuppliers as $supplier)
+                            <tr>
+                                <td>
+                                    <form action="{{ route('suppliers.restore', $supplier->SupplierID) }}" 
+                                          method="POST" 
+                                          class="d-inline restore-supplier-form">
+                                        @csrf
+                                        <button type="submit" 
+                                                class="btn btn-success btn-sm restore-supplier-btn"
+                                                onclick="return confirm('Are you sure you want to restore this supplier?');">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>{{ $supplier->CompanyName }}</td>
+                                <td>{{ $supplier->ContactPerson }}</td>
+                                <td>{{ $supplier->TelephoneNumber }}</td>
+                                <td>{{ $supplier->ContactNum }}</td>
+                                <td>{{ $supplier->Address }}</td>
+                                <td>
+                                    @if($supplier->items->count() > 0)
+                                        <ul class="list-unstyled mb-0">
+                                            @foreach($supplier->items as $item)
+                                                <li>{{ $item->ItemName }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <span class="text-muted">No items</span>
+                                    @endif
+                                </td>
+                                <td>{{ $supplier->DateDeleted ? date('Y-m-d H:i:s', strtotime($supplier->DateDeleted)) : 'N/A' }}</td>
+                                <td>{{ $supplier->createdBy->Username ?? 'N/A' }}</td>
+                                <td>{{ $supplier->modifiedBy->Username ?? 'N/A' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="10" class="text-center">No deleted suppliers found</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -381,52 +431,6 @@
     @endforeach
 @endif  
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteSupplierModal" tabindex="-1" aria-labelledby="deleteSupplierModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteSupplierModalLabel">Delete Supplier</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this supplier?</p>
-                <p id="supplierNameToDelete" class="fw-bold"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteSupplierForm" action="" method="POST">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Restore Modal Template -->
-<div class="modal fade" 
-     id="restoreSupplierModal" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
-     tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Restore Supplier</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to restore this supplier?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="confirmRestoreBtn">Restore</button>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @section('scripts')
@@ -441,6 +445,9 @@
 
 <script>
     $(document).ready(function() {
+        // Ensure correct display on page load
+        showActiveRecords();
+        
         // Initialize Select2 for items dropdowns
         function initializeSelect2(element) {
             $(element).select2({
@@ -500,25 +507,6 @@
             }
         });
 
-        // Show active records by default
-        $('#activeSuppliers').show();
-        $('#deletedSuppliers').hide();
-
-        // Toggle between active and deleted records
-        $('#activeRecordsBtn').click(function() {
-            $(this).addClass('active');
-            $('#showDeletedBtn').removeClass('active');
-            $('#activeSuppliers').show();
-            $('#deletedSuppliers').hide();
-        });
-
-        $('#showDeletedBtn').click(function() {
-            $(this).addClass('active');
-            $('#activeRecordsBtn').removeClass('active');
-            $('#activeSuppliers').hide();
-            $('#deletedSuppliers').show();
-        });
-
         // Search functionality for active suppliers
         $('#activeSearchInput').on('keyup', function() {
             let searchText = $(this).val().toLowerCase();
@@ -527,79 +515,13 @@
                 $(this).toggle(rowText.indexOf(searchText) > -1);
             });
         });
-
+        
         // Search functionality for deleted suppliers
         $('#deletedSearchInput').on('keyup', function() {
             let searchText = $(this).val().toLowerCase();
             $('#deletedSuppliersTable tbody tr').each(function() {
                 let rowText = $(this).text().toLowerCase();
                 $(this).toggle(rowText.indexOf(searchText) > -1);
-            });
-        });
-
-        // Delete supplier handler
-        $('.delete-supplier-btn').on('click', function(e) {
-                    e.preventDefault();
-            const button = $(this);
-            const supplierName = button.data('supplier-name');
-            const form = button.closest('.delete-supplier-form');
-
-            Swal.fire({
-                title: 'Delete Supplier',
-                html: `Are you sure you want to delete supplier:<br><strong>${supplierName}</strong>?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Delete',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({
-                        title: 'Deleting...',
-                        text: 'Please wait while we delete the supplier.',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        showConfirmButton: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                            form.submit();
-                        }
-                    });
-                }
-            });
-        });
-
-        // Restore supplier handler
-        $('.restore-supplier-btn').on('click', function(e) {
-            e.preventDefault();
-            const button = $(this);
-            const supplierName = button.data('supplier-name');
-            const form = button.closest('.restore-supplier-form');
-
-            Swal.fire({
-                title: 'Restore Supplier',
-                html: `Are you sure you want to restore supplier:<br><strong>${supplierName}</strong>?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, restore it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({
-                        title: 'Restoring...',
-                        text: 'Please wait while we restore the supplier.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                        showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                            form.submit();
-                        }
-                    });
-                }
             });
         });
     });

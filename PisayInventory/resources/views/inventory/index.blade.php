@@ -2,7 +2,48 @@
 
 @section('title', 'Inventory')
 
+@section('head')
+<style>
+    /* Simple display styles without !important flags */
+    #activeRecordsCard {
+        display: block;
+    }
+    #deletedRecordsCard {
+        display: none;
+    }
+</style>
+@endsection
+
 @section('content')
+
+<script>
+// Simple toggle functions for reliability
+function showActiveView() {
+    document.getElementById('activeRecordsCard').style.display = 'block';
+    document.getElementById('deletedRecordsCard').style.display = 'none';
+    
+    document.getElementById('activeRecords').classList.add('btn-primary');
+    document.getElementById('activeRecords').classList.remove('btn-outline-primary');
+    
+    document.getElementById('deletedRecords').classList.remove('btn-danger');
+    document.getElementById('deletedRecords').classList.add('btn-outline-danger');
+    
+    console.log('Active view shown');
+}
+
+function showDeletedView() {
+    document.getElementById('activeRecordsCard').style.display = 'none';
+    document.getElementById('deletedRecordsCard').style.display = 'block';
+    
+    document.getElementById('deletedRecords').classList.add('btn-danger');
+    document.getElementById('deletedRecords').classList.remove('btn-outline-danger');
+    
+    document.getElementById('activeRecords').classList.remove('btn-primary');
+    document.getElementById('activeRecords').classList.add('btn-outline-primary');
+    
+    console.log('Deleted view shown');
+}
+</script>
 
 <div class="container">
     <div class="mb-4">
@@ -10,8 +51,8 @@
     </div>
 
     <div class="d-flex gap-2 mb-3">
-        <button type="button" class="btn btn-primary" id="activeRecords">Active Records</button>
-        <button type="button" class="btn btn-outline-danger" id="deletedRecords">
+        <button type="button" class="btn btn-primary" id="activeRecords" onclick="showActiveView()">Active Records</button>
+        <button type="button" class="btn btn-outline-danger" id="deletedRecords" onclick="showDeletedView()">
             <i class="bi bi-trash"></i> Show Deleted Records
         </button>
         <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
@@ -151,12 +192,14 @@
                                     
                                     {{-- Show Delete button only for users with Delete permission --}}
                                     @if($userPermissions && $userPermissions->CanDelete)
-                                        <button type="button" 
-                                                class="btn btn-sm btn-danger delete-inventory-item"
-                                                data-id="{{ $inventory->InventoryId }}" 
-                                                data-name="{{ $inventory->item->ItemName }}">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </button>
+                                        <form action="{{ route('inventory.destroy', $inventory->InventoryId) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-danger delete-confirm">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
+                                        </form>
                                     @endif
                                 </div>
                             </td>
@@ -192,9 +235,9 @@
 
     <!-- Deleted Records Card -->
     <div class="card mb-4" id="deletedRecordsCard">
-        <div class="card-header">
+        <div class="card-header bg-danger text-white">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Deleted Inventory</h5>
+                <h5 class="card-title mb-0">Deleted Inventory Records</h5>
                 <div class="d-flex gap-2 align-items-center">
                     <div class="input-group">
                         <input type="text" 
@@ -260,13 +303,14 @@
                                 <div class="btn-group btn-group-sm">
                                     {{-- Show Restore button only for users with Edit permission --}}
                                     @if($userPermissions && $userPermissions->CanEdit)
-                                        <button type="button" 
-                                                class="btn btn-success restore-inventory"
-                                                data-inventory-id="{{ $inventory->InventoryId }}"
-                                                data-item-name="{{ $inventory->item->ItemName }}">
-                                            <i class="bi bi-arrow-counterclockwise me-1"></i>
-                                            Restore
-                                        </button>
+                                        <!-- Direct restore form - more reliable approach -->
+                                        <form action="{{ route('inventory.restore', $inventory->InventoryId) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('PUT')
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i> Restore
+                                            </button>
+                                        </form>
                                     @endif
                                 </div>
                             </td>
@@ -291,7 +335,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="13" class="text-center">No inventory records found</td>
+                            <td colspan="13" class="text-center">No deleted inventory records found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -444,31 +488,6 @@
 </div>
 @endif
 
-<!-- Restore Modal Template -->
-@if($userPermissions && $userPermissions->CanEdit)
-<div class="modal fade" 
-     id="restoreInventoryModal" 
-     data-bs-backdrop="static" 
-     data-bs-keyboard="false" 
-     tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Restore Inventory Record</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to restore this inventory record?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="confirmRestoreBtn">Restore</button>
-            </div>
-        </div>
-    </div>
-</div>
-@endif
-
 @endforeach
 
 {{-- Make sure the delete modal is also wrapped with permission check --}}
@@ -495,61 +514,12 @@ const successMessage = "{{ Session::has('success') ? Session::get('success') : '
 const errorMessage = "{{ Session::has('error') ? Session::get('error') : '' }}";
 
 $(document).ready(function() {
-    // Toggle between active and deleted records
-    const activeRecordsBtn = $('#activeRecords');
-    const deletedRecordsBtn = $('#deletedRecords');
-    const activeRecordsCard = $('#activeRecordsCard');
-    const deletedRecordsCard = $('#deletedRecordsCard');
-
-    // Hide deleted records by default
-    deletedRecordsCard.hide();
-
-    activeRecordsBtn.click(function() {
-        activeRecordsCard.show();
-        deletedRecordsCard.hide();
-        activeRecordsBtn.removeClass('btn-outline-primary').addClass('btn-primary');
-        deletedRecordsBtn.removeClass('btn-danger').addClass('btn-outline-danger');
-    });
-
-    deletedRecordsBtn.click(function() {
-        activeRecordsCard.hide();
-        deletedRecordsCard.show();
-        activeRecordsBtn.removeClass('btn-primary').addClass('btn-outline-primary');
-        deletedRecordsBtn.removeClass('btn-outline-danger').addClass('btn-danger');
-    });
-
-    // Restore inventory handler
-    $('.restore-inventory').click(function(e) {
-        e.preventDefault();
-        
-        const inventoryId = $(this).data('inventory-id');
-        const itemName = $(this).data('item-name');
-        
-        // Confirm restore
-        Swal.fire({
-            title: 'Restore Inventory?',
-            html: `Are you sure you want to restore the inventory record for: <strong>${itemName}</strong>?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, restore it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Create and submit form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = "{{ route('inventory.restore', ':id') }}".replace(':id', inventoryId);
-                form.innerHTML = `
-                    @csrf
-                    @method('PUT')
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-    });
+    // Log that the document is ready for debugging
+    console.log('Document ready - initializing inventory page');
     
+    // Ensure active records are shown by default on page load
+    showActiveView();
+
     // Display success/error messages if they exist
     if (successMessage) {
         Swal.fire({
@@ -576,7 +546,7 @@ $(document).ready(function() {
             $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
         });
     });
-
+    
     // Simple search functionality for deleted records
     $('#deletedSearchInput').on('keyup', function() {
         const searchText = $(this).val().toLowerCase();
@@ -586,15 +556,15 @@ $(document).ready(function() {
     });
 
     // Initialize SweetAlert for delete confirmations
-    $('.delete-inventory-item').on('click', function(e) {
+    $('.delete-confirm').on('click', function(e) {
         e.preventDefault();
         
-        const itemId = $(this).data('id');
-        const itemName = $(this).data('name');
+        const form = $(this).closest('form');
+        const itemName = $(this).closest('tr').find('td:nth-child(2)').text(); // Get item name from the second column
         
         Swal.fire({
-            title: 'Delete Inventory Item?',
-            html: `Are you sure you want to delete <strong>${itemName}</strong> from inventory?<br><small class="text-danger">This action can be undone later.</small>`,
+            title: 'Delete Inventory Record?',
+            html: `Are you sure you want to delete the inventory record for <strong>${itemName}</strong>?<br><small class="text-danger">This action can be undone later.</small>`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',
@@ -603,36 +573,6 @@ $(document).ready(function() {
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Show loading indicator
-                Swal.fire({
-                    title: 'Deleting...',
-                    text: 'Please wait',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    willOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-                
-                // Create and submit form for delete
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '{{ url("/inventory/inventory") }}/' + itemId;
-                form.style.display = 'none';
-                
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = '{{ csrf_token() }}';
-                
-                const method = document.createElement('input');
-                method.type = 'hidden';
-                method.name = '_method';
-                method.value = 'DELETE';
-                
-                form.appendChild(csrfToken);
-                form.appendChild(method);
-                document.body.appendChild(form);
                 form.submit();
             }
         });
