@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\Log;
 
 class LaboratoryReservationController extends Controller
 {
@@ -348,17 +349,22 @@ public function getStudentInfo()
             return response()->json([
                 'success' => true,
                 'data' => [
+                    'isStudent' => true,
+                    'isTeacher' => false,
                     'full_name' => trim($user->student->first_name . ' ' . $user->student->last_name),
                     'grade_level' => $user->student->grade_level,
-                    'section' => $user->student->section
+                    'section' => $user->student->section,
+                    'campus' => $user->student->campus ?? 'Main'
                 ]
             ]);
         } elseif ($user->employee) {
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'full_name' => trim($user->employee->first_name . ' ' . $user->employee->last_name),
-                    'type' => 'teacher'
+                    'isStudent' => false,
+                    'isTeacher' => true,
+                    'full_name' => trim($user->employee->FirstName . ' ' . $user->employee->LastName),
+                    'campus' => $user->employee->campus ?? 'Main'
                 ]
             ]);
         }
@@ -369,9 +375,9 @@ public function getStudentInfo()
         ], 404);
 
     } catch (\Exception $e) {
-        \Log::error('Error in getStudentInfo:', [
+        Log::error('Error in getStudentInfo:', [
             'error' => $e->getMessage(),
-            'user' => Auth::user()->toArray()
+            'user' => Auth::user()
         ]);
         
         return response()->json([

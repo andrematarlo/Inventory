@@ -55,20 +55,15 @@
                                                 <option value="">Select Item</option>
                                                 @foreach($items as $item)
                                                 <option value="{{ $item->ItemId }}" 
-                                                        data-suppliers='@json($item->suppliers)'>
+                                                        data-suppliers='@json($item->formatted_suppliers)'>
                                                     {{ $item->ItemName }}
                                                 </option>
                                                 @endforeach
                                             </select>
                                         </td>
                                         <td>
-                                            <select name="items[0][SupplierID]" class="form-control supplier-select" required>
-                                                <option value="">Select Supplier</option>
-                                                @foreach($suppliers as $supplier)
-                                                <option value="{{ $supplier->SupplierID }}">
-                                                    {{ $supplier->CompanyName }}
-                                                </option>
-                                                @endforeach
+                                            <select name="items[0][SupplierID]" class="form-control supplier-select" required disabled>
+                                                <option value="">Select Item First</option>
                                             </select>
                                         </td>
                                         <td>
@@ -157,105 +152,118 @@
 @section('scripts')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-$(document).ready(function() {
-    // Initialize Select2
-    initializeItemRow($('.item-row:first'));
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2 for the first row
+    initializeSelects($('.item-row:first'));
 
-    // Add new item row
-    $('#addItem').click(function() {
-        let rowCount = $('.item-row').length;
-        let newRow = $('<tr class="item-row">' + 
-            '<td>' +
-                '<select name="items[' + rowCount + '][ItemId]" class="form-control item-select" required>' +
-                    '<option value="">Select Item</option>' +
-                    '@foreach($items as $item)' +
-                    '<option value="{{ $item->ItemId }}" data-suppliers=\'@json($item->suppliers)\'>' +
-                        '{{ $item->ItemName }}' +
-                    '</option>' +
-                    '@endforeach' +
-                '</select>' +
-            '</td>' +
-            '<td>' +
-                '<select name="items[' + rowCount + '][SupplierID]" class="form-control supplier-select" required disabled>' +
-                    '<option value="">Select Item First</option>' +
-                '</select>' +
-            '</td>' +
-            '<td>' +
-                '<input type="number" name="items[' + rowCount + '][Quantity]" class="form-control quantity" min="1" required>' +
-            '</td>' +
-            '<td>' +
-                '<input type="number" name="items[' + rowCount + '][UnitPrice]" class="form-control unit-price" step="0.01" required>' +
-            '</td>' +
-            '<td>' +
-                '<input type="number" class="form-control total-price" readonly>' +
-            '</td>' +
-            '<td>' +
-                '<button type="button" class="btn btn-danger btn-sm remove-item">' +
-                    '<i class="bi bi-trash"></i>' +
-                '</button>' +
-            '</td>' +
-        '</tr>');
-        
-        $('#itemsTable tbody').append(newRow);
-        initializeItemRow(newRow);
-    });
-
-    function initializeItemRow(row) {
-        // Initialize Select2 for items
+    function initializeSelects(row) {
         row.find('.item-select').select2({
-            placeholder: 'Select Item',
             width: '100%'
         });
-
-        // Initialize Select2 for suppliers
+        
         row.find('.supplier-select').select2({
-            placeholder: 'Select Item First',
             width: '100%'
-        });
-
-        // Item selection change
-        row.find('.item-select').on('change', function() {
-            const row = $(this).closest('tr');
-            const supplierSelect = row.find('.supplier-select');
-            
-            if (this.value) {
-                const selectedOption = $(this).find('option:selected');
-                const suppliers = selectedOption.data('suppliers');
-                
-                supplierSelect.empty();
-                
-                if (suppliers && suppliers.length > 0) {
-                    supplierSelect.prop('disabled', false);
-                    supplierSelect.append('<option value="">Select Supplier</option>');
-                    
-                    suppliers.forEach(supplier => {
-                        supplierSelect.append(`
-                            <option value="${supplier.SupplierID}">
-                                ${supplier.CompanyName}
-                            </option>
-                        `);
-                    });
-                } else {
-                    supplierSelect.prop('disabled', true);
-                    supplierSelect.append('<option value="">No suppliers available</option>');
-                }
-                
-                supplierSelect.trigger('change');
-            } else {
-                supplierSelect.empty();
-                supplierSelect.prop('disabled', true);
-                supplierSelect.append('<option value="">Select Item First</option>');
-                supplierSelect.trigger('change');
-            }
-        });
-
-        // Quantity and price change handlers
-        row.find('.quantity, .unit-price').on('input', function() {
-            calculateRowTotal(row);
         });
     }
 
-    // Remove item row with SweetAlert
+    // Handle item selection change
+    $(document).on('change', '.item-select', function() {
+        const row = $(this).closest('tr');
+        const supplierSelect = row.find('.supplier-select');
+        const selectedOption = $(this).find('option:selected');
+        
+        // Get suppliers data from the data attribute
+        let suppliers = [];
+        try {
+            const suppliersString = selectedOption.attr('data-suppliers');
+            suppliers = JSON.parse(suppliersString || '[]');
+        } catch (e) {
+            console.error('Error parsing suppliers:', e);
+            suppliers = [];
+        }
+
+        console.log('Selected suppliers:', suppliers); // Debug log
+
+        // Reset supplier select
+        supplierSelect.empty();
+        
+        if (this.value) {
+            supplierSelect.append(new Option('Select Supplier', ''));
+            
+            if (suppliers && suppliers.length > 0) {
+                suppliers.forEach(supplier => {
+                    supplierSelect.append(new Option(supplier.CompanyName, supplier.SupplierID));
+                });
+                supplierSelect.prop('disabled', false);
+            } else {
+                supplierSelect.append(new Option('No suppliers available', ''));
+                supplierSelect.prop('disabled', true);
+            }
+        } else {
+            supplierSelect.append(new Option('Select Item First', ''));
+            supplierSelect.prop('disabled', true);
+        }
+
+        // Refresh Select2
+        supplierSelect.trigger('change');
+    });
+
+    // Handle quantity and price changes
+    $(document).on('input', '.quantity, .unit-price', function() {
+        const row = $(this).closest('tr');
+        const quantity = parseFloat(row.find('.quantity').val()) || 0;
+        const unitPrice = parseFloat(row.find('.unit-price').val()) || 0;
+        const total = quantity * unitPrice;
+        
+        row.find('.total-price').val(total.toFixed(2));
+        calculateGrandTotal();
+    });
+
+    // Add new item row
+    $('#addItem').click(function() {
+        const rowCount = $('.item-row').length;
+        const newRow = $(`
+            <tr class="item-row">
+                <td>
+                    <select name="items[${rowCount}][ItemId]" class="form-control item-select" required>
+                        <option value="">Select Item</option>
+                        @foreach($items as $item)
+                        <option value="{{ $item->ItemId }}" 
+                                data-suppliers='@json($item->formatted_suppliers)'>
+                            {{ $item->ItemName }}
+                        </option>
+                        @endforeach
+                    </select>
+                </td>
+                <td>
+                    <select name="items[${rowCount}][SupplierID]" class="form-control supplier-select" required disabled>
+                        <option value="">Select Item First</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="number" name="items[${rowCount}][Quantity]" 
+                           class="form-control quantity" min="1" required>
+                </td>
+                <td>
+                    <input type="number" name="items[${rowCount}][UnitPrice]" 
+                           class="form-control unit-price" step="0.01" required>
+                </td>
+                <td>
+                    <input type="number" class="form-control total-price" readonly>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `);
+        
+        $('#itemsTable tbody').append(newRow);
+        initializeSelects(newRow);
+    });
+
+    // Remove item row
     $(document).on('click', '.remove-item', function() {
         const row = $(this).closest('.item-row');
         if ($('.item-row').length > 1) {
@@ -270,7 +278,7 @@ $(document).ready(function() {
             }).then((result) => {
                 if (result.isConfirmed) {
                     row.remove();
-            calculateGrandTotal();
+                    calculateGrandTotal();
                 }
             });
         } else {
@@ -282,23 +290,56 @@ $(document).ready(function() {
         }
     });
 
-    // Form submission with SweetAlert
+    // Form submission
     $('#purchaseOrderForm').submit(function(e) {
         e.preventDefault();
-
-        if ($('.item-row').length === 0) {
+        
+        // Validate form
+        let isValid = true;
+        $('.item-row').each(function() {
+            const row = $(this);
+            const itemSelect = row.find('.item-select');
+            const supplierSelect = row.find('.supplier-select');
+            const quantity = row.find('.quantity');
+            const unitPrice = row.find('.unit-price');
+            
+            // Remove previous validation classes
+            [itemSelect, supplierSelect, quantity, unitPrice].forEach(field => {
+                field.removeClass('is-invalid');
+            });
+            
+            // Validate each field
+            if (!itemSelect.val()) {
+                itemSelect.addClass('is-invalid');
+                isValid = false;
+            }
+            if (!supplierSelect.val()) {
+                supplierSelect.addClass('is-invalid');
+                isValid = false;
+            }
+            if (!quantity.val() || quantity.val() < 1) {
+                quantity.addClass('is-invalid');
+                isValid = false;
+            }
+            if (!unitPrice.val() || unitPrice.val() <= 0) {
+                unitPrice.addClass('is-invalid');
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
             Swal.fire({
                 title: 'Error',
-                text: 'Please add at least one item to the purchase order.',
+                text: 'Please fill in all required fields correctly.',
                 icon: 'error'
             });
             return false;
         }
-
+        
         // Enable all supplier selects before submitting
         $('.supplier-select').prop('disabled', false);
-
-        // Submit form via AJAX
+        
+        // Submit form
         $.ajax({
             url: $(this).attr('action'),
             type: 'POST',
@@ -333,41 +374,7 @@ $(document).ready(function() {
             }
         });
     });
-
-    // Add item validation
-    $('#addItem').click(function() {
-        const existingItems = [];
-        $('.item-select').each(function() {
-            const selectedValue = $(this).val();
-            if (selectedValue) {
-                existingItems.push(selectedValue);
-            }
-        });
-
-        const availableItems = $('option', '.item-select:first').filter(function() {
-            return !existingItems.includes($(this).val()) && $(this).val() !== '';
-        });
-
-        if (availableItems.length === 0) {
-            Swal.fire({
-                title: 'No More Items',
-                text: 'All available items have been added to the purchase order.',
-                icon: 'info'
-            });
-            return;
-        }
-
-        // Add new row code remains the same...
-    });
 });
-
-function calculateRowTotal(row) {
-    let quantity = parseFloat(row.find('.quantity').val()) || 0;
-    let unitPrice = parseFloat(row.find('.unit-price').val()) || 0;
-    let total = quantity * unitPrice;
-    row.find('.total-price').val(total.toFixed(2));
-    calculateGrandTotal();
-}
 
 function calculateGrandTotal() {
     let grandTotal = 0;

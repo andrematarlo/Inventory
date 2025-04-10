@@ -96,7 +96,7 @@
                                     @if($userPermissions && $userPermissions->CanDelete)
                                         <button type="button" 
                                                 class="btn btn-sm btn-danger" 
-                                                onclick="deleteResource('{{ route('purchases.destroy', $po->PurchaseOrderID) }}', 'Purchase #{{ $po->PONumber }}')"
+                                                onclick="deletePurchase('{{ $po->PurchaseOrderID }}')"
                                                 title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -107,9 +107,7 @@
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
-                            <td>
-                                {{ $po->supplier ? $po->supplier->CompanyName : 'N/A' }}
-                            </td>
+                            <td>{{ $po->supplier->CompanyName }}</td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
                             <td>
                                 <span class="badge bg-success">
@@ -168,7 +166,7 @@
                                     @if($userPermissions && $userPermissions->CanDelete)
                                         <button type="button" 
                                                 class="btn btn-sm btn-danger" 
-                                                onclick="deleteResource('{{ route('purchases.destroy', $po->PurchaseOrderID) }}', 'Purchase #{{ $po->PONumber }}')"
+                                                onclick="deletePurchase('{{ $po->PurchaseOrderID }}')"
                                                 title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -179,9 +177,7 @@
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
-                            <td>
-                                {{ $po->supplier ? $po->supplier->CompanyName : 'N/A' }}
-                            </td>
+                            <td>{{ $po->supplier->CompanyName }}</td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
                             <td>
                                 <span class="badge bg-warning">
@@ -243,9 +239,7 @@
                                 </div>
                             </td>
                             <td>{{ $po->PONumber }}</td>
-                            <td>
-                                {{ $po->supplier ? $po->supplier->CompanyName : 'N/A' }}
-                            </td>
+                            <td>{{ $po->supplier->CompanyName }}</td>
                             <td>{{ $po->OrderDate->format('M d, Y') }}</td>
                             <td>
                                 <span class="badge bg-danger">

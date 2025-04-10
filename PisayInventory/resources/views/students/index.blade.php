@@ -334,10 +334,30 @@
     </div>
 </div>
 
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">Preview Selected Columns</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Preview content will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -680,6 +700,118 @@ function showSkippedRecordsModal(details) {
         confirmButtonText: 'Close',
         confirmButtonColor: '#6c757d'
     });
+}
+
+function previewColumns() {
+    const selectedColumns = [];
+    // Make sure we're selecting the correct checkboxes
+    $('input[name="columns[]"]:checked').each(function() {
+        selectedColumns.push($(this).val());
+    });
+
+    console.log('Selected columns:', selectedColumns);
+
+    if (selectedColumns.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Columns Selected',
+            text: 'Please select at least one column to preview'
+        });
+        return;
+    }
+
+    $.ajax({
+        url: '{{ route("students.preview-columns") }}',
+        method: 'POST',
+        data: {
+            columns: selectedColumns,
+            _token: '{{ csrf_token() }}'
+        },
+        success: function(response) {
+            console.log('Server response:', response);
+            
+            if (!response || typeof response !== 'object') {
+                console.error('Invalid response format:', response);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Invalid response format received from server'
+                });
+                return;
+            }
+
+            if (response.success && response.data) {
+                console.log('Response data:', response.data);
+                const previewHtml = generatePreviewHtml(response.data);
+                $('#previewModal .modal-body').html(previewHtml);
+                $('#previewModal').modal('show');
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.message || 'Failed to load preview'
+                });
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', {
+                status: status,
+                error: error,
+                response: xhr.responseText
+            });
+            
+            let errorMessage = 'An error occurred while loading the preview.';
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMessage = response.message || errorMessage;
+            } catch (e) {
+                console.error('Error parsing response:', e);
+            }
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMessage
+            });
+        }
+    });
+}
+
+function generatePreviewHtml(data) {
+    console.log('Generating preview HTML with data:', data);
+    
+    if (!data || !data.headers || !data.rows) {
+        console.error('Invalid data format:', data);
+        return '<div class="alert alert-danger">Invalid data format received from server</div>';
+    }
+
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        ${data.headers.map(header => `<th>${header}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    data.rows.forEach(row => {
+        html += '<tr>';
+        data.headers.forEach(header => {
+            const value = row[header] !== undefined ? row[header] : '';
+            html += `<td>${value}</td>`;
+        });
+        html += '</tr>';
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    return html;
 }
 </script>
 @endsection 

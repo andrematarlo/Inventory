@@ -74,10 +74,13 @@ class Receiving extends Model
 
     public function getTotalAmountAttribute()
     {
-        // Get total from purchase order items instead
-        return $this->purchaseOrder ? $this->purchaseOrder->items->sum(function($item) {
+        if (!$this->items) {
+            return 0;
+        }
+        
+        return $this->items->sum(function($item) {
             return $item->Quantity * $item->UnitPrice;
-        }) : 0;
+        });
     }
 
     // Custom delete method to handle soft deletes with additional fields

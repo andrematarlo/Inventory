@@ -91,6 +91,8 @@ Route::middleware('auth')->group(function () {
              Route::get('/students/import', [StudentsController::class, 'showImport'])->name('students.import');
              Route::post('/students/preview-columns', [StudentsController::class, 'previewColumns'])->name('students.preview-columns');
              Route::post('/students/process-import', [StudentsController::class, 'processImport'])->name('students.process-import');
+             Route::post('/students/preview-import', [StudentsController::class, 'previewImport'])->name('students.preview-import');
+             Route::post('/students/import', [StudentsController::class, 'import'])->name('students.import');
         
 
         // Items Management
@@ -358,6 +360,8 @@ Route::middleware('auth')->group(function () {
                     ->name('reservations.getTeachers');
                 Route::get('/reservations/generate-control-no', [LaboratoryReservationController::class, 'generateControlNo'])
                     ->name('reservations.generateControlNo');
+                Route::get('/reservations/check-conflicts', [LaboratoryReservationController::class, 'checkConflicts'])
+                    ->name('reservations.checkConflicts');
 
                 // Other reservation management routes
                 Route::get('/reservations/{reservation}', [LaboratoryReservationController::class, 'show'])

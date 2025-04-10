@@ -300,160 +300,233 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Initialize Select2 for teacher selection
-$('select[name="teacher_id"]').select2({
-    placeholder: 'Select Teacher',
-    allowClear: true,
-    ajax: {
-        url: '{{ route("laboratory.reservations.getTeachers") }}',
-        dataType: 'json',
-        delay: 250,
-        data: function(params) {
-            return {
-                search: params.term || ''
-            };
-        },
-        processResults: function(data) {
-            return {
-                results: data
-            };
-        },
-        cache: true
-    }
-});
-
-    // Auto-populate student info if user is a student
-    @if(Auth::user()->student)
-        $.get('{{ route("laboratory.reservations.getStudentInfo") }}', function(response) {
-            if (response.success) {
-                $('input[name="grade_section"]').val(response.data.grade_level + ' - ' + response.data.section);
-                $('input[name="requested_by"]').val(response.data.full_name);
-                $('input[name="requested_by_type"]').val('student');
-            }
-        });
-    @endif
-
-    // If user is a teacher, auto-select themselves
-    @if(Auth::user()->employee)
-        var teacherData = {
-            id: '{{ Auth::user()->employee->EmployeeID }}',
-            text: '{{ Auth::user()->employee->FirstName }} {{ Auth::user()->employee->LastName }}'
-        };
-        
-        var option = new Option(teacherData.text, teacherData.id, true, true);
-        $('select[name="teacher_id"]').append(option).trigger('change');
-        $('select[name="teacher_id"]').prop('disabled', true);
-        $('input[name="requested_by"]').val(teacherData.text);
-        $('input[name="requested_by_type"]').val('teacher');
-    @endif
-
-
-
-    // Generate control number on page load
+    // Auto-generate control number on page load
     $.get('{{ route("laboratory.reservations.generateControlNo") }}', function(response) {
-        $('input[name="control_no"]').val(' ');
+        $('input[name="control_no"]').val(response.control_no);
     });
 
-    // Set current school year
+    // Auto-populate current school year
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const nextYear = currentYear + 1;
-    const schoolYear = currentDate.getMonth() >= 5  // June onwards is new school year
+    const schoolYear = currentDate.getMonth() >= 5  // If current month is June or later
         ? `${currentYear}-${nextYear}`
         : `${currentYear-1}-${currentYear}`;
     $('input[name="school_year"]').val(schoolYear);
 
-    // Form submission
-$('#reservationForm').submit(function(e) {
-    e.preventDefault();
-    
-    // Validate required fields
-    const requiredFields = ['subject', 'teacher_id', 'reservation_date', 
-                          'start_time', 'end_time', 'num_students'];
-    
-    // Only add grade_section to required fields if user is not a teacher
-    @if(Auth::user()->role !== 'Teacher')
-        requiredFields.push('grade_section');
-    @endif
-
-    let isValid = true;
-    
-    requiredFields.forEach(field => {
-        if (!$(`[name="${field}"]`).val()) {
-            isValid = false;
-            $(`[name="${field}"]`).addClass('is-invalid');
-        } else {
-            $(`[name="${field}"]`).removeClass('is-invalid');
-        }
-    });
-
-    if (!isValid) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
-            text: 'Please fill in all required fields'
-        });
-        return;
-    }
-
-    // Show loading state while processing
-    Swal.fire({
-        title: 'Submitting Reservation',
-        text: 'Please wait...',
-        allowOutsideClick: false,
-        showConfirmButton: false,
-        willOpen: () => {
-            Swal.showLoading();
-        }
-    });
-        
-    $.ajax({
-        url: '{{ route("laboratory.reservations.store") }}',
-        type: 'POST',
-        data: $(this).serialize(),
-        success: function(response) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: 'Your reservation has been submitted successfully.'
-            }).then(() => {
-                window.location.href = '{{ route("laboratory.reservations") }}';
-            });
-        },
-        error: function(xhr) {
-            let errorMessage = 'Something went wrong.';
-            if (xhr.responseJSON && xhr.responseJSON.errors) {
-                errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
-            } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                errorMessage = xhr.responseJSON.message;
-            }
+    // Auto-populate campus and grade-section
+    $.get('{{ route("laboratory.reservations.getStudentInfo") }}', function(response) {
+        if (response.success) {
+            // Auto-populate campus
+            $('input[name="campus"]').val(response.data.campus || 'Main');
             
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: errorMessage
-            });
+            // Auto-populate grade and section for students
+            if (response.data.isStudent) {
+                const gradeSection = `${response.data.grade_level || ''} - ${response.data.section || ''}`.trim();
+                $('input[name="grade_section"]').val(gradeSection);
+            } else if (response.data.isTeacher) {
+                $('input[name="grade_section"]')
+                    .val('N/A')
+                    .prop('readonly', true)
+                    .attr('placeholder', 'Not applicable for teacher reservations');
+            }
+        }
+    }).fail(function(xhr) {
+        console.error('Error fetching user info:', xhr.responseText);
+    });
+
+    // Initialize Select2 for teacher selection with search
+    $('select[name="teacher_id"]').select2({
+        placeholder: 'Select Teacher',
+        allowClear: true,
+        ajax: {
+            url: '{{ route("laboratory.reservations.getTeachers") }}',
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {
+                    search: params.term || ''
+                };
+            },
+            processResults: function(data) {
+                return {
+                    results: data
+                };
+            },
+            cache: true
         }
     });
-});
+
+    // Initialize Select2 for laboratory selection
+    $('select[name="laboratory_id"]').select2({
+        placeholder: 'Select Laboratory'
+    });
+
+    // Set minimum date for reservation
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    $('input[name="reservation_date"]').attr('min', tomorrow.toISOString().split('T')[0]);
+
+    // Set default time range (8 AM to 5 PM)
+    $('input[name="start_time"]').val('08:00');
+    $('input[name="end_time"]').val('17:00');
 
     // Validate time inputs
     $('input[name="start_time"], input[name="end_time"]').change(function() {
         const startTime = $('input[name="start_time"]').val();
         const endTime = $('input[name="end_time"]').val();
         
-        if (startTime && endTime && endTime <= startTime) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Time',
-                text: 'End time must be after start time'
-            });
-            $('input[name="end_time"]').val('');
+        if (startTime && endTime) {
+            const start = new Date(`2000-01-01T${startTime}`);
+            const end = new Date(`2000-01-01T${endTime}`);
+            
+            // Check if end time is before start time
+            if (end <= start) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Time',
+                    text: 'End time must be after start time'
+                });
+                $(this).val('');
+                return;
+            }
+
+            // Check if reservation is within operating hours (8 AM to 5 PM)
+            const openingTime = new Date(`2000-01-01T08:00`);
+            const closingTime = new Date(`2000-01-01T17:00`);
+            
+            if (start < openingTime || end > closingTime) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Time',
+                    text: 'Reservations must be between 8:00 AM and 5:00 PM'
+                });
+                $(this).val('');
+            }
         }
     });
 
-    // Initialize datepicker with minimum date
-    $('input[name="reservation_date"]').attr('min', new Date().toISOString().split('T')[0]);
+    // Form validation and submission
+    $('#reservationForm').submit(function(e) {
+        e.preventDefault();
+        
+        // Validate required fields
+        const requiredFields = ['campus', 'school_year', 'subject', 'teacher_id', 
+                              'reservation_date', 'start_time', 'end_time', 
+                              'laboratory_id', 'num_students'];
+        
+        // Only add grade_section to required fields if user is not a teacher
+        @if(Auth::user()->role !== 'Teacher')
+            requiredFields.push('grade_section');
+        @endif
+
+        let isValid = true;
+        let firstInvalidField = null;
+        
+        requiredFields.forEach(field => {
+            const element = $(`[name="${field}"]`);
+            if (!element.val()) {
+                isValid = false;
+                element.addClass('is-invalid');
+                if (!firstInvalidField) {
+                    firstInvalidField = element;
+                }
+            } else {
+                element.removeClass('is-invalid');
+            }
+        });
+
+        if (!isValid) {
+            firstInvalidField.focus();
+            Swal.fire({
+                icon: 'error',
+                title: 'Required Fields Missing',
+                text: 'Please fill in all required fields'
+            });
+            return;
+        }
+
+        // Show loading state
+        Swal.fire({
+            title: 'Submitting Reservation',
+            text: 'Please wait...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Submit form
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Your reservation has been submitted successfully.',
+                        showConfirmButton: true
+                    }).then(() => {
+                        window.location.href = '{{ route("laboratory.reservations") }}';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: response.message || 'Something went wrong.'
+                    });
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Something went wrong.';
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: errorMessage
+                });
+            }
+        });
+    });
+
+    // Check for conflicting reservations when laboratory and date/time are selected
+    function checkConflicts() {
+        const labId = $('select[name="laboratory_id"]').val();
+        const date = $('input[name="reservation_date"]').val();
+        const startTime = $('input[name="start_time"]').val();
+        const endTime = $('input[name="end_time"]').val();
+
+        if (labId && date && startTime && endTime) {
+            $.get('{{ route("laboratory.reservations.checkConflicts") }}', {
+                laboratory_id: labId,
+                reservation_date: date,
+                start_time: startTime,
+                end_time: endTime
+            }, function(response) {
+                if (response.conflict) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Time Slot Conflict',
+                        text: 'This time slot is already reserved. Please choose a different time.'
+                    });
+                    $('input[name="start_time"]').val('');
+                    $('input[name="end_time"]').val('');
+                }
+            });
+        }
+    }
+
+    // Check conflicts when relevant fields change
+    $('select[name="laboratory_id"], input[name="reservation_date"], input[name="start_time"], input[name="end_time"]')
+        .change(checkConflicts);
 });
 </script>
 @endpush

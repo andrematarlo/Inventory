@@ -22,7 +22,7 @@ class Student extends Model
      *
      * @var string
      */
-    protected $primaryKey = 'student_id';
+    protected $primaryKey = 'StudentID';
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -38,7 +38,7 @@ class Student extends Model
      *
      * @var bool
      */
-    public $timestamps = true;
+    public $timestamps = false;
 
     /**
      * The attributes that are mass assignable.

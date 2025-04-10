@@ -11,6 +11,7 @@ use App\Enums\PurchaseStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\Employee;
 
 class PurchaseController extends Controller
@@ -92,41 +93,42 @@ class PurchaseController extends Controller
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
         try {
             DB::beginTransaction();
             
-            // Find the purchase
+            // Get the authenticated user's ID and find the employee
+            $userAccountId = Auth::id();
+            \Log::info('Auth ID:', ['user_account_id' => $userAccountId]); // Debug log
+            
+            $employee = Employee::where('UserAccountID', $userAccountId)->first();
+            \Log::info('Employee found:', ['employee' => $employee]); // Debug log
+            
+            if (!$employee) {
+                throw new \Exception('Employee not found for UserAccountID: ' . $userAccountId);
+            }
+            
             $purchase = Purchase::findOrFail($id);
-            
-            // Soft delete or mark as deleted
-            $purchase->update([
-                'is_deleted' => true,
-                'deleted_by' => Auth::id(),
-                'deleted_at' => now()
-            ]);
-            
-            // Or hard delete if appropriate
-            // $purchase->delete();
+            $purchase->softDelete();
             
             DB::commit();
             
-            // Return JSON response for AJAX
             return response()->json([
                 'success' => true,
-                'message' => 'Purchase deleted successfully'
+                'message' => 'Purchase order deleted successfully'
             ]);
-            
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error deleting purchase order:', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete purchase: ' . $e->getMessage()
+                'message' => 'Error deleting purchase order: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -247,11 +249,25 @@ class PurchaseController extends Controller
 
             // Load items with their active suppliers
             $items = Item::with(['suppliers' => function($query) {
-                $query->where('items_suppliers.IsDeleted', false);
-            }])->where('IsDeleted', false)->get();
+                $query->where('items_suppliers.IsDeleted', false)
+                      ->select('suppliers.SupplierID', 'suppliers.CompanyName');
+            }])->where('IsDeleted', false)
+              ->get()
+              ->map(function($item) {
+                  // Format suppliers data for the view
+                  $item->formatted_suppliers = $item->suppliers->map(function($supplier) {
+                      return [
+                          'SupplierID' => $supplier->SupplierID,
+                          'CompanyName' => $supplier->CompanyName
+                      ];
+                  });
+                  return $item;
+              });
 
-            // Load all active suppliers
-            $suppliers = Supplier::where('IsDeleted', false)->get();
+            // Load all active suppliers for the initial dropdown
+            $suppliers = Supplier::where('IsDeleted', false)
+                               ->select('SupplierID', 'CompanyName')
+                               ->get();
 
             return view('purchases.create', compact('items', 'suppliers', 'userPermissions'));
 

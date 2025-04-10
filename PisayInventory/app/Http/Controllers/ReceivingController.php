@@ -382,42 +382,47 @@ class ReceivingController extends Controller
         }
     }
 
-    /**
-     * Remove the specified receiving record from storage.
-     */
     public function destroy($id)
     {
         try {
+            $userPermissions = $this->getUserPermissions();
+            
+            // Check if user has Delete permission
+            if (!$userPermissions || !$userPermissions->CanDelete) {
+                return redirect()->back()->with('error', 'You do not have permission to delete receiving records.');
+            }
+
+            Log::info('Starting delete process for receiving record: ' . $id);
             DB::beginTransaction();
-            
-            // Find the receiving record
-            $receivingRecord = Receiving::findOrFail($id);
-            
-            // Soft delete the record
-            $receivingRecord->update([
-                'IsDeleted' => true,
-                'DeletedByID' => Auth::id(),
-                'DeletedAt' => now()
-            ]);
-            
+
+            $currentEmployee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->firstOrFail();
+
+            $receiving = Receiving::with('purchaseOrder')
+                ->where('IsDeleted', false)
+                ->findOrFail($id);
+
+            if ($receiving->IsDeleted) {
+                throw new \Exception('Record is already deleted.');
+            }
+
+            $receiving->softDelete($currentEmployee->EmployeeID);
+
             DB::commit();
-            
+            Log::info('Receiving record deleted successfully');
             return response()->json([
                 'success' => true,
-                'message' => 'Receiving record deleted successfully'
+                'message' => 'Receiving deleted successfully'
             ]);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error deleting receiving record:', [
-                'error' => $e->getMessage(),
-                'user_id' => Auth::id(),
-                'receiving_id' => $id
-            ]);
-            
+            Log::error('Error deleting receiving: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete receiving record: ' . $e->getMessage()
+                'message' => 'Error deleting receiving: ' . $e->getMessage()
             ], 500);
         }
     }
