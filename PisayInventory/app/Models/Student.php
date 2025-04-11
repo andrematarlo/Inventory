@@ -22,7 +22,7 @@ class Student extends Model
      *
      * @var string
      */
-    protected $primaryKey = 'StudentID';
+    protected $primaryKey = 'student_id';
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -38,7 +38,7 @@ class Student extends Model
      *
      * @var bool
      */
-    public $timestamps = false;
+    public $timestamps = true;
 
     /**
      * The attributes that are mass assignable.
@@ -121,16 +121,6 @@ class Student extends Model
     {
         return $this->belongsTo(Employee::class, 'RestoredByID', 'EmployeeID')
             ->withDefault(['FirstName' => 'Unknown', 'LastName' => 'User']);
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'UserAccountID', 'UserAccountID');
-    }
-
-    public function orders()
-    {
-        return $this->hasMany(Order::class, 'student_id', 'student_id');
     }
 
     // Helper methods

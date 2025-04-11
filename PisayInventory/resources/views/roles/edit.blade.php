@@ -34,8 +34,9 @@
                 </div>
 
                 <div class="card mb-4">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Module Permissions</h5>
+                        <button type="button" class="btn btn-secondary btn-sm" id="clearAllPermissions">Clear All</button>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -110,3 +111,16 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.getElementById('clearAllPermissions').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all permissions?')) {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+    });
+</script>
+@endpush

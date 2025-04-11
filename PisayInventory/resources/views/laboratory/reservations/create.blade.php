@@ -131,16 +131,27 @@
                     value="{{ Auth::user()->employee->FirstName }} {{ Auth::user()->employee->LastName }}"
                     readonly>
                 <input type="hidden" name="requested_by_type" value="teacher">
+            @elseif(Auth::user()->role === 'Students' || Auth::user()->role === 'Student')
+                <input type="text" class="form-control" name="requested_by" 
+                    value="{{ Auth::user()->name }}"
+                    required>
+                <input type="hidden" name="requested_by_type" value="student">
+                <small class="text-muted">Please enter your full name</small>
+            @else
+                <input type="text" class="form-control" name="requested_by" 
+                    value="{{ Auth::user()->name }}"
+                    readonly>
+                <input type="hidden" name="requested_by_type" value="other">
             @endif
             <small class="text-muted text-center mt-1">Teacher/Student</small>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Date Requested:</label>
-                                <input type="date" class="form-control" name="date_requested" 
-                                    value="{{ date('Y-m-d') }}" readonly>
-                            </div>
-                        </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">Date Requested:</label>
+        <input type="date" class="form-control" name="date_requested" 
+            value="{{ date('Y-m-d') }}" readonly>
+    </div>
+</div>
 
                         <!-- Group Members -->
                         <div class="mb-4">
@@ -415,10 +426,11 @@ $(document).ready(function() {
                               'reservation_date', 'start_time', 'end_time', 
                               'laboratory_id', 'num_students'];
         
-        // Only add grade_section to required fields if user is not a teacher
-        @if(Auth::user()->role !== 'Teacher')
+        // Check user role and add grade_section conditionally
+        const userRole = '{{ Auth::user()->role }}';
+        if (userRole !== 'Teacher') {
             requiredFields.push('grade_section');
-        @endif
+        }
 
         let isValid = true;
         let firstInvalidField = null;
