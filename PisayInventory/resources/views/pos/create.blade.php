@@ -11,6 +11,17 @@
                         <h1 class="fs-2 fw-bold mb-0" style="color:rgb(2, 2, 2) !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">CVicsC</h1>
                     </div>
                     <div class="d-flex align-items-center gap-3">
+                        <!-- Search Bar -->
+                        <div class="position-relative" style="min-width: 300px;">
+                            <input type="search" 
+                                   class="form-control search-input" 
+                                   placeholder="Search items..." 
+                                   style="padding: 0.75rem 2.5rem; color: #000000 !important; background: #FFFFFF !important; border: none; height: auto;"
+                                   autocomplete="off">
+                            <i class="bi bi-search position-absolute" 
+                               style="left: 1rem; top: 50%; transform: translateY(-50%); color: #6c757d;"></i>
+                        </div>
+                        
                         <!-- Cart Button in Header -->
                         <button type="button" class="btn btn-light position-relative shadow-sm" 
                                 data-bs-toggle="offcanvas" 
@@ -167,7 +178,7 @@
                         <h5 class="mb-0 fw-bold" style="color: #000000 !important;">
                             <i class="bi bi-cart me-2"></i>Your Order
                         </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                     </div>
                     <div class="offcanvas-body p-0 d-flex flex-column">
                         <!-- Cart Items will be dynamically added here -->
@@ -538,27 +549,49 @@ label {
 .btn-close,
 .offcanvas .btn-close,
 .alert .btn-close {
-    background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 011.414 0L8 6.586 14.293.293a1 1 0 111.414 1.414L9.414 8l6.293 6.293a1 1 0 01-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 01-1.414-1.414L6.586 8 .293 1.707a1 1 0 010-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat !important;
-    opacity: 1 !important;
-    padding: 1rem !important;
-}
-
-/* Hover state for close button */
-.btn-close:hover {
-    opacity: 0.75 !important;
-    background-color: transparent !important;
-}
-
-/* Override any Bootstrap close button styles */
-.btn-close-white {
+    background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000000'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat !important;
+    opacity: 0.8 !important;
     filter: none !important;
 }
 
-/* Make sure close button is visible in offcanvas header */
+/* Remove white button override */
+.btn-close-white {
+    filter: none !important;
+    background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000000'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat !important;
+}
+
+/* Hover state */
+.btn-close:hover {
+    opacity: 1 !important;
+}
+
+/* Specific styling for offcanvas close button */
 .offcanvas-header .btn-close {
-    margin-right: 0 !important;
-    padding: 0.5rem !important;
-    background-color: transparent !important;
+    margin: 0 !important;
+    padding: 1rem !important;
+}
+
+/* Search input styling */
+.search-input {
+    border-radius: 20px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+    transition: all 0.3s ease !important;
+    font-size: 1rem !important;
+    color: #000000 !important;
+    font-weight: 500 !important;
+    background-color: #FFFFFF !important;
+}
+
+.search-input::placeholder {
+    color: #6c757d !important;
+    opacity: 0.8 !important;
+}
+
+.search-input:focus {
+    color: #000000 !important;
+    background-color: #FFFFFF !important;
+    border-color: #27AE60 !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15) !important;
 }
 </style>
 @endpush
@@ -1029,6 +1062,22 @@ $(document).ready(function() {
                 submitButton.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>Place Order');
                 }
             });
+    });
+
+    // Add this to your existing $(document).ready function
+    $('.search-input').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        
+        $('.menu-item').each(function() {
+            const itemName = $(this).find('.card-title').text().toLowerCase();
+            const itemDescription = $(this).find('.card-text').text().toLowerCase();
+            
+            if (itemName.includes(searchTerm) || itemDescription.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
     });
 });
 </script>
