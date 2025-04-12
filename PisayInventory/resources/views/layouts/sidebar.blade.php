@@ -604,6 +604,99 @@
 .sidebar.collapsed .nav-item .collapse.show {
     display: block;
 }
+
+/* Update text colors in sidebar */
+.sidebar .nav-link,
+.sidebar .nav-link span,
+.sidebar .nav-link i,
+.sidebar .dropdown-item,
+.sidebar .dropdown-item i,
+.sidebar-title,
+.sidebar .nav-content .dropdown-item {
+    color: #FFFFFF !important;
+}
+
+/* Keep white text in dropdowns */
+.sidebar .dropdown-menu {
+    background-color: #000000 !important;
+}
+
+.sidebar .dropdown-menu .dropdown-item {
+    color: #FFFFFF !important;
+}
+
+/* Make sure active items are still visible */
+.sidebar .nav-link.active,
+.sidebar .dropdown-item.active {
+    background-color: rgba(255,255,255,0.1) !important;
+    color: #FFFFFF !important;
+}
+
+/* Ensure hover states maintain white text */
+.sidebar .nav-link:hover,
+.sidebar .dropdown-item:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+    color: #FFFFFF !important;
+}
+
+/* Update dropdown styles for Point of Sale */
+.sidebar #posCollapse {
+    background-color: transparent !important;
+}
+
+.sidebar #posCollapse .nav-content {
+    background-color: transparent !important;
+}
+
+.sidebar #posCollapse .dropdown-item,
+.sidebar #posCollapse .dropdown-item i,
+.sidebar #posCollapse .dropdown-item span {
+    color: #FFFFFF !important;
+    font-weight: normal;
+}
+
+/* Make sure the dropdown items are visible */
+.sidebar .collapse .nav-content .dropdown-item {
+    color: #FFFFFF !important;
+    background-color: transparent !important;
+}
+
+/* Hover effect for dropdown items */
+.sidebar .collapse .nav-content .dropdown-item:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+    color: #FFFFFF !important;
+}
+
+/* Active state for dropdown items */
+.sidebar .collapse .nav-content .dropdown-item.active {
+    background-color: rgba(255,255,255,0.1) !important;
+    color: #FFFFFF !important;
+}
+
+/* Update text colors for Point of Sale dropdown */
+.sidebar #posCollapse .nav-content .dropdown-item,
+.sidebar #posCollapse .nav-content .dropdown-item i,
+.sidebar #posCollapse .nav-content .dropdown-item span {
+    color: #FFFFFF !important;
+    font-weight: normal;
+}
+
+/* Make sure active and hover states maintain white text */
+.sidebar #posCollapse .nav-content .dropdown-item:hover,
+.sidebar #posCollapse .nav-content .dropdown-item.active {
+    color: #FFFFFF !important;
+    background-color: rgba(255,255,255,0.1) !important;
+}
+
+/* Update close button color */
+.btn-close {
+    background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 011.414 0L8 6.586 14.293.293a1 1 0 111.414 1.414L9.414 8l6.293 6.293a1 1 0 01-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 01-1.414-1.414L6.586 8 .293 1.707a1 1 0 010-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat !important;
+    opacity: 1 !important;
+}
+
+.btn-close:hover {
+    opacity: 0.75 !important;
+}
 </style>
 
 <script>

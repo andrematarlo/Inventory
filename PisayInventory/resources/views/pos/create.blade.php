@@ -1,19 +1,28 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-4">
+<div class="container-fluid py-4" style="background: #F5F5DC !important; min-height: 100vh;">
     <!-- Header Section -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card bg-primary text-white shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center py-3">
                     <div>
-                        <h1 class="fs-2 fw-bold mb-0">New Order</h1>
-                        <p class="mb-0 opacity-75">Select items to add to your order</p>
+                        <h1 class="fs-2 fw-bold mb-0" style="color:rgb(2, 2, 2) !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">CVicsC</h1>
                     </div>
-                    <a href="{{ route('pos.index') }}" class="btn btn-light">
-                        <i class="bi bi-arrow-left me-1"></i> Back to Orders
-                    </a>
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- Cart Button in Header -->
+                        <button type="button" class="btn btn-light position-relative shadow-sm" 
+                                data-bs-toggle="offcanvas" 
+                                data-bs-target="#cartOffcanvas"
+                                style="background: #FFFFFF !important; padding: 0.5rem 1rem;">
+                            <i class="bi bi-cart fs-5" style="color:rgb(2, 2, 2) !important;"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger cart-count" 
+                                  style="color: #FFFFFF !important;">
+                                0
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -76,7 +85,7 @@
         @csrf
         <div class="row g-4">
             <!-- Menu Items Section -->
-            <div class="col-lg-8">
+            <div class="col-lg-12">
                 <!-- Menu Categories -->
                 <div class="card shadow-sm border-0 rounded-3 mb-4">
                     <div class="card-body pb-0">
@@ -102,7 +111,7 @@
                 <div class="menu-items-grid">
                     <div class="row g-4">
                         @foreach($menuItems as $item)
-                            <div class="col-md-4 menu-item {{ $item->StocksAvailable <= 0 ? 'out-of-stock' : '' }} {{ $item->StocksAvailable <= 5 ? 'low-stock' : '' }}" 
+                            <div class="col-lg-3 menu-item {{ $item->StocksAvailable <= 0 ? 'out-of-stock' : '' }} {{ $item->StocksAvailable <= 5 ? 'low-stock' : '' }}" 
                                  data-category="{{ $item->ClassificationID }}"
                                  data-item-id="{{ $item->MenuItemID }}">
                                 <div class="card h-100 border-0 shadow-sm menu-item-card">
@@ -110,10 +119,10 @@
                                         <img src="{{ asset('storage/' . $item->image_path) }}" 
                                              class="card-img-top" 
                                              alt="{{ $item->ItemName }}"
-                                             style="height: 200px; object-fit: cover;">
+                                             style="height: 250px; object-fit: cover;">
                                     @else
                                         <div class="bg-light d-flex align-items-center justify-content-center" 
-                                             style="height: 200px;">
+                                             style="height: 250px;">
                                             <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
                                         </div>
                                     @endif
@@ -151,133 +160,133 @@
             </div>
 
             <!-- Order Summary Section -->
-            <div class="col-lg-4">
-                <div class="card shadow-sm border-0 rounded-3 sticky-top" style="top: 20px;">
-                    <div class="card-header bg-primary text-white py-3">
-                        <h5 class="mb-0 fw-bold">
+            <div class="col-lg-12">
+                <!-- Cart Offcanvas -->
+                <div class="offcanvas offcanvas-end" tabindex="-1" id="cartOffcanvas" style="width: 400px;">
+                    <div class="offcanvas-header bg-primary text-white">
+                        <h5 class="mb-0 fw-bold" style="color: #000000 !important;">
                             <i class="bi bi-cart me-2"></i>Your Order
-                            <span class="badge bg-light text-primary ms-2 cart-count">0</span>
                         </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                     </div>
-                    <div class="card-body p-0">
-                        <!-- Cart Items -->
-                        <div class="cart-items" style="max-height: 400px; overflow-y: auto;">
-                            <!-- Cart items will be dynamically added here -->
+                    <div class="offcanvas-body p-0 d-flex flex-column">
+                        <!-- Cart Items will be dynamically added here -->
+                        <div class="cart-items flex-grow-1" style="overflow-y: auto;">
                         </div>
 
                         <!-- Empty Cart Message -->
                         <div class="cart-empty text-center py-5">
                             <i class="bi bi-cart text-muted" style="font-size: 3rem;"></i>
-                            <p class="text-muted mt-3">Your cart is empty</p>
-                            <p class="text-muted small">Add items from the menu to start your order</p>
+                            <p class="text-muted mt-3" style="color: #000000 !important;">Your cart is empty</p>
+                            <p class="text-muted small" style="color: #000000 !important;">Add items from the menu to start your order</p>
                         </div>
 
                         <!-- Order Summary -->
                         <div class="cart-summary p-3 border-top" style="display: none;">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Subtotal</span>
-                                <span>₱<span id="subtotal">0.00</span></span>
+                                <span style="color: #000000 !important;">Subtotal</span>
+                                <span style="color: #000000 !important;">₱<span id="subtotal">0.00</span></span>
                             </div>
                             <div class="d-flex justify-content-between mt-3 pt-3 border-top">
-                                <span class="fw-bold fs-5">Total</span>
-                                <span class="fw-bold text-primary fs-5">₱<span id="total">0.00</span></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-white p-3">
-                        <!-- Add Total Amount section -->
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold">Total Amount</h5>
-                                <h5 class="mb-0 text-primary fw-bold">₱<span id="footer-total">0.00</span></h5>
-                            </div>
-                        </div>
-                        <hr class="my-3">
-                        <!-- Add Customer Name Input -->
-                        <div class="mb-3">
-                            <label for="customerName" class="form-label">Customer Name</label>
-                            <input type="text" class="form-control" id="customerName" name="customer_name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="d-block mb-2">Payment Method</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="payment_type" 
-                                           id="cashPayment" value="cash" checked>
-                                    <label class="form-check-label" for="cashPayment">
-                                        <i class="bi bi-cash me-1"></i> Cash
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="payment_type" 
-                                           id="depositPayment" value="deposit">
-                                    <label class="form-check-label" for="depositPayment">
-                                        <i class="bi bi-wallet2 me-1"></i> Cash Deposit
-                                    </label>
-                                </div>
+                                <span class="fw-bold fs-5" style="color: #000000 !important;">Total</span>
+                                <span class="fw-bold fs-5" style="color: #27AE60 !important;">₱<span id="total">0.00</span></span>
                             </div>
                         </div>
 
-                        <!-- Cash Payment Details -->
-                        <div id="cashPaymentDetails" class="mb-3 p-3 border rounded">
-                            <div class="row g-2 mb-2">
-                                <div class="col-md-6">
-                                    <label for="cashAmount" class="form-label">Cash Amount</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">₱</span>
-                                        <input type="number" class="form-control" id="cashAmount" name="amount_tendered" step="0.01" min="0">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="changeAmount" class="form-label">Change</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">₱</span>
-                                        <input type="text" class="form-control" id="changeAmount" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="d-flex flex-wrap justify-content-between gap-1">
-                                <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="100">₱100</button>
-                                <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="200">₱200</button>
-                                <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="500">₱500</button>
-                                <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="1000">₱1000</button>
-                                <button type="button" class="quick-cash btn btn-sm btn-outline-primary" data-amount="exact">Exact</button>
-                            </div>
-                        </div>
-
-                        <!-- Cash Deposit Details -->
-                        <div id="depositPaymentDetails" class="mb-3 p-3 border rounded" style="display: none;">
+                        <!-- Checkout Section -->
+                        <div class="border-top p-3">
                             <div class="mb-3">
-                                <label for="student_id" class="form-label">Student ID *</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="student_id" name="student_id" 
-                                           placeholder="Enter student ID">
-                                    <button type="button" class="btn btn-outline-primary" id="checkBalance">
-                                        <i class="bi bi-search"></i> Check Balance
-                                    </button>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 fw-bold" style="color: #000000 !important;">Total Amount</h5>
+                                    <h5 class="mb-0 fw-bold" style="color: #27AE60 !important;">₱<span id="footer-total">0.00</span></h5>
                                 </div>
-                                <div id="studentInfo" class="mt-2" style="display: none;">
-                                    <div class="alert alert-info mb-0">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <strong>Student Name:</strong> <span id="studentName"></span><br>
-                                                <strong>Current Balance:</strong> <span id="studentBalance"></span>
-                                            </div>
-                                            <div>
-                                                <strong>Order Total:</strong> <span id="orderTotal"></span>
+                            </div>
+                            <hr class="my-3">
+                            <div class="mb-3">
+                                <label for="customerName" class="form-label">Customer Name</label>
+                                <input type="text" class="form-control" id="customerName" name="customer_name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="d-block mb-2">Payment Method</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="payment_type" 
+                                               id="cashPayment" value="cash" checked>
+                                        <label class="form-check-label" for="cashPayment">
+                                            <i class="bi bi-cash me-1"></i> Cash
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="payment_type" 
+                                               id="depositPayment" value="deposit">
+                                        <label class="form-check-label" for="depositPayment">
+                                            <i class="bi bi-wallet2 me-1"></i> Cash Deposit
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cash Payment Details -->
+                            <div id="cashPaymentDetails" class="mb-3 p-3 border rounded">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6">
+                                        <label for="cashAmount" class="form-label">Cash Amount</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">₱</span>
+                                            <input type="number" class="form-control" id="cashAmount" name="amount_tendered" step="0.01" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="changeAmount" class="form-label">Change</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">₱</span>
+                                            <input type="text" class="form-control" id="changeAmount" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap justify-content-between gap-1">
+                                    <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="100">₱100</button>
+                                    <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="200">₱200</button>
+                                    <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="500">₱500</button>
+                                    <button type="button" class="quick-cash btn btn-sm btn-outline-secondary" data-amount="1000">₱1000</button>
+                                    <button type="button" class="quick-cash btn btn-sm btn-outline-primary" data-amount="exact">Exact</button>
+                                </div>
+                            </div>
+
+                            <!-- Cash Deposit Details -->
+                            <div id="depositPaymentDetails" class="mb-3 p-3 border rounded" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="student_id" class="form-label">Student ID *</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="student_id" name="student_id" 
+                                               placeholder="Enter student ID">
+                                        <button type="button" class="btn btn-outline-primary" id="checkBalance">
+                                            <i class="bi bi-search"></i> Check Balance
+                                        </button>
+                                    </div>
+                                    <div id="studentInfo" class="mt-2" style="display: none;">
+                                        <div class="alert alert-info mb-0">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>Student Name:</strong> <span id="studentName"></span><br>
+                                                    <strong>Current Balance:</strong> <span id="studentBalance"></span>
+                                                </div>
+                                                <div>
+                                                    <strong>Order Total:</strong> <span id="orderTotal"></span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
+                            <textarea class="form-control mb-3" id="notes" name="notes" rows="2" 
+                                      placeholder="Add any special instructions..."></textarea>
+
+                            <button type="submit" class="btn btn-primary btn-lg w-100" disabled>
+                                <i class="bi bi-check-circle me-2"></i>Place Order
+                            </button>
                         </div>
-
-                        <textarea class="form-control mb-3" id="notes" name="notes" rows="2" 
-                                  placeholder="Add any special instructions..."></textarea>
-
-                        <button type="submit" class="btn btn-primary btn-lg w-100" disabled>
-                            <i class="bi bi-check-circle me-2"></i>Place Order
-                        </button>
                     </div>
                 </div>
             </div>
@@ -290,13 +299,87 @@
 
 @push('styles')
 <style>
-.card {
-    transition: all 0.3s ease;
+/* Force beige background and black text on all parent elements */
+html, 
+body, 
+#app,
+main,
+.container-fluid,
+.py-4 {
+    background-color: #F5F5DC !important;
+    background-image: none !important;
+    color: #000000 !important;
 }
+
+/* Make sure text is black in cards and other elements */
+.card,
+.offcanvas,
+.cart-item,
+.form-control,
+.input-group-text,
+.card-title,
+.card-text,
+.form-label,
+h1, h2, h3, h4, h5, h6,
+p,
+span:not(.badge),
+label {
+    color: #000000 !important;
+}
+
+/* Keep white text for primary buttons and headers */
+.btn-primary,
+.bg-primary,
+.card.bg-primary,
+.card.bg-primary *,
+.offcanvas-header.bg-primary,
+.offcanvas-header.bg-primary * {
+    color: #FFFFFF !important;
+}
+
+/* Override any background colors */
+.container-fluid[style*="background"] {
+    background: #F5F5DC !important;
+}
+
+/* Make sure no other elements override the beige background */
+*[class*="bg-"] {
+    background-color: transparent !important;
+}
+
+/* Keep your cards and other elements with light background */
+.card,
+.offcanvas,
+.cart-item,
+.form-control,
+.input-group-text {
+    background-color: #FFFFFF !important; /* White background for cards */
+}
+
+/* Keep the green color for buttons */
+:root {
+    --bs-primary: #27AE60;
+    --bs-primary-rgb: 39, 174, 96;
+}
+
+.btn-primary {
+    background-color: #27AE60 !important;
+    border-color: #27AE60;
+}
+
+.btn-primary:hover, 
+.btn-primary:focus {
+    background-color: #219452 !important;
+    border-color: #219452;
+}
+
+/* Make cards pop more against beige background */
 .menu-item-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2) !important;
 }
+
+/* Keep your other existing styles... */
 .categories-scroll {
     overflow-x: auto;
     padding-bottom: 1rem;
@@ -311,8 +394,8 @@
 }
 .categories-scroll::-webkit-scrollbar-thumb {
     background: #888;
-    border-radius: 3px;
-}
+        border-radius: 3px;
+    }
 .cart-item {
     transition: all 0.3s ease;
 }
@@ -333,16 +416,6 @@
 }
 .cart-items:not(:empty) ~ .cart-summary {
     display: block;
-}
-.category-btn.active {
-    background-color: var(--bs-primary);
-    color: white;
-}
-.menu-item-card {
-    cursor: pointer;
-}
-.menu-item-card:hover .btn-primary {
-    opacity: 0.9;
 }
 .menu-item.out-of-stock {
     display: none; /* Hide out of stock items */
@@ -396,12 +469,6 @@
     box-shadow: none !important;
 }
 
-.quantity-controls .btn-outline-secondary:hover {
-    background-color: #f8f9fa !important;
-    border-color: #dee2e6 !important;
-    color: #6c757d !important;
-}
-
 .quantity-controls .quantity-decrease {
     border-top-left-radius: 0.25rem;
     border-bottom-left-radius: 0.25rem;
@@ -416,6 +483,82 @@
 .quantity-input::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
+}
+
+/* Update menu item grid layout and spacing */
+.menu-items-grid .row.g-4 {
+    margin-right: -0.5rem;
+    margin-left: -0.5rem;
+    row-gap: 2.5rem !important;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between; /* This will help distribute space evenly */
+}
+
+.menu-items-grid .row.g-4 > .menu-item {
+    width: 23% !important; /* Slightly wider cards with some space between */
+    flex: 0 0 23% !important;
+    max-width: 23% !important;
+    margin: 1rem 1%;
+}
+
+/* Make cards more visually appealing with spacing */
+.menu-item-card {
+    height: 100%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Increase image size */
+.menu-item-card .card-img-top,
+.menu-item-card .bg-light {
+    height: 220px !important; /* Slightly taller images */
+}
+
+/* Add more padding inside cards */
+.menu-item-card .card-body {
+    padding: 1.25rem !important;
+}
+
+/* Make card title larger */
+.menu-item-card .card-title {
+    font-size: 1.3rem !important;
+    margin-bottom: 1rem !important;
+}
+
+/* Make price and stock badge larger */
+.menu-item-card .fw-bold.text-primary {
+    font-size: 1.3rem !important;
+}
+
+.menu-item-card .stock-badge {
+    font-size: 1rem !important;
+}
+
+/* Style for close button */
+.btn-close,
+.offcanvas .btn-close,
+.alert .btn-close {
+    background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 011.414 0L8 6.586 14.293.293a1 1 0 111.414 1.414L9.414 8l6.293 6.293a1 1 0 01-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 01-1.414-1.414L6.586 8 .293 1.707a1 1 0 010-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat !important;
+    opacity: 1 !important;
+    padding: 1rem !important;
+}
+
+/* Hover state for close button */
+.btn-close:hover {
+    opacity: 0.75 !important;
+    background-color: transparent !important;
+}
+
+/* Override any Bootstrap close button styles */
+.btn-close-white {
+    filter: none !important;
+}
+
+/* Make sure close button is visible in offcanvas header */
+.offcanvas-header .btn-close {
+    margin-right: 0 !important;
+    padding: 0.5rem !important;
+    background-color: transparent !important;
 }
 </style>
 @endpush
@@ -463,10 +606,10 @@ $(document).ready(function() {
         $(this).addClass('active');
         
         if (view === 'list') {
-            $('.menu-item').removeClass('col-md-4').addClass('col-12');
+            $('.menu-item').removeClass('col-lg-3').addClass('col-12');
             $('.menu-item-card').addClass('flex-row');
         } else {
-            $('.menu-item').removeClass('col-12').addClass('col-md-4');
+            $('.menu-item').removeClass('col-12').addClass('col-lg-3');
             $('.menu-item-card').removeClass('flex-row');
         }
     });
@@ -478,6 +621,10 @@ $(document).ready(function() {
         const price = parseFloat($(this).data('item-price'));
         const stock = parseInt($(this).data('item-stock'));
         
+        // Get the image source from the menu item card
+        const itemImage = $(this).closest('.menu-item-card').find('img').attr('src') || '';
+        const defaultImage = '<div class="bg-light d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;"><i class="bi bi-image text-muted"></i></div>';
+        
         // Check if item already exists in cart
         const existingItem = $(`.cart-item[data-item-id="${itemId}"]`);
         if (existingItem.length) {
@@ -486,34 +633,46 @@ $(document).ready(function() {
                 existingItem.find('.quantity-input').val(currentQty + 1).trigger('change');
             }
         } else {
-            // Add new item to cart with subtotal display
+            // Add new item to cart with image and improved layout
             const cartItem = `
                 <div class="cart-item p-3 border-bottom" data-item-id="${itemId}" data-price="${price.toFixed(2)}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="mb-1">${itemName}</h6>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="text-primary">₱${price.toFixed(2)}</span>
+                    <div class="d-flex gap-3">
+                        <div class="cart-item-image">
+                            ${itemImage ? 
+                                `<img src="${itemImage}" alt="${itemName}" class="rounded" style="width: 70px; height: 70px; object-fit: cover;">` : 
+                                `<div class="bg-light d-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                                    <i class="bi bi-image text-muted" style="font-size: 1.5rem;"></i>
+                                </div>`
+                            }
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1 fw-bold">${itemName}</h6>
+                                    <span class="text-primary">₱${price.toFixed(2)}</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-item">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </div>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-item">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                    <div class="mt-2">
-                        <div class="input-group quantity-controls">
-                            <button type="button" class="btn btn-outline-secondary quantity-decrease">
-                                <i class="bi bi-dash"></i>
-                            </button>
-                            <input type="number" class="form-control quantity-input" 
-                                   value="1" min="1" max="${stock}">
-                            <button type="button" class="btn btn-outline-secondary quantity-increase">
-                                <i class="bi bi-plus"></i>
-                            </button>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <span class="text-muted">Subtotal:</span>
-                            <span class="fw-bold item-subtotal">₱${price.toFixed(2)}</span>
+                            <div class="mt-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="input-group quantity-controls" style="width: 110px;">
+                                        <button type="button" class="btn btn-outline-secondary quantity-decrease">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <input type="number" class="form-control quantity-input text-center" 
+                                               value="1" min="1" max="${stock}">
+                                        <button type="button" class="btn btn-outline-secondary quantity-increase">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="text-muted d-block small">Subtotal:</span>
+                                        <span class="fw-bold item-subtotal">₱${price.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -537,6 +696,17 @@ $(document).ready(function() {
             icon: 'success',
             title: 'Item added to cart'
         });
+
+        // Animate the cart badge
+        $('.cart-count').addClass('shake');
+        setTimeout(() => {
+            $('.cart-count').removeClass('shake');
+        }, 500);
+
+        // Show the cart offcanvas if it's the first item
+        if ($('.cart-item').length === 1) {
+            new bootstrap.Offcanvas('#cartOffcanvas').show();
+        }
     });
 
     // Handle quantity changes
