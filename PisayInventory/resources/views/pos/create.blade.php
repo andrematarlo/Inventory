@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-4" style="background: #F5F5DC !important; min-height: 100vh;">
+<div class="container-fluid py-4" style="background: url('{{ asset('images/background.jpg') }}') no-repeat center center fixed; background-size: cover; min-height: 100vh;">
     <!-- Header Section -->
     <div class="row mb-4">
         <div class="col-12">
@@ -28,8 +28,8 @@
                                 data-bs-target="#cartOffcanvas"
                                 style="background: #FFFFFF !important; padding: 0.5rem 1rem;">
                             <i class="bi bi-cart fs-5" style="color:rgb(2, 2, 2) !important;"></i>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger cart-count" 
-                                  style="color: #FFFFFF !important;">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary cart-count" 
+                                  style="color: blue !important;">
                                 0
                             </span>
                         </button>
@@ -149,7 +149,7 @@
                                         <div class="mt-auto">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
                                                 <span class="fw-bold text-primary">₱{{ number_format($item->Price, 2) }}</span>
-                                                <span class="badge stock-badge bg-{{ $item->StocksAvailable > 5 ? 'success' : ($item->StocksAvailable > 0 ? 'warning' : 'danger') }}">
+                                                <span class="badge stock-badge bg-success" style="color: blue !important;">
                                                     {{ $item->StocksAvailable > 0 ? 'In Stock: ' . $item->StocksAvailable : 'Out of Stock' }}
                                                 </span>
                                             </div>

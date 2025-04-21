@@ -46,15 +46,17 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Grade Level and Section:</label>
-                                @if(Auth::user()->student)
+                                @php
+                                    $student = \App\Models\Student::where('UserAccountID', Auth::id())->first();
+                                @endphp
+                                @if($student)
                                     <input type="text" class="form-control" name="grade_section" 
-                                        value="{{ Auth::user()->student->grade_level }} - {{ Auth::user()->student->section }}" 
+                                        value="{{ $student->grade_level }} - {{ $student->section }}" 
                                         readonly>
                                 @elseif(Auth::user()->role === 'Teacher')
                                     <input type="text" class="form-control" name="grade_section" 
                                         placeholder="Not applicable for teacher reservations" 
                                         readonly>
-                                    <!-- Add a hidden input to ensure the form submits even without grade_section -->
                                     <input type="hidden" name="grade_section" value="N/A">
                                 @else
                                     <input type="text" class="form-control" name="grade_section" required>
@@ -117,41 +119,40 @@
                         </div>
 
                         <!-- Requestor Information -->
-<div class="row mb-3">
-    <div class="col-md-6">
-        <label class="form-label">Requested by:</label>
-        <div class="d-flex flex-column">
-            @if(Auth::user()->student)
-                <input type="text" class="form-control" name="requested_by" 
-                    value="{{ Auth::user()->student->FirstName }} {{ Auth::user()->student->LastName }}"
-                    readonly>
-                <input type="hidden" name="requested_by_type" value="student">
-            @elseif(Auth::user()->employee)
-                <input type="text" class="form-control" name="requested_by" 
-                    value="{{ Auth::user()->employee->FirstName }} {{ Auth::user()->employee->LastName }}"
-                    readonly>
-                <input type="hidden" name="requested_by_type" value="teacher">
-            @elseif(Auth::user()->role === 'Students' || Auth::user()->role === 'Student')
-                <input type="text" class="form-control" name="requested_by" 
-                    value="{{ Auth::user()->name }}"
-                    required>
-                <input type="hidden" name="requested_by_type" value="student">
-                <small class="text-muted">Please enter your full name</small>
-            @else
-                <input type="text" class="form-control" name="requested_by" 
-                    value="{{ Auth::user()->name }}"
-                    readonly>
-                <input type="hidden" name="requested_by_type" value="other">
-            @endif
-            <small class="text-muted text-center mt-1">Teacher/Student</small>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Date Requested:</label>
-        <input type="date" class="form-control" name="date_requested" 
-            value="{{ date('Y-m-d') }}" readonly>
-    </div>
-</div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Requested by:</label>
+                                <div class="d-flex flex-column">
+                                    @php
+                                        $student = \App\Models\Student::where('UserAccountID', Auth::id())->first();
+                                        $employee = DB::table('employee')
+                                            ->where('UserAccountID', Auth::id())
+                                            ->first();
+                                    @endphp
+                                    
+                                    @if($student)
+                                        <input type="text" class="form-control" name="requested_by" 
+                                            value="{{ $student->first_name }} {{ $student->last_name }}"
+                                            readonly>
+                                        <input type="hidden" name="requested_by_type" value="student">
+                                    @elseif($employee)
+                                        <input type="text" class="form-control" name="requested_by" 
+                                            value="{{ $employee->FirstName }} {{ $employee->LastName }}"
+                                            readonly>
+                                        <input type="hidden" name="requested_by_type" value="teacher">
+                                    @else
+                                        <input type="text" class="form-control" name="requested_by" required>
+                                        <input type="hidden" name="requested_by_type" value="other">
+                                    @endif
+                                    <small class="text-muted text-center mt-1">Teacher/Student</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date Requested:</label>
+                                <input type="date" class="form-control" name="date_requested" 
+                                    value="{{ date('Y-m-d') }}" readonly>
+                            </div>
+                        </div>
 
                         <!-- Group Members -->
                         <div class="mb-4">

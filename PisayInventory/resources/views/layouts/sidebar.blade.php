@@ -186,6 +186,16 @@
                         <i class="bi bi-box-arrow-right"></i> Equipment Borrowing
                     </a>
                 </li>
+                <li>
+                    <a class="dropdown-item" href="{{ route('laboratory.accountability.index') }}">
+                        <i class="bi bi-file-text"></i> Accountability Records
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ route('laboratory.reagent.index') }}">
+                        <i class="bi bi-flask"></i> Laboratory Reagent Requests
+                    </a>
+                </li>
             </ul>
         </li>
         @endif

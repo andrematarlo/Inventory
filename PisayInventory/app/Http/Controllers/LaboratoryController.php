@@ -294,4 +294,210 @@ class LaboratoryController extends Controller
     {
         return parent::getUserPermissions($moduleName);
     }
+
+    /**
+     * Display a listing of accountability forms.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function accountability()
+    {
+        // Check if user has permission to view accountability forms
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->route('dashboard')->with('error', 'You do not have permission to view accountability forms.');
+        }
+
+        return view('laboratory.accountability.index');
+    }
+
+    /**
+     * Show the form for creating a new accountability form.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function createAccountability()
+    {
+        // Check if user has permission to add accountability forms
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanAdd) {
+            return redirect()->route('laboratory.accountability')->with('error', 'You do not have permission to create accountability forms.');
+        }
+
+        return view('laboratory.accountability.create');
+    }
+
+    /**
+     * Display the specified accountability form.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function showAccountability($id)
+    {
+        // Check if user has permission to view accountability forms
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->route('laboratory.accountability')->with('error', 'You do not have permission to view accountability forms.');
+        }
+
+        return view('laboratory.accountability.show', compact('id'));
+    }
+
+    /**
+     * Approve the specified accountability form.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function approveAccountability($id)
+    {
+        // Check if user has permission to approve accountability forms
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanApprove) {
+            return redirect()->route('laboratory.accountability')->with('error', 'You do not have permission to approve accountability forms.');
+        }
+
+        // Logic to approve accountability form
+        return redirect()->route('laboratory.accountability')->with('success', 'Accountability form approved successfully.');
+    }
+
+    /**
+     * Reject the specified accountability form.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function rejectAccountability($id)
+    {
+        // Check if user has permission to reject accountability forms
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanApprove) {
+            return redirect()->route('laboratory.accountability')->with('error', 'You do not have permission to reject accountability forms.');
+        }
+
+        // Logic to reject accountability form
+        return redirect()->route('laboratory.accountability')->with('success', 'Accountability form rejected successfully.');
+    }
+
+    /**
+     * Delete the specified accountability form.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function deleteAccountability($id)
+    {
+        // Check if user has permission to delete accountability forms
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanDelete) {
+            return redirect()->route('laboratory.accountability')->with('error', 'You do not have permission to delete accountability forms.');
+        }
+
+        // Logic to delete accountability form
+        return redirect()->route('laboratory.accountability')->with('success', 'Accountability form deleted successfully.');
+    }
+
+    /**
+     * Display a listing of reagent requests.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function reagent()
+    {
+        // Check if user has permission to view reagent requests
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->route('dashboard')->with('error', 'You do not have permission to view reagent requests.');
+        }
+
+        return view('laboratory.reagent.index');
+    }
+
+    /**
+     * Show the form for creating a new reagent request.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function createReagent()
+    {
+        // Check if user has permission to add reagent requests
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanAdd) {
+            return redirect()->route('laboratory.reagent')->with('error', 'You do not have permission to create reagent requests.');
+        }
+
+        return view('laboratory.reagent.create');
+    }
+
+    /**
+     * Display the specified reagent request.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function showReagent($id)
+    {
+        // Check if user has permission to view reagent requests
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanView) {
+            return redirect()->route('laboratory.reagent')->with('error', 'You do not have permission to view reagent requests.');
+        }
+
+        return view('laboratory.reagent.show', compact('id'));
+    }
+
+    /**
+     * Approve the specified reagent request.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function approveReagent($id)
+    {
+        // Check if user has permission to approve reagent requests
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanApprove) {
+            return redirect()->route('laboratory.reagent')->with('error', 'You do not have permission to approve reagent requests.');
+        }
+
+        // Logic to approve reagent request
+        return redirect()->route('laboratory.reagent')->with('success', 'Reagent request approved successfully.');
+    }
+
+    /**
+     * Reject the specified reagent request.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function rejectReagent($id)
+    {
+        // Check if user has permission to reject reagent requests
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanApprove) {
+            return redirect()->route('laboratory.reagent')->with('error', 'You do not have permission to reject reagent requests.');
+        }
+
+        // Logic to reject reagent request
+        return redirect()->route('laboratory.reagent')->with('success', 'Reagent request rejected successfully.');
+    }
+
+    /**
+     * Delete the specified reagent request.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function deleteReagent($id)
+    {
+        // Check if user has permission to delete reagent requests
+        $userPermissions = $this->getUserPermissions('Laboratory Management');
+        if (!$userPermissions || !$userPermissions->CanDelete) {
+            return redirect()->route('laboratory.reagent')->with('error', 'You do not have permission to delete reagent requests.');
+        }
+
+        // Logic to delete reagent request
+        return redirect()->route('laboratory.reagent')->with('success', 'Reagent request deleted successfully.');
+    }
 } 
