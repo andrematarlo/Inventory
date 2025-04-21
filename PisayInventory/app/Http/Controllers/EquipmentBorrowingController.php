@@ -28,7 +28,7 @@ class EquipmentBorrowingController extends Controller
     public function index(Request $request)
     {
         try {
-            $userPermissions = $this->getUserPermissions('Equipment');
+            $userPermissions = $this->getUserPermissions('Equipment Borrowings');
             if (!$userPermissions || !$userPermissions->CanView) {
                 return redirect()->route('dashboard')
                     ->with('error', 'You do not have permission to view equipment borrowings.');
@@ -218,7 +218,7 @@ class EquipmentBorrowingController extends Controller
     public function edit($id)
     {
         try {
-            $userPermissions = $this->getUserPermissions('Equipment');
+            $userPermissions = $this->getUserPermissions('Equipment Borrowings');
             if (!$userPermissions || !$userPermissions->CanEdit) {
                 return response()->json([
                     'success' => false,
@@ -252,7 +252,7 @@ class EquipmentBorrowingController extends Controller
     {
         try {
             // Check permissions
-            $userPermissions = $this->getUserPermissions('Equipment');
+            $userPermissions = $this->getUserPermissions('Equipment Borrowings');
             if (!$userPermissions || !$userPermissions->CanEdit) {
                 return response()->json([
                     'success' => false,
@@ -363,7 +363,7 @@ class EquipmentBorrowingController extends Controller
     public function return($id, Request $request)
     {
         try {
-            $userPermissions = $this->getUserPermissions('Equipment');
+            $userPermissions = $this->getUserPermissions('Equipment Borrowings');
             if (!$userPermissions || !$userPermissions->CanEdit) {
                 return response()->json([
                     'success' => false,
@@ -432,7 +432,7 @@ class EquipmentBorrowingController extends Controller
     public function destroy($id)
     {
         try {
-            $userPermissions = $this->getUserPermissions('Equipment');
+            $userPermissions = $this->getUserPermissions('Equipment Borrowings');
             if (!$userPermissions || !$userPermissions->CanDelete) {
                 return response()->json([
                     'success' => false,
@@ -487,7 +487,7 @@ class EquipmentBorrowingController extends Controller
     public function restore($id)
     {
         try {
-            $userPermissions = $this->getUserPermissions('Equipment');
+            $userPermissions = $this->getUserPermissions('Equipment Borrowings');
             if (!$userPermissions || !$userPermissions->CanEdit) {
                 return response()->json([
                     'success' => false,

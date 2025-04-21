@@ -20,23 +20,21 @@ class StudentRoleSeeder extends Seeder
 
         // Define the modules that students can access
         $modules = [
-            'Laboratory Reservations' => [
-                'CanView' => true, 
-                'CanAdd' => true, 
-                'CanEdit' => true, 
-                'CanDelete' => false
-            ]
+            'Laboratory Reservations' => ['view' => true, 'add' => true, 'edit' => true, 'delete' => false],
+            'Equipment Borrowings' => ['view' => true, 'add' => true, 'edit' => true, 'delete' => false],
+            'Students' => ['view' => true, 'add' => true, 'edit' => true, 'delete' => false],
+            'Reports' => ['view' => true, 'add' => false, 'edit' => false, 'delete' => false]
         ];
 
         // Assign permissions for each module
-        foreach ($modules as $moduleName => $permissions) {
+        foreach ($modules as $module => $permissions) {
             DB::table('role_policies')->insert([
                 'RoleId' => $roleId,
-                'ModuleName' => $moduleName,
-                'CanView' => $permissions['CanView'],
-                'CanAdd' => $permissions['CanAdd'],
-                'CanEdit' => $permissions['CanEdit'],
-                'CanDelete' => $permissions['CanDelete'],
+                'Module' => $module,
+                'CanView' => $permissions['view'],
+                'CanAdd' => $permissions['add'],
+                'CanEdit' => $permissions['edit'],
+                'CanDelete' => $permissions['delete'],
                 'DateCreated' => now(),
                 'CreatedById' => 1, // Admin user ID (adjust if needed)
                 'IsDeleted' => false

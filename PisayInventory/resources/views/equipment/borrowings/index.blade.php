@@ -62,6 +62,14 @@
                             <td>
                                 <div class="btn-group">
                                     @if(!$borrowing->IsDeleted)
+                                        @if($userPermissions->CanView)
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-info viewBorrowingBtn" 
+                                                    data-borrowing-id="{{ $borrowing->borrowing_id }}"
+                                                    title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        @endif
                                         @if($userPermissions->CanEdit)
                                             @if(!$borrowing->actual_return_date)
                                                 <button type="button" 
@@ -490,13 +498,112 @@ $(document).ready(function() {
     });
 
     // View Borrowing
-    $('.view-borrowing').click(function() {
-        const id = $(this).data('id');
+    $(document).on('click', '.viewBorrowingBtn', function() {
+        const borrowingId = $(this).data('borrowing-id');
         
-        $.get("{{ route('equipment.borrowings.show', ['borrowing' => '_id_']) }}".replace('_id_', id))
+        $.get("{{ route('equipment.borrowings.show', ['borrowing' => '_id_']) }}".replace('_id_', borrowingId))
             .done(function(response) {
-                $('#viewModal .modal-body').html(response);
-                $('#viewModal').modal('show');
+                if (response.success) {
+                    const borrowing = response.data;
+                    const viewHtml = `
+                        <div class="container-fluid p-3">
+                            <div class="row">
+                                <div class="col-12">
+                                    <table class="table table-bordered">
+                                        <tr>
+                                            <th width="200">Borrowing ID</th>
+                                            <td>${borrowing.borrowing_id}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Status</th>
+                                            <td>
+                                                ${borrowing.actual_return_date ? 
+                                                    '<span class="badge bg-success">Returned</span>' : 
+                                                    (new Date(borrowing.expected_return_date) < new Date() ? 
+                                                        '<span class="badge bg-danger">Overdue</span>' : 
+                                                        '<span class="badge bg-warning">Borrowed</span>')}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Equipment</th>
+                                            <td>
+                                                ${borrowing.equipment ? borrowing.equipment.equipment_name : 'N/A'}
+                                                ${borrowing.equipment ? `
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        Serial: ${borrowing.equipment.serial_number || 'N/A'}
+                                                        <br>
+                                                        Model: ${borrowing.equipment.model_number || 'N/A'}
+                                                    </small>
+                                                ` : ''}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Borrower</th>
+                                            <td>
+                                                ${borrowing.borrower && borrowing.borrower.employee ? 
+                                                    `${borrowing.borrower.employee.FirstName} ${borrowing.borrower.employee.LastName}` : 
+                                                    'N/A'}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>Borrow Date</th>
+                                            <td>${new Date(borrowing.borrow_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Expected Return Date</th>
+                                            <td>${new Date(borrowing.expected_return_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Actual Return Date</th>
+                                            <td>${borrowing.actual_return_date ? 
+                                                new Date(borrowing.actual_return_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                                                '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Condition on Borrow</th>
+                                            <td>${borrowing.condition_on_borrow}</td>
+                                        </tr>
+                                        ${borrowing.actual_return_date ? `
+                                            <tr>
+                                                <th>Condition on Return</th>
+                                                <td>${borrowing.condition_on_return || 'Not specified'}</td>
+                                            </tr>
+                                        ` : ''}
+                                        <tr>
+                                            <th>Purpose</th>
+                                            <td>${borrowing.purpose}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Remarks</th>
+                                            <td>${borrowing.remarks || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Created By</th>
+                                            <td>
+                                                ${borrowing.creator && borrowing.creator.employee ? 
+                                                    `${borrowing.creator.employee.FirstName} ${borrowing.creator.employee.LastName}
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        ${new Date(borrowing.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' })}
+                                                    </small>` : 
+                                                    'System'}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $('#viewModal .modal-body').html(viewHtml);
+                    $('#viewModal').modal('show');
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: response.message || 'Failed to load borrowing details.'
+                    });
+                }
             })
             .fail(function(xhr) {
                 console.error('Error:', xhr.responseText);
