@@ -332,15 +332,13 @@ class LaboratoryReservationController extends Controller
                 )
                 ->where('employee.IsDeleted', 0)
                 ->where('employee_roles.IsDeleted', 0)
-                ->where('roles.RoleName', 'Teacher')  // Filter by role name instead of ID
+                ->where('roles.RoleName', 'Teacher')
                 ->where(function($query) use ($search) {
                     $query->where('employee.FirstName', 'LIKE', "%{$search}%")
                         ->orWhere('employee.LastName', 'LIKE', "%{$search}%");
                 })
                 ->distinct()
                 ->get();
-
-            \Log::info('Teachers query result:', ['teachers' => $teachers]);
 
             return response()->json($teachers);
 

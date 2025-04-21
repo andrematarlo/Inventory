@@ -339,16 +339,16 @@ Route::middleware('auth')->group(function () {
             Route::get('reservations/counts', [LaboratoryReservationController::class, 'getStatusCounts'])->name('reservations.counts');
             Route::get('reservations/create', [LaboratoryReservationController::class, 'create'])->name('reservations.create');
             Route::post('reservations', [LaboratoryReservationController::class, 'store'])->name('reservations.store');
+            Route::get('reservations/teachers', [LaboratoryReservationController::class, 'getTeachers'])->name('reservations.getTeachers');
+            Route::get('reservations/student-info', [LaboratoryReservationController::class, 'getStudentInfo'])->name('reservations.getStudentInfo');
+            Route::get('reservations/generate-control-no', [LaboratoryReservationController::class, 'generateControlNo'])->name('reservations.generateControlNo');
+            Route::post('reservations/check-conflicts', [LaboratoryReservationController::class, 'checkConflicts'])->name('reservations.checkConflicts');
             Route::post('reservations/{id}/endorse', [LaboratoryReservationController::class, 'endorse'])->name('reservations.endorse');
             Route::delete('reservations/{id}', [LaboratoryReservationController::class, 'destroy'])->name('reservations.destroy')->where('id', '.*');
             Route::get('reservations/{id}', [LaboratoryReservationController::class, 'show'])->name('reservations.show')->where('id', '.*');
             Route::post('reservations/{id}/disapprove', [LaboratoryReservationController::class, 'disapprove'])->name('reservations.disapprove');
             Route::post('reservations/{id}/approve', [LaboratoryReservationController::class, 'approve'])->name('reservations.approve');
             Route::post('reservations/{id}/restore', [LaboratoryReservationController::class, 'restore'])->name('reservations.restore');
-            Route::get('reservations/generate-control-no', [LaboratoryReservationController::class, 'generateControlNo'])->name('reservations.generateControlNo');
-            Route::get('reservations/student-info', [LaboratoryReservationController::class, 'getStudentInfo'])->name('reservations.getStudentInfo');
-            Route::get('reservations/teachers', [LaboratoryReservationController::class, 'getTeachers'])->name('reservations.getTeachers');
-            Route::post('reservations/check-conflicts', [LaboratoryReservationController::class, 'checkConflicts'])->name('reservations.checkConflicts');
             
             // Accountability
             Route::get('accountability', [LaboratoryAccountabilityController::class, 'index'])->name('accountability');

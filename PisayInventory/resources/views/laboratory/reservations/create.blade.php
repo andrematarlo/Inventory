@@ -352,7 +352,7 @@ $(document).ready(function() {
         placeholder: 'Select Teacher',
         allowClear: true,
         ajax: {
-            url: '{{ route("laboratory.reservations.getTeachers") }}',
+            url: '/inventory/laboratory/reservations/teachers',
             dataType: 'json',
             delay: 250,
             data: function(params) {
