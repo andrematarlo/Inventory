@@ -65,7 +65,7 @@
                                         <a href="{{ route('pos.process.byid', $order->OrderID) }}" 
                                            class="btn btn-sm btn-success mark-ready" 
                                            data-order-id="{{ $order->OrderID }}">
-                                            <i class="bi bi-check-circle"></i> Mark Ready
+                                            <i class="bi bi-check-circle"></i> Serve
                                         </a>
                                     </td>
                                 </tr>

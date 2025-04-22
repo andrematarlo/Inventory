@@ -201,10 +201,10 @@ class StudentsController extends Controller
 
         // Validate the request
         $validator = Validator::make($request->all(), [
-            'student_id' => 'required|string|max:20|unique:students,student_id,' . $id,
+            'student_id' => 'required|string|max:20|unique:students,student_id,' . $student->student_id . ',student_id',
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
-            'email' => 'nullable|email|max:100|unique:students,email,' . $id,
+            'email' => 'nullable|email|max:100|unique:students,email,' . $student->student_id . ',student_id',
             'contact_number' => 'nullable|string|max:20',
             'gender' => 'required|in:Male,Female,Other',
             'date_of_birth' => 'nullable|date',

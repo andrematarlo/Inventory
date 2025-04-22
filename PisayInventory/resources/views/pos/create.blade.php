@@ -8,7 +8,7 @@
             <div class="card bg-primary text-white shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center py-3">
                     <div>
-                        <h1 class="fs-2 fw-bold mb-0" style="color:rgb(2, 2, 2) !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">CVicsC</h1>
+                        <h1 class="fs-2 fw-bold mb-0" style="color:rgb(2, 2, 2) !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">PSHS Kiosk</h1>
                     </div>
                     <div class="d-flex align-items-center gap-3">
                         <!-- Search Bar -->
@@ -895,6 +895,25 @@ $(document).ready(function() {
             $('#cashPaymentDetails').hide();
             $('#depositPaymentDetails').show();
         }
+    });
+
+    // Handle quick-cash button clicks
+    $('.quick-cash').click(function() {
+        const amount = $(this).data('amount');
+        const total = parseFloat($('#total').text());
+        
+        if (amount === 'exact') {
+            // Set amount to match total
+            $('#cashAmount').val(total.toFixed(2));
+        } else {
+            // Set the predefined amount
+            $('#cashAmount').val(amount);
+        }
+        
+        // Calculate and display change
+        const cashAmount = parseFloat($('#cashAmount').val()) || 0;
+        const change = cashAmount - total;
+        $('#changeAmount').val(change.toFixed(2));
     });
         
     // Check student balance
