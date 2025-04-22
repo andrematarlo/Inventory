@@ -1,3 +1,7 @@
+@php
+    use App\Enums\PurchaseStatus;
+@endphp
+
 <div class="modal fade" 
      id="editPurchaseModal{{ $purchase->PurchaseId }}" 
      data-bs-backdrop="static" 
@@ -66,9 +70,11 @@
                         <div class="col-md-6">
                             <label for="Status{{ $purchase->PurchaseId }}" class="form-label">Status</label>
                             <select name="Status" id="Status{{ $purchase->PurchaseId }}" class="form-select">
-                                <option value="Pending" {{ $purchase->Status == 'Pending' ? 'selected' : '' }}>Pending</option>
-                                <option value="Delivered" {{ $purchase->Status == 'Delivered' ? 'selected' : '' }}>Delivered</option>
-                                <option value="Cancelled" {{ $purchase->Status == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
+                                <option value="{{ PurchaseStatus::PENDING->value }}" {{ $purchase->Status == PurchaseStatus::PENDING->value ? 'selected' : '' }}>Pending</option>
+                                <option value="{{ PurchaseStatus::APPROVED->value }}" {{ $purchase->Status == PurchaseStatus::APPROVED->value ? 'selected' : '' }}>Approved</option>
+                                <option value="{{ PurchaseStatus::RECEIVED->value }}" {{ $purchase->Status == PurchaseStatus::RECEIVED->value ? 'selected' : '' }}>Received</option>
+                                <option value="{{ PurchaseStatus::COMPLETED->value }}" {{ $purchase->Status == PurchaseStatus::COMPLETED->value ? 'selected' : '' }}>Completed</option>
+                                <option value="{{ PurchaseStatus::CANCELLED->value }}" {{ $purchase->Status == PurchaseStatus::CANCELLED->value ? 'selected' : '' }}>Cancelled</option>
                             </select>
                         </div>
 

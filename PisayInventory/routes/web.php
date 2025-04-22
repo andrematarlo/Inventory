@@ -444,9 +444,16 @@ Route::get('/pos/search-students', [POSController::class, 'searchStudents'])->na
 // Orders Dashboard
 Route::get('/pos/dashboard', [OrderController::class, 'dashboard'])->name('pos.dashboard');
 Route::get('/pos/orders/{id}/items', [OrderController::class, 'getOrderItems'])->name('pos.orders.items');
-Route::post('/pos/orders/{id}/process', [OrderController::class, 'processById'])->name('pos.process.byid');
+Route::post('/pos/orders/{id}/process', [OrderController::class, 'processById'])->name('pos.orders.process');
+Route::post('/pos/orders/{id}/claim', [OrderController::class, 'claim'])->name('pos.orders.claim');
 
 // POS Reports Routes
 Route::get('/pos/reports', [POSController::class, 'reports'])->name('pos.reports');
 Route::get('/pos/reports/sales', [POSController::class, 'salesReport'])->name('pos.reports.sales');
 Route::get('/pos/reports/deposits', [POSController::class, 'depositsReport'])->name('pos.reports.deposits');
+
+// Student POS Order History Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/pos/my-orders', [App\Http\Controllers\POS\StudentOrderController::class, 'index'])->name('pos.student.orders');
+    Route::get('/pos/my-orders/{orderId}/items', [App\Http\Controllers\POS\StudentOrderController::class, 'getItems'])->name('pos.student.orders.items');
+});

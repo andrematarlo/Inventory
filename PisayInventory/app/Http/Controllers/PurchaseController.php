@@ -11,7 +11,6 @@ use App\Enums\PurchaseStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use App\Models\Employee;
 
 class PurchaseController extends Controller
@@ -249,25 +248,11 @@ class PurchaseController extends Controller
 
             // Load items with their active suppliers
             $items = Item::with(['suppliers' => function($query) {
-                $query->where('items_suppliers.IsDeleted', false)
-                      ->select('suppliers.SupplierID', 'suppliers.CompanyName');
-            }])->where('IsDeleted', false)
-              ->get()
-              ->map(function($item) {
-                  // Format suppliers data for the view
-                  $item->formatted_suppliers = $item->suppliers->map(function($supplier) {
-                      return [
-                          'SupplierID' => $supplier->SupplierID,
-                          'CompanyName' => $supplier->CompanyName
-                      ];
-                  });
-                  return $item;
-              });
+                $query->where('items_suppliers.IsDeleted', false);
+            }])->where('IsDeleted', false)->get();
 
-            // Load all active suppliers for the initial dropdown
-            $suppliers = Supplier::where('IsDeleted', false)
-                               ->select('SupplierID', 'CompanyName')
-                               ->get();
+            // Load all active suppliers
+            $suppliers = Supplier::where('IsDeleted', false)->get();
 
             return view('purchases.create', compact('items', 'suppliers', 'userPermissions'));
 

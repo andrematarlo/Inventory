@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Enums\PurchaseStatus;
 
 class ReceivingController extends Controller
 {
@@ -72,17 +73,17 @@ class ReceivingController extends Controller
                 'modifiedBy'
             ])
             ->where('IsDeleted', false)
-            ->where('Status', 'Partial')
+            ->where('Status', 'Partially Received')
             ->orderBy('DateCreated', 'desc')
             ->get();
 
             // Log the exact query being executed
             Log::info('Partial records query:', [
                 'sql' => Receiving::where('IsDeleted', false)
-                    ->where('Status', 'Partial')
+                    ->where('Status', 'Partially Received')
                     ->toSql(),
                 'bindings' => Receiving::where('IsDeleted', false)
-                    ->where('Status', 'Partial')
+                    ->where('Status', 'Partially Received')
                     ->getBindings()
             ]);
 
@@ -259,7 +260,7 @@ class ReceivingController extends Controller
                     $completeItems++;
                 } elseif ($totalReceivedQty > 0) {
                     $itemStatuses[$poItem->ItemId] = [
-                        'status' => 'Partial',
+                        'status' => 'Partially Received',
                         'received_qty' => $totalReceivedQty
                     ];
                     $hasPartialItems = true;
@@ -284,17 +285,21 @@ class ReceivingController extends Controller
             }
 
             // Determine overall status based on all items
-            $status = 'Pending';
+            $poStatus = PurchaseStatus::PENDING->value;
+            $receivingStatus = Receiving::STATUS_PENDING;
+            
             if ($completeItems === $totalItems) {
-                $status = 'Received';
+                $poStatus = PurchaseStatus::RECEIVED->value;
+                $receivingStatus = Receiving::STATUS_RECEIVED;
             } elseif ($completeItems > 0 || $hasPartialItems) {
-                $status = 'Partial';
+                $poStatus = PurchaseStatus::RECEIVED->value;
+                $receivingStatus = Receiving::STATUS_PARTIAL;
             }
 
             // Update existing receiving record if it exists
             if ($existingReceiving) {
                 $existingReceiving->update([
-                    'Status' => $status,
+                    'Status' => $receivingStatus,
                     'Notes' => $request->Notes,
                     'ModifiedByID' => $currentEmployee->EmployeeID,
                     'DateModified' => date('Y-m-d'),
@@ -307,7 +312,7 @@ class ReceivingController extends Controller
                     'PurchaseOrderID' => $request->PurchaseOrderID,
                     'ReceivedByID' => $currentEmployee->EmployeeID,
                     'DateReceived' => $request->DeliveryDate ?? date('Y-m-d'),
-                    'Status' => $status,
+                    'Status' => $receivingStatus,
                     'Notes' => $request->Notes,
                     'DateCreated' => date('Y-m-d'),
                     'CreatedByID' => $currentEmployee->EmployeeID,
@@ -319,7 +324,7 @@ class ReceivingController extends Controller
 
             // Update purchase order status
             $purchaseOrder->update([
-                'Status' => $status,
+                'Status' => $poStatus,
                 'ModifiedByID' => $currentEmployee->EmployeeID,
                 'DateModified' => now()
             ]);
@@ -346,7 +351,7 @@ class ReceivingController extends Controller
 
             DB::commit();
             return redirect()->route('receiving.show', $receiving->ReceivingID)
-                ->with('success', $status === 'Received' ? 'All items received successfully' : 'Items partially received');
+                ->with('success', $receivingStatus === Receiving::STATUS_RECEIVED ? 'All items received successfully' : 'Items partially received');
 
         } catch (\Exception $e) {
             DB::rollBack();

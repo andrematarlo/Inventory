@@ -231,25 +231,33 @@ class OrderController extends Controller
 
     public function dashboard()
     {
-        $preparingOrders = Order::with('student')
-            ->where('Status', 'preparing')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($order) {
-                $order->items_count = $order->items()->count();
-                return $order;
-            });
+        $preparingOrders = DB::table('pos_orders')
+            ->leftJoin('students', 'pos_orders.student_id', '=', 'students.student_id')
+            ->select(
+                'pos_orders.*',
+                'students.first_name',
+                'students.last_name',
+                DB::raw('(SELECT COUNT(*) FROM pos_order_items WHERE pos_order_items.OrderID = pos_orders.OrderID) as items_count')
+            )
+            ->where('pos_orders.Status', 'preparing')
+            ->whereNull('pos_orders.deleted_at')
+            ->orderBy('pos_orders.created_at', 'desc')
+            ->get();
 
-        $readyOrders = Order::with('student')
-            ->where('Status', 'ready')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($order) {
-                $order->items_count = $order->items()->count();
-                return $order;
-            });
+        $readyOrders = DB::table('pos_orders')
+            ->leftJoin('students', 'pos_orders.student_id', '=', 'students.student_id')
+            ->select(
+                'pos_orders.*',
+                'students.first_name',
+                'students.last_name',
+                DB::raw('(SELECT COUNT(*) FROM pos_order_items WHERE pos_order_items.OrderID = pos_orders.OrderID) as items_count')
+            )
+            ->where('pos_orders.Status', 'ready')
+            ->whereNull('pos_orders.deleted_at')
+            ->orderBy('pos_orders.created_at', 'desc')
+            ->get();
 
-        return view('pos.dashboard', compact('preparingOrders', 'readyOrders'));
+        return view('pos.orders.dashboard', compact('preparingOrders', 'readyOrders'));
     }
 
     public function getOrderItems($id)
@@ -270,6 +278,8 @@ class OrderController extends Controller
     public function processById($id)
     {
         try {
+            DB::beginTransaction();
+            
             $order = Order::findOrFail($id);
             
             // Check if order is already processed
@@ -282,15 +292,18 @@ class OrderController extends Controller
 
             // Update order status
             $order->Status = Order::STATUS_READY;
-            $order->ProcessedBy = auth()->id();
+            $order->ProcessedBy = Auth::id();
             $order->ProcessedAt = now();
             $order->save();
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Order marked as ready to serve.'
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Error processing order: ' . $e->getMessage()
@@ -301,6 +314,8 @@ class OrderController extends Controller
     public function claim($id)
     {
         try {
+            DB::beginTransaction();
+            
             $order = Order::findOrFail($id);
             
             // Check if order is already claimed
@@ -313,15 +328,18 @@ class OrderController extends Controller
 
             // Update order status to completed
             $order->Status = Order::STATUS_COMPLETED;
-            $order->ProcessedBy = auth()->id();
+            $order->ProcessedBy = Auth::id();
             $order->ProcessedAt = now();
             $order->save();
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Order has been claimed successfully.'
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Error claiming order: ' . $e->getMessage()

@@ -6,40 +6,55 @@
         <!-- Preparing Orders Section -->
         <div class="col-md-6 border-right">
             <div class="card">
-                <div class="card-header bg-warning text-white">
-                    <h5 class="mb-0">Preparing Orders</h5>
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-clock"></i> Preparing Orders</h5>
                 </div>
-                <div class="card-body">
-                    <div class="preparing-orders-list">
-                        @foreach($preparingOrders as $order)
-                        <div class="order-card mb-3 p-3 border rounded">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0">Order #{{ $order->OrderNumber }}</h6>
-                                <span class="badge bg-warning">Preparing</span>
-                            </div>
-                            <div class="order-details">
-                                <p class="mb-1"><strong>Customer:</strong> {{ $order->customer_name ?? 'Walk-in Customer' }}</p>
-                                <p class="mb-1"><strong>Total:</strong> ₱{{ number_format($order->TotalAmount, 2) }}</p>
-                                <p class="mb-1"><strong>Time:</strong> {{ $order->created_at->format('h:i A') }}</p>
-                            </div>
-                            <div class="order-items mt-2">
-                                <h6 class="mb-2">Items:</h6>
-                                <ul class="list-unstyled mb-0">
-                                    @foreach($order->items as $item)
-                                    <li>{{ $item->ItemName }} x {{ $item->Quantity }}</li>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Student</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                    <th>Time</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if($preparingOrders->isEmpty())
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">
+                                            <i class="fas fa-coffee fa-2x text-muted mb-2"></i>
+                                            <p class="mb-0">No orders being prepared</p>
+                                        </td>
+                                    </tr>
+                                @else
+                                    @foreach($preparingOrders as $order)
+                                    <tr>
+                                        <td>{{ $order->OrderNumber }}</td>
+                                        <td>{{ $order->first_name && $order->last_name ? $order->first_name . ' ' . $order->last_name : 'Walk-in' }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-link btn-sm p-0 view-items" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#itemsModal" 
+                                                    data-order-id="{{ $order->OrderID }}">
+                                                View Items ({{ $order->items_count }})
+                                            </button>
+                                        </td>
+                                        <td>₱{{ number_format($order->TotalAmount, 2) }}</td>
+                                        <td>{{ \Carbon\Carbon::parse($order->created_at)->format('h:i A') }}</td>
+                                        <td>
+                                            <button class="btn btn-success btn-sm mark-ready" data-order-id="{{ $order->OrderID }}">
+                                                Mark Ready
+                                            </button>
+                                        </td>
+                                    </tr>
                                     @endforeach
-                                </ul>
-                            </div>
-                            <div class="mt-3">
-                                <button class="btn btn-success btn-sm mark-ready" data-order-id="{{ $order->OrderID }}">
-                                    Mark as Ready
-                                </button>
-                                <button class="btn btn-danger btn-sm mark-cancelled" data-order-id="{{ $order->OrderID }}">
-                                    Cancel Order
-                                </button>
-                            </div>
-                        </div>
-                        @endforeach
+                                @endif
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -49,40 +64,82 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Ready to Serve</h5>
+                    <h5 class="mb-0"><i class="fas fa-check-circle"></i> Ready to Serve</h5>
                 </div>
-                <div class="card-body">
-                    <div class="ready-orders-list">
-                        @foreach($readyOrders as $order)
-                        <div class="order-card mb-3 p-3 border rounded">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0">Order #{{ $order->OrderNumber }}</h6>
-                                <span class="badge bg-success">Ready to Serve</span>
-                            </div>
-                            <div class="order-details">
-                                <p class="mb-1"><strong>Customer:</strong> {{ $order->customer_name ?? 'Walk-in Customer' }}</p>
-                                <p class="mb-1"><strong>Total:</strong> ₱{{ number_format($order->TotalAmount, 2) }}</p>
-                                <p class="mb-1"><strong>Time:</strong> {{ $order->created_at->format('h:i A') }}</p>
-                            </div>
-                            <div class="order-items mt-2">
-                                <h6 class="mb-2">Items:</h6>
-                                <ul class="list-unstyled mb-0">
-                                    @foreach($order->items as $item)
-                                    <li>{{ $item->ItemName }} x {{ $item->Quantity }}</li>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Student</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                    <th>Time</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if($readyOrders->isEmpty())
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">
+                                            <i class="fas fa-check-circle fa-2x text-muted mb-2"></i>
+                                            <p class="mb-0">No orders ready to serve</p>
+                                        </td>
+                                    </tr>
+                                @else
+                                    @foreach($readyOrders as $order)
+                                    <tr>
+                                        <td>{{ $order->OrderNumber }}</td>
+                                        <td>{{ $order->first_name && $order->last_name ? $order->first_name . ' ' . $order->last_name : 'Walk-in' }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-link btn-sm p-0 view-items" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#itemsModal" 
+                                                    data-order-id="{{ $order->OrderID }}">
+                                                View Items ({{ $order->items_count }})
+                                            </button>
+                                        </td>
+                                        <td>₱{{ number_format($order->TotalAmount, 2) }}</td>
+                                        <td>{{ \Carbon\Carbon::parse($order->created_at)->format('h:i A') }}</td>
+                                        <td>
+                                            <button class="btn btn-primary btn-sm mark-served" data-order-id="{{ $order->OrderID }}">
+                                                Mark Served
+                                            </button>
+                                        </td>
+                                    </tr>
                                     @endforeach
-                                </ul>
-                            </div>
-                            <div class="mt-3">
-                                <button class="btn btn-primary btn-sm mark-served" data-order-id="{{ $order->OrderID }}">
-                                    Mark as Served
-                                </button>
-                                <button class="btn btn-danger btn-sm mark-cancelled" data-order-id="{{ $order->OrderID }}">
-                                    Cancel Order
-                                </button>
-                            </div>
-                        </div>
-                        @endforeach
+                                @endif
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Items Modal -->
+<div class="modal fade" id="itemsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Order Items</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-center">Quantity</th>
+                                <th class="text-end">Price</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTableBody"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -92,24 +149,85 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // View items modal handler
+    $('.view-items').click(function() {
+        const orderId = $(this).data('order-id');
+        const tableBody = $('#itemsTableBody');
+        tableBody.empty();
+        
+        // Fetch items via AJAX
+        $.ajax({
+            url: "{{ route('pos.orders.items', '') }}/" + orderId,
+            method: 'GET',
+            success: function(response) {
+                let total = 0;
+                response.items.forEach(function(item) {
+                    const subtotal = item.Quantity * item.UnitPrice;
+                    total += subtotal;
+                    
+                    tableBody.append(`
+                        <tr>
+                            <td>${item.ItemName}</td>
+                            <td class="text-center">${item.Quantity}</td>
+                            <td class="text-end">₱${parseFloat(item.UnitPrice).toFixed(2)}</td>
+                            <td class="text-end">₱${subtotal.toFixed(2)}</td>
+                        </tr>
+                    `);
+                });
+                
+                tableBody.append(`
+                    <tr class="table-light fw-bold">
+                        <td colspan="3" class="text-end">Total:</td>
+                        <td class="text-end">₱${total.toFixed(2)}</td>
+                    </tr>
+                `);
+            },
+            error: function(xhr) {
+                tableBody.append(`
+                    <tr>
+                        <td colspan="4" class="text-center text-danger">
+                            Error loading items: ${xhr.responseJSON?.message || 'Unknown error'}
+                        </td>
+                    </tr>
+                `);
+            }
+        });
+    });
+
     // Mark order as ready
     $('.mark-ready').click(function() {
         const orderId = $(this).data('order-id');
         $.ajax({
-            url: `/inventory/pos/process-by-id/${orderId}`,
+            url: `/pos/orders/${orderId}/process`,
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
             success: function(response) {
                 if (response.success) {
-                    location.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Order has been marked as ready',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
+                    });
                 } else {
-                    alert('Error updating order status: ' + response.message);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to update order status'
+                    });
                 }
             },
             error: function(xhr) {
-                alert('Error updating order status: ' + (xhr.responseJSON?.message || 'Unknown error'));
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: xhr.responseJSON?.message || 'Failed to update order status'
+                });
             }
         });
     });
@@ -118,47 +236,38 @@ $(document).ready(function() {
     $('.mark-served').click(function() {
         const orderId = $(this).data('order-id');
         $.ajax({
-            url: `/inventory/pos/orders/${orderId}/claim`,
+            url: `/pos/orders/${orderId}/claim`,
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
             success: function(response) {
                 if (response.success) {
-                    location.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Order has been marked as served',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
+                    });
                 } else {
-                    alert('Error updating order status: ' + response.message);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to update order status'
+                    });
                 }
             },
             error: function(xhr) {
-                alert('Error updating order status: ' + (xhr.responseJSON?.message || 'Unknown error'));
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: xhr.responseJSON?.message || 'Failed to update order status'
+                });
             }
         });
-    });
-
-    // Mark order as cancelled
-    $('.mark-cancelled').click(function() {
-        const orderId = $(this).data('order-id');
-        if (confirm('Are you sure you want to cancel this order?')) {
-            $.ajax({
-                url: `/inventory/pos/orders/${orderId}/status`,
-                method: 'PUT',
-                data: {
-                    status: 'cancelled',
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        alert('Error updating order status: ' + response.message);
-                    }
-                },
-                error: function(xhr) {
-                    alert('Error updating order status: ' + (xhr.responseJSON?.message || 'Unknown error'));
-                }
-            });
-        }
     });
 
     // Auto-refresh every 30 seconds
@@ -171,41 +280,42 @@ $(document).ready(function() {
 
 @push('styles')
 <style>
-.order-card {
-    background-color: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
+.table {
+    margin-bottom: 0;
 }
 
-.order-card:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    transform: translateY(-2px);
+.table > :not(caption) > * > * {
+    padding: 0.75rem;
 }
 
-.order-items ul li {
-    font-size: 0.9rem;
-    color: #666;
+.btn-link {
+    text-decoration: none;
 }
 
-.badge {
-    font-size: 0.8rem;
-    padding: 0.5em 0.8em;
+.btn-link:hover {
+    text-decoration: underline;
 }
 
-.btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
+.card {
+    border: none;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-/* Status badge colors */
-.badge.bg-warning {
+.card-header {
+    padding: 1rem;
+}
+
+.card-header i {
+    margin-right: 0.5rem;
+}
+
+/* Status colors */
+.bg-warning {
     background-color: #ffc107 !important;
-    color: #000;
 }
 
-.badge.bg-success {
+.bg-success {
     background-color: #28a745 !important;
-    color: #fff;
 }
 </style>
 @endpush

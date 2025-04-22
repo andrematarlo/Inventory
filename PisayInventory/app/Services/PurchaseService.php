@@ -17,7 +17,7 @@ class PurchaseService
                 'PONumber' => $this->generatePONumber(),
                 'SupplierID' => $data['SupplierID'],
                 'OrderDate' => now(),
-                'Status' => PurchaseStatus::PENDING,
+                'Status' => PurchaseStatus::PENDING->value,
                 'CreatedById' => Auth::id(),
                 'DateCreated' => now(),
             ]);

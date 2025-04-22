@@ -20,7 +20,6 @@ class Order extends Model
         'ChangeAmount',
         'Status',
         'student_id',
-        'customer_name',
         'ProcessedBy',
         'ProcessedAt',
         'Remarks'

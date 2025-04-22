@@ -22,6 +22,35 @@
                                style="left: 1rem; top: 50%; transform: translateY(-50%); color: #6c757d;"></i>
                         </div>
                         
+                        <!-- Debug Info -->
+                        <div class="mb-2 small text-muted">
+                            @if(Auth::check())
+                                User Type: {{ Auth::user()->UserType ?? 'Not set' }} | 
+                                ID: {{ Auth::id() }}
+                            @else
+                                Not logged in
+                            @endif
+                        </div>
+
+                        @php
+                            $student = null;
+                            if(Auth::check()) {
+                                $student = DB::table('students')
+                                    ->where('UserAccountID', Auth::id())
+                                    ->first();
+                            }
+                        @endphp
+
+                        @if($student)
+                        <!-- Order History Button -->
+                        <a href="{{ route('pos.student.orders') }}" 
+                           class="btn btn-light position-relative shadow-sm me-2"
+                           style="background: #FFFFFF !important; padding: 0.5rem 1rem;">
+                            <i class="bi bi-clock-history fs-5" style="color:rgb(2, 2, 2) !important;"></i>
+                            <span class="badge bg-secondary position-absolute top-0 start-100 translate-middle">History</span>
+                        </a>
+                        @endif
+
                         <!-- Cart Button in Header -->
                         <button type="button" class="btn btn-light position-relative shadow-sm" 
                                 data-bs-toggle="offcanvas" 
@@ -214,8 +243,28 @@
                             </div>
                             <hr class="my-3">
                             <div class="mb-3">
-                                <label for="customerName" class="form-label">Customer Name</label>
-                                <input type="text" class="form-control" id="customerName" name="customer_name" required>
+                                <label for="studentId" class="form-label">Student ID *</label>
+                                @if(Auth::check())
+                                    @php
+                                        $user = Auth::user();
+                                        $student = DB::table('students')
+                                            ->where('UserAccountID', $user->UserAccountID)
+                                            ->first();
+                                    @endphp
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="studentId" 
+                                           name="student_id" 
+                                           value="{{ $student ? $student->student_id : '' }}"
+                                           {{ $student ? 'readonly' : '' }}
+                                           required>
+                                @else
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="studentId" 
+                                           name="student_id" 
+                                           required>
+                                @endif
                             </div>
                             <div class="mb-3">
                                 <label class="d-block mb-2">Payment Method</label>
@@ -269,7 +318,12 @@
                                 <div class="mb-3">
                                     <label for="student_id" class="form-label">Student ID *</label>
                                     <div class="input-group">
-                                        <input type="text" class="form-control" id="student_id" name="student_id" 
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="student_id" 
+                                               name="student_id" 
+                                               value="{{ Auth::check() && Auth::user()->role === 'Students' ? DB::table('students')->where('UserAccountID', Auth::user()->UserAccountID)->value('student_id') : '' }}"
+                                               {{ Auth::check() && Auth::user()->role === 'Students' ? 'readonly' : '' }}
                                                placeholder="Enter student ID">
                                         <button type="button" class="btn btn-outline-primary" id="checkBalance">
                                             <i class="bi bi-search"></i> Check Balance
@@ -295,7 +349,7 @@
                                       placeholder="Add any special instructions..."></textarea>
 
                             <button type="submit" class="btn btn-primary btn-lg w-100" disabled>
-                                <i class="bi bi-check-circle me-2"></i>Place Order
+                                Place Order
                             </button>
                         </div>
                     </div>
@@ -927,20 +981,21 @@ $(document).ready(function() {
         e.preventDefault();
         
         const paymentType = $('input[name="payment_type"]:checked').val();
+        const studentId = $('#studentId').val();
+        
+        // Validate student ID
+        if (!studentId) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Student ID Required',
+                text: 'Please enter a student ID before placing the order.',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
         
         // Validate payment method specific requirements
         if (paymentType === 'deposit') {
-            const studentId = $('#student_id').val();
-            if (!studentId) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Student Required',
-                    text: 'Please enter a student ID for deposit payment.',
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
-
             // Check if balance was verified
             if ($('#studentInfo').is(':hidden')) {
                 Swal.fire({
@@ -966,18 +1021,6 @@ $(document).ready(function() {
             }
         }
 
-        // Get customer name
-        const customerName = $('#customerName').val();
-        if (!customerName) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Customer Name Required',
-                text: 'Please enter the customer name before placing the order.',
-                confirmButtonText: 'OK'
-            });
-            return;
-        }
-
         // Prepare cart items data
         const cartItems = [];
         $('.cart-item').each(function() {
@@ -996,18 +1039,15 @@ $(document).ready(function() {
         const total = parseFloat($('#total').text());
         $('#cartData').append(`<input type="hidden" name="total_amount" value="${total}">`);
         
-        // Add payment type and details
+        // Add payment type and student ID
         $('#cartData').append(`<input type="hidden" name="payment_type" value="${paymentType}">`);
-        $('#cartData').append(`<input type="hidden" name="customer_name" value="${encodeURIComponent(customerName)}">`);
+        $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
 
         if (paymentType === 'cash') {
             const cashAmount = parseFloat($('#cashAmount').val()) || 0;
             const changeAmount = cashAmount - total;
             $('#cartData').append(`<input type="hidden" name="amount_tendered" value="${cashAmount}">`);
             $('#cartData').append(`<input type="hidden" name="change_amount" value="${changeAmount}">`);
-        } else {
-            const studentId = $('#student_id').val();
-            $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
         }
 
         // Add notes if any
@@ -1027,21 +1067,36 @@ $(document).ready(function() {
             data: $(this).serialize(),
                     success: function(response) {
                         if (response.success) {
+                            // Close the cart offcanvas
+                            const offcanvas = bootstrap.Offcanvas.getInstance('#cartOffcanvas');
+                            if (offcanvas) {
+                                offcanvas.hide();
+                            }
+
+                            // Clear the cart
+                            $('.cart-items').empty();
+                            updateTotals();
+                            
+                            // Reset form fields
+                            $('#orderForm')[0].reset();
+                            $('#studentInfo').hide();
+                            $('button[type="submit"]').prop('disabled', true);
+                            
+                            // Show success message
                             Swal.fire({
                                 icon: 'success',
-                        title: 'Order Placed Successfully!',
-                        text: 'Your order has been processed.',
-                                confirmButtonText: 'OK'
-                            }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.href = "{{ route('pos.index') }}";
-                                }
+                                title: 'Order Placed Successfully!',
+                                text: `Order #${response.order_number} has been created.`,
+                                confirmButtonText: 'Create New Order'
                             });
+
+                            // Update cart count
+                            updateCartCount();
                         } else {
                             Swal.fire({
                                 icon: 'error',
-                        title: 'Error',
-                        text: response.message || 'Failed to place order. Please try again.',
+                                title: 'Error',
+                                text: response.message || 'Failed to place order. Please try again.',
                                 confirmButtonText: 'OK'
                             });
                         }
@@ -1059,7 +1114,7 @@ $(document).ready(function() {
                         });
             },
             complete: function() {
-                submitButton.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>Place Order');
+                submitButton.prop('disabled', false).html('Place Order');
                 }
             });
     });

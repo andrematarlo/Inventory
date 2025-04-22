@@ -191,7 +191,6 @@ class POSController extends Controller
             // Create the order
             $order = POSOrder::create([
                 'student_id' => $request->student_id,
-                'customer_name' => $request->customer_name,
                 'TotalAmount' => $request->total_amount,
                 'PaymentMethod' => $request->payment_type,
                 'Status' => 'pending',
@@ -1381,8 +1380,10 @@ class POSController extends Controller
             Log::info('Updating order', ['id' => $id, 'request_data' => $request->all()]);
             
             $validator = Validator::make($request->all(), [
-                'customer_name' => 'required|string|max:255',
-                'status' => 'required|in:pending,paid,preparing,ready,completed,cancelled'
+                'Status' => 'required|in:pending,paid,preparing,ready,completed,cancelled',
+                'PaymentMethod' => 'required|in:cash,deposit',
+                'AmountTendered' => 'nullable|numeric|min:0',
+                'Remarks' => 'nullable|string'
             ]);
 
             if ($validator->fails()) {
@@ -1398,8 +1399,7 @@ class POSController extends Controller
             
             DB::beginTransaction();
             
-            $order->customer_name = $request->customer_name;
-            $order->Status = $request->status;
+            $order->Status = $request->Status;
             $order->save();
             
             DB::commit();

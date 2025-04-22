@@ -55,7 +55,7 @@
                                                 <option value="">Select Item</option>
                                                 @foreach($items as $item)
                                                 <option value="{{ $item->ItemId }}" 
-                                                        data-suppliers='@json($item->formatted_suppliers)'>
+                                                        data-suppliers='@json($item->suppliers)'>
                                                     {{ $item->ItemName }}
                                                 </option>
                                                 @endforeach
@@ -182,8 +182,6 @@ document.addEventListener('DOMContentLoaded', function() {
             suppliers = [];
         }
 
-        console.log('Selected suppliers:', suppliers); // Debug log
-
         // Reset supplier select
         supplierSelect.empty();
         
@@ -229,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <option value="">Select Item</option>
                         @foreach($items as $item)
                         <option value="{{ $item->ItemId }}" 
-                                data-suppliers='@json($item->formatted_suppliers)'>
+                                data-suppliers='@json($item->suppliers)'>
                             {{ $item->ItemName }}
                         </option>
                         @endforeach

@@ -15,7 +15,6 @@ class POSOrder extends Model
         'TotalAmount',
         'PaymentMethod',
         'student_id',
-        'customer_name',
         'Status',
         'AmountTendered',
         'ChangeAmount',

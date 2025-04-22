@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\PurchaseStatus;
 
 class Receiving extends Model
 {
@@ -39,8 +40,9 @@ class Receiving extends Model
 
     // Add constants for status values
     const STATUS_RECEIVED = 'Received';
-    const STATUS_PARTIAL = 'Partial';
     const STATUS_PENDING = 'Pending';
+    const STATUS_PARTIAL = 'Partially Received';
+    const STATUS_COMPLETED = 'Completed';
 
     public function purchaseOrder()
     {

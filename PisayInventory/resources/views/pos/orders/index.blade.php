@@ -33,12 +33,12 @@
                     <label for="statusFilter" class="form-label">Status</label>
                     <select class="form-select" id="statusFilter">
                         <option value="">All Statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="paid">Paid</option>
-                        <option value="preparing">Preparing</option>
-                        <option value="ready">Ready to Serve</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
+                        <option value="pending"><span class="badge bg-warning">Pending</span></option>
+                        <option value="paid"><span class="badge bg-primary">Paid</span></option>
+                        <option value="preparing"><span class="badge bg-info">Preparing</span></option>
+                        <option value="ready"><span class="badge bg-success">Ready to Serve</span></option>
+                        <option value="completed"><span class="badge bg-secondary">Completed</span></option>
+                        <option value="cancelled"><span class="badge bg-danger">Cancelled</span></option>
                     </select>
                 </div>
             </div>
@@ -54,7 +54,7 @@
                         <tr>
                             <th>Order ID</th>
                             <th>Date</th>
-                            <th>Customer</th>
+                            <th>Student Name</th>
                             <th>Items</th>
                             <th>Total Amount</th>
                             <th>Status</th>
@@ -69,7 +69,12 @@
                             </td>
                             <td>{{ \Carbon\Carbon::parse($order->OrderDate)->format('M d, Y h:ia') }}</td>
                             <td>
-                                {{ $order->customer_name ? urldecode($order->customer_name) : 'Walk-in Customer' }}
+                                @php
+                                    $student = DB::table('students')
+                                        ->where('student_id', $order->student_id)
+                                        ->first();
+                                @endphp
+                                {{ $student ? $student->first_name . ' ' . $student->last_name : 'Walk-in Customer' }}
                             </td>
                             <td>
                                 <button class="btn btn-sm btn-link view-items" 
@@ -81,13 +86,16 @@
                             </td>
                             <td>₱{{ number_format($order->TotalAmount, 2) }}</td>
                             <td>
-                                <span class="badge bg-{{ 
-                                    $order->Status === 'ready' ? 'success' : 
-                                    ($order->Status === 'paid' ? 'primary' : 
-                                    ($order->Status === 'preparing' ? 'warning' : 
-                                    ($order->Status === 'completed' ? 'info' : 'danger'))) }}">
-                                    {{ ucfirst($order->Status) }}
-                                </span>
+                                <select class="form-select form-select-sm status-select" 
+                                        data-order-id="{{ $order->OrderID }}"
+                                        style="width: auto;">
+                                    <option value="pending" {{ $order->Status === 'pending' ? 'selected' : '' }}>Pending</option>
+                                    <option value="paid" {{ $order->Status === 'paid' ? 'selected' : '' }}>Paid</option>
+                                    <option value="preparing" {{ $order->Status === 'preparing' ? 'selected' : '' }}>Preparing</option>
+                                    <option value="ready" {{ $order->Status === 'ready' ? 'selected' : '' }}>Ready to Serve</option>
+                                    <option value="completed" {{ $order->Status === 'completed' ? 'selected' : '' }}>Completed</option>
+                                    <option value="cancelled" {{ $order->Status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                                </select>
                             </td>
                             <td>
                                 <div class="btn-group">
@@ -97,14 +105,6 @@
                                             data-bs-target="#viewOrderModal{{ $order->OrderID }}"
                                             title="View Order">
                                         <i class="fas fa-eye"></i> View
-                                    </button>
-                                    
-                                    <button type="button" 
-                                            class="btn btn-sm btn-primary" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#editOrderModal{{ $order->OrderID }}"
-                                            title="Edit Order">
-                                        <i class="fas fa-edit"></i> Edit
                                     </button>
                                     
                                     <button type="button" 
@@ -232,8 +232,15 @@
                             <dt class="col-sm-4">Order Date</dt>
                             <dd class="col-sm-8">{{ \Carbon\Carbon::parse($order->OrderDate)->format('M d, Y h:ia') }}</dd>
                             
-                            <dt class="col-sm-4">Customer</dt>
-                            <dd class="col-sm-8">{{ $order->customer_name ? urldecode($order->customer_name) : 'Walk-in Customer' }}</dd>
+                            <dt class="col-sm-4">Student Name</dt>
+                            <dd class="col-sm-8">
+                                @php
+                                    $student = DB::table('students')
+                                        ->where('student_id', $order->student_id)
+                                        ->first();
+                                @endphp
+                                {{ $student ? $student->first_name . ' ' . $student->last_name : 'Walk-in Customer' }}
+                            </dd>
                             
                             <dt class="col-sm-4">Status</dt>
                             <dd class="col-sm-8">
@@ -309,11 +316,11 @@
                     
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Customer Name</label>
+                            <label class="form-label">Student Name</label>
                             <input type="text" 
                                    class="form-control" 
-                                   name="customer_name" 
-                                   value="{{ $order->customer_name }}"
+                                   name="student_name" 
+                                   value="{{ $order->student_name }}"
                                    placeholder="Walk-in Customer">
                         </div>
                         
@@ -345,6 +352,16 @@
 
 @push('styles')
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<style>
+#statusFilter option {
+    padding: 8px;
+}
+#statusFilter .badge {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+}
+</style>
 @endpush
 
 @push('scripts')
@@ -401,8 +418,15 @@ $(document).ready(function() {
 
     // Status filter
     $('#statusFilter').on('change', function() {
-        const status = $(this).val();
-        table.column(5).search(status).draw();
+        const status = $(this).val().toLowerCase();
+        
+        table.rows().every(function() {
+            const rowNode = this.node();
+            const statusSelect = $(rowNode).find('.status-select');
+            const rowStatus = statusSelect.val();
+            
+            this.nodes().to$().toggle(!status || rowStatus === status);
+        });
     });
 
     // View items modal
@@ -421,100 +445,57 @@ $(document).ready(function() {
         });
     });
 
-    // Update status
-    $('.update-status').on('click', function() {
+    // Handle status change
+    $('.status-select').on('change', function() {
         const orderId = $(this).data('order-id');
-        const currentStatus = $(this).data('current-status');
-        $('#updateStatusModal').modal('show');
-        $('#newStatus').val(currentStatus);
-        
-        $('#confirmStatusUpdate').off('click').on('click', function() {
-            const newStatus = $('#newStatus').val();
-            
-            $.ajax({
-                url: `/pos/orders/${orderId}/status`,
-                type: 'PUT',
-                data: {
-                    status: newStatus,
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        alert('Error updating status');
-                    }
-                },
-                error: function() {
-                    alert('Error updating status');
-                }
-            });
-        });
-    });
+        const newStatus = $(this).val();
+        const selectElement = $(this);
 
-    // Update order functionality
-    $('.update-order').on('click', function() {
-        const orderId = $(this).data('order-id');
-        const form = $(`#editOrderForm${orderId}`);
-        const submitBtn = $(this);
-        const originalBtnText = submitBtn.html();
-        
+        // Store original value in case of error
+        const originalValue = selectElement.find('option:selected').attr('selected', true).val();
+
         // Show loading state
-        submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
-        submitBtn.prop('disabled', true);
-        
-        // Reset error states
-        form.find('.is-invalid').removeClass('is-invalid');
-        $(`#editErrorAlert${orderId}`).hide();
+        selectElement.prop('disabled', true);
         
         $.ajax({
-            url: `/inventory/pos/orders/${orderId}`,
-            type: 'POST',
-            data: form.serialize(),
+            url: `/inventory/pos/orders/${orderId}/status`,
+            type: 'PUT',
+            data: {
+                _token: '{{ csrf_token() }}',
+                status: newStatus
+            },
             success: function(response) {
                 if (response.success) {
-                    // Close modal
-                    $(`#editOrderModal${orderId}`).modal('hide');
-                    
                     // Show success message
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
-                        text: response.message || 'Order updated successfully',
-                    }).then(() => {
-                        location.reload();
+                        text: 'Order status updated successfully',
+                        showConfirmButton: false,
+                        timer: 1500
                     });
                 } else {
-                    $(`#editErrorAlert${orderId}`)
-                        .text(response.message || 'Failed to update order')
-                        .show();
+                    // Revert to original value on failure
+                    selectElement.val(originalValue);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to update status'
+                    });
                 }
             },
             error: function(xhr) {
-                console.error('Error response:', xhr.responseText); // Add this line for debugging
-                if (xhr.status === 422) {
-                    // Validation errors
-                    const errors = xhr.responseJSON.errors;
-                    let errorMessage = '<ul class="mb-0">';
-                    
-                    Object.keys(errors).forEach(field => {
-                        const input = form.find(`[name="${field}"]`);
-                        input.addClass('is-invalid');
-                        errorMessage += `<li>${errors[field][0]}</li>`;
-                    });
-                    
-                    errorMessage += '</ul>';
-                    $(`#editErrorAlert${orderId}`).html(errorMessage).show();
-                } else {
-                    $(`#editErrorAlert${orderId}`)
-                        .text('An error occurred while updating the order')
-                        .show();
-                }
+                // Revert to original value on error
+                selectElement.val(originalValue);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to update order status'
+                });
             },
             complete: function() {
-                // Reset button state
-                submitBtn.html(originalBtnText);
-                submitBtn.prop('disabled', false);
+                // Re-enable select
+                selectElement.prop('disabled', false);
             }
         });
     });

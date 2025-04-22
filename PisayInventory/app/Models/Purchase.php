@@ -60,7 +60,7 @@ class Purchase extends Model
 
     public function scopePending($query)
     {
-        return $query->where('Status', PurchaseStatus::PENDING)
+        return $query->where('Status', PurchaseStatus::PENDING->value)
                     ->where('IsDeleted', false);
     }
 
@@ -212,7 +212,7 @@ class Purchase extends Model
 
         static::creating(function ($purchase) {
             if (!$purchase->Status) {
-                $purchase->Status = PurchaseStatus::PENDING;
+                $purchase->Status = PurchaseStatus::PENDING->value;
             }
             
             // Get the employee record
