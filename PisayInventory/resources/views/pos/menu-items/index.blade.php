@@ -19,6 +19,9 @@
                         <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#createMenuItemModal">
                             <i class="bi bi-plus-circle me-1"></i> Add Menu Item
                         </button>
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createValueMealModal">
+                            <i class="fas fa-utensils"></i> Create Value Meal
+                        </button>
                     </div>
                 </div>
             </div>
@@ -44,6 +47,14 @@
                     <label for="searchInput" class="form-label">Search</label>
                     <input type="text" class="form-control" id="searchInput" placeholder="Search items...">
                 </div>
+                <div class="col-md-4">
+                    <label for="typeFilter" class="form-label">Type</label>
+                    <select class="form-select" id="typeFilter">
+                        <option value="">All Types</option>
+                        <option value="0">Regular Items</option>
+                        <option value="1">Value Meals</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -62,6 +73,7 @@
                             <th>Stock</th>
                             <th>Status</th>
                             <th>Available</th>
+                            <th>Type</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -95,6 +107,11 @@
                                            {{ $item->IsAvailable ? 'checked' : '' }}
                                            {{ $item->IsDeleted ? 'disabled' : '' }}>
                                 </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ $item->IsValueMeal ? 'info' : 'secondary' }}">
+                                    {{ $item->IsValueMeal ? 'Value Meal' : 'Regular Item' }}
+                                </span>
                             </td>
                             <td class="text-end">
                                 <div class="btn-group">
@@ -151,6 +168,9 @@
     @include('pos.menu-items.partials.edit-modal', ['item' => $item])
 @endforeach
 
+<!-- Create Value Meal Modal -->
+@include('pos.menu-items.partials.create-value-meal-modal')
+
 @endsection
 
 @push('scripts')
@@ -163,7 +183,7 @@ $(document).ready(function() {
         responsive: true,
         columnDefs: [
             {
-                targets: 7, // Actions column
+                targets: 8, // Actions column
                 orderable: false,
                 searchable: true
             }
@@ -176,6 +196,53 @@ $(document).ready(function() {
                 $(row).attr('data-deleted', 'false');
             }
         }
+    });
+
+    // Handle menu item form submission
+    $('#createMenuItemForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const form = $(this);
+        const formData = new FormData(this);
+        
+        $.ajax({
+            url: form.attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                // Close the modal
+                $('#createMenuItemModal').modal('hide');
+                
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: 'Menu item has been added successfully.',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    // Reload the page to show the new item
+                    window.location.reload();
+                });
+            },
+            error: function(xhr) {
+                // Show error message
+                const errors = xhr.responseJSON?.errors || {};
+                let errorMessage = 'An error occurred while adding the menu item.';
+                
+                if (Object.keys(errors).length > 0) {
+                    errorMessage = Object.values(errors).flat().join('\n');
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMessage
+                });
+            }
+        });
     });
 
     // Show/Hide deleted items
@@ -201,6 +268,12 @@ $(document).ready(function() {
     $('#categoryFilter').on('change', function() {
         const category = $(this).val();
         table.column(2).search(category).draw();
+    });
+
+    // Type filter
+    $('#typeFilter').on('change', function() {
+        const type = $(this).val();
+        table.column(7).search(type).draw();
     });
 
     // Search functionality

@@ -197,27 +197,59 @@ $(document).ready(function() {
     // Handle view items button click
     $('.view-items').on('click', function() {
         const orderId = $(this).data('order-id');
+        const url = "{{ route('pos.orders.items', ['id' => ':id']) }}".replace(':id', orderId);
         
-        // Load order items via AJAX
-        $.get(`/pos/orders/${orderId}/items`, function(response) {
-            const tbody = $('#orderItemsTableBody');
-            tbody.empty();
-            
-            let total = 0;
-            
-            response.items.forEach(function(item) {
-                tbody.append(`
+        // Show loading state
+        $('#orderItemsTableBody').html(`
+            <tr>
+                <td colspan="4" class="text-center">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    Loading items...
+                </td>
+            </tr>
+        `);
+        
+        // Load order items via AJAX using named route
+        $.ajax({
+            url: url,
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                $('#orderItemsTableBody').empty();
+                let total = 0;
+                
+                response.items.forEach(function(item) {
+                    const subtotal = parseFloat(item.Subtotal || (item.Quantity * item.UnitPrice));
+                    total += subtotal;
+                    
+                    $('#orderItemsTableBody').append(`
+                        <tr>
+                            <td>${item.ItemName}</td>
+                            <td>${item.Quantity}</td>
+                            <td>₱${parseFloat(item.UnitPrice).toFixed(2)}</td>
+                            <td>₱${subtotal.toFixed(2)}</td>
+                        </tr>
+                    `);
+                });
+                
+                $('#orderItemsTotal').text(`₱${total.toFixed(2)}`);
+            },
+            error: function(xhr) {
+                console.log('Error:', xhr); // For debugging
+                $('#orderItemsTableBody').html(`
                     <tr>
-                        <td>${item.ItemName}</td>
-                        <td>${item.Quantity}</td>
-                        <td>₱${parseFloat(item.UnitPrice).toFixed(2)}</td>
-                        <td>₱${parseFloat(item.Subtotal).toFixed(2)}</td>
+                        <td colspan="4" class="text-center text-danger">
+                            <i class="bi bi-exclamation-circle me-2"></i>
+                            ${xhr.responseJSON?.message || 'Error loading order items. Please try again.'}
+                        </td>
                     </tr>
                 `);
-                total += parseFloat(item.Subtotal);
-            });
-            
-            $('#orderItemsTotal').text(`₱${total.toFixed(2)}`);
+                $('#orderItemsTotal').text('₱0.00');
+            }
         });
     });
 

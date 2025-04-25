@@ -1,143 +1,113 @@
 <div class="modal fade" id="editMenuItemModal{{ $item->MenuItemID }}" tabindex="-1" aria-labelledby="editMenuItemModalLabel{{ $item->MenuItemID }}" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header">
                 <h5 class="modal-title" id="editMenuItemModalLabel{{ $item->MenuItemID }}">Edit Menu Item</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editMenuItemForm{{ $item->MenuItemID }}" action="{{ route('pos.menu-items.update', $item->MenuItemID) }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                @method('PUT')
                 <div class="modal-body">
-                    @csrf
-                    @method('PUT')
-                    
-                    <style>
-                        .alert-danger {
-                            background-color: #f8d7da;
-                            border-color: #f5c6cb;
-                            color: #721c24;
-                            padding: 1rem;
-                            margin-bottom: 1rem;
-                            border: 1px solid transparent;
-                            border-radius: 0.25rem;
-                        }
-                        .invalid-feedback {
-                            display: block;
-                            color: #dc3545;
-                            margin-top: 0.25rem;
-                        }
-                    </style>
-
-                    <div class="alert alert-danger" id="errorAlert{{ $item->MenuItemID }}" role="alert" style="display: none; margin-bottom: 15px;">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            <div>
-                                <div class="fw-bold">Error</div>
-                                <div id="errorMessage{{ $item->MenuItemID }}"></div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="ItemName{{ $item->MenuItemID }}" class="form-label">Item Name *</label>
-                                <input type="text" 
-                                       class="form-control @error('ItemName') is-invalid @enderror" 
-                                       id="ItemName{{ $item->MenuItemID }}" 
-                                       name="ItemName" 
-                                       value="{{ old('ItemName', $item->ItemName) }}" 
-                                       required>
-                                @error('ItemName')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="Description{{ $item->MenuItemID }}" class="form-label">Description</label>
-                                <textarea class="form-control @error('Description') is-invalid @enderror" 
-                                          id="Description{{ $item->MenuItemID }}" 
-                                          name="Description" 
-                                          rows="3">{{ old('Description', $item->Description) }}</textarea>
-                                @error('Description')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="ClassificationID{{ $item->MenuItemID }}" class="form-label">Category *</label>
-                                <select class="form-select @error('ClassificationID') is-invalid @enderror" 
-                                        id="ClassificationID{{ $item->MenuItemID }}" 
-                                        name="ClassificationID" 
-                                        required>
-                                    <option value="">Select Category</option>
-                                    @foreach($categories as $category)
-                                        @if($category->IsDeleted == 0)
-                                            <option value="{{ $category->ClassificationId }}" 
-                                                    {{ old('ClassificationID', $item->ClassificationID) == $category->ClassificationId ? 'selected' : '' }}>
-                                                {{ $category->ClassificationName }}
-                                                @if($category->ParentClassificationId)
-                                                    ({{ $categories->firstWhere('ClassificationId', $category->ParentClassificationId)->ClassificationName ?? 'N/A' }})
-                                                @endif
-                                            </option>
-                                        @endif
-                                    @endforeach
-                                </select>
-                                @error('ClassificationID')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            <label for="editItemName{{ $item->MenuItemID }}" class="form-label">Item Name</label>
+                            <input type="text" class="form-control" id="editItemName{{ $item->MenuItemID }}" name="ItemName" value="{{ $item->ItemName }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editPrice{{ $item->MenuItemID }}" class="form-label">Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input type="number" class="form-control" id="editPrice{{ $item->MenuItemID }}" name="Price" step="0.01" value="{{ $item->Price }}" required>
                             </div>
                         </div>
-
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="Price{{ $item->MenuItemID }}" class="form-label">Price (₱) *</label>
-                                <input type="number" 
-                                       class="form-control @error('Price') is-invalid @enderror" 
-                                       id="Price{{ $item->MenuItemID }}" 
-                                       name="Price" 
-                                       value="{{ old('Price', $item->Price) }}" 
-                                       step="0.01" 
-                                       min="0" 
-                                       required>
-                                @error('Price')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            <label for="editCategory{{ $item->MenuItemID }}" class="form-label">Category</label>
+                            <select class="form-select" id="editCategory{{ $item->MenuItemID }}" name="ClassificationID" required>
+                                <option value="">Select Category</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->ClassificationId }}" {{ $item->ClassificationID == $category->ClassificationId ? 'selected' : '' }}>
+                                        {{ $category->ClassificationName }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editUnitOfMeasure{{ $item->MenuItemID }}" class="form-label">Unit of Measure</label>
+                            <select class="form-select" id="editUnitOfMeasure{{ $item->MenuItemID }}" name="UnitOfMeasureID" required>
+                                <option value="">Select Unit</option>
+                                @foreach($units as $unit)
+                                    <option value="{{ $unit->UnitOfMeasureId }}" {{ $item->UnitOfMeasureID == $unit->UnitOfMeasureId ? 'selected' : '' }}>
+                                        {{ $unit->UnitName }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="editDescription{{ $item->MenuItemID }}" class="form-label">Description</label>
+                            <textarea class="form-control" id="editDescription{{ $item->MenuItemID }}" name="Description" rows="3">{{ $item->Description }}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editImage{{ $item->MenuItemID }}" class="form-label">Image</label>
+                            <input type="file" class="form-control" id="editImage{{ $item->MenuItemID }}" name="image" accept="image/*">
+                            @if($item->image_path)
+                                <div class="mt-2">
+                                    <img src="{{ asset('storage/' . $item->image_path) }}" alt="{{ $item->ItemName }}" class="img-thumbnail" style="max-height: 100px;">
+                                </div>
+                            @endif
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editStocksAvailable{{ $item->MenuItemID }}" class="form-label">Current Stock</label>
+                            <input type="number" class="form-control" id="editStocksAvailable{{ $item->MenuItemID }}" name="StocksAvailable" value="{{ $item->StocksAvailable }}" min="0">
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editIsValueMeal{{ $item->MenuItemID }}" name="IsValueMeal" value="1" {{ $item->IsValueMeal ? 'checked' : '' }}>
+                                <label class="form-check-label" for="editIsValueMeal{{ $item->MenuItemID }}">
+                                    This is a Value Meal
+                                </label>
                             </div>
-
-                            <div class="mb-3">
-                                <label for="StocksAvailable{{ $item->MenuItemID }}" class="form-label">Stock *</label>
-                                <input type="number" 
-                                       class="form-control @error('StocksAvailable') is-invalid @enderror" 
-                                       id="StocksAvailable{{ $item->MenuItemID }}" 
-                                       name="StocksAvailable" 
-                                       value="{{ old('StocksAvailable', $item->StocksAvailable) }}" 
-                                       min="0" 
-                                       required>
-                                @error('StocksAvailable')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                        </div>
+                        <div class="col-12 value-meal-items {{ $item->IsValueMeal ? 'd-block' : 'd-none' }}">
+                            <label class="form-label">Value Meal Items</label>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Quantity</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="editValueMealItemsList{{ $item->MenuItemID }}">
+                                        @foreach($item->valueMealItems as $valueMealItem)
+                                            <tr>
+                                                <td>
+                                                    <select class="form-select form-select-sm" name="value_meal_items[][menu_item_id]" required>
+                                                        <option value="">Select Item</option>
+                                                        @foreach($menuItems as $menuItem)
+                                                            <option value="{{ $menuItem->MenuItemID }}" {{ $valueMealItem->menu_item_id == $menuItem->MenuItemID ? 'selected' : '' }}>
+                                                                {{ $menuItem->ItemName }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control form-control-sm" name="value_meal_items[][quantity]" value="{{ $valueMealItem->quantity }}" min="1" required>
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-danger remove-value-meal-item">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
                             </div>
-
-                            <div class="mb-3">
-                                <label for="image{{ $item->MenuItemID }}" class="form-label">Item Image</label>
-                                @if($item->image_path)
-                                    <div class="mb-2">
-                                        <img src="{{ asset('storage/' . $item->image_path) }}" 
-                                             alt="{{ $item->ItemName }}"
-                                             class="img-thumbnail"
-                                             style="max-height: 100px;">
-                                    </div>
-                                @endif
-                                <input type="file" 
-                                       class="form-control @error('image') is-invalid @enderror" 
-                                       id="image{{ $item->MenuItemID }}" 
-                                       name="image" 
-                                       accept="image/*">
-                                <div class="form-text">Leave empty to keep current image. Maximum file size: 2MB</div>
-                                @error('image')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="addEditValueMealItem{{ $item->MenuItemID }}">
+                                <i class="fas fa-plus"></i> Add Item
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -153,103 +123,39 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    $('#editMenuItemForm{{ $item->MenuItemID }}').on('submit', function(e) {
-        e.preventDefault();
-        
-        // Reset previous error states
-        $('.is-invalid').removeClass('is-invalid');
-        $('.invalid-feedback').remove();
-        $('#errorAlert{{ $item->MenuItemID }}').hide();
-        $('#errorMessage{{ $item->MenuItemID }}').empty();
-        
-        // Show loading state
-        const submitBtn = $(this).find('button[type="submit"]');
-        const originalBtnText = submitBtn.html();
-        submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
-        submitBtn.prop('disabled', true);
+    // Toggle value meal items section
+    $('#editIsValueMeal{{ $item->MenuItemID }}').on('change', function() {
+        $('.value-meal-items').toggleClass('d-block d-none');
+    });
 
-        let formData = new FormData(this);
+    // Add value meal item
+    $('#addEditValueMealItem{{ $item->MenuItemID }}').on('click', function() {
+        const row = `
+            <tr>
+                <td>
+                    <select class="form-select form-select-sm" name="value_meal_items[][menu_item_id]" required>
+                        <option value="">Select Item</option>
+                        @foreach($menuItems as $menuItem)
+                            <option value="{{ $menuItem->MenuItemID }}">{{ $menuItem->ItemName }}</option>
+                        @endforeach
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" name="value_meal_items[][quantity]" value="1" min="1" required>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger remove-value-meal-item">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        $('#editValueMealItemsList{{ $item->MenuItemID }}').append(row);
+    });
 
-        $.ajax({
-            url: $(this).attr('action'),
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    // Close modal
-                    $('#editMenuItemModal{{ $item->MenuItemID }}').modal('hide');
-                    
-                    // Show success message
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: response.message,
-                    }).then((result) => {
-                        location.reload();
-                    });
-                } else {
-                    // Show error message
-                    $('#errorMessage{{ $item->MenuItemID }}').html(response.message || 'An error occurred while updating the menu item.');
-                    $('#errorAlert{{ $item->MenuItemID }}').fadeIn();
-                }
-            },
-            error: function(xhr, status, error) {
-                // Log the full error details
-                console.group('Update Error Details');
-                console.log('Status:', status);
-                console.log('Error:', error);
-                console.log('Response:', xhr.responseJSON);
-                console.log('Status Code:', xhr.status);
-                console.groupEnd();
-
-                let errorMessages = [];
-                let mainError = 'An error occurred while updating the menu item.';
-                
-                // Handle validation errors
-                if (xhr.responseJSON && xhr.responseJSON.errors) {
-                    Object.keys(xhr.responseJSON.errors).forEach(field => {
-                        const input = $(`#${field}{{ $item->MenuItemID }}`);
-                        input.addClass('is-invalid');
-                        
-                        const errorMessage = xhr.responseJSON.errors[field][0];
-                        errorMessages.push(errorMessage);
-                        
-                        // Add error message below the field
-                        const feedback = $(`<div class="invalid-feedback">${errorMessage}</div>`);
-                        input.parent().find('.invalid-feedback').remove();
-                        input.after(feedback);
-                    });
-                }
-                
-                // Set main error message from response if available
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    mainError = xhr.responseJSON.message;
-                }
-                
-                // Combine validation errors with main error if they exist
-                if (errorMessages.length > 0) {
-                    mainError += '<ul class="mb-0 mt-2">';
-                    errorMessages.forEach(msg => {
-                        mainError += `<li>${msg}</li>`;
-                    });
-                    mainError += '</ul>';
-                }
-                
-                // Display error message
-                $('#errorMessage{{ $item->MenuItemID }}').html(mainError);
-                $('#errorAlert{{ $item->MenuItemID }}').fadeIn();
-
-                // Scroll to top of modal to show error
-                $('.modal-body').scrollTop(0);
-            },
-            complete: function() {
-                // Reset button state
-                submitBtn.html(originalBtnText);
-                submitBtn.prop('disabled', false);
-            }
-        });
+    // Remove value meal item
+    $(document).on('click', '.remove-value-meal-item', function() {
+        $(this).closest('tr').remove();
     });
 });
 </script>

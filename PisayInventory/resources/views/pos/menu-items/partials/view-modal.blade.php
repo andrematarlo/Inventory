@@ -1,80 +1,112 @@
 <div class="modal fade" id="viewMenuItemModal{{ $item->MenuItemID }}" tabindex="-1" aria-labelledby="viewMenuItemModalLabel{{ $item->MenuItemID }}" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
+            <div class="modal-header">
                 <h5 class="modal-title" id="viewMenuItemModalLabel{{ $item->MenuItemID }}">View Menu Item</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row">
-                    <!-- Image Column -->
-                    <div class="col-md-4 text-center mb-3">
-                        @if($item->image_path)
-                            <img src="{{ asset('storage/' . $item->image_path) }}" 
-                                 alt="{{ $item->ItemName }}"
-                                 class="img-fluid rounded"
-                                 style="max-height: 200px;">
-                        @else
-                            <div class="border rounded p-4 text-muted">
-                                <i class="fas fa-image fa-3x mb-2"></i>
-                                <p class="mb-0">No image available</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">Item Details</h6>
+                                <dl class="row mb-0">
+                                    <dt class="col-sm-4">Name</dt>
+                                    <dd class="col-sm-8">{{ $item->ItemName }}</dd>
+
+                                    <dt class="col-sm-4">Price</dt>
+                                    <dd class="col-sm-8">₱{{ number_format($item->Price, 2) }}</dd>
+
+                                    <dt class="col-sm-4">Category</dt>
+                                    <dd class="col-sm-8">{{ $item->classification->ClassificationName ?? 'N/A' }}</dd>
+
+                                    <dt class="col-sm-4">Unit</dt>
+                                    <dd class="col-sm-8">{{ $item->unit->UnitName ?? 'N/A' }}</dd>
+
+                                    <dt class="col-sm-4">Stock</dt>
+                                    <dd class="col-sm-8">{{ $item->StocksAvailable }}</dd>
+
+                                    <dt class="col-sm-4">Status</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge bg-{{ $item->StocksAvailable > 0 ? 'success' : 'danger' }}">
+                                            {{ $item->StocksAvailable > 0 ? 'In Stock' : 'Out of Stock' }}
+                                        </span>
+                                    </dd>
+
+                                    <dt class="col-sm-4">Available</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge bg-{{ $item->IsAvailable ? 'success' : 'danger' }}">
+                                            {{ $item->IsAvailable ? 'Yes' : 'No' }}
+                                        </span>
+                                    </dd>
+
+                                    <dt class="col-sm-4">Type</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge bg-{{ $item->IsValueMeal ? 'info' : 'secondary' }}">
+                                            {{ $item->IsValueMeal ? 'Value Meal' : 'Regular Item' }}
+                                        </span>
+                                    </dd>
+                                </dl>
                             </div>
-                        @endif
-                    </div>
-                    
-                    <!-- Details Column -->
-                    <div class="col-md-8">
-                        <div class="mb-3">
-                            <label class="fw-bold">Item Name</label>
-                            <p class="mb-2">{{ $item->ItemName }}</p>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="fw-bold">Category</label>
-                            <p class="mb-2">{{ $item->classification->ClassificationName ?? 'N/A' }}</p>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="fw-bold">Description</label>
-                            <p class="mb-2">{{ $item->Description ?: 'No description available' }}</p>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold">Price</label>
-                                <p class="mb-2">₱{{ number_format($item->Price, 2) }}</p>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold">Stock Available</label>
-                                <p class="mb-2">
-                                    <span class="badge bg-{{ $item->StocksAvailable > 0 ? 'success' : 'danger' }}">
-                                        {{ $item->StocksAvailable }} units
-                                    </span>
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="fw-bold">Status</label>
-                            <p class="mb-2">
-                                <span class="badge bg-{{ $item->StocksAvailable > 0 ? 'success' : 'danger' }}">
-                                    {{ $item->StocksAvailable > 0 ? 'In Stock' : 'Out of Stock' }}
-                                </span>
-                            </p>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">Image</h6>
+                                @if($item->image_path)
+                                    <img src="{{ asset('storage/' . $item->image_path) }}" 
+                                         alt="{{ $item->ItemName }}"
+                                         class="img-fluid rounded">
+                                @else
+                                    <div class="text-center text-muted py-5">
+                                        <i class="fas fa-image fa-3x mb-3"></i>
+                                        <p>No image available</p>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">Description</h6>
+                                <p class="mb-0">{{ $item->Description ?: 'No description available' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    @if($item->IsValueMeal)
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Value Meal Items</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Item</th>
+                                                    <th>Quantity</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($item->valueMealItems as $valueMealItem)
+                                                    <tr>
+                                                        <td>{{ $valueMealItem->menuItem->ItemName }}</td>
+                                                        <td>{{ $valueMealItem->quantity }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" 
-                        class="btn btn-primary" 
-                        data-bs-dismiss="modal"
-                        data-bs-toggle="modal" 
-                        data-bs-target="#editMenuItemModal{{ $item->MenuItemID }}">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
             </div>
         </div>
     </div>

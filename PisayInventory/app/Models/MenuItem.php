@@ -13,18 +13,20 @@ class MenuItem extends Model
         'ItemName',
         'Description',
         'Price',
-        'ClassificationId',
+        'ClassificationID',
         'UnitOfMeasureID',
         'StocksAvailable',
         'IsAvailable',
         'IsDeleted',
-        'image_path'
+        'image_path',
+        'IsValueMeal'
     ];
     
     protected $casts = [
         'Price' => 'decimal:2',
         'IsAvailable' => 'boolean',
         'IsDeleted' => 'boolean',
+        'IsValueMeal' => 'boolean',
         'StocksAvailable' => 'integer'
     ];
     
@@ -77,19 +79,19 @@ class MenuItem extends Model
     }
     
     /**
-     * Accessor for category attribute to map to ClassificationId column
+     * Accessor for category attribute to map to ClassificationID column
      */
     public function getCategoryAttribute()
     {
-        return $this->ClassificationId;
+        return $this->ClassificationID;
     }
     
     /**
-     * Mutator for category attribute to map to ClassificationId column
+     * Mutator for category attribute to map to ClassificationID column
      */
     public function setCategoryAttribute($value)
     {
-        $this->attributes['ClassificationId'] = $value;
+        $this->attributes['ClassificationID'] = $value;
     }
     
     /**
@@ -111,13 +113,12 @@ class MenuItem extends Model
     
     public function classification()
     {
-        return $this->belongsTo(Classification::class, 'ClassificationId', 'ClassificationId');
+        return $this->belongsTo(Classification::class, 'ClassificationID', 'ClassificationId');
     }
     
-    public function unitOfMeasure()
+    public function unit()
     {
-        return $this->belongsTo(UnitOfMeasure::class, 'UnitOfMeasureID', 'UnitOfMeasureID')
-                    ->withDefault(['UnitName' => 'N/A']);
+        return $this->belongsTo(UnitOfMeasure::class, 'UnitOfMeasureID', 'UnitOfMeasureId');
     }
     
     /**
@@ -160,5 +161,17 @@ class MenuItem extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class, 'menu_item_id', 'MenuItemID');
+    }
+
+    public function valueMealItems()
+    {
+        return $this->hasMany(ValueMealItem::class, 'value_meal_id', 'MenuItemID');
+    }
+
+    public function menuItems()
+    {
+        return $this->belongsToMany(MenuItem::class, 'value_meal_items', 'value_meal_id', 'menu_item_id')
+                    ->withPivot('quantity')
+                    ->withTimestamps();
     }
 } 

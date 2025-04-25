@@ -372,6 +372,18 @@ Route::middleware('auth')->group(function () {
             
 
         });
+
+        // Menu Items Routes
+        Route::prefix('inventory/pos/menu-items')->group(function () {
+            Route::get('/', [POSController::class, 'menuItems'])->name('menu-items.index');
+            Route::post('/', [POSController::class, 'storeMenuItem'])->name('menu-items.store');
+            Route::get('/create', [POSController::class, 'createMenuItem'])->name('menu-items.create');
+            Route::get('/{id}/edit', [POSController::class, 'editMenuItem'])->name('menu-items.edit');
+            Route::put('/{id}', [POSController::class, 'updateMenuItem'])->name('menu-items.update');
+            Route::delete('/{id}', [POSController::class, 'deleteMenuItem'])->name('menu-items.destroy');
+            Route::post('/{id}/restore', [POSController::class, 'restoreMenuItem'])->name('menu-items.restore');
+            Route::post('/{id}/toggle-availability', [POSController::class, 'toggleMenuItemAvailability'])->name('menu-items.toggle-availability');
+        });
     }); // Close inventory prefix
 }); // Close auth middleware
 

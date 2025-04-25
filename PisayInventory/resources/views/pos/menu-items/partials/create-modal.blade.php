@@ -1,109 +1,60 @@
+<!-- Regular Menu Item Modal -->
 <div class="modal fade" id="createMenuItemModal" tabindex="-1" aria-labelledby="createMenuItemModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="createMenuItemModalLabel">Create Menu Item</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="createMenuItemModalLabel">Add New Menu Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="createMenuItemForm" action="{{ route('pos.menu-items.store') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="IsValueMeal" value="0">
                 <div class="modal-body">
-                    @csrf
-                    
-                    <div class="alert alert-danger" id="errorAlert" style="display: none;"></div>
-
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="ItemName" class="form-label">Item Name *</label>
-                                <input type="text" 
-                                       class="form-control @error('ItemName') is-invalid @enderror" 
-                                       id="ItemName" 
-                                       name="ItemName" 
-                                       value="{{ old('ItemName') }}" 
-                                       required>
-                                @error('ItemName')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="Description" class="form-label">Description</label>
-                                <textarea class="form-control @error('Description') is-invalid @enderror" 
-                                          id="Description" 
-                                          name="Description" 
-                                          rows="3">{{ old('Description') }}</textarea>
-                                @error('Description')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="ClassificationId" class="form-label">Category *</label>
-                                <select class="form-select @error('ClassificationId') is-invalid @enderror" 
-                                        id="ClassificationId" 
-                                        name="ClassificationId" 
-                                        required>
-                                    <option value="">Select Category</option>
-                                    @foreach($categories as $category)
-                                        @if(!$category->IsDeleted)
-                                            <option value="{{ $category->ClassificationId }}" 
-                                                    {{ old('ClassificationId') == $category->ClassificationId ? 'selected' : '' }}>
-                                                {{ $category->ClassificationName }}
-                                                @if($category->ParentClassificationId)
-                                                    ({{ $categories->firstWhere('ClassificationId', $category->ParentClassificationId)->ClassificationName ?? 'N/A' }})
-                                                @endif
-                                            </option>
-                                        @endif
-                                    @endforeach
-                                </select>
-                                @error('ClassificationId')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            <label for="itemName" class="form-label">Item Name</label>
+                            <input type="text" class="form-control" id="itemName" name="ItemName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="price" class="form-label">Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input type="number" class="form-control" id="price" name="Price" step="0.01" required>
                             </div>
                         </div>
-
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="Price" class="form-label">Price (₱) *</label>
-                                <input type="number" 
-                                       class="form-control @error('Price') is-invalid @enderror" 
-                                       id="Price" 
-                                       name="Price" 
-                                       value="{{ old('Price') }}" 
-                                       step="0.01" 
-                                       min="0" 
-                                       required>
-                                @error('Price')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="StocksAvailable" class="form-label">Initial Stock *</label>
-                                <input type="number" 
-                                       class="form-control @error('StocksAvailable') is-invalid @enderror" 
-                                       id="StocksAvailable" 
-                                       name="StocksAvailable" 
-                                       value="{{ old('StocksAvailable') }}" 
-                                       min="0" 
-                                       required>
-                                @error('StocksAvailable')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="image" class="form-label">Item Image</label>
-                                <input type="file" 
-                                       class="form-control @error('image') is-invalid @enderror" 
-                                       id="image" 
-                                       name="image" 
-                                       accept="image/*">
-                                <div class="form-text">Maximum file size: 2MB. Supported formats: JPEG, PNG, JPG, GIF</div>
-                                @error('image')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="ClassificationID" required>
+                                <option value="">Select Category</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->ClassificationId }}">
+                                        {{ $category->ClassificationName }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="unitOfMeasure" class="form-label">Unit of Measure</label>
+                            <select class="form-select" id="unitOfMeasure" name="UnitOfMeasureID" required>
+                                <option value="">Select Unit</option>
+                                @foreach($units as $unit)
+                                    <option value="{{ $unit->UnitOfMeasureId }}">
+                                        {{ $unit->UnitName }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="Description" rows="3"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="image" class="form-label">Image</label>
+                            <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="stocksAvailable" class="form-label">Initial Stock</label>
+                            <input type="number" class="form-control" id="stocksAvailable" name="StocksAvailable" value="0" min="0" required>
                         </div>
                     </div>
                 </div>
@@ -114,4 +65,47 @@
             </form>
         </div>
     </div>
-</div> 
+</div>
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    // Toggle value meal items section
+    $('#isValueMeal').on('change', function() {
+        $('.value-meal-items').toggleClass('d-block d-none');
+    });
+
+    // Add value meal item
+    $('#addValueMealItem').on('click', function() {
+        const row = `
+            <tr>
+                <td>
+                    <select class="form-select form-select-sm" name="value_meal_items[0][menu_item_id]" required>
+                        <option value="">Select Item</option>
+                        @foreach($menuItems as $item)
+                            <option value="{{ $item->MenuItemID }}">{{ $item->ItemName }}</option>
+                        @endforeach
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" name="value_meal_items[0][quantity]" value="1" min="1" required>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger remove-value-meal-item">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        const rowCount = $('#valueMealItemsList tr').length;
+        const newRow = row.replace(/\[0\]/g, `[${rowCount}]`);
+        $('#valueMealItemsList').append(newRow);
+    });
+
+    // Remove value meal item
+    $(document).on('click', '.remove-value-meal-item', function() {
+        $(this).closest('tr').remove();
+    });
+});
+</script>
+@endpush 

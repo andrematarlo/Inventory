@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Carbon\Carbon;
+use App\Models\UnitOfMeasure;
 
 class POSController extends Controller
 {
@@ -172,8 +173,21 @@ class POSController extends Controller
 
                 if (empty($item['isCustom']) || !$item['isCustom']) {
                     $menuItem = MenuItem::findOrFail((int)$item['id']);
+                    
+                    // Check stock for the menu item itself
                     if (!$menuItem->hasSufficientStock($item['quantity'])) {
                         throw new \Exception("Insufficient stock for item: {$menuItem->ItemName}");
+                    }
+
+                    // If it's a value meal, also check stock of included items
+                    if ($menuItem->IsValueMeal) {
+                        $valueMealItems = $menuItem->valueMealItems()->with('menuItem')->get();
+                        foreach ($valueMealItems as $valueMealItem) {
+                            $requiredQuantity = $valueMealItem->quantity * $item['quantity'];
+                            if ($valueMealItem->menuItem->StocksAvailable < $requiredQuantity) {
+                                throw new \Exception("Insufficient stock for included item: {$valueMealItem->menuItem->ItemName} in value meal {$menuItem->ItemName}");
+                            }
+                        }
                     }
                 }
             }
@@ -239,17 +253,36 @@ class POSController extends Controller
                             'IsCustomItem' => false
                         ]);
                         
-                        // Update stock in menu_items table
+                        // Deduct stock from the menu item itself
                         $menuItem->StocksAvailable -= $item['quantity'];
                         $menuItem->save();
                         
-                        Log::debug('Stock updated:', [
+                        Log::debug('Stock updated for menu item:', [
                             'item_id' => $menuItem->MenuItemID,
                             'item_name' => $menuItem->ItemName,
                             'previous_stock' => $menuItem->StocksAvailable + $item['quantity'],
                             'quantity_ordered' => $item['quantity'],
                             'new_stock' => $menuItem->StocksAvailable
                         ]);
+
+                        // If it's a value meal, also deduct stock from included items
+                        if ($menuItem->IsValueMeal) {
+                            $valueMealItems = $menuItem->valueMealItems()->with('menuItem')->get();
+                            foreach ($valueMealItems as $valueMealItem) {
+                                $deductQuantity = $valueMealItem->quantity * $item['quantity'];
+                                $includedItem = $valueMealItem->menuItem;
+                                $includedItem->StocksAvailable -= $deductQuantity;
+                                $includedItem->save();
+                                
+                                Log::debug('Updated included item stock:', [
+                                    'value_meal' => $menuItem->ItemName,
+                                    'included_item' => $includedItem->ItemName,
+                                    'previous_stock' => $includedItem->StocksAvailable + $deductQuantity,
+                                    'deducted_quantity' => $deductQuantity,
+                                    'new_stock' => $includedItem->StocksAvailable
+                                ]);
+                            }
+                        }
                     }
                 }
             }
@@ -294,12 +327,28 @@ class POSController extends Controller
                 'updated_stocks' => collect($cartItems)->map(function($item) {
                     if (!empty($item['id']) && empty($item['isCustom'])) {
                         $menuItem = MenuItem::find($item['id']);
-                        return [
-                            'item_name' => $menuItem->ItemName,
-                            'new_stock' => $menuItem->StocksAvailable
+                        $stockUpdates = [
+                            [
+                                'item_name' => $menuItem->ItemName,
+                                'new_stock' => $menuItem->StocksAvailable
+                            ]
                         ];
+
+                        if ($menuItem->IsValueMeal) {
+                            // Add stock updates for included items
+                            $includedItemsStocks = $menuItem->valueMealItems()->with('menuItem')->get()->map(function($valueMealItem) {
+                                return [
+                                    'item_name' => $valueMealItem->menuItem->ItemName,
+                                    'new_stock' => $valueMealItem->menuItem->StocksAvailable
+                                ];
+                            })->toArray();
+                            
+                            return array_merge($stockUpdates, $includedItemsStocks);
+                        }
+
+                        return $stockUpdates;
                     }
-                })->filter()
+                })->filter()->flatten(1)
             ]);
             
         } catch (Exception $e) {
@@ -1066,14 +1115,19 @@ class POSController extends Controller
     {
         try {
             // Get all menu items including deleted ones
-            $menuItems = MenuItem::with(['classification', 'unitOfMeasure'])
+            $menuItems = MenuItem::with(['classification', 'unit'])
                 ->orderBy('ItemName')
                 ->get();
 
             // Get all classifications for the filter dropdown
             $categories = Classification::orderBy('ClassificationName')->get();
 
-            return view('pos.menu-items.index', compact('menuItems', 'categories'));
+            // Get all units for the dropdown
+            $units = UnitOfMeasure::where('IsDeleted', 0)
+                ->orderBy('UnitName')
+                ->get();
+
+            return view('pos.menu-items.index', compact('menuItems', 'categories', 'units'));
 
         } catch (\Exception $e) {
             Log::error('Error loading menu items: ' . $e->getMessage());
@@ -1105,10 +1159,15 @@ class POSController extends Controller
             $validator = Validator::make($request->all(), [
                 'ItemName' => 'required|string|max:255',
                 'Price' => 'required|numeric|min:0',
-                'ClassificationId' => 'required|exists:classification,ClassificationId',
+                'ClassificationID' => 'required|exists:classification,ClassificationId',
                 'Description' => 'nullable|string',
-                'StocksAvailable' => 'required|integer|min:0',
+                'StocksAvailable' => 'required_if:IsValueMeal,0|integer|min:0',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'UnitOfMeasureID' => 'required|exists:unitofmeasure,UnitOfMeasureId',
+                'IsValueMeal' => 'boolean',
+                'value_meal_items' => 'required_if:IsValueMeal,1|array|min:1',
+                'value_meal_items.*.menu_item_id' => 'required_with:value_meal_items|exists:menu_items,MenuItemID',
+                'value_meal_items.*.quantity' => 'required_with:value_meal_items|integer|min:1'
             ]);
 
             if ($validator->fails()) {
@@ -1125,9 +1184,28 @@ class POSController extends Controller
             $menuItem = new MenuItem();
             $menuItem->ItemName = $request->ItemName;
             $menuItem->Price = $request->Price;
-            $menuItem->ClassificationId = $request->ClassificationId;
+            $menuItem->ClassificationID = $request->ClassificationID;
             $menuItem->Description = $request->Description;
-            $menuItem->StocksAvailable = $request->StocksAvailable;
+            $menuItem->UnitOfMeasureID = $request->UnitOfMeasureID;
+            $menuItem->IsValueMeal = $request->IsValueMeal ?? false;
+            
+            // Handle stocks for value meals vs regular items
+            if (!$menuItem->IsValueMeal) {
+                $menuItem->StocksAvailable = $request->StocksAvailable;
+            } else {
+                // For value meals, calculate the maximum possible meals based on included items
+                $maxMeals = PHP_INT_MAX;
+                foreach ($request->value_meal_items as $item) {
+                    $includedItem = MenuItem::findOrFail($item['menu_item_id']);
+                    if ($includedItem->IsValueMeal) {
+                        throw new \Exception("Cannot include a value meal inside another value meal: {$includedItem->ItemName}");
+                    }
+                    $possibleMeals = floor($includedItem->StocksAvailable / $item['quantity']);
+                    $maxMeals = min($maxMeals, $possibleMeals);
+                }
+                $menuItem->StocksAvailable = $maxMeals;
+            }
+            
             $menuItem->IsAvailable = true;
             $menuItem->IsDeleted = false;
             
@@ -1139,6 +1217,21 @@ class POSController extends Controller
             }
 
             $menuItem->save();
+
+            // If this is a value meal, create the value meal items
+            if ($menuItem->IsValueMeal && $request->has('value_meal_items')) {
+                foreach ($request->value_meal_items as $item) {
+                    $includedItem = MenuItem::findOrFail($item['menu_item_id']);
+                    if ($includedItem->IsValueMeal) {
+                        throw new \Exception("Cannot include a value meal inside another value meal: {$includedItem->ItemName}");
+                    }
+                    
+                    $menuItem->valueMealItems()->create([
+                        'menu_item_id' => $item['menu_item_id'],
+                        'quantity' => $item['quantity']
+                    ]);
+                }
+            }
 
             DB::commit();
             
@@ -1187,7 +1280,6 @@ class POSController extends Controller
     public function updateMenuItem(Request $request, $id)
     {
         try {
-            // Log the incoming request data
             Log::info('Update menu item request:', [
                 'id' => $id,
                 'request_data' => $request->all()
@@ -1198,8 +1290,13 @@ class POSController extends Controller
                 'Price' => 'required|numeric|min:0',
                 'ClassificationID' => 'required|exists:classification,ClassificationId',
                 'Description' => 'nullable|string',
-                'StocksAvailable' => 'required|integer|min:0',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+                'StocksAvailable' => 'required_if:IsValueMeal,0|integer|min:0',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'UnitOfMeasureID' => 'required|exists:unitofmeasure,UnitOfMeasureId',
+                'IsValueMeal' => 'boolean',
+                'value_meal_items' => 'required_if:IsValueMeal,1|array',
+                'value_meal_items.*.menu_item_id' => 'required_if:IsValueMeal,1|exists:menu_items,MenuItemID',
+                'value_meal_items.*.quantity' => 'required_if:IsValueMeal,1|integer|min:1'
             ]);
 
             if ($validator->fails()) {
@@ -1220,7 +1317,6 @@ class POSController extends Controller
                 ->where('IsDeleted', false)
                 ->firstOrFail();
 
-            // Log the current state
             Log::info('Current menu item state:', [
                 'id' => $id,
                 'current_data' => $menuItem->toArray()
@@ -1230,7 +1326,25 @@ class POSController extends Controller
             $menuItem->Price = $request->Price;
             $menuItem->ClassificationID = $request->ClassificationID;
             $menuItem->Description = $request->Description;
-            $menuItem->StocksAvailable = $request->StocksAvailable;
+            $menuItem->UnitOfMeasureID = $request->UnitOfMeasureID;
+            $menuItem->IsValueMeal = $request->IsValueMeal ?? false;
+            
+            // Handle stocks for value meals vs regular items
+            if (!$menuItem->IsValueMeal) {
+                $menuItem->StocksAvailable = $request->StocksAvailable;
+            } else {
+                // For value meals, calculate the maximum possible meals based on included items
+                $maxMeals = PHP_INT_MAX;
+                foreach ($request->value_meal_items as $item) {
+                    $includedItem = MenuItem::findOrFail($item['menu_item_id']);
+                    if ($includedItem->IsValueMeal) {
+                        throw new \Exception("Cannot include a value meal inside another value meal: {$includedItem->ItemName}");
+                    }
+                    $possibleMeals = floor($includedItem->StocksAvailable / $item['quantity']);
+                    $maxMeals = min($maxMeals, $possibleMeals);
+                }
+                $menuItem->StocksAvailable = $maxMeals;
+            }
             
             // Handle image upload
             if ($request->hasFile('image')) {
@@ -1245,9 +1359,27 @@ class POSController extends Controller
 
             $menuItem->save();
 
+            // If this is a value meal, update the value meal items
+            if ($menuItem->IsValueMeal && $request->has('value_meal_items')) {
+                // Delete existing value meal items
+                $menuItem->valueMealItems()->delete();
+                
+                // Create new value meal items
+                foreach ($request->value_meal_items as $item) {
+                    $includedItem = MenuItem::findOrFail($item['menu_item_id']);
+                    if ($includedItem->IsValueMeal) {
+                        throw new \Exception("Cannot include a value meal inside another value meal: {$includedItem->ItemName}");
+                    }
+                    
+                    $menuItem->valueMealItems()->create([
+                        'menu_item_id' => $item['menu_item_id'],
+                        'quantity' => $item['quantity']
+                    ]);
+                }
+            }
+
             DB::commit();
             
-            // Log the final state
             Log::info('Menu item updated successfully:', [
                 'id' => $id,
                 'updated_data' => $menuItem->toArray()
@@ -1259,25 +1391,12 @@ class POSController extends Controller
                 'data' => $menuItem
             ]);
 
-        } catch (ModelNotFoundException $e) {
+        } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Menu item not found:', [
+            Log::error('Error updating menu item:', [
                 'id' => $id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Menu item not found'
-            ], 404);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to update menu item:', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all()
             ]);
             
             return response()->json([

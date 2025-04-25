@@ -262,17 +262,23 @@ class OrderController extends Controller
 
     public function getOrderItems($id)
     {
-        $order = Order::findOrFail($id);
-        $items = $order->items()->with('item')->get()->map(function ($orderItem) {
-            return [
-                'ItemName' => $orderItem->item->ItemName,
-                'Quantity' => $orderItem->Quantity,
-                'UnitPrice' => $orderItem->UnitPrice,
-                'Subtotal' => $orderItem->Subtotal
-            ];
-        });
+        try {
+            $order = Order::findOrFail($id);
+            $items = $order->items()->with('menuItem')->get()->map(function ($orderItem) {
+                return [
+                    'ItemName' => $orderItem->menuItem ? $orderItem->menuItem->ItemName : $orderItem->ItemName,
+                    'Quantity' => $orderItem->Quantity,
+                    'UnitPrice' => $orderItem->UnitPrice,
+                    'Subtotal' => $orderItem->Quantity * $orderItem->UnitPrice
+                ];
+            });
 
-        return response()->json(['items' => $items]);
+            return response()->json(['items' => $items]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error loading order items: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function processById($id)
