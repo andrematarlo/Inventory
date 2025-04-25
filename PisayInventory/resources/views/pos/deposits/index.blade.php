@@ -121,6 +121,13 @@
                                         title="View Details">
                                     <i class="bi bi-eye"></i>
                                 </button>
+                                <button type="button" class="btn btn-sm btn-light set-limit" 
+                                        data-student-id="{{ $deposit->student_id }}"
+                                        data-student-name="{{ $deposit->student->first_name ?? 'Unknown' }} {{ $deposit->student->last_name ?? '' }}"
+                                        data-bs-toggle="tooltip" 
+                                        title="Set Balance Limit">
+                                    <i class="bi bi-sliders"></i>
+                                </button>
                             </td>
                         </tr>
                         @empty
@@ -182,6 +189,45 @@
                 <button type="submit" form="quickDepositForm" class="btn btn-primary px-4">
                     Add Deposit
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Set Balance Limit Modal -->
+<div class="modal fade" id="setLimitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">Set Negative Balance Limit</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="student-info mb-4"></p>
+                <form id="setLimitForm">
+                    <div class="mb-3">
+                        <label class="form-label">Negative Balance Limit</label>
+                        <div class="input-group">
+                            <span class="input-group-text">-₱</span>
+                            <input type="number" class="form-control" name="limit" id="limitAmount" min="0" step="100" required>
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                Quick Set
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><button class="dropdown-item quick-limit" type="button" data-amount="500">₱500</button></li>
+                                <li><button class="dropdown-item quick-limit" type="button" data-amount="1000">₱1,000</button></li>
+                                <li><button class="dropdown-item quick-limit" type="button" data-amount="2000">₱2,000</button></li>
+                                <li><button class="dropdown-item quick-limit" type="button" data-amount="5000">₱5,000</button></li>
+                            </ul>
+                        </div>
+                        <div class="form-text">Enter the maximum negative balance allowed for this student (without the negative sign).</div>
+                    </div>
+                    <input type="hidden" name="student_id" id="limitStudentId">
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="setLimitForm" class="btn btn-primary px-4">Save Limit</button>
             </div>
         </div>
     </div>
@@ -324,6 +370,65 @@ $(document).ready(function() {
         $('#startDate, #endDate').val('');
         $('#studentSearch').val('');
         location.reload();
+    });
+
+    // Handle Set Limit button click
+    $('.set-limit').on('click', function() {
+        const studentId = $(this).data('student-id');
+        const studentName = $(this).data('student-name');
+        
+        $('#limitStudentId').val(studentId);
+        $('.student-info').text(`Setting limit for: ${studentName} (${studentId})`);
+        
+        // Get current limit if exists
+        $.get(`{{ url('pos/student-limit') }}/${studentId}`)
+            .done(function(response) {
+                $('#limitAmount').val(response.limit || '');
+            })
+            .fail(function() {
+                $('#limitAmount').val('');
+            });
+        
+        $('#setLimitModal').modal('show');
+    });
+
+    // Handle quick limit buttons
+    $('.quick-limit').on('click', function() {
+        $('#limitAmount').val($(this).data('amount'));
+    });
+
+    // Handle limit form submission
+    $('#setLimitForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const studentId = $('#limitStudentId').val();
+        const limit = $('#limitAmount').val();
+        
+        $.ajax({
+            url: `{{ url('pos/students') }}/${studentId}/limit`,
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                limit: limit
+            },
+            success: function(response) {
+                $('#setLimitModal').modal('hide');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: 'Balance limit has been set successfully',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: xhr.responseJSON?.message || 'Failed to set balance limit'
+                });
+            }
+        });
     });
 });
 </script>

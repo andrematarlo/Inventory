@@ -470,3 +470,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pos/my-orders/{orderId}/items', [App\Http\Controllers\POS\StudentOrderController::class, 'getItems'])->name('pos.student.orders.items');
     Route::post('/pos/my-orders/{orderId}/cancel', [App\Http\Controllers\POS\StudentOrderController::class, 'cancel'])->name('pos.student.orders.cancel');
 });
+
+Route::get('/pos/students/{studentId}/limit', [App\Http\Controllers\POSController::class, 'getStudentLimit'])->name('pos.students.limit.get');
+Route::post('/pos/students/{studentId}/limit', [App\Http\Controllers\POSController::class, 'setStudentLimit'])->name('pos.students.limit.set');

@@ -8,7 +8,7 @@
             <div class="card bg-primary text-white shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center py-3">
                     <div>
-                        <h1 class="fs-2 fw-bold mb-0" style="color:rgb(2, 2, 2) !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">PSHS Kiosk</h1>
+                        <h1 class="fs-2 fw-bold mb-0" style="color:rgb(2, 2, 2) !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">PSHS  Kiosk</h1>
                     </div>
                     <div class="d-flex align-items-center gap-3">
                         <!-- Search Bar -->
@@ -919,15 +919,15 @@ $(document).ready(function() {
     // Check student balance
     $('#checkBalance').click(function() {
         const studentId = $('#student_id').val();
-            if (!studentId) {
-                Swal.fire({
+        if (!studentId) {
+            Swal.fire({
                 icon: 'error',
                 title: 'Student ID Required',
                 text: 'Please enter a student ID to check balance.',
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
             
         // Show loading state
         $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Checking...');
@@ -937,10 +937,11 @@ $(document).ready(function() {
             url: `{{ route('pos.check-student-balance', '') }}/${studentId}`,
             type: 'GET',
             success: function(response) {
-                console.log('Balance check response:', response); // Debug log
+                console.log('Balance check response:', response);
                 if (response.success) {
                     const student = response.student;
                     const balance = parseFloat(response.balance);
+                    const limit = parseFloat(response.limit);
                     const orderTotal = parseFloat($('#total').text());
 
                     // Update student info display
@@ -949,17 +950,32 @@ $(document).ready(function() {
                     $('#orderTotal').text(`₱${orderTotal.toFixed(2)}`);
                     $('#studentInfo').show();
 
-                    // Enable/disable submit button based on balance
-                    if (balance >= orderTotal) {
-                        $('button[type="submit"]').prop('disabled', false);
-                    } else {
-                        $('button[type="submit"]').prop('disabled', true);
-                Swal.fire({
-                            icon: 'warning',
-                    title: 'Insufficient Balance',
-                            text: `Student balance (₱${balance.toFixed(2)}) is less than the order total (₱${orderTotal.toFixed(2)})`,
-                    confirmButtonText: 'OK'
+                    // Check if order would exceed limit
+                    const newBalance = balance - orderTotal;
+                    if (newBalance < -limit) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Balance Limit Exceeded',
+                            html: `This order would exceed the student's negative balance limit.<br><br>
+                                  Current Balance: ₱${balance.toFixed(2)}<br>
+                                  Order Total: ₱${orderTotal.toFixed(2)}<br>
+                                  New Balance: ₱${newBalance.toFixed(2)}<br>
+                                  Maximum Allowed Negative: ₱${limit.toFixed(2)}`,
+                            confirmButtonText: 'OK'
                         });
+                        $('button[type="submit"]').prop('disabled', true);
+                    } else {
+                        // Show informational message about balance
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Balance Information',
+                            html: `Current Balance: ₱${balance.toFixed(2)}<br>
+                                  Order Total: ₱${orderTotal.toFixed(2)}<br>
+                                  New Balance: ₱${newBalance.toFixed(2)}<br>
+                                  Maximum Allowed Negative: ₱${limit.toFixed(2)}`,
+                            confirmButtonText: 'Continue'
+                        });
+                        $('button[type="submit"]').prop('disabled', false);
                     }
                 } else {
                     Swal.fire({
@@ -971,7 +987,7 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Balance check error:', {xhr, status, error}); // Debug log
+                console.error('Balance check error:', {xhr, status, error});
                 let errorMessage = 'Failed to check student balance. Please try again.';
                 
                 if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -1015,7 +1031,7 @@ $(document).ready(function() {
         
         // Validate payment method specific requirements
         if (paymentType === 'deposit') {
-            // Check if balance was verified
+            // Only check if balance was verified
             if ($('#studentInfo').is(':hidden')) {
                 Swal.fire({
                     icon: 'error',

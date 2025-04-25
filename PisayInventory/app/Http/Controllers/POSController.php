@@ -150,15 +150,30 @@ class POSController extends Controller
                 'items' => $cartItems
             ]);
 
-            // If payment method is deposit, check student balance
+            // If payment method is deposit, check student balance and limit
             if ($request->payment_type === 'deposit' && $request->student_id) {
                 $currentBalance = CashDeposit::where('student_id', $request->student_id)
                     ->whereNull('deleted_at')
-                    ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
+                    ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END'));
 
-                if ($currentBalance < $request->total_amount) {
-                    throw new \Exception('Insufficient deposit balance. Current balance: ' . number_format($currentBalance, 2));
+                $newBalance = $currentBalance - $request->total_amount;
+                
+                // Get student's negative balance limit
+                $limit = session()->get("student.{$request->student_id}.limit", 0);
+                
+                // If limit is set and new balance would exceed it, prevent the transaction
+                if ($newBalance < -$limit) {
+                    throw new \Exception("This transaction would exceed the student's negative balance limit. Maximum allowed negative balance is -₱{$limit}. Current balance: ₱{$currentBalance}");
                 }
+
+                // Record the transaction if within limit
+                Log::debug('Processing deposit payment', [
+                    'student_id' => $request->student_id,
+                    'current_balance' => $currentBalance,
+                    'order_amount' => $request->total_amount,
+                    'new_balance' => $newBalance,
+                    'limit' => $limit
+                ]);
             }
             
             // Check stock availability for all items before proceeding
@@ -1563,61 +1578,38 @@ class POSController extends Controller
     public function checkStudentBalance($studentId)
     {
         try {
-            Log::info('Checking balance for student ID: ' . $studentId);
-
-            // Get the latest balance for the student
-            $latestDeposit = DB::table('student_deposits')
+            $student = Student::findOrFail($studentId);
+            
+            // Get current balance
+            $balance = DB::table('student_deposits')
                 ->where('student_id', $studentId)
                 ->whereNull('deleted_at')
-                ->orderBy('TransactionDate', 'desc')
-                ->first();
+                ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
 
-            Log::info('Latest deposit record:', ['deposit' => $latestDeposit]);
-
-            if (!$latestDeposit) {
-                Log::warning('No deposit records found for student ID: ' . $studentId);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No deposit records found for this student.'
-                ]);
-            }
-
-            // Get student information
-            $student = DB::table('students')
+            // Get student's limit
+            $limit = DB::table('student_deposits')
                 ->where('student_id', $studentId)
-                ->first();
+                ->value('limit') ?? 0;
 
-            Log::info('Student record:', ['student' => $student]);
-
-            if (!$student) {
-                Log::warning('Student not found with ID: ' . $studentId);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Student not found.'
-                ]);
-            }
-
-            $response = [
+            return response()->json([
                 'success' => true,
                 'student' => [
                     'id' => $student->student_id,
-                    'name' => $student->first_name . ' ' . $student->last_name
+                    'name' => $student->FirstName . ' ' . $student->LastName
                 ],
-                'balance' => $latestDeposit->BalanceAfter
-            ];
-
-            Log::info('Balance check response:', $response);
-            return response()->json($response);
-
-        } catch (\Exception $e) {
-            Log::error('Error checking student balance: ' . $e->getMessage(), [
-                'student_id' => $studentId,
-                'trace' => $e->getTraceAsString()
+                'balance' => $balance,
+                'limit' => $limit,
+                'available_credit' => $balance + $limit
             ]);
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while checking the student balance.',
-                'debug_message' => $e->getMessage()
+                'message' => 'Student not found'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error checking student balance'
             ], 500);
         }
     }
@@ -1983,6 +1975,88 @@ class POSController extends Controller
         } catch (\Exception $e) {
             Log::error('Error generating deposits report: ' . $e->getMessage());
             return back()->with('error', 'Failed to generate deposits report. Please try again.');
+        }
+    }
+
+    public function setStudentLimit(Request $request, $studentId)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'limit' => 'required|numeric|min:0'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid limit value',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $student = Student::findOrFail($studentId);
+            $limit = -abs($request->input('limit')); // Convert to negative value
+            
+            // Update or insert the limit in student_deposits
+            $existingLimit = DB::table('student_deposits')
+                ->where('student_id', $studentId)
+                ->first();
+
+            if ($existingLimit) {
+                DB::table('student_deposits')
+                    ->where('student_id', $studentId)
+                    ->update(['limit' => $limit]);
+            } else {
+                DB::table('student_deposits')
+                    ->insert([
+                        'student_id' => $studentId,
+                        'limit' => $limit
+                    ]);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Student limit updated successfully',
+                'limit' => abs($limit) // Return positive value for display
+            ]);
+        } catch (ModelNotFoundException $e) {
+            Log::error('Student not found: ' . $studentId);
+            return response()->json([
+                'success' => false,
+                'message' => 'Student not found'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Student limit update error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating student limit: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getStudentLimit($studentId)
+    {
+        try {
+            $student = Student::findOrFail($studentId);
+            
+            // Get limit from student_deposits table
+            $limit = DB::table('student_deposits')
+                ->where('student_id', $studentId)
+                ->value('limit') ?? 0;
+            
+            return response()->json([
+                'success' => true,
+                'limit' => abs($limit) // Return positive value for display
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student not found'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving student limit'
+            ], 500);
         }
     }
 } 
