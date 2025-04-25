@@ -347,6 +347,47 @@
         </div>
     </div>
 </div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Process Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="paymentForm">
+                    <div class="mb-3">
+                        <label class="form-label">Order Total</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input type="text" class="form-control" id="orderTotal" readonly>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="amountPaid" class="form-label">Amount Paid</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input type="number" class="form-control" id="amountPaid" required min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Change</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input type="text" class="form-control" id="changeAmount" readonly>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmPayment">Confirm Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endforeach
 @endsection
 
@@ -479,23 +520,83 @@ $(document).ready(function() {
         const orderId = $(this).data('order-id');
         const newStatus = $(this).val();
         const selectElement = $(this);
-
-        // Store original value in case of error
         const originalValue = selectElement.find('option:selected').attr('selected', true).val();
 
-        // Show loading state
+        // If status is being changed to paid, show payment modal
+        if (newStatus === 'paid') {
+            // Get the order total from the row
+            const orderTotal = parseFloat($(this).closest('tr').find('td:eq(4)').text().replace('₱', '').replace(',', ''));
+            
+            // Set the order total in the payment modal
+            $('#orderTotal').val(orderTotal.toFixed(2));
+            $('#amountPaid').val('').focus();
+            $('#changeAmount').val('');
+            
+            // Show payment modal
+            const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+            paymentModal.show();
+
+            // Calculate change when amount is entered
+            $('#amountPaid').on('input', function() {
+                const amountPaid = parseFloat($(this).val()) || 0;
+                const change = amountPaid - orderTotal;
+                $('#changeAmount').val(change >= 0 ? change.toFixed(2) : '0.00');
+            });
+
+            // Handle payment confirmation
+            $('#confirmPayment').off('click').on('click', function() {
+                const amountPaid = parseFloat($('#amountPaid').val());
+                
+                if (!amountPaid || amountPaid < orderTotal) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Amount',
+                        text: 'Please enter an amount equal to or greater than the order total.'
+                    });
+                    return;
+                }
+
+                // Process the status change with payment
+                updateOrderStatus(orderId, newStatus, selectElement, originalValue, {
+                    amount_paid: amountPaid,
+                    change: parseFloat($('#changeAmount').val())
+                });
+                
+                // Hide payment modal
+                paymentModal.hide();
+            });
+
+            // If modal is dismissed, revert the status
+            $('#paymentModal').on('hidden.bs.modal', function() {
+                selectElement.val(originalValue);
+            });
+        } else {
+            // For other statuses, proceed normally
+            updateOrderStatus(orderId, newStatus, selectElement, originalValue);
+        }
+    });
+
+    // Function to update order status
+    function updateOrderStatus(orderId, newStatus, selectElement, originalValue, paymentDetails = null) {
         selectElement.prop('disabled', true);
         
+        const data = {
+            _token: '{{ csrf_token() }}',
+            status: newStatus
+        };
+
+        // Add payment details if provided
+        if (paymentDetails) {
+            data.amount_paid = paymentDetails.amount_paid;
+            data.change = paymentDetails.change;
+        }
+
         $.ajax({
             url: `/inventory/pos/orders/${orderId}/status`,
             type: 'PUT',
-            data: {
-                _token: '{{ csrf_token() }}',
-                status: newStatus
-            },
+            data: data,
             success: function(response) {
                 if (response.success) {
-                    // Show success message
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
@@ -504,7 +605,6 @@ $(document).ready(function() {
                         timer: 1500
                     });
                 } else {
-                    // Revert to original value on failure
                     selectElement.val(originalValue);
                     Swal.fire({
                         icon: 'error',
@@ -514,7 +614,6 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
-                // Revert to original value on error
                 selectElement.val(originalValue);
                 Swal.fire({
                     icon: 'error',
@@ -523,11 +622,10 @@ $(document).ready(function() {
                 });
             },
             complete: function() {
-                // Re-enable select
                 selectElement.prop('disabled', false);
             }
         });
-    });
+    }
 
     // Delete order functionality
     $('.delete-order').on('click', function() {
