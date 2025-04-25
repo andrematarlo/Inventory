@@ -468,4 +468,5 @@ Route::get('/pos/reports/deposits', [POSController::class, 'depositsReport'])->n
 Route::middleware(['auth'])->group(function () {
     Route::get('/pos/my-orders', [App\Http\Controllers\POS\StudentOrderController::class, 'index'])->name('pos.student.orders');
     Route::get('/pos/my-orders/{orderId}/items', [App\Http\Controllers\POS\StudentOrderController::class, 'getItems'])->name('pos.student.orders.items');
+    Route::post('/pos/my-orders/{orderId}/cancel', [App\Http\Controllers\POS\StudentOrderController::class, 'cancel'])->name('pos.student.orders.cancel');
 });

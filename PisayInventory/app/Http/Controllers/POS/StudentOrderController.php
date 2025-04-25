@@ -95,4 +95,46 @@ class StudentOrderController extends Controller
             ], 500);
         }
     }
+
+    public function cancel($orderId)
+    {
+        try {
+            $student = DB::table('students')
+                ->where('UserAccountID', Auth::id())
+                ->first();
+
+            if (!$student) {
+                return response()->json(['error' => 'Student not found'], 404);
+            }
+
+            $order = DB::table('pos_orders')
+                ->where('OrderID', $orderId)
+                ->where('student_id', $student->student_id)
+                ->where('Status', 'pending')
+                ->first();
+
+            if (!$order) {
+                return response()->json([
+                    'error' => 'Order not found or cannot be cancelled',
+                    'message' => 'Only pending orders can be cancelled.'
+                ], 404);
+            }
+
+            // Update order status to cancelled
+            DB::table('pos_orders')
+                ->where('OrderID', $orderId)
+                ->update(['Status' => 'cancelled']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order cancelled successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'An error occurred while cancelling the order',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 } 

@@ -378,18 +378,56 @@ $(document).ready(function() {
         responsive: true
     });
 
+    // Set initial status filter to pending
+    $('#statusFilter').val('pending');
+
+    // Status filter change handler
+    $('#statusFilter').on('change', function() {
+        const status = $(this).val().toLowerCase();
+        
+        table.rows().every(function() {
+            const rowNode = this.node();
+            const statusSelect = $(rowNode).find('.status-select');
+            const rowStatus = statusSelect.val().toLowerCase();
+            
+            if (status === '' || status === 'all') {
+                $(rowNode).show();
+            } else {
+                $(rowNode).toggle(rowStatus === status);
+            }
+        });
+
+        // Show/hide empty message
+        const visibleRows = table.rows(':visible').length;
+        if (visibleRows === 0) {
+            if ($('.no-orders-message').length === 0) {
+                $('.table-responsive').append(`
+                    <div class="text-center py-4 no-orders-message">
+                        <div class="text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            No ${status} orders found
+                        </div>
+                    </div>
+                `);
+            }
+        } else {
+            $('.no-orders-message').remove();
+        }
+    });
+
+    // Trigger initial filter
+    $('#statusFilter').trigger('change');
+
     // Custom date range filter function
     $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
         const dateRange = $('#dateFilter').val();
         if (!dateRange) {
-            return true; // Show all rows if no date range is selected
+            return true;
         }
 
         const [start, end] = dateRange.split(' - ');
         const startDate = moment(start, 'MM/DD/YYYY').startOf('day');
         const endDate = moment(end, 'MM/DD/YYYY').endOf('day');
-        
-        // Data[1] is the date column (index 1)
         const rowDate = moment(data[1], 'MMM DD, YYYY h:mma');
 
         return rowDate.isBetween(startDate, endDate, 'day', '[]');
@@ -408,25 +446,16 @@ $(document).ready(function() {
     // Date filter events
     $('#dateFilter').on('apply.daterangepicker', function(ev, picker) {
         $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
-        table.draw(); // Redraw table with filter
+        table.draw();
+        // Reapply status filter
+        $('#statusFilter').trigger('change');
     });
 
     $('#dateFilter').on('cancel.daterangepicker', function(ev, picker) {
         $(this).val('');
-        table.draw(); // Redraw table without filter
-    });
-
-    // Status filter
-    $('#statusFilter').on('change', function() {
-        const status = $(this).val().toLowerCase();
-        
-        table.rows().every(function() {
-            const rowNode = this.node();
-            const statusSelect = $(rowNode).find('.status-select');
-            const rowStatus = statusSelect.val();
-            
-            this.nodes().to$().toggle(!status || rowStatus === status);
-        });
+        table.draw();
+        // Reapply status filter
+        $('#statusFilter').trigger('change');
     });
 
     // View items modal
