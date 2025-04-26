@@ -590,7 +590,7 @@ $(document).ready(function() {
             data.amount_paid = paymentDetails.amount_paid;
             data.change = paymentDetails.change;
         }
-
+        
         $.ajax({
             url: `/inventory/pos/orders/${orderId}/status`,
             type: 'PUT',

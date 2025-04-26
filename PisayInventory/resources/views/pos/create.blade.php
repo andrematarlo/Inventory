@@ -952,7 +952,7 @@ $(document).ready(function() {
 
                     // Check if order would exceed limit
                     const newBalance = balance - orderTotal;
-                    if (newBalance < -limit) {
+                    if (newBalance < limit) {
                         Swal.fire({
                             icon: 'error',
                             title: 'Balance Limit Exceeded',
@@ -960,7 +960,7 @@ $(document).ready(function() {
                                   Current Balance: ₱${balance.toFixed(2)}<br>
                                   Order Total: ₱${orderTotal.toFixed(2)}<br>
                                   New Balance: ₱${newBalance.toFixed(2)}<br>
-                                  Maximum Allowed Negative: ₱${limit.toFixed(2)}`,
+                                  Maximum Allowed Negative: ₱${Math.abs(limit).toFixed(2)}`,
                             confirmButtonText: 'OK'
                         });
                         $('button[type="submit"]').prop('disabled', true);
@@ -972,7 +972,7 @@ $(document).ready(function() {
                             html: `Current Balance: ₱${balance.toFixed(2)}<br>
                                   Order Total: ₱${orderTotal.toFixed(2)}<br>
                                   New Balance: ₱${newBalance.toFixed(2)}<br>
-                                  Maximum Allowed Negative: ₱${limit.toFixed(2)}`,
+                                  Maximum Allowed Negative: ₱${Math.abs(limit).toFixed(2)}`,
                             confirmButtonText: 'Continue'
                         });
                         $('button[type="submit"]').prop('disabled', false);

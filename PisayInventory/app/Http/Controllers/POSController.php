@@ -154,16 +154,18 @@ class POSController extends Controller
             if ($request->payment_type === 'deposit' && $request->student_id) {
                 $currentBalance = CashDeposit::where('student_id', $request->student_id)
                     ->whereNull('deleted_at')
-                    ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END'));
+                    ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount WHEN TransactionType = "PURCHASE" THEN -Amount ELSE 0 END'));
 
                 $newBalance = $currentBalance - $request->total_amount;
                 
-                // Get student's negative balance limit
-                $limit = session()->get("student.{$request->student_id}.limit", 0);
+                // Get student's negative balance limit from database
+                $limit = DB::table('student_deposits')
+                    ->where('student_id', $request->student_id)
+                    ->value('limit') ?? 0;
                 
-                // If limit is set and new balance would exceed it, prevent the transaction
-                if ($newBalance < -$limit) {
-                    throw new \Exception("This transaction would exceed the student's negative balance limit. Maximum allowed negative balance is -₱{$limit}. Current balance: ₱{$currentBalance}");
+                // Since limit is stored as negative in database, compare directly
+                if ($newBalance < $limit) {
+                    throw new \Exception("This transaction would exceed the student's negative balance limit. Maximum allowed negative balance is ₱{$limit}. Current balance: ₱{$currentBalance}");
                 }
 
                 // Record the transaction if within limit
@@ -309,7 +311,7 @@ class POSController extends Controller
                     'student_id' => $request->student_id,
                     'TransactionDate' => now(),
                     'ReferenceNumber' => $orderNumber,
-                    'TransactionType' => 'WITHDRAWAL',
+                    'TransactionType' => 'PURCHASE',
                     'Amount' => $request->total_amount,
                     'BalanceBefore' => $currentBalance,
                     'BalanceAfter' => $currentBalance - $request->total_amount,
@@ -344,8 +346,8 @@ class POSController extends Controller
                         $menuItem = MenuItem::find($item['id']);
                         $stockUpdates = [
                             [
-                                'item_name' => $menuItem->ItemName,
-                                'new_stock' => $menuItem->StocksAvailable
+                            'item_name' => $menuItem->ItemName,
+                            'new_stock' => $menuItem->StocksAvailable
                             ]
                         ];
 
@@ -483,7 +485,7 @@ class POSController extends Controller
     {
         $balance = CashDeposit::where('student_id', $studentId)
             ->whereNull('deleted_at')
-            ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END'));
+            ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount WHEN TransactionType = "PURCHASE" THEN -Amount ELSE 0 END'));
 
         return response()->json(['balance' => $balance]);
     }
@@ -596,7 +598,7 @@ class POSController extends Controller
             // Get current balance
             $currentBalance = CashDeposit::where('student_id', $validated['student_id'])
                 ->whereNull('deleted_at')
-                ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount WHEN TransactionType = "WITHDRAWAL" THEN -Amount ELSE 0 END'));
+                ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount WHEN TransactionType = "PURCHASE" THEN -Amount ELSE 0 END'));
                 
             // Create deposit record
             $deposit = CashDeposit::create([
@@ -790,7 +792,7 @@ class POSController extends Controller
             if ($validated['payment_type'] === 'deposit' && $order->student_id) {
                 $currentBalance = CashDeposit::where('student_id', $order->student_id)
                     ->whereNull('deleted_at')
-                    ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END'));
+                    ->sum(DB::raw('CASE WHEN TransactionType = "DEPOSIT" THEN Amount WHEN TransactionType = "PURCHASE" THEN -Amount ELSE 0 END'));
 
                 if ($currentBalance < $order->TotalAmount) {
                     throw new \Exception('Insufficient student deposit balance');
@@ -810,7 +812,7 @@ class POSController extends Controller
                     'student_id' => $order->student_id,
                     'TransactionDate' => now(),
                     'ReferenceNumber' => "PAY-{$order->OrderNumber}",
-                    'TransactionType' => 'WITHDRAWAL',
+                    'TransactionType' => 'PURCHASE',
                     'Amount' => $order->TotalAmount,
                     'BalanceBefore' => $currentBalance,
                     'BalanceAfter' => $currentBalance - $order->TotalAmount,
@@ -1206,7 +1208,7 @@ class POSController extends Controller
             
             // Handle stocks for value meals vs regular items
             if (!$menuItem->IsValueMeal) {
-                $menuItem->StocksAvailable = $request->StocksAvailable;
+            $menuItem->StocksAvailable = $request->StocksAvailable;
             } else {
                 // For value meals, calculate the maximum possible meals based on included items
                 $maxMeals = PHP_INT_MAX;
@@ -1346,7 +1348,7 @@ class POSController extends Controller
             
             // Handle stocks for value meals vs regular items
             if (!$menuItem->IsValueMeal) {
-                $menuItem->StocksAvailable = $request->StocksAvailable;
+            $menuItem->StocksAvailable = $request->StocksAvailable;
             } else {
                 // For value meals, calculate the maximum possible meals based on included items
                 $maxMeals = PHP_INT_MAX;
@@ -1579,19 +1581,19 @@ class POSController extends Controller
     {
         try {
             $student = Student::findOrFail($studentId);
-            
+
             // Get current balance
             $balance = DB::table('student_deposits')
                 ->where('student_id', $studentId)
                 ->whereNull('deleted_at')
-                ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 ELSE -1 END'));
+                ->sum(DB::raw('Amount * CASE WHEN TransactionType = "DEPOSIT" THEN 1 WHEN TransactionType = "PURCHASE" THEN -1 ELSE 0 END'));
 
             // Get student's limit
             $limit = DB::table('student_deposits')
                 ->where('student_id', $studentId)
                 ->value('limit') ?? 0;
 
-            return response()->json([
+                return response()->json([
                 'success' => true,
                 'student' => [
                     'id' => $student->student_id,
@@ -1908,7 +1910,8 @@ class POSController extends Controller
                 ->select(
                     DB::raw('COUNT(*) as total_transactions'),
                     DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE 0 END) as total_deposits'),
-                    DB::raw('SUM(CASE WHEN TransactionType = "WITHDRAWAL" THEN Amount ELSE 0 END) as total_withdrawals')
+                    DB::raw('SUM(CASE WHEN TransactionType = "PURCHASE" THEN Amount ELSE 0 END) as total_purchases'),
+                    DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount WHEN TransactionType = "PURCHASE" THEN -Amount ELSE 0 END) as current_balance')
                 )
                 ->first();
 
@@ -1931,7 +1934,7 @@ class POSController extends Controller
                 ->select(
                     DB::raw('DATE(TransactionDate) as date'),
                     DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE 0 END) as deposits'),
-                    DB::raw('SUM(CASE WHEN TransactionType = "WITHDRAWAL" THEN Amount ELSE 0 END) as withdrawals')
+                    DB::raw('SUM(CASE WHEN TransactionType = "PURCHASE" THEN Amount ELSE 0 END) as withdrawals')
                 )
                 ->groupBy('date')
                 ->orderBy('date')
@@ -1953,7 +1956,7 @@ class POSController extends Controller
                     'student_deposits.student_id',
                     DB::raw('CONCAT(students.first_name, " ", students.last_name) as StudentName'),
                     DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE 0 END) as total_deposits'),
-                    DB::raw('SUM(CASE WHEN TransactionType = "WITHDRAWAL" THEN Amount ELSE 0 END) as total_withdrawals'),
+                    DB::raw('SUM(CASE WHEN TransactionType = "PURCHASE" THEN Amount ELSE 0 END) as total_withdrawals'),
                     DB::raw('SUM(CASE WHEN TransactionType = "DEPOSIT" THEN Amount ELSE -Amount END) as current_balance')
                 )
                 ->groupBy('student_deposits.student_id', 'students.first_name', 'students.last_name')

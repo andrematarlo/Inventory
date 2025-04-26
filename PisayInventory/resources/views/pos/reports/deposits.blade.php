@@ -45,7 +45,7 @@
                     <select name="transaction_type" id="transaction_type" class="form-select">
                         <option value="">All Types</option>
                         <option value="DEPOSIT" {{ request()->transaction_type == 'DEPOSIT' ? 'selected' : '' }}>Deposits</option>
-                        <option value="WITHDRAWAL" {{ request()->transaction_type == 'WITHDRAWAL' ? 'selected' : '' }}>Withdrawals</option>
+                        <option value="PURCHASE" {{ request()->transaction_type == 'PURCHASE' ? 'selected' : '' }}>Purchases</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -87,9 +87,9 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="small text-white-50">Total Withdrawals</div>
+                            <div class="small text-white-50">Total Purchases</div>
                             @php
-                                $totalWithdrawals = $deposits->where('TransactionType', 'WITHDRAWAL')->sum('Amount');
+                                $totalWithdrawals = $deposits->where('TransactionType', 'PURCHASE')->sum('Amount');
                             @endphp
                             <div class="fs-4 fw-bold">₱{{ number_format($totalWithdrawals, 2) }}</div>
                         </div>
@@ -113,7 +113,7 @@
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <span class="small text-white">Deposits - Withdrawals</span>
+                    <span class="small text-white">Deposits - Purchases</span>
                 </div>
             </div>
         </div>
@@ -141,7 +141,7 @@
             <div class="card">
                 <div class="card-header">
                     <i class="fas fa-chart-bar me-1"></i>
-                    Deposit & Withdrawal Trends
+                    Deposit & Purchase Trends
                 </div>
                 <div class="card-body">
                     <canvas id="depositChart" height="225"></canvas>
@@ -175,7 +175,7 @@
                             <th>Student ID</th>
                             <th>Student Name</th>
                             <th>Total Deposits</th>
-                            <th>Total Withdrawals</th>
+                            <th>Total Purchases</th>
                             <th>Current Balance</th>
                         </tr>
                     </thead>
@@ -234,8 +234,8 @@
                             <td>
                                 @if($deposit->TransactionType == 'DEPOSIT')
                                     <span class="badge bg-success">Deposit</span>
-                                @elseif($deposit->TransactionType == 'WITHDRAWAL')
-                                    <span class="badge bg-warning">Withdrawal</span>
+                                @elseif($deposit->TransactionType == 'PURCHASE')
+                                    <span class="badge bg-warning">Purchase</span>
                                 @else
                                     <span class="badge bg-secondary">{{ $deposit->TransactionType }}</span>
                                 @endif
@@ -243,7 +243,7 @@
                             <td class="text-end">
                                 @if($deposit->TransactionType == 'DEPOSIT')
                                     <span class="text-success">+₱{{ number_format($deposit->Amount, 2) }}</span>
-                                @elseif($deposit->TransactionType == 'WITHDRAWAL')
+                                @elseif($deposit->TransactionType == 'PURCHASE')
                                     <span class="text-danger">-₱{{ number_format($deposit->Amount, 2) }}</span>
                                 @else
                                     ₱{{ number_format($deposit->Amount, 2) }}
@@ -290,7 +290,7 @@
     }
     
     document.addEventListener('DOMContentLoaded', function() {
-        // Deposits and Withdrawals Chart
+        // Deposits and Purchases Chart
         const chartLabels = JSON.parse('{{ json_encode($chartLabels ?? []) }}'.replace(/&quot;/g, '"'));
         const depositData = JSON.parse('{{ json_encode($depositData ?? []) }}'.replace(/&quot;/g, '"'));
         const withdrawalData = JSON.parse('{{ json_encode($withdrawalData ?? []) }}'.replace(/&quot;/g, '"'));
@@ -309,7 +309,7 @@
                         borderWidth: 1
                     },
                     {
-                        label: 'Withdrawals (₱)',
+                        label: 'Purchases (₱)',
                         data: withdrawalData,
                         backgroundColor: 'rgba(255, 193, 7, 0.5)',
                         borderColor: 'rgba(255, 193, 7, 1)',

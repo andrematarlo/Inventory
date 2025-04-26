@@ -2,7 +2,11 @@
 
 @section('content')
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Sales Report</h1>
+    <h1 class="mt-4">Sales Report
+        <button onclick="printReport()" class="btn btn-primary float-end">
+            <i class="fas fa-print me-1"></i> Print Report
+        </button>
+    </h1>
     <ol class="breadcrumb mb-4">
         <li class="breadcrumb-item"><a href="{{ route('pos.reports.deposits') }}">Deposit Reports</a></li>
         <li class="breadcrumb-item active">Sales</li>
@@ -10,35 +14,90 @@
 
     <!-- Filters -->
     <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header bg-primary text-white">
             <i class="fas fa-filter me-1"></i>
             Filter Options
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('pos.reports.sales') }}" class="row g-3">
+                <!-- Date Range Filter -->
                 <div class="col-md-4">
-                    <label for="date_range" class="form-label">Date Range</label>
-                    <select name="date_range" id="date_range" class="form-select" onchange="toggleCustomDateInputs()">
-                        <option value="today" {{ $dateRange == 'today' ? 'selected' : '' }}>Today</option>
-                        <option value="yesterday" {{ $dateRange == 'yesterday' ? 'selected' : '' }}>Yesterday</option>
-                        <option value="last7days" {{ $dateRange == 'last7days' ? 'selected' : '' }}>Last 7 Days</option>
-                        <option value="last30days" {{ $dateRange == 'last30days' ? 'selected' : '' }}>Last 30 Days</option>
-                        <option value="custom" {{ $dateRange == 'custom' ? 'selected' : '' }}>Custom Range</option>
-                    </select>
+                    <div class="form-group">
+                        <label for="date_range" class="form-label fw-bold">
+                            <i class="fas fa-calendar me-1"></i> Date Range
+                        </label>
+                        <select name="date_range" id="date_range" class="form-select" onchange="toggleCustomDateInputs()">
+                            <option value="today" {{ $dateRange == 'today' ? 'selected' : '' }}>Today</option>
+                            <option value="yesterday" {{ $dateRange == 'yesterday' ? 'selected' : '' }}>Yesterday</option>
+                            <option value="last7days" {{ $dateRange == 'last7days' ? 'selected' : '' }}>Last 7 Days</option>
+                            <option value="last30days" {{ $dateRange == 'last30days' ? 'selected' : '' }}>Last 30 Days</option>
+                            <option value="custom" {{ $dateRange == 'custom' ? 'selected' : '' }}>Custom Range</option>
+                        </select>
+                    </div>
                 </div>
+
+                <!-- Custom Date Range -->
                 <div id="custom_date_container" class="col-md-8" style="display: {{ $dateRange == 'custom' ? 'flex' : 'none' }}">
                     <div class="col-md-6">
-                        <label for="date_from" class="form-label">From Date</label>
-                        <input type="date" class="form-control" id="date_from" name="date_from" value="{{ $startDate ? $startDate->format('Y-m-d') : '' }}">
+                        <div class="form-group">
+                            <label for="date_from" class="form-label fw-bold">
+                                <i class="fas fa-calendar-alt me-1"></i> From Date
+                            </label>
+                            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ $startDate ? $startDate->format('Y-m-d') : '' }}">
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <label for="date_to" class="form-label">To Date</label>
-                        <input type="date" class="form-control" id="date_to" name="date_to" value="{{ $endDate ? $endDate->format('Y-m-d') : '' }}">
+                        <div class="form-group">
+                            <label for="date_to" class="form-label fw-bold">
+                                <i class="fas fa-calendar-alt me-1"></i> To Date
+                            </label>
+                            <input type="date" class="form-control" id="date_to" name="date_to" value="{{ $endDate ? $endDate->format('Y-m-d') : '' }}">
+                        </div>
                     </div>
                 </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">Apply Filters</button>
-                    <a href="{{ route('pos.reports.sales') }}" class="btn btn-secondary">Reset</a>
+
+                <!-- Filter by Item -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="item_id" class="form-label fw-bold">
+                            <i class="fas fa-box me-1"></i> Filter by Item
+                        </label>
+                        <select name="item_id" id="item_id" class="form-select select2">
+                            <option value="">All Items</option>
+                            @foreach($items ?? [] as $item)
+                                <option value="{{ $item->id }}" {{ request()->item_id == $item->id ? 'selected' : '' }}>
+                                    {{ $item->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Filter by Cashier -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="cashier_id" class="form-label fw-bold">
+                            <i class="fas fa-user me-1"></i> Filter by Cashier
+                        </label>
+                        <select name="cashier_id" id="cashier_id" class="form-select select2">
+                            <option value="">All Cashiers</option>
+                            @foreach($cashiers ?? [] as $cashier)
+                                <option value="{{ $cashier->id }}" {{ request()->cashier_id == $cashier->id ? 'selected' : '' }}>
+                                    {{ $cashier->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i> Apply Filters
+                    </button>
+                    <a href="{{ route('pos.reports.sales') }}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-1"></i> Reset
+                    </a>
                 </div>
             </form>
         </div>
@@ -47,14 +106,14 @@
     <!-- Summary Cards -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-primary text-white mb-4">
+            <div class="card bg-primary text-white mb-4 h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="small text-white-50">Total Sales</div>
-                            <div class="fs-4 fw-bold">₱{{ number_format($totals->total_sales ?? 0, 2) }}</div>
+                            <div class="display-6 fw-bold">₱{{ number_format($totals->total_sales ?? 0, 2) }}</div>
                         </div>
-                        <i class="fas fa-cash-register fa-2x text-white-50"></i>
+                        <i class="fas fa-cash-register fa-3x text-white-50"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
@@ -63,14 +122,14 @@
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-warning text-white mb-4">
+            <div class="card bg-warning text-white mb-4 h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="small text-white-50">Total Orders</div>
-                            <div class="fs-4 fw-bold">{{ $totals->total_orders ?? 0 }}</div>
+                            <div class="display-6 fw-bold">{{ $totals->total_orders ?? 0 }}</div>
                         </div>
-                        <i class="fas fa-shopping-cart fa-2x text-white-50"></i>
+                        <i class="fas fa-shopping-cart fa-3x text-white-50"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
@@ -79,14 +138,14 @@
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-success text-white mb-4">
+            <div class="card bg-success text-white mb-4 h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="small text-white-50">Average Order Value</div>
-                            <div class="fs-4 fw-bold">₱{{ number_format(($totals->total_orders ?? 0) > 0 ? ($totals->total_sales ?? 0) / ($totals->total_orders ?? 1) : 0, 2) }}</div>
+                            <div class="display-6 fw-bold">₱{{ number_format(($totals->total_orders ?? 0) > 0 ? ($totals->total_sales ?? 0) / ($totals->total_orders ?? 1) : 0, 2) }}</div>
                         </div>
-                        <i class="fas fa-chart-line fa-2x text-white-50"></i>
+                        <i class="fas fa-chart-line fa-3x text-white-50"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
@@ -95,14 +154,14 @@
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-info text-white mb-4">
+            <div class="card bg-info text-white mb-4 h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="small text-white-50">Total Items Sold</div>
-                            <div class="fs-4 fw-bold">{{ $totals->total_items ?? 0 }}</div>
+                            <div class="display-6 fw-bold">{{ $totals->total_items ?? 0 }}</div>
                         </div>
-                        <i class="fas fa-box fa-2x text-white-50"></i>
+                        <i class="fas fa-box fa-3x text-white-50"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
@@ -359,8 +418,39 @@
 </div>
 @endsection
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<style>
+    .select2-container--bootstrap-5 .select2-selection {
+        min-height: 38px;
+    }
+    .card {
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    .card-header {
+        font-weight: 600;
+    }
+    .form-label {
+        margin-bottom: 0.5rem;
+    }
+    .display-6 {
+        font-size: 1.8rem;
+    }
+</style>
+@endpush
+
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
+    $(document).ready(function() {
+        // Initialize Select2
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%'
+        });
+    });
+
     function showSalesData(type) {
         // Hide all sales data
         document.querySelectorAll('.sales-data').forEach(el => {
@@ -408,5 +498,74 @@
             });
         });
     });
+
+    function printReport() {
+        // Create the print window content
+        let printContent = `
+            <html>
+            <head>
+                <title>Sales Report</title>
+                <style>
+                    body { font-family: Arial, sans-serif; }
+                    .text-end { text-align: right; }
+                    .text-center { text-align: center; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; }
+                    th { background-color: #f4f4f4; }
+                    .report-header { text-align: center; margin-bottom: 20px; }
+                    .summary-box { 
+                        border: 1px solid #ddd; 
+                        padding: 10px; 
+                        margin-bottom: 20px;
+                        display: inline-block;
+                        margin-right: 10px;
+                    }
+                    @media print {
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="report-header">
+                    <h2>Sales Report</h2>
+                    <p>Period: ${document.getElementById('date_range').options[document.getElementById('date_range').selectedIndex].text}</p>
+                    <p>Generated on: ${new Date().toLocaleString()}</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <div class="summary-box">
+                        <h4>Total Sales</h4>
+                        <p>₱${document.querySelector('.bg-primary .fw-bold').textContent}</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Total Orders</h4>
+                        <p>${document.querySelector('.bg-warning .fw-bold').textContent}</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Average Order Value</h4>
+                        <p>₱${document.querySelector('.bg-success .fw-bold').textContent}</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Total Items Sold</h4>
+                        <p>${document.querySelector('.bg-info .fw-bold').textContent}</p>
+                    </div>
+                </div>
+
+                <h3>Top Selling Items</h3>
+                ${document.querySelector('.table-responsive:last-of-type table').outerHTML}
+            </body>
+            </html>
+        `;
+
+        // Open print window
+        let printWindow = window.open('', '_blank');
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+
+        // Add event listener for when content is loaded
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    }
 </script>
 @endsection 

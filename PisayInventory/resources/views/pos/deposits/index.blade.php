@@ -57,7 +57,7 @@
                         <select class="form-select" id="typeFilter">
                             <option value="">All Types</option>
                             <option value="DEPOSIT">Deposits</option>
-                            <option value="WITHDRAWAL">Withdrawals</option>
+                            <option value="PURCHASE">Purchases</option>
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -109,7 +109,7 @@
                                 @if($deposit->TransactionType == 'DEPOSIT')
                                     <span class="badge bg-success-subtle text-success">Deposit</span>
                                 @else
-                                    <span class="badge bg-warning-subtle text-warning">Withdrawal</span>
+                                    <span class="badge bg-warning-subtle text-warning">Purchase</span>
                                 @endif
                             </td>
                             <td class="text-end">₱{{ number_format($deposit->Amount, 2) }}</td>
