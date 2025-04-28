@@ -22,6 +22,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Carbon\Carbon;
 use App\Models\UnitOfMeasure;
+use App\Models\User;
 
 class POSController extends Controller
 {
@@ -1705,6 +1706,7 @@ class POSController extends Controller
         $dateRange = $request->get('date_range', 'last7days');
         $startDate = null;
         $endDate = null;
+        $itemId = $request->get('item_id');
 
         switch ($dateRange) {
             case 'today':
@@ -1729,12 +1731,42 @@ class POSController extends Controller
                 break;
         }
 
-        // Get daily sales data
-        $dailySales = DB::table('pos_order_items')
+        // Get all items for the dropdown
+        $items = DB::table('menu_items')
+            ->where('IsDeleted', 0)
+            ->select(
+                'MenuItemID as id',
+                'ItemName as name'
+            )
+            ->orderBy('ItemName')
+            ->get();
+
+        // Get all cashiers for the dropdown
+        $cashiers = DB::table('useraccount')
+            ->join('employee', 'employee.UserAccountID', '=', 'useraccount.UserAccountID')
+            ->where('useraccount.role', 'cashier')
+            ->where('useraccount.IsDeleted', false)
+            ->select(
+                'useraccount.UserAccountID as id',
+                DB::raw("CONCAT(employee.FirstName, ' ', employee.LastName) as name")
+            )
+            ->orderBy('employee.FirstName')
+            ->orderBy('employee.LastName')
+            ->get();
+
+        // Base query for sales data
+        $salesQuery = DB::table('pos_order_items')
             ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
             ->whereBetween('pos_orders.created_at', [$startDate, $endDate])
-            ->where('pos_orders.Status', 'COMPLETED')
-            ->select(
+            ->where('pos_orders.Status', 'COMPLETED');
+
+        if ($itemId) {
+            $salesQuery->where('pos_order_items.ItemID', $itemId);
+        }
+
+        // For daily sales
+        $dailySales = clone $salesQuery;
+        $dailySales = $dailySales->select(
                 DB::raw('DATE(pos_orders.created_at) as date'),
                 DB::raw('SUM(pos_order_items.Subtotal) as total_sales')
             )
@@ -1742,12 +1774,9 @@ class POSController extends Controller
             ->orderBy('date')
             ->get();
 
-        // Get weekly sales data
-        $weeklySales = DB::table('pos_order_items')
-            ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
-            ->whereBetween('pos_orders.created_at', [$startDate, $endDate])
-            ->where('pos_orders.Status', 'COMPLETED')
-            ->select(
+        // For weekly sales
+        $weeklySales = clone $salesQuery;
+        $weeklySales = $weeklySales->select(
                 DB::raw('YEARWEEK(pos_orders.created_at) as week'),
                 DB::raw('SUM(pos_order_items.Subtotal) as total_sales')
             )
@@ -1755,12 +1784,9 @@ class POSController extends Controller
             ->orderBy('week')
             ->get();
 
-        // Get monthly sales data
-        $monthlySales = DB::table('pos_order_items')
-            ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
-            ->whereBetween('pos_orders.created_at', [$startDate, $endDate])
-            ->where('pos_orders.Status', 'COMPLETED')
-            ->select(
+        // For monthly sales
+        $monthlySales = clone $salesQuery;
+        $monthlySales = $monthlySales->select(
                 DB::raw('DATE_FORMAT(pos_orders.created_at, "%Y-%m") as month'),
                 DB::raw('SUM(pos_order_items.Subtotal) as total_sales')
             )
@@ -1768,40 +1794,57 @@ class POSController extends Controller
             ->orderBy('month')
             ->get();
 
-        // Format the data for the chart
+        // For yearly sales
+        $yearlySales = clone $salesQuery;
+        $yearlySales = $yearlySales->select(
+                DB::raw('YEAR(pos_orders.created_at) as year'),
+                DB::raw('SUM(pos_order_items.Subtotal) as total_sales')
+            )
+            ->groupBy('year')
+            ->orderBy('year')
+            ->get();
+
         $chartData = [
             'daily' => [
-                'labels' => $dailySales->pluck('date'),
-                'data' => $dailySales->pluck('total_sales')
+                'labels' => $dailySales->pluck('date')->toArray(),
+                'data' => $dailySales->pluck('total_sales')->toArray()
             ],
             'weekly' => [
-                'labels' => $weeklySales->pluck('week'),
-                'data' => $weeklySales->pluck('total_sales')
+                'labels' => $weeklySales->pluck('week')->toArray(),
+                'data' => $weeklySales->pluck('total_sales')->toArray()
             ],
             'monthly' => [
-                'labels' => $monthlySales->pluck('month'),
-                'data' => $monthlySales->pluck('total_sales')
+                'labels' => $monthlySales->pluck('month')->toArray(),
+                'data' => $monthlySales->pluck('total_sales')->toArray()
+            ],
+            'yearly' => [
+                'labels' => $yearlySales->pluck('year')->toArray(),
+                'data' => $yearlySales->pluck('total_sales')->toArray()
             ]
         ];
 
-        // Rest of your existing code...
-        $totals = DB::table('pos_order_items')
-            ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
-            ->whereBetween('pos_orders.created_at', [$startDate, $endDate])
-            ->where('pos_orders.Status', 'COMPLETED')
-            ->select(
+        // Calculate totals
+        $totalsQuery = clone $salesQuery;
+        $totals = $totalsQuery->select(
                 DB::raw('COUNT(DISTINCT pos_orders.OrderID) as total_orders'),
                 DB::raw('SUM(pos_order_items.Quantity) as total_items'),
                 DB::raw('SUM(pos_order_items.Subtotal) as total_sales')
             )
             ->first();
 
-        $topItems = DB::table('pos_order_items')
+        // Get top selling items
+        $topItemsQuery = DB::table('pos_order_items')
             ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
             ->join('menu_items', 'pos_order_items.ItemID', '=', 'menu_items.MenuItemID')
             ->whereBetween('pos_orders.created_at', [$startDate, $endDate])
-            ->where('pos_orders.Status', 'COMPLETED')
-            ->select(
+            ->where('pos_orders.Status', 'COMPLETED');
+            
+        // Apply item filter if provided
+        if ($itemId) {
+            $topItemsQuery->where('pos_order_items.ItemID', $itemId);
+        }
+        
+        $topItems = $topItemsQuery->select(
                 'menu_items.ItemName',
                 'menu_items.image_path',
                 DB::raw('SUM(pos_order_items.Quantity) as total_quantity'),
@@ -1812,17 +1855,30 @@ class POSController extends Controller
             ->limit(5)
             ->get();
 
-        $paymentMethods = DB::table('pos_orders')
+        // Get payment methods
+        $paymentMethodsQuery = DB::table('pos_orders')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->where('Status', 'COMPLETED')
-            ->select(
+            ->where('Status', 'COMPLETED');
+            
+        // Apply item filter if provided
+        if ($itemId) {
+            $paymentMethodsQuery->whereExists(function ($query) use ($itemId) {
+                $query->select(DB::raw(1))
+                    ->from('pos_order_items')
+                    ->whereRaw('pos_order_items.OrderID = pos_orders.OrderID')
+                    ->where('pos_order_items.ItemID', $itemId);
+            });
+        }
+        
+        $paymentMethods = $paymentMethodsQuery->select(
                 'PaymentMethod',
                 DB::raw('SUM(TotalAmount) as total_amount')
             )
             ->groupBy('PaymentMethod')
             ->get();
 
-        $sales = DB::table('pos_order_items')
+        // Get sales data
+        $salesQuery = DB::table('pos_order_items')
             ->join('pos_orders', 'pos_order_items.OrderID', '=', 'pos_orders.OrderID')
             ->whereBetween('pos_orders.created_at', [$startDate, $endDate])
             ->where('pos_orders.Status', 'COMPLETED')
@@ -1836,8 +1892,14 @@ class POSController extends Controller
                 'pos_orders.student_id',
                 'pos_orders.PaymentMethod',
                 'pos_orders.Status'
-            )
-            ->orderByDesc('pos_orders.created_at')
+            );
+            
+        // Apply item filter if provided
+        if ($itemId) {
+            $salesQuery->where('pos_order_items.ItemID', $itemId);
+        }
+        
+        $sales = $salesQuery->orderByDesc('pos_orders.created_at')
             ->paginate(10);
 
         return view('pos.reports.sales', compact(
@@ -1848,7 +1910,10 @@ class POSController extends Controller
             'topItems',
             'paymentMethods',
             'sales',
-            'chartData'
+            'chartData',
+            'items',
+            'cashiers',
+            'itemId'
         ));
     }
 

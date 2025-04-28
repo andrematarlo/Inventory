@@ -9,8 +9,8 @@
             <form id="createValueMealForm" action="{{ route('pos.menu-items.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="IsValueMeal" value="1">
-                <input type="hidden" name="ClassificationID" value="{{ $categories->first()->ClassificationId }}">
-                <input type="hidden" name="UnitOfMeasureID" value="{{ $units->first()->UnitOfMeasureId }}">
+                <input type="hidden" name="ClassificationID" value="{{ $categories->first() ? $categories->first()->ClassificationId : '' }}">
+                <input type="hidden" name="UnitOfMeasureID" value="{{ $units->first() ? $units->first()->UnitOfMeasureId : '' }}">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-8">
