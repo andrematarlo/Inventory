@@ -2,7 +2,11 @@
 
 @section('content')
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Deposits Report</h1>
+    <h1 class="mt-4">Deposits Report
+        <button onclick="printReport()" class="btn btn-primary float-end no-print">
+            <i class="fas fa-print me-1"></i> Print Report
+        </button>
+    </h1>
     <ol class="breadcrumb mb-4">
         <li class="breadcrumb-item"><a href="{{ route('pos.reports.sales') }}">Sales Reports</a></li>
         <li class="breadcrumb-item active">Deposits</li>
@@ -267,7 +271,7 @@
                     Showing {{ $deposits->firstItem() ?? 0 }} to {{ $deposits->lastItem() ?? 0 }} of {{ $deposits->total() }} entries
                 </div>
                 <div>
-                    {{ $deposits->links() }}
+                    {{ $deposits->appends(request()->except('page'))->links() }}
                 </div>
             </div>
         </div>
@@ -289,11 +293,43 @@
         }
     }
     
+    function printReport() {
+        // Get the main report content
+        var printContents = document.querySelector('.container-fluid.px-4').innerHTML;
+        var printWindow = window.open('', '', 'height=900,width=1200');
+        printWindow.document.write('<html><head><title>Deposits Report</title>');
+        printWindow.document.write('<style>\n');
+        printWindow.document.write('body { font-family: Arial, sans-serif; margin: 0; padding: 0; }\n');
+        printWindow.document.write('.no-print, .breadcrumb, .btn, nav, .pagination, .form-select, form, .card-footer, .card-header.bg-primary, .card-header.bg-warning, .card-header.bg-success, .card-header.bg-danger { display: none !important; }\n');
+        printWindow.document.write('.container-fluid { width: 100%; margin: 0 auto; padding: 0 20px; }\n');
+        printWindow.document.write('h2, h1 { text-align: center; margin-top: 20px; }\n');
+        printWindow.document.write('.row { display: flex; flex-wrap: wrap; margin-bottom: 20px; }\n');
+        printWindow.document.write('.col-xl-3, .col-md-6, .col-lg-8, .col-lg-4, .col-12 { flex: 1 1 0; min-width: 200px; margin: 10px; }\n');
+        printWindow.document.write('.card { box-shadow: 0 0.15rem 1.75rem 0 rgba(58,59,69,0.15); border: 1px solid #ddd; margin-bottom: 20px; }\n');
+        printWindow.document.write('.card-body { padding: 16px; }\n');
+        printWindow.document.write('.bg-primary, .bg-warning, .bg-success, .bg-danger { color: #fff !important; }\n');
+        printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }\n');
+        printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; }\n');
+        printWindow.document.write('th { background-color: #f4f4f4; }\n');
+        printWindow.document.write('.text-end { text-align: right; }\n');
+        printWindow.document.write('.text-center { text-align: center; }\n');
+        printWindow.document.write('.fw-bold { font-weight: bold; }\n');
+        printWindow.document.write('</style>');
+        printWindow.document.write('</head><body>');
+        printWindow.document.write('<h2>Deposits Report</h2>');
+        printWindow.document.write(printContents);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    }
+    
     document.addEventListener('DOMContentLoaded', function() {
         // Deposits and Purchases Chart
-        const chartLabels = JSON.parse('{{ json_encode($chartLabels ?? []) }}'.replace(/&quot;/g, '"'));
-        const depositData = JSON.parse('{{ json_encode($depositData ?? []) }}'.replace(/&quot;/g, '"'));
-        const withdrawalData = JSON.parse('{{ json_encode($withdrawalData ?? []) }}'.replace(/&quot;/g, '"'));
+        const chartLabels = @json($chartDataFormatted['labels'] ?? []);
+        const depositData = @json($chartDataFormatted['deposits'] ?? []);
+        const withdrawalData = @json($chartDataFormatted['withdrawals'] ?? []);
         
         const depositCtx = document.getElementById('depositChart').getContext('2d');
         new Chart(depositCtx, {
@@ -333,8 +369,12 @@
         });
         
         // Transaction Types Chart
-        const typeLabels = JSON.parse('{{ json_encode($typeLabels ?? []) }}'.replace(/&quot;/g, '"'));
-        const typeValues = JSON.parse('{{ json_encode($typeValues ?? []) }}'.replace(/&quot;/g, '"'));
+        const typeLabels = ['Deposits', 'Purchases'];
+        @php
+            $depositSum = $deposits->where('TransactionType', 'DEPOSIT')->sum('Amount') ?? 0;
+            $purchaseSum = $deposits->where('TransactionType', 'PURCHASE')->sum('Amount') ?? 0;
+        @endphp
+        const typeValues = [{{ $depositSum }}, {{ $purchaseSum }}];
         
         const typesCtx = document.getElementById('transactionTypesChart').getContext('2d');
         new Chart(typesCtx, {
@@ -345,13 +385,11 @@
                     data: typeValues,
                     backgroundColor: [
                         'rgba(40, 167, 69, 0.7)',
-                        'rgba(255, 193, 7, 0.7)',
-                        'rgba(108, 117, 125, 0.7)'
+                        'rgba(255, 193, 7, 0.7)'
                     ],
                     borderColor: [
                         'rgba(40, 167, 69, 1)',
-                        'rgba(255, 193, 7, 1)',
-                        'rgba(108, 117, 125, 1)'
+                        'rgba(255, 193, 7, 1)'
                     ],
                     borderWidth: 1
                 }]
