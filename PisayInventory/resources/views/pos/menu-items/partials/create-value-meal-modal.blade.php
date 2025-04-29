@@ -189,6 +189,74 @@ $(document).ready(function() {
         $('#valueMealItemsList').empty();
         $('#addValueMealItem').trigger('click');
     });
+
+    // Handle value meal form submission
+    $('#createValueMealForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const form = $(this);
+        const formData = new FormData(this);
+        
+        // Show loading state
+        Swal.fire({
+            title: 'Creating Value Meal...',
+            html: 'Please wait while we process your request.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        $.ajax({
+            url: form.attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    // Close the modal
+                    $('#createValueMealModal').modal('hide');
+                    
+                    // Show success message
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Value meal has been created successfully.',
+                        showConfirmButton: true,
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#28a745'
+                    }).then((result) => {
+                        // Reload the page to show the new value meal
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: response.message || 'Failed to create value meal.',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            },
+            error: function(xhr) {
+                // Show error message
+                const errors = xhr.responseJSON?.errors || {};
+                let errorMessage = 'An error occurred while creating the value meal.';
+                
+                if (Object.keys(errors).length > 0) {
+                    errorMessage = Object.values(errors).flat().join('\n');
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMessage,
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+        });
+    });
 });
 </script>
 @endpush 

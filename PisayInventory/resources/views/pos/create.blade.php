@@ -243,26 +243,20 @@
                             </div>
                             <hr class="my-3">
                             <div class="mb-3">
-                                <label for="studentId" class="form-label">Student ID *</label>
-                                @if(Auth::check())
-                                    @php
-                                        $user = Auth::user();
-                                        $student = DB::table('students')
-                                            ->where('UserAccountID', $user->UserAccountID)
-                                            ->first();
-                                    @endphp
+                                @php
+                                    $user = Auth::user();
+                                    $student = DB::table('students')
+                                        ->where('UserAccountID', $user->UserAccountID)
+                                        ->first();
+                                @endphp
+                                @if($student)
+                                    <label for="studentId" class="form-label">Student ID *</label>
                                     <input type="text" 
                                            class="form-control" 
                                            id="studentId" 
                                            name="student_id" 
-                                           value="{{ $student ? $student->student_id : '' }}"
-                                           {{ $student ? 'readonly' : '' }}
-                                           required>
-                                @else
-                                    <input type="text" 
-                                           class="form-control" 
-                                           id="studentId" 
-                                           name="student_id" 
+                                           value="{{ $student->student_id }}"
+                                           readonly
                                            required>
                                 @endif
                             </div>
@@ -1016,30 +1010,35 @@ $(document).ready(function() {
         e.preventDefault();
         
         const paymentType = $('input[name="payment_type"]:checked').val();
-        const studentId = $('#studentId').val();
+        const hasStudentField = $('#studentId').length > 0;
         
-        // Validate student ID
-        if (!studentId) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Student ID Required',
-                text: 'Please enter a student ID before placing the order.',
-                confirmButtonText: 'OK'
-            });
-            return;
+        if (hasStudentField) {
+            const studentId = $('#studentId').val();
+            // Validate student ID
+            if (!studentId) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Student ID Required',
+                    text: 'Please enter a student ID before placing the order.',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
         }
         
         // Validate payment method specific requirements
         if (paymentType === 'deposit') {
-            // Only check if balance was verified
-            if ($('#studentInfo').is(':hidden')) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Balance Not Verified',
-                    text: 'Please check the student balance before proceeding.',
-                    confirmButtonText: 'OK'
-                });
-                return;
+            if (hasStudentField) {  // Only check balance for students
+                // Only check if balance was verified
+                if ($('#studentInfo').is(':hidden')) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Balance Not Verified',
+                        text: 'Please check the student balance before proceeding.',
+                        confirmButtonText: 'OK'
+                    });
+                    return;
+                }
             }
         } else if (paymentType === 'cash') {
             const cashAmount = parseFloat($('#cashAmount').val()) || 0;
@@ -1074,9 +1073,15 @@ $(document).ready(function() {
         const total = parseFloat($('#total').text());
         $('#cartData').append(`<input type="hidden" name="total_amount" value="${total}">`);
         
-        // Add payment type and student ID
+        // Add payment type and identification
         $('#cartData').append(`<input type="hidden" name="payment_type" value="${paymentType}">`);
-        $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
+        if (hasStudentField) {
+            const studentId = $('#studentId').val();
+            $('#cartData').append(`<input type="hidden" name="student_id" value="${studentId}">`);
+        } else {
+            const customerName = $('#customerName').val();
+            $('#cartData').append(`<input type="hidden" name="customer_name" value="${encodeURIComponent(customerName)}">`);
+        }
 
         if (paymentType === 'cash') {
             const cashAmount = parseFloat($('#cashAmount').val()) || 0;
