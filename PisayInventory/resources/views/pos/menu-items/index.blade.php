@@ -245,6 +245,88 @@ $(document).ready(function() {
         });
     });
 
+    // Handle edit menu item form submission
+    $('form[id^="editMenuItemForm"]').on('submit', function(e) {
+        e.preventDefault();
+        
+        const form = $(this);
+        const formData = new FormData(this);
+        const isValueMeal = form.find('input[name="IsValueMeal"]').is(':checked');
+        
+        // Validate value meal items if it's a value meal
+        if (isValueMeal) {
+            const valueMealItems = form.find('.value-meal-items tbody tr');
+            if (valueMealItems.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Value meals must contain at least one item.'
+                });
+                return;
+            }
+            
+            // Check if all value meal items are properly filled
+            let isValid = true;
+            valueMealItems.each(function() {
+                const menuItemId = $(this).find('select[name$="[menu_item_id]"]').val();
+                const quantity = $(this).find('input[name$="[quantity]"]').val();
+                
+                if (!menuItemId || !quantity) {
+                    isValid = false;
+                    return false; // break the loop
+                }
+            });
+            
+            if (!isValid) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please fill in all required fields for value meal items (menu item and quantity).'
+                });
+                return;
+            }
+        }
+        
+        $.ajax({
+            url: form.attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                // Close the modal
+                form.closest('.modal').modal('hide');
+                
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: 'Menu item has been updated successfully.',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    // Reload the page to show the updated item
+                    window.location.reload();
+                });
+            },
+            error: function(xhr) {
+                // Show error message
+                const errors = xhr.responseJSON?.errors || {};
+                let errorMessage = 'An error occurred while updating the menu item.';
+                
+                if (Object.keys(errors).length > 0) {
+                    errorMessage = Object.values(errors).flat().join('\n');
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMessage
+                });
+            }
+        });
+    });
+
     // Show/Hide deleted items
     $('#showDeletedToggle').on('change', function() {
         const showDeleted = $(this).prop('checked');
@@ -273,7 +355,22 @@ $(document).ready(function() {
     // Type filter
     $('#typeFilter').on('change', function() {
         const type = $(this).val();
-        table.column(7).search(type).draw();
+        if (type === '') {
+            table.column(7).search('').draw();
+        } else {
+            const searchText = type === '0' ? 'Regular Item' : 'Value Meal';
+            table.column(7).search(searchText).draw();
+        }
+        
+        // Show success message
+        const filterText = type === '' ? 'All Types' : (type === '0' ? 'Regular Items' : 'Value Meals');
+        Swal.fire({
+            icon: 'success',
+            title: 'Filter Applied',
+            text: `Showing ${filterText}`,
+            timer: 1500,
+            showConfirmButton: false
+        });
     });
 
     // Search functionality

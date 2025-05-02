@@ -9,8 +9,8 @@
             <form id="createValueMealForm" action="{{ route('pos.menu-items.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="IsValueMeal" value="1">
-                <input type="hidden" name="ClassificationID" value="{{ $categories->first() ? $categories->first()->ClassificationId : '' }}">
-                <input type="hidden" name="UnitOfMeasureID" value="{{ $units->first() ? $units->first()->UnitOfMeasureId : '' }}">
+                <input type="hidden" name="UnitOfMeasureID" value="{{ $unitOfMeasures->first() ? $unitOfMeasures->first()->UnitOfMeasureId : '' }}">
+                <input type="hidden" name="StocksAvailable" value="0">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-8">
@@ -23,6 +23,15 @@
                                 <span class="input-group-text">₱</span>
                                 <input type="number" class="form-control" id="valueMealPrice" name="Price" min="0" step="0.01" required>
                             </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label for="ClassificationId" class="form-label">Category</label>
+                            <select class="form-select" id="ClassificationId" name="ClassificationId" required>
+                                <option value="">Select Category</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->ClassificationId }}">{{ $category->ClassificationName }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col-12">
                             <label for="valueMealImage" class="form-label">Image</label>
@@ -63,54 +72,52 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Store menu items data
+    // Store menu items data - only regular menu items (explicitly filtered)
     const menuItemsData = [
-        @foreach($menuItems as $item)
-            @if(!$item->IsValueMeal)
-            {
-                id: "{{ $item->MenuItemID }}",
-                name: "{{ $item->ItemName }}",
-                stock: {{ $item->StocksAvailable }}
-            },
-            @endif
+        @foreach($regularMenuItems as $item)
+        {
+            id: "{{ $item->MenuItemID }}",
+            name: "{{ $item->ItemName }}",
+            stock: {{ $item->StocksAvailable }},
+            isValueMeal: {{ $item->IsValueMeal ? 'true' : 'false' }}
+        },
         @endforeach
-    ];
+    ].filter(item => !item.isValueMeal);  // Extra safety check to filter out value meals
 
-    // Function to get available menu items
+    // Function to get available menu items excluding selected ones
     function getAvailableMenuItems() {
         const selectedItems = new Set();
         $('#valueMealItemsList .menu-item-select').each(function() {
             const val = $(this).val();
             if (val) selectedItems.add(val);
         });
-
-        return menuItemsData.filter(item => !selectedItems.has(item.id));
+        return menuItemsData.filter(item => !selectedItems.has(item.id) && !item.isValueMeal);
     }
 
     // Function to create options HTML
     function createOptionsHtml(availableItems) {
         let html = '<option value="">Select Item</option>';
         availableItems.forEach(item => {
-            html += `<option value="${item.id}">
-                ${item.name} (Stock: ${item.stock})
-            </option>`;
+            if (!item.isValueMeal) {  // Extra check to ensure no value meals
+                html += `<option value="${item.id}">${item.name} (Stock: ${item.stock})</option>`;
+            }
         });
         return html;
     }
 
     // Function to create a new row
-    function createNewRow(index) {
+    function createNewRow(rowIndex) {
         const availableItems = getAvailableMenuItems();
         return `
-            <tr data-row="${index}">
+            <tr data-row="${rowIndex}">
                 <td>
-                    <select class="form-select form-select-sm menu-item-select" name="value_meal_items[${index}][menu_item_id]" required>
+                    <select class="form-select form-select-sm menu-item-select" name="value_meal_items[${rowIndex}][menu_item_id]" required>
                         ${createOptionsHtml(availableItems)}
                     </select>
                 </td>
                 <td>
                     <input type="number" class="form-control form-control-sm quantity-input" 
-                           name="value_meal_items[${index}][quantity]" value="1" min="1" required>
+                           name="value_meal_items[${rowIndex}][quantity]" value="1" min="1" required>
                 </td>
                 <td>
                     <button type="button" class="btn btn-sm btn-danger remove-value-meal-item">
@@ -121,139 +128,153 @@ $(document).ready(function() {
         `;
     }
 
-    // Function to reindex rows
-    function reindexRows() {
-        $('#valueMealItemsList tr').each(function(index) {
-            $(this).attr('data-row', index);
-            $(this).find('select, input').each(function() {
-                const name = $(this).attr('name');
-                if (name) {
-                    $(this).attr('name', name.replace(/\[\d+\]/, `[${index}]`));
-                }
-            });
-        });
-    }
-    
-    // Update available items when selection changes
-    $(document).on('change', '.menu-item-select', function() {
-        // Update available items in other dropdowns
+    // Initialize modal with a single row
+    $('#createValueMealModal').on('show.bs.modal', function() {
+        $('#valueMealItemsList').empty();  // Clear any existing rows
+        const newRow = createNewRow(0);    // Create just one row
+        $('#valueMealItemsList').append(newRow);
+    });
+
+    // Add value meal item - ensure only one row is added at a time
+    $('#addValueMealItem').off('click').on('click', function(e) {
+        e.preventDefault();  // Prevent any default behavior
+        const rowCount = $('#valueMealItemsList tr').length;
         const availableItems = getAvailableMenuItems();
-        const optionsHtml = createOptionsHtml(availableItems);
+        
+        if (availableItems.length > 0) {
+            const newRow = createNewRow(rowCount);
+            $('#valueMealItemsList').append(newRow);
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No More Items',
+                text: 'No more items available to add.'
+            });
+        }
+    });
+
+    // Remove value meal item
+    $(document).on('click', '.remove-value-meal-item', function() {
+        $(this).closest('tr').remove();
+        updateRowIndexes();
+        
+        // Update all dropdowns with new available items
+        const availableItems = getAvailableMenuItems();
         $('.menu-item-select').each(function() {
             const currentValue = $(this).val();
             if (!currentValue) {
-                $(this).html(optionsHtml);
+                $(this).html(createOptionsHtml(availableItems));
             }
         });
     });
 
-    // Add value meal item
-    $('#addValueMealItem').off('click').on('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const rowCount = $('#valueMealItemsList tr').length;
-        const newRow = createNewRow(rowCount);
-        $('#valueMealItemsList').append(newRow);
-        return false;
-    });
+    // Update row indexes
+    function updateRowIndexes() {
+        $('#valueMealItemsList tr').each(function(index) {
+            $(this).attr('data-row', index);
+            $(this).find('.menu-item-select').attr('name', `value_meal_items[${index}][menu_item_id]`);
+            $(this).find('.quantity-input').attr('name', `value_meal_items[${index}][quantity]`);
+        });
+    }
 
-    // Remove value meal item
-    $(document).off('click', '.remove-value-meal-item').on('click', '.remove-value-meal-item', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if ($('#valueMealItemsList tr').length > 1) {
-            $(this).closest('tr').remove();
-            reindexRows();
-            
-            // Update all dropdowns with available items
-            const availableItems = getAvailableMenuItems();
-            const optionsHtml = createOptionsHtml(availableItems);
-            $('.menu-item-select').each(function() {
-                const currentValue = $(this).val();
-                if (!currentValue) {
-                    $(this).html(optionsHtml);
-                }
-            });
-        } else {
-            alert('Value meal must have at least one item');
-        }
-        return false;
+    // Handle item selection change
+    $(document).on('change', '.menu-item-select', function() {
+        // Update dropdowns in other rows
+        const availableItems = getAvailableMenuItems();
+        $('.menu-item-select').each(function() {
+            const currentValue = $(this).val();
+            if (!currentValue) {
+                $(this).html(createOptionsHtml(availableItems));
+            }
+        });
     });
-
-    // Add initial row
-    $('#addValueMealItem').trigger('click');
 
     // Reset form when modal is hidden
     $('#createValueMealModal').on('hidden.bs.modal', function() {
         $('#createValueMealForm')[0].reset();
         $('#valueMealItemsList').empty();
-        $('#addValueMealItem').trigger('click');
     });
 
-    // Handle value meal form submission
+    // Handle form submission
     $('#createValueMealForm').on('submit', function(e) {
         e.preventDefault();
         
-        const form = $(this);
+        // Get form data
         const formData = new FormData(this);
+        formData.set('IsValueMeal', '1'); // Ensure IsValueMeal is set to 1
         
-        // Show loading state
-        Swal.fire({
-            title: 'Creating Value Meal...',
-            html: 'Please wait while we process your request.',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
+        // Validate required fields
+        if (!formData.get('ItemName')) {
+            Swal.fire('Error', 'Please enter a value meal name', 'error');
+            return;
+        }
+        if (!formData.get('Price')) {
+            Swal.fire('Error', 'Please enter a price', 'error');
+            return;
+        }
+        
+        const categoryId = $('#ClassificationId').val();
+        if (!categoryId) {
+            Swal.fire('Error', 'Please select a category', 'error');
+            return;
+        }
+
+        // Check if at least one item is selected
+        const hasItems = $('#valueMealItemsList tr').length > 0 && 
+                        $('#valueMealItemsList .menu-item-select').toArray().some(select => select.value);
+        if (!hasItems) {
+            Swal.fire('Error', 'Please add at least one item to the value meal', 'error');
+            return;
+        }
+
+        // Get all selected items
+        const selectedItems = [];
+        $('#valueMealItemsList tr').each(function() {
+            const menuItemId = $(this).find('.menu-item-select').val();
+            const quantity = $(this).find('.quantity-input').val();
+            if (menuItemId && quantity) {
+                selectedItems.push({
+                    menu_item_id: menuItemId,
+                    quantity: quantity
+                });
             }
         });
-        
+
+        // Add the selected items to the form data
+        selectedItems.forEach((item, index) => {
+            formData.append(`value_meal_items[${index}][menu_item_id]`, item.menu_item_id);
+            formData.append(`value_meal_items[${index}][quantity]`, item.quantity);
+        });
+
+        // Submit form
         $.ajax({
-            url: form.attr('action'),
-            type: 'POST',
+            url: $(this).attr('action'),
+            method: 'POST',
             data: formData,
             processData: false,
             contentType: false,
             success: function(response) {
                 if (response.success) {
-                    // Close the modal
-                    $('#createValueMealModal').modal('hide');
-                    
-                    // Show success message
                     Swal.fire({
                         icon: 'success',
-                        title: 'Success!',
-                        text: 'Value meal has been created successfully.',
-                        showConfirmButton: true,
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#28a745'
-                    }).then((result) => {
-                        // Reload the page to show the new value meal
+                        title: 'Success',
+                        text: response.message
+                    }).then(() => {
                         window.location.reload();
                     });
                 } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: response.message || 'Failed to create value meal.',
-                        confirmButtonColor: '#dc3545'
-                    });
+                    Swal.fire('Error', response.message || 'Failed to create value meal', 'error');
                 }
             },
             error: function(xhr) {
-                // Show error message
-                const errors = xhr.responseJSON?.errors || {};
-                let errorMessage = 'An error occurred while creating the value meal.';
-                
-                if (Object.keys(errors).length > 0) {
-                    errorMessage = Object.values(errors).flat().join('\n');
+                const response = xhr.responseJSON;
+                console.log('Error response:', response); // Add this for debugging
+                if (response && response.errors) {
+                    const errorMessages = Object.values(response.errors).flat().join('\n');
+                    Swal.fire('Validation Error', errorMessages, 'error');
+                } else {
+                    Swal.fire('Error', response?.message || 'Failed to create value meal', 'error');
                 }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: errorMessage,
-                    confirmButtonColor: '#dc3545'
-                });
             }
         });
     });

@@ -1199,70 +1199,75 @@ class POSController extends Controller
 
             DB::beginTransaction();
 
-            $menuItem = new MenuItem();
-            $menuItem->ItemName = $request->ItemName;
-            $menuItem->Price = $request->Price;
-            $menuItem->ClassificationID = $request->ClassificationID;
-            $menuItem->Description = $request->Description;
-            $menuItem->UnitOfMeasureID = $request->UnitOfMeasureID;
-            $menuItem->IsValueMeal = $request->IsValueMeal ?? false;
-            
-            // Handle stocks for value meals vs regular items
-            if (!$menuItem->IsValueMeal) {
-            $menuItem->StocksAvailable = $request->StocksAvailable;
-            } else {
-                // For value meals, calculate the maximum possible meals based on included items
-                $maxMeals = PHP_INT_MAX;
-                foreach ($request->value_meal_items as $item) {
-                    $includedItem = MenuItem::findOrFail($item['menu_item_id']);
-                    if ($includedItem->IsValueMeal) {
-                        throw new \Exception("Cannot include a value meal inside another value meal: {$includedItem->ItemName}");
+            try {
+                $menuItem = new MenuItem();
+                $menuItem->ItemName = $request->ItemName;
+                $menuItem->Price = $request->Price;
+                $menuItem->ClassificationID = $request->ClassificationID;
+                $menuItem->Description = $request->Description;
+                $menuItem->UnitOfMeasureID = $request->UnitOfMeasureID;
+                $menuItem->IsValueMeal = $request->boolean('IsValueMeal');
+                
+                // Handle stocks for value meals vs regular items
+                if (!$menuItem->IsValueMeal) {
+                    $menuItem->StocksAvailable = $request->StocksAvailable;
+                } else {
+                    // For value meals, calculate the maximum possible meals based on included items
+                    $maxMeals = PHP_INT_MAX;
+                    foreach ($request->value_meal_items as $item) {
+                        $includedItem = MenuItem::findOrFail($item['menu_item_id']);
+                        if ($includedItem->IsValueMeal) {
+                            throw new \Exception("Cannot include a value meal inside another value meal: {$includedItem->ItemName}");
+                        }
+                        $possibleMeals = floor($includedItem->StocksAvailable / $item['quantity']);
+                        $maxMeals = min($maxMeals, $possibleMeals);
                     }
-                    $possibleMeals = floor($includedItem->StocksAvailable / $item['quantity']);
-                    $maxMeals = min($maxMeals, $possibleMeals);
+                    $menuItem->StocksAvailable = $maxMeals;
                 }
-                $menuItem->StocksAvailable = $maxMeals;
-            }
-            
-            $menuItem->IsAvailable = true;
-            $menuItem->IsDeleted = false;
-            
-            // Handle image upload
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
-                $imagePath = $image->store('menu-items', 'public');
-                $menuItem->image_path = $imagePath;
-            }
+                
+                $menuItem->IsAvailable = true;
+                $menuItem->IsDeleted = false;
+                
+                // Handle image upload
+                if ($request->hasFile('image')) {
+                    $image = $request->file('image');
+                    $imagePath = $image->store('menu-items', 'public');
+                    $menuItem->image_path = $imagePath;
+                }
 
-            $menuItem->save();
+                $menuItem->save();
 
-            // If this is a value meal, create the value meal items
-            if ($menuItem->IsValueMeal && $request->has('value_meal_items')) {
-                foreach ($request->value_meal_items as $item) {
-                    $includedItem = MenuItem::findOrFail($item['menu_item_id']);
-                    if ($includedItem->IsValueMeal) {
-                        throw new \Exception("Cannot include a value meal inside another value meal: {$includedItem->ItemName}");
+                // If this is a value meal, create the value meal items
+                if ($menuItem->IsValueMeal && $request->has('value_meal_items')) {
+                    Log::info('Creating value meal items:', ['items' => $request->value_meal_items]);
+                    foreach ($request->value_meal_items as $item) {
+                        $includedItem = MenuItem::findOrFail($item['menu_item_id']);
+                        if ($includedItem->IsValueMeal) {
+                            throw new \Exception("Cannot include a value meal inside another value meal: {$includedItem->ItemName}");
+                        }
+                        
+                        $menuItem->valueMealItems()->create([
+                            'menu_item_id' => $item['menu_item_id'],
+                            'quantity' => $item['quantity']
+                        ]);
                     }
-                    
-                    $menuItem->valueMealItems()->create([
-                        'menu_item_id' => $item['menu_item_id'],
-                        'quantity' => $item['quantity']
-                    ]);
                 }
+
+                DB::commit();
+                
+                Log::info('Menu item created successfully:', ['menu_item' => $menuItem->toArray()]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Menu item created successfully',
+                    'data' => $menuItem
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
             }
-
-            DB::commit();
             
-            Log::info('Menu item created successfully:', ['menu_item' => $menuItem->toArray()]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Menu item created successfully',
-                'data' => $menuItem
-            ]);
-            
-        } catch (Exception $e) {
-            DB::rollBack();
+        } catch (\Exception $e) {
             Log::error('Error creating menu item:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()

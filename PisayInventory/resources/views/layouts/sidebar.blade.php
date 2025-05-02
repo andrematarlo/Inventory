@@ -271,9 +271,9 @@
         <li class="nav-item mt-auto">
             <form method="POST" action="{{ route('logout') }}" onsubmit="return confirmLogout()">
                 @csrf
-                <button type="submit" class="nav-link btn btn-link text-white w-100 text-start px-3">
+                <button type="submit" class="nav-link btn btn-link text-white w-100 text-start px-3 logout-button">
                     <i class="bi bi-box-arrow-right"></i>
-                    <span>Logout</span>
+                    <span class="logout-text">Logout</span>
                 </button>
             </form>
         </li>
@@ -383,9 +383,9 @@
 }
 
 .sidebar.collapsed .sidebar-title,
-.sidebar.collapsed .nav-link span,
+.sidebar.collapsed .nav-link span:not(.logout-text),
 .sidebar.collapsed .dropdown-menu,
-.sidebar.collapsed .nav-item form span,
+.sidebar.collapsed .nav-item form span:not(.logout-text),
 .sidebar.collapsed .dropdown-arrow {
     display: none;
 }
@@ -714,7 +714,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebar = document.querySelector('.sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
     const mainContent = document.querySelector('.main-content');
-    const navLinks = document.querySelectorAll('.sidebar .nav-link');
+    const navLinks = document.querySelectorAll('.sidebar .nav-link:not(.logout-button)');
     
     // Add data-title attribute to all nav links for tooltip
     navLinks.forEach(link => {

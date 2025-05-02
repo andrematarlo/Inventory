@@ -269,14 +269,12 @@ Route::middleware('auth')->group(function () {
             
             // Menu Items Management Routes
             Route::prefix('menu-items')->name('menu-items.')->group(function () {
-                Route::get('/', [POSController::class, 'menuItems'])->name('index');
-                Route::get('/create', [POSController::class, 'createMenuItem'])->name('create');
-                Route::post('/', [POSController::class, 'storeMenuItem'])->name('store');
-                Route::get('/{id}/edit', [POSController::class, 'editMenuItem'])->name('edit');
-                Route::put('/{id}', [POSController::class, 'updateMenuItem'])->name('update');
-                Route::delete('/{id}', [POSController::class, 'deleteMenuItem'])->name('destroy');
-                Route::post('/{id}/toggle-availability', [POSController::class, 'toggleMenuItemAvailability'])->name('toggle-availability');
-                Route::post('/{id}/restore', [POSController::class, 'restoreMenuItem'])->name('restore');
+                Route::get('/', [MenuItemController::class, 'index'])->name('index');
+                Route::post('/', [MenuItemController::class, 'store'])->name('store');
+                Route::get('/create', [MenuItemController::class, 'create'])->name('create');
+                Route::get('/{id}/edit', [MenuItemController::class, 'edit'])->name('edit');
+                Route::put('/{id}', [MenuItemController::class, 'update'])->name('update');
+                Route::delete('/{id}', [MenuItemController::class, 'destroy'])->name('destroy');
             });
 
             // Add these routes for edit and delete functionality

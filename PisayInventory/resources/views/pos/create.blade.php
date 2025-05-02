@@ -1097,7 +1097,7 @@ $(document).ready(function() {
         }
 
                 // Show loading state
-        const submitButton = $('button[type="submit"]');
+        const submitButton = $('#orderForm button[type="submit"]');
         submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
 
         // Submit the form
@@ -1120,18 +1120,27 @@ $(document).ready(function() {
                             // Reset form fields
                             $('#orderForm')[0].reset();
                             $('#studentInfo').hide();
-                            $('button[type="submit"]').prop('disabled', true);
+                            $('#orderForm button[type="submit"]').prop('disabled', true);
                             
-                            // Show success message
+                            // Show success message with reload option
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Order Placed Successfully!',
                                 text: `Order #${response.order_number} has been created.`,
-                                confirmButtonText: 'Create New Order'
+                                showCancelButton: true,
+                                confirmButtonText: 'Create New Order',
+                                cancelButtonText: 'View Orders'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // Stay on the same page but reset everything
+                                    $('.cart-count').text('0');
+                                    updateCartCount();
+                                    window.location.reload(); // Reload the current page
+                                } else {
+                                    // Open orders page in a new tab/window
+                                    window.open('{{ route('pos.orders.index') }}', '_blank');
+                                }
                             });
-
-                            // Update cart count
-                            updateCartCount();
                         } else {
                             Swal.fire({
                                 icon: 'error',

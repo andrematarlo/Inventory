@@ -1,5 +1,5 @@
 <div class="modal fade" id="editMenuItemModal{{ $item->MenuItemID }}" tabindex="-1" aria-labelledby="editMenuItemModalLabel{{ $item->MenuItemID }}" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editMenuItemModalLabel{{ $item->MenuItemID }}">Edit Menu Item</h5>
@@ -8,67 +8,66 @@
             <form id="editMenuItemForm{{ $item->MenuItemID }}" action="{{ route('pos.menu-items.update', $item->MenuItemID) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="MenuItemID" value="{{ $item->MenuItemID }}">
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="editItemName{{ $item->MenuItemID }}" class="form-label">Item Name</label>
-                            <input type="text" class="form-control" id="editItemName{{ $item->MenuItemID }}" name="ItemName" value="{{ $item->ItemName }}" required>
+                        <div class="col-12">
+                            <label class="form-label">Item Name</label>
+                            <input type="text" class="form-control" name="ItemName" value="{{ $item->ItemName }}" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="editPrice{{ $item->MenuItemID }}" class="form-label">Price</label>
+                            <label class="form-label">Price</label>
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
-                                <input type="number" class="form-control" id="editPrice{{ $item->MenuItemID }}" name="Price" step="0.01" value="{{ $item->Price }}" required>
+                                <input type="number" class="form-control" name="Price" value="{{ $item->Price }}" required min="0" step="0.01">
                             </div>
                         </div>
+                        <div class="col-md-6 non-value-meal-field">
+                            <label class="form-label">Stocks Available</label>
+                            <input type="number" class="form-control" name="StocksAvailable" value="{{ $item->StocksAvailable }}" min="0">
+                        </div>
                         <div class="col-md-6">
-                            <label for="editCategory{{ $item->MenuItemID }}" class="form-label">Category</label>
-                            <select class="form-select" id="editCategory{{ $item->MenuItemID }}" name="ClassificationID" required>
-                                <option value="">Select Category</option>
+                            <label class="form-label">Category</label>
+                            <select class="form-select" name="ClassificationId" required>
                                 @foreach($categories as $category)
-                                    <option value="{{ $category->ClassificationId }}" {{ $item->ClassificationID == $category->ClassificationId ? 'selected' : '' }}>
+                                    <option value="{{ $category->ClassificationId }}" {{ $item->ClassificationId == $category->ClassificationId ? 'selected' : '' }}>
                                         {{ $category->ClassificationName }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="editUnitOfMeasure{{ $item->MenuItemID }}" class="form-label">Unit of Measure</label>
-                            <select class="form-select" id="editUnitOfMeasure{{ $item->MenuItemID }}" name="UnitOfMeasureID" required>
-                                <option value="">Select Unit</option>
-                                @foreach($units as $unit)
-                                    <option value="{{ $unit->UnitOfMeasureId }}" {{ $item->UnitOfMeasureID == $unit->UnitOfMeasureId ? 'selected' : '' }}>
-                                        {{ $unit->UnitName }}
+                            <label class="form-label">Unit of Measure</label>
+                            <select class="form-select" name="UnitOfMeasureID" required>
+                                @foreach($unitOfMeasures as $uom)
+                                    <option value="{{ $uom->UnitOfMeasureId }}" {{ $item->UnitOfMeasureID == $uom->UnitOfMeasureId ? 'selected' : '' }}>
+                                        {{ $uom->Name }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-12">
-                            <label for="editDescription{{ $item->MenuItemID }}" class="form-label">Description</label>
-                            <textarea class="form-control" id="editDescription{{ $item->MenuItemID }}" name="Description" rows="3">{{ $item->Description }}</textarea>
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="Description" rows="3">{{ $item->Description }}</textarea>
                         </div>
-                        <div class="col-md-6">
-                            <label for="editImage{{ $item->MenuItemID }}" class="form-label">Image</label>
-                            <input type="file" class="form-control" id="editImage{{ $item->MenuItemID }}" name="image" accept="image/*">
+                        <div class="col-12">
+                            <label class="form-label">Image</label>
+                            <input type="file" class="form-control" name="image" accept="image/*">
                             @if($item->image_path)
                                 <div class="mt-2">
-                                    <img src="{{ asset('storage/' . $item->image_path) }}" alt="{{ $item->ItemName }}" class="img-thumbnail" style="max-height: 100px;">
+                                    <img src="{{ asset('storage/' . $item->image_path) }}" alt="Current Image" class="img-thumbnail" style="max-height: 100px;">
                                 </div>
                             @endif
                         </div>
-                        <div class="col-md-6">
-                            <label for="editStocksAvailable{{ $item->MenuItemID }}" class="form-label">Current Stock</label>
-                            <input type="number" class="form-control" id="editStocksAvailable{{ $item->MenuItemID }}" name="StocksAvailable" value="{{ $item->StocksAvailable }}" min="0">
-                        </div>
                         <div class="col-12">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="editIsValueMeal{{ $item->MenuItemID }}" name="IsValueMeal" value="1" {{ $item->IsValueMeal ? 'checked' : '' }}>
-                                <label class="form-check-label" for="editIsValueMeal{{ $item->MenuItemID }}">
+                                <input class="form-check-input" type="checkbox" name="IsValueMeal" {{ $item->IsValueMeal ? 'checked' : '' }}>
+                                <label class="form-check-label">
                                     This is a Value Meal
                                 </label>
                             </div>
                         </div>
-                        <div class="col-12 value-meal-items {{ $item->IsValueMeal ? 'd-block' : 'd-none' }}">
+                        <div class="col-12 value-meal-items {{ $item->IsValueMeal ? '' : 'd-none' }}">
                             <label class="form-label">Value Meal Items</label>
                             <div class="table-responsive">
                                 <table class="table table-sm">
@@ -79,35 +78,34 @@
                                             <th>Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="editValueMealItemsList{{ $item->MenuItemID }}">
-                                        @foreach($item->valueMealItems as $valueMealItem)
-                                            <tr>
-                                                <td>
-                                                    <select class="form-select form-select-sm" name="value_meal_items[][menu_item_id]" required>
-                                                        <option value="">Select Item</option>
-                                                        @foreach($menuItems as $menuItem)
-                                                            <option value="{{ $menuItem->MenuItemID }}" {{ $valueMealItem->menu_item_id == $menuItem->MenuItemID ? 'selected' : '' }}>
-                                                                {{ $menuItem->ItemName }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </td>
-                                                <td>
-                                                    <input type="number" class="form-control form-control-sm" name="value_meal_items[][quantity]" value="{{ $valueMealItem->quantity }}" min="1" required>
-                                                </td>
-                                                <td>
-                                                    <button type="button" class="btn btn-sm btn-danger remove-value-meal-item">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        @endforeach
+                                    <tbody>
+                                        @if($item->IsValueMeal)
+                                            @foreach($item->valueMealItems as $valueMealItem)
+                                                <tr>
+                                                    <td>
+                                                        <select class="form-select" name="value_meal_items[{{ $loop->index }}][menu_item_id]" required>
+                                                            @foreach($menuItems->where('IsValueMeal', false) as $menuItem)
+                                                                <option value="{{ $menuItem->MenuItemID }}" {{ $valueMealItem->menu_item_id == $menuItem->MenuItemID ? 'selected' : '' }}>
+                                                                    {{ $menuItem->ItemName }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" class="form-control" name="value_meal_items[{{ $loop->index }}][quantity]" value="{{ $valueMealItem->quantity }}" min="1" required>
+                                                    </td>
+                                                    <td>
+                                                        <button type="button" class="btn btn-danger btn-sm remove-item">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        @endif
                                     </tbody>
                                 </table>
+                                <button type="button" class="btn btn-sm btn-primary add-value-meal-item">Add Item</button>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="addEditValueMealItem{{ $item->MenuItemID }}">
-                                <i class="fas fa-plus"></i> Add Item
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -123,39 +121,88 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Toggle value meal items section
-    $('#editIsValueMeal{{ $item->MenuItemID }}').on('change', function() {
-        $('.value-meal-items').toggleClass('d-block d-none');
+    // Handle value meal toggle
+    $('input[name="IsValueMeal"]').change(function() {
+        const isValueMeal = $(this).is(':checked');
+        $(this).closest('form').find('.value-meal-items').toggleClass('d-none', !isValueMeal);
+        $(this).closest('form').find('.non-value-meal-field').toggleClass('d-none', isValueMeal);
     });
 
-    // Add value meal item
-    $('#addEditValueMealItem{{ $item->MenuItemID }}').on('click', function() {
+    // Handle add value meal item
+    $('.add-value-meal-item').click(function() {
+        const form = $(this).closest('form');
+        const tbody = form.find('tbody');
+        const index = tbody.find('tr').length;
+        
         const row = `
             <tr>
                 <td>
-                    <select class="form-select form-select-sm" name="value_meal_items[][menu_item_id]" required>
+                    <select class="form-select" name="value_meal_items[${index}][menu_item_id]" required>
                         <option value="">Select Item</option>
-                        @foreach($menuItems as $menuItem)
+                        @foreach($menuItems->where('IsValueMeal', false) as $menuItem)
                             <option value="{{ $menuItem->MenuItemID }}">{{ $menuItem->ItemName }}</option>
                         @endforeach
                     </select>
                 </td>
                 <td>
-                    <input type="number" class="form-control form-control-sm" name="value_meal_items[][quantity]" value="1" min="1" required>
+                    <input type="number" class="form-control" name="value_meal_items[${index}][quantity]" value="1" min="1" required>
                 </td>
                 <td>
-                    <button type="button" class="btn btn-sm btn-danger remove-value-meal-item">
-                        <i class="fas fa-trash"></i>
+                    <button type="button" class="btn btn-danger btn-sm remove-item">
+                        <i class="fas fa-times"></i>
                     </button>
                 </td>
             </tr>
         `;
-        $('#editValueMealItemsList{{ $item->MenuItemID }}').append(row);
+        tbody.append(row);
     });
 
-    // Remove value meal item
-    $(document).on('click', '.remove-value-meal-item', function() {
+    // Handle remove value meal item
+    $(document).on('click', '.remove-item', function() {
         $(this).closest('tr').remove();
+    });
+
+    // Handle form submission
+    $('form[id^="editMenuItemForm"]').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const formData = new FormData(this);
+        
+        $.ajax({
+            url: form.attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    form.closest('.modal').modal('hide');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Menu item has been updated successfully.',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'Failed to update menu item.'
+                    });
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response?.message || 'An error occurred while updating the menu item.'
+                });
+            }
+        });
     });
 });
 </script>

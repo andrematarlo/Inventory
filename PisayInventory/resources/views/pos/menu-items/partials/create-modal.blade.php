@@ -24,37 +24,33 @@
                         </div>
                         <div class="col-md-6">
                             <label for="category" class="form-label">Category</label>
-                            <select class="form-select" id="category" name="ClassificationID" required>
+                            <select class="form-select" id="category" name="ClassificationId" required>
                                 <option value="">Select Category</option>
                                 @foreach($categories as $category)
-                                    <option value="{{ $category->ClassificationId }}">
-                                        {{ $category->ClassificationName }}
-                                    </option>
+                                    <option value="{{ $category->ClassificationId }}">{{ $category->ClassificationName }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="unitOfMeasure" class="form-label">Unit of Measure</label>
-                            <select class="form-select" id="unitOfMeasure" name="UnitOfMeasureID" required>
+                            <label for="unit" class="form-label">Unit of Measure</label>
+                            <select class="form-select" id="unit" name="UnitOfMeasureID" required>
                                 <option value="">Select Unit</option>
-                                @foreach($units as $unit)
-                                    <option value="{{ $unit->UnitOfMeasureId }}">
-                                        {{ $unit->UnitName }}
-                                    </option>
+                                @foreach($unitOfMeasures as $uom)
+                                    <option value="{{ $uom->UnitOfMeasureId }}">{{ $uom->UnitName }}</option>
                                 @endforeach
                             </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="stocks" class="form-label">Initial Stock</label>
+                            <input type="number" class="form-control" id="stocks" name="StocksAvailable" min="0" required>
                         </div>
                         <div class="col-12">
                             <label for="description" class="form-label">Description</label>
                             <textarea class="form-control" id="description" name="Description" rows="3"></textarea>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label for="image" class="form-label">Image</label>
                             <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="stocksAvailable" class="form-label">Initial Stock</label>
-                            <input type="number" class="form-control" id="stocksAvailable" name="StocksAvailable" value="0" min="0" required>
                         </div>
                     </div>
                 </div>
