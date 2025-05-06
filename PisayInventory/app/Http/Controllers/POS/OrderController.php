@@ -13,6 +13,16 @@ use App\Models\OrderItem;
 
 class OrderController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            if (Auth::check() && Auth::user()->role === 'Student') {
+                abort(403, 'Unauthorized. Students cannot access this page.');
+            }
+            return $next($request);
+        });
+    }
+
     public function index()
     {
         $orders = Order::with(['items', 'student'])
@@ -85,7 +95,7 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         try {
-            \DB::beginTransaction();
+            DB::beginTransaction();
 
             $order = Order::create([
                 'student_id' => Auth::user()->student_id,
@@ -118,7 +128,7 @@ class OrderController extends Controller
                 $menuItem->save();
             }
 
-            \DB::commit();
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -129,7 +139,7 @@ class OrderController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            \DB::rollback();
+            DB::rollback();
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to process order: ' . $e->getMessage()

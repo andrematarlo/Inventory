@@ -361,16 +361,6 @@ $(document).ready(function() {
             const searchText = type === '0' ? 'Regular Item' : 'Value Meal';
             table.column(7).search(searchText).draw();
         }
-        
-        // Show success message
-        const filterText = type === '' ? 'All Types' : (type === '0' ? 'Regular Items' : 'Value Meals');
-        Swal.fire({
-            icon: 'success',
-            title: 'Filter Applied',
-            text: `Showing ${filterText}`,
-            timer: 1500,
-            showConfirmButton: false
-        });
     });
 
     // Search functionality
@@ -523,13 +513,8 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: response.message || 'Availability updated successfully.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
+                    // Remove the success message for toggle changes
+                    // Just let the UI update silently
                 } else {
                     // Revert the toggle if failed
                     $(this).prop('checked', !isAvailable);

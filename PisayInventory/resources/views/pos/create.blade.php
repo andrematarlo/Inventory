@@ -1127,18 +1127,14 @@ $(document).ready(function() {
                                 icon: 'success',
                                 title: 'Order Placed Successfully!',
                                 text: `Order #${response.order_number} has been created.`,
-                                showCancelButton: true,
-                                confirmButtonText: 'Create New Order',
-                                cancelButtonText: 'View Orders'
+                                showCancelButton: false,
+                                confirmButtonText: 'Create New Order'
                             }).then((result) => {
                                 if (result.isConfirmed) {
                                     // Stay on the same page but reset everything
                                     $('.cart-count').text('0');
                                     updateCartCount();
                                     window.location.reload(); // Reload the current page
-                                } else {
-                                    // Open orders page in a new tab/window
-                                    window.open('{{ route('pos.orders.index') }}', '_blank');
                                 }
                             });
                         } else {

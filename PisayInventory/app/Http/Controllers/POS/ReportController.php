@@ -65,6 +65,7 @@ class ReportController extends Controller
                 'pos_orders.PaymentMethod',
                 'pos_orders.Status',
                 'pos_orders.student_id as StudentID',
+                DB::raw('CONCAT(students.first_name, " ", students.last_name) as StudentName'),
                 'pos_order_items.ItemName',
                 'pos_order_items.Quantity',
                 'pos_order_items.UnitPrice',

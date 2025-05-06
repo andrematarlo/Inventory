@@ -47,7 +47,7 @@
                                         <td>{{ \Carbon\Carbon::parse($order->created_at)->format('h:i A') }}</td>
                                         <td>
                                             <button class="btn btn-success btn-sm mark-ready" data-order-id="{{ $order->OrderID }}">
-                                                Mark Ready
+                                                Serve
                                             </button>
                                         </td>
                                     </tr>
@@ -64,7 +64,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-check-circle"></i> Ready to Serve</h5>
+                    <h5 class="mb-0"><i class="fas fa-check-circle"></i> Ready to Claim</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -104,7 +104,7 @@
                                         <td>{{ \Carbon\Carbon::parse($order->created_at)->format('h:i A') }}</td>
                                         <td>
                                             <button class="btn btn-primary btn-sm mark-served" data-order-id="{{ $order->OrderID }}">
-                                                Mark Served
+                                                Claimed
                                             </button>
                                         </td>
                                     </tr>
