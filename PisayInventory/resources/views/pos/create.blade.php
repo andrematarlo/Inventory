@@ -148,12 +148,10 @@
                 </div>
 
                 <!-- Menu Items Grid -->
-                <div class="menu-items-grid">
-                    <div class="row g-4">
-                        @foreach($menuItems as $item)
-                            <div class="col-lg-3 menu-item {{ $item->StocksAvailable <= 0 ? 'out-of-stock' : '' }} {{ $item->StocksAvailable <= 5 ? 'low-stock' : '' }}" 
-                                 data-category="{{ $item->ClassificationID }}"
-                                 data-item-id="{{ $item->MenuItemID }}">
+                <div class="menu-items-custom-grid">
+                    @foreach($menuItems as $index => $item)
+                        @if($index < 8)
+                            <div class="menu-card">
                                 <div class="card h-100 border-0 shadow-sm menu-item-card">
                                     @if($item->image_path && Storage::disk('public')->exists($item->image_path))
                                         <img src="{{ asset('storage/' . $item->image_path) }}" 
@@ -166,7 +164,6 @@
                                             <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
                                         </div>
                                     @endif
-                                    
                                     <div class="card-body d-flex flex-column">
                                         <h5 class="card-title mb-2">{{ $item->ItemName }}</h5>
                                         <p class="card-text text-muted small mb-2">
@@ -194,8 +191,9 @@
                                     </div>
                                 </div>
                             </div>
-                        @endforeach
-                    </div>
+                        @endif
+                    @endforeach
+                    <div class="blue-area"></div>
                 </div>
             </div>
 
@@ -545,7 +543,7 @@ label {
 }
 
 /* Update menu item grid layout and spacing */
-.menu-items-grid .row.g-4 {
+.menu-items-custom-grid .row.g-4 {
     margin-right: -0.5rem;
     margin-left: -0.5rem;
     row-gap: 2.5rem !important;
@@ -554,7 +552,7 @@ label {
     justify-content: space-between; /* This will help distribute space evenly */
 }
 
-.menu-items-grid .row.g-4 > .menu-item {
+.menu-items-custom-grid .row.g-4 > .menu-item {
     width: 23% !important; /* Slightly wider cards with some space between */
     flex: 0 0 23% !important;
     max-width: 23% !important;
@@ -641,6 +639,50 @@ label {
     border-color: #27AE60 !important;
     box-shadow: 0 3px 8px rgba(0,0,0,0.15) !important;
 }
+
+.menu-items-custom-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    min-height: 300px;
+    margin-bottom: 2rem;
+}
+.menu-items-custom-grid .menu-card,
+.menu-item-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+.menu-item-card .card-img-top,
+.menu-item-card .bg-light {
+    width: 100%;
+    height: 180px !important;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+.menu-item-card .card-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 0.75rem 1rem 1rem 1rem !important;
+    min-height: 0;
+}
+.menu-item-card .card-title,
+.menu-item-card .card-text {
+    margin-bottom: 0.5rem !important;
+    word-break: break-word;
+}
+.menu-item-card .btn {
+    margin-top: 0.5rem;
+}
+.menu-items-custom-grid .blue-area {
+    display: none;
+}
+.menu-items-custom-grid > * {
+    min-height: 150px;
+}
 </style>
 @endpush
 
@@ -655,7 +697,7 @@ $(document).ready(function() {
         const categoryId = $(this).data('category');
         
         // Add loading state
-        $('.menu-items-grid').fadeOut(200);
+        $('.menu-items-custom-grid').fadeOut(200);
         
         setTimeout(() => {
             if (categoryId === 'all') {
@@ -676,7 +718,7 @@ $(document).ready(function() {
                     }
                 });
             }
-            $('.menu-items-grid').fadeIn(200);
+            $('.menu-items-custom-grid').fadeIn(200);
         }, 200);
     });
 

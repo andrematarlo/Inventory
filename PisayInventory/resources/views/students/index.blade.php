@@ -356,6 +356,18 @@ $(document).ready(function() {
     }
 
     // Initialize DataTables
+    var hasData = false;
+$('#studentsTable tbody tr').each(function() {
+    // If this row does NOT have a colspan, it's a real data row
+    if (!$(this).find('td').attr('colspan')) {
+        hasData = true;
+    }
+});
+
+if (hasData) {
+    if ($.fn.DataTable.isDataTable('#studentsTable')) {
+        $('#studentsTable').DataTable().destroy();
+    }
     $('#studentsTable').DataTable({
         responsive: true,
         order: [[1, 'asc']],
@@ -363,6 +375,7 @@ $(document).ready(function() {
             emptyTable: "No students found"
         }
     });
+}
 
     // Handle file selection and preview
     $('#readExcelBtn').on('click', function(e) {

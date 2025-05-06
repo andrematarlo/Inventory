@@ -23,7 +23,7 @@
 
                     <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
                         <label class="form-label mb-0">CAMPUS:</label>
-                        <input type="text" class="form-control form-control-sm w-auto" name="campus" required>
+                        <input type="text" class="form-control form-control-sm w-auto" name="campus" value="CVisC" required>
                     </div>
                         
                         <!-- Control Number and School Year -->
@@ -330,7 +330,7 @@ $(document).ready(function() {
     $.get('{{ route("laboratory.reservations.getStudentInfo") }}', function(response) {
         if (response.success) {
             // Auto-populate campus
-            $('input[name="campus"]').val(response.data.campus || 'Main');
+            $('input[name="campus"]').val('CVisC');
             
             // Auto-populate grade and section for students
             if (response.data.isStudent) {

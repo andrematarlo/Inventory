@@ -457,19 +457,19 @@
                         </div>
                         <div class="mb-3">
                             <label for="emailColumn" class="form-label">Email</label>
-                            <select id="emailColumn" name="column_mapping[Email]" class="form-select" required></select>
+                            <select id="emailColumn" name="column_mapping[Email]" class="form-select" ></select>
                         </div>
                         <div class="mb-3">
                             <label for="addressColumn" class="form-label">Address</label>
-                            <select id="addressColumn" name="column_mapping[Address]" class="form-select" required></select>
+                            <select id="addressColumn" name="column_mapping[Address]" class="form-select" ></select>
                         </div>
                         <div class="mb-3">
                             <label for="genderColumn" class="form-label">Gender</label>
-                            <select id="genderColumn" name="column_mapping[Gender]" class="form-select" required></select>
+                            <select id="genderColumn" name="column_mapping[Gender]" class="form-select" ></select>
                         </div>
                         <div class="mb-3">
                             <label for="roleColumn" class="form-label">Role</label>
-                            <select id="roleColumn" name="column_mapping[Role]" class="form-select" required></select>
+                            <select id="roleColumn" name="column_mapping[Role]" class="form-select" ></select>
                         </div>
                         @if($userPermissions && $userPermissions->CanAdd)
                         <button type="submit" class="btn btn-success">Import Data</button>
@@ -777,14 +777,16 @@
                 const columnMapping = {};
                 const unmappedFields = [];
 
-                selects.forEach(select => {
-                    const fieldName = select.name.match(/\[(.*?)\]/)[1];
-                    if (!select.value) {
-                        unmappedFields.push(fieldName);
-                    } else {
-                        columnMapping[fieldName] = select.value;
-                    }
-                });
+                const requiredFields = ['FirstName', 'LastName'];
+selects.forEach(select => {
+    const fieldName = select.name.match(/\[(.*?)\]/)[1];
+    if (requiredFields.includes(fieldName) && !select.value) {
+        unmappedFields.push(fieldName);
+    }
+    if (select.value) {
+        columnMapping[fieldName] = select.value;
+    }
+});
 
                 if (unmappedFields.length > 0) {
                     alert(`Please map the following required fields: ${unmappedFields.join(', ')}`);

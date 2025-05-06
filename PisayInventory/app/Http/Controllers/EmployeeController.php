@@ -512,7 +512,20 @@ class EmployeeController extends Controller
 
                 // Sync roles - this will add new roles and remove unchecked ones
                 if ($request->has('roles')) {
-                    $employee->roles()->sync($request->roles);
+                    // Remove all current roles
+                    DB::table('employee_roles')->where('EmployeeId', $employee->EmployeeID)->delete();
+                    // Insert new roles with DateCreated and CreatedById
+                    $now = now();
+                    $createdById = Auth::id();
+                    foreach ($request->roles as $roleId) {
+                        DB::table('employee_roles')->insert([
+                            'EmployeeId' => $employee->EmployeeID,
+                            'RoleId' => $roleId,
+                            'IsDeleted' => false,
+                            'DateCreated' => $now,
+                            'CreatedById' => $createdById
+                        ]);
+                    }
                 } else {
                     // If no roles were selected, remove all roles
                     $employee->roles()->detach();

@@ -34,7 +34,9 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
     }
 
     public function collection(Collection $rows)
+    
     {
+        set_time_limit(300); 
         Log::info('Starting import process with rows:', ['row_count' => count($rows)]);
 
         foreach ($rows as $index => $row) {
@@ -142,27 +144,44 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
                     throw new \Exception('Missing required fields');
                 }
 
-                // Check for existing student
+                // Check for existing student number
                 $existingStudent = Student::where('student_id', $studentData['student_id'])->first();
-
-                // Add check for existing username in UserAccount
-                $username = strtolower($studentData['first_name'] . '.' . $studentData['last_name']);
-                $existingUserAccount = UserAccount::where('Username', $username)->first();
-
-                if ($existingStudent || $existingUserAccount) {
+                if ($existingStudent) {
                     $this->duplicateRows[] = [
                         'row' => $index + 2,
                         'student_id' => $studentData['student_id'],
                         'name' => $studentData['first_name'] . ' ' . $studentData['last_name'],
-                        'reason' => $existingStudent ? 'Student ID already exists' : 'Username already exists'
+                        'reason' => 'Student number already exists'
                     ];
-                    continue; // Skip this record but continue with next one
+                    continue;
+                }
+
+                // Generate username: first initial + middle initial + last name (all lowercased, no spaces)
+                $firstInitial = strtolower(substr($studentData['first_name'], 0, 1));
+                $middleInitial = '';
+                if (!empty($studentData['middle_name'])) {
+                    $middleInitial = strtolower(substr($studentData['middle_name'], 0, 1));
+                }
+                $lastName = strtolower(preg_replace('/\s+/', '', $studentData['last_name']));
+                $username = $firstInitial . $middleInitial . $lastName;
+                $password = $username . '123';
+
+                // Check for existing username in UserAccount
+                $existingUserAccount = UserAccount::where('Username', $username)->first();
+                if ($existingUserAccount) {
+                    $this->duplicateRows[] = [
+                        'row' => $index + 2,
+                        'student_id' => $studentData['student_id'],
+                        'name' => $studentData['first_name'] . ' ' . $studentData['last_name'],
+                        'reason' => 'Username already exists'
+                    ];
+                    continue;
                 }
 
                 // Create user account
                 $userAccount = UserAccount::create([
-                    'Username' => strtolower($studentData['first_name'] . '.' . $studentData['last_name']),
-                    'Password' => Hash::make('password123'),
+                    'Username' => $username,
+                    'Password' => Hash::make($password),
                     'CreatedByID' => $this->createdById,
                     'DateCreated' => now(),
                     'IsDeleted' => 0

@@ -39,81 +39,84 @@ class EmployeesImport implements ToModel, WithHeadingRow, WithValidation
     }
 
     public function model(array $row)
-{
-    try {
-        // Convert row keys to the same format as the mapping
-        $processedRow = [];
-        foreach ($row as $key => $value) {
-            $processedKey = Str::slug($key, '');
-            $processedRow[$processedKey] = $value;
-        }
+    {
+        try {
+            // Convert row keys to the same format as the mapping
+            $processedRow = [];
+            foreach ($row as $key => $value) {
+                $processedKey = Str::slug($key, '');
+                $processedRow[$processedKey] = $value;
+            }
 
-        // Debug log the processed row and column mapping
-        Log::info('Processing row:', [
-            'raw_row' => $row,
-            'processed_row' => $processedRow,
-            'column_mapping' => $this->columnMapping
-        ]);
+            // Debug log the processed row and column mapping
+            Log::info('Processing row:', [
+                'raw_row' => $row,
+                'processed_row' => $processedRow,
+                'column_mapping' => $this->columnMapping
+            ]);
 
-        // Initialize name variables
-        $firstName = null;
-        $lastName = null;
+            // Initialize name variables
+            $firstName = null;
+            $lastName = null;
 
-        // Check if the Excel has a combined Name column
-        $nameColumnExists = false;
-        foreach ($processedRow as $key => $value) {
-            if (in_array(strtolower($key), ['name', 'fullname', 'full-name', 'full_name'])) {
-                $nameColumnExists = true;
-                $fullName = trim($value);
+            // Check if the Excel has a combined Name column
+            $nameColumnExists = false;
+            foreach ($processedRow as $key => $value) {
+                if (in_array(strtolower($key), ['name', 'fullname', 'full-name', 'full_name'])) {
+                    $nameColumnExists = true;
+                    $fullName = trim($value);
+                    
+                    // Split the full name into parts
+                    $nameParts = array_filter(explode(' ', $fullName));
+                    
+                    // Take the last word as lastName
+                    $lastName = array_pop($nameParts);
+                    
+                    // Join the remaining words as firstName
+                    $firstName = !empty($nameParts) ? implode(' ', $nameParts) : '';
+                    
+                    Log::info('Split name:', [
+                        'full_name' => $fullName,
+                        'first_name' => $firstName,
+                        'last_name' => $lastName
+                    ]);
+                    break;
+                }
+            }
+
+            // If no combined name column found, look for separate FirstName and LastName
+            if (!$nameColumnExists) {
+                $firstName = trim($processedRow[Str::slug($this->columnMapping['FirstName'], '')] ?? '');
+                $lastName = trim($processedRow[Str::slug($this->columnMapping['LastName'], '')] ?? '');
                 
-                // Split the full name into parts
-                $nameParts = array_filter(explode(' ', $fullName));
-                
-                // Take the last word as lastName
-                $lastName = array_pop($nameParts);
-                
-                // Join the remaining words as firstName
-                $firstName = !empty($nameParts) ? implode(' ', $nameParts) : '';
-                
-                Log::info('Split name:', [
-                    'full_name' => $fullName,
+                Log::info('Using separate name fields:', [
                     'first_name' => $firstName,
                     'last_name' => $lastName
                 ]);
-                break;
             }
-        }
 
-        // If no combined name column found, look for separate FirstName and LastName
-        if (!$nameColumnExists) {
-            $firstName = trim($processedRow[Str::slug($this->columnMapping['FirstName'], '')] ?? '');
-            $lastName = trim($processedRow[Str::slug($this->columnMapping['LastName'], '')] ?? '');
-            
-            Log::info('Using separate name fields:', [
-                'first_name' => $firstName,
-                'last_name' => $lastName
-            ]);
-        }
+            // Validate that we have both names
+            if (empty($firstName) || empty($lastName)) {
+                throw new \Exception("First name and last name are required");
+            }
 
-        // Validate that we have both names
-        if (empty($firstName) || empty($lastName)) {
-            throw new \Exception("Both first name and last name are required");
-        }
+            // Get other fields
+            $email = isset($this->columnMapping['Email'])
+                ? ($processedRow[Str::slug($this->columnMapping['Email'], '')] ?? null)
+                : null;
+            $gender = isset($this->columnMapping['Gender'])
+                ? ($processedRow[Str::slug($this->columnMapping['Gender'], '')] ?? null)
+                : null;
+            $role = isset($this->columnMapping['Role'])
+                ? ($processedRow[Str::slug($this->columnMapping['Role'], '')] ?? null)
+                : null;
+            $address = isset($this->columnMapping['Address'])
+                ? ($processedRow[Str::slug($this->columnMapping['Address'], '')] ?? null)
+                : null;
 
-        // Get other fields
-        $email = $processedRow[Str::slug($this->columnMapping['Email'], '')] ?? null;
-        $gender = $processedRow[Str::slug($this->columnMapping['Gender'], '')] ?? null;
-        $role = $processedRow[Str::slug($this->columnMapping['Role'], '')] ?? null;
-        $address = $processedRow[Str::slug($this->columnMapping['Address'], '')] ?? null;
-
-        // Validate required fields
-        if (!$firstName || !$lastName || !$email || !$role) {
-            throw new \Exception("Missing required fields");
-        }
-
-            // Normalize gender and role
-            $gender = $this->normalizeGender($gender);
-            $role = $this->normalizeRole($role);
+            // Normalize gender and role if they exist
+            $gender = $gender ? $this->normalizeGender($gender) : null;
+            $role = $role ? $this->normalizeRole($role) : null;
 
             // Create user account
             $userAccount = UserAccount::create([
@@ -242,19 +245,24 @@ class EmployeesImport implements ToModel, WithHeadingRow, WithValidation
         $mappedColumns = [];
         foreach ($this->columnMapping as $field => $column) {
             $processedColumn = Str::slug($column, '');
-            $mappedColumns[$processedColumn] = ['required', 'string'];
             
-            // Add specific validations
+            // Only make FirstName and LastName required
+            if ($field === 'FirstName' || $field === 'LastName') {
+                $mappedColumns[$processedColumn] = ['required', 'string'];
+            } else {
+                $mappedColumns[$processedColumn] = ['nullable', 'string'];
+            }
+            
+            // Add specific validations for optional fields
             if ($field === 'Email') {
                 $mappedColumns[$processedColumn][] = 'email';
                 $mappedColumns[$processedColumn][] = 'unique:Employee,Email';
             }
             elseif ($field === 'Gender') {
-                $mappedColumns[$processedColumn] = ['required', 'in:Male,Female,M,F,male,female,m,f'];
+                $mappedColumns[$processedColumn] = ['nullable', 'in:Male,Female,M,F,male,female,m,f'];
             }
             elseif ($field === 'Role') {
-                // Add role validation
-                $mappedColumns[$processedColumn] = ['required', 'string'];
+                $mappedColumns[$processedColumn] = ['nullable', 'string'];
             }
         }
 
@@ -266,7 +274,11 @@ class EmployeesImport implements ToModel, WithHeadingRow, WithValidation
         $messages = [];
         foreach ($this->columnMapping as $field => $column) {
             $processedColumn = Str::slug($column, '');
-            $messages[$processedColumn.'.required'] = $field . ' is required';
+            
+            // Only show required message for FirstName and LastName
+            if ($field === 'FirstName' || $field === 'LastName') {
+                $messages[$processedColumn.'.required'] = $field . ' is required';
+            }
             
             if ($field === 'Email') {
                 $messages[$processedColumn.'.email'] = 'Email must be a valid email address';
@@ -274,9 +286,6 @@ class EmployeesImport implements ToModel, WithHeadingRow, WithValidation
             }
             elseif ($field === 'Gender') {
                 $messages[$processedColumn.'.in'] = 'Gender must be either Male or Female';
-            }
-            elseif ($field === 'Role') {
-                $messages[$processedColumn.'.required'] = 'Role is required';
             }
         }
         return $messages;
