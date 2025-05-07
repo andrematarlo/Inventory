@@ -505,7 +505,15 @@ class EmployeeController extends Controller
                         if ($request->filled('Password')) {
                             $userAccount->Password = Hash::make($request->Password);
                         }
-                        
+
+                        // Update the role field to match the first selected role's name
+                        if ($request->has('roles') && count($request->roles) > 0) {
+                            $primaryRoleId = $request->roles[0];
+                            $primaryRole = \App\Models\Role::find($primaryRoleId);
+                            if ($primaryRole) {
+                                $userAccount->role = $primaryRole->RoleName;
+                            }
+                        }
                         $userAccount->save();
                     }
                 }

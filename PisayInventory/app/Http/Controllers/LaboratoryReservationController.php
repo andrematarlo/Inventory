@@ -507,6 +507,15 @@ class LaboratoryReservationController extends Controller
             $fullId = request('full_id', $id);
             $reservation = LaboratoryReservation::where('reservation_id', $fullId)->firstOrFail();
             
+            // Check if user is SRA or SRS
+            $user = Auth::user();
+            if ($user->role !== 'SRA' && $user->role !== 'SRS') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only SRA and SRS can approve reservations.'
+                ], 403);
+            }
+            
             if ($reservation->status !== 'For Approval') {
                 return response()->json([
                     'success' => false,
@@ -527,7 +536,8 @@ class LaboratoryReservationController extends Controller
             // Add logging to track the update
             \Log::info('Attempting to approve reservation', [
                 'reservation_id' => $fullId,
-                'employee_id' => $employee->EmployeeID
+                'employee_id' => $employee->EmployeeID,
+                'user_role' => $user->role
             ]);
 
             $reservation->update([
@@ -629,36 +639,67 @@ class LaboratoryReservationController extends Controller
 
     public function getReservationsData(Request $request)
     {
-        $status = $request->get('status', 'For Approval');
-        $search = $request->get('search', '');
-        $perPage = $request->get('per_page', 10);
+        try {
+            $status = $request->get('status', 'For Approval');
+            $search = $request->get('search', '');
+            $perPage = $request->get('per_page', 10);
 
-        // Get all reservations without filtering by user
-        $query = LaboratoryReservation::with(['laboratory', 'teacher', 'reserver'])
-            ->where('status', $status);
+            // Get all reservations without filtering by user
+            $query = LaboratoryReservation::with(['laboratory', 'teacher', 'reserver'])
+                ->whereNull('deleted_at');
 
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('control_no', 'like', "%{$search}%")
-                    ->orWhere('grade_section', 'like', "%{$search}%")
-                    ->orWhere('subject', 'like', "%{$search}%")
-                    ->orWhereHas('laboratory', function($q) use ($search) {
-                        $q->where('laboratory_name', 'like', "%{$search}%");
-                    });
-            });
-        }
+            // Only filter by status if it's not empty
+            if (!empty($status)) {
+                $query->where('status', $status);
+            }
 
-        $reservations = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            if ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('control_no', 'like', "%{$search}%")
+                        ->orWhere('grade_section', 'like', "%{$search}%")
+                        ->orWhere('subject', 'like', "%{$search}%")
+                        ->orWhere('requested_by', 'like', "%{$search}%")
+                        ->orWhereHas('laboratory', function($q) use ($search) {
+                            $q->where('laboratory_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('teacher', function($q) use ($search) {
+                            $q->where('FirstName', 'like', "%{$search}%")
+                              ->orWhere('LastName', 'like', "%{$search}%");
+                        });
+                });
+            }
 
-        return response()->json([
-            'data' => $reservations->items(),
-            'meta' => [
+            $reservations = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+            // Add debug logging
+            \Log::info('Reservations query result:', [
+                'status' => $status,
+                'count' => $reservations->total(),
                 'current_page' => $reservations->currentPage(),
-                'last_page' => $reservations->lastPage(),
-                'per_page' => $reservations->perPage(),
-                'total' => $reservations->total()
-            ]
-        ]);
+                'per_page' => $perPage,
+                'sql' => $query->toSql(),
+                'bindings' => $query->getBindings()
+            ]);
+
+            return response()->json([
+                'data' => $reservations->items(),
+                'meta' => [
+                    'current_page' => $reservations->currentPage(),
+                    'last_page' => $reservations->lastPage(),
+                    'per_page' => $reservations->perPage(),
+                    'total' => $reservations->total()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in getReservationsData:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Error loading reservations: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getStatusCounts()
