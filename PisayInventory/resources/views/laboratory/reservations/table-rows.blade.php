@@ -48,6 +48,8 @@
         <td>
             @php
                 $statusClass = match($reservation->status) {
+                    'Approval of Teacher' => 'bg-primary',
+                    'Approval of SRA / SRS' => 'bg-warning',
                     'Active' => 'bg-success',
                     'Pending' => 'bg-warning',
                     'Cancelled' => 'bg-danger',
@@ -68,7 +70,12 @@
                 N/A
             @endif
         </td>
-        <td>{{ date('M d, Y', strtotime($reservation->reservation_date)) }}</td>
+        <td>
+            {{ date('M d, Y', strtotime($reservation->reservation_date_from)) }}
+            @if($reservation->reservation_date_to && $reservation->reservation_date_to !== $reservation->reservation_date_from)
+                to {{ date('M d, Y', strtotime($reservation->reservation_date_to)) }}
+            @endif
+        </td>
         <td>
             {{ date('h:i A', strtotime($reservation->start_time)) }} - 
             {{ date('h:i A', strtotime($reservation->end_time)) }}

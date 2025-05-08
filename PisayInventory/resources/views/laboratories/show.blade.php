@@ -110,7 +110,12 @@
                             <tbody>
                                 @forelse($laboratory->reservations->take(5) as $reservation)
                                 <tr>
-                                    <td>{{ $reservation->reservation_date }}</td>
+                                    <td>
+                                        {{ $reservation->reservation_date_from }}
+                                        @if($reservation->reservation_date_to && $reservation->reservation_date_to !== $reservation->reservation_date_from)
+                                            to {{ $reservation->reservation_date_to }}
+                                        @endif
+                                    </td>
                                     <td>{{ $reservation->start_time }} - {{ $reservation->end_time }}</td>
                                     <td>{{ Str::limit($reservation->purpose, 30) }}</td>
                                     <td>

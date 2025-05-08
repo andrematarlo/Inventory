@@ -81,6 +81,14 @@ class LaboratoryReservationController extends Controller
     public function store(Request $request)
     {
         try {
+            // Log the raw request data
+            \Log::info('Raw reservation request data:', [
+                'all' => $request->all(),
+                'has_reservation_date_to' => $request->has('reservation_date_to'),
+                'reservation_date_to' => $request->input('reservation_date_to'),
+                'reservation_date_from' => $request->input('reservation_date_from')
+            ]);
+
             $user = auth()->user();
             $isTeacher = $user->role === 'Teacher';
 
@@ -97,7 +105,8 @@ class LaboratoryReservationController extends Controller
                 'campus' => 'required|string',
                 'school_year' => 'required|string',
                 'subject' => 'required|string',
-                'reservation_date' => 'required|date|after:today',
+                'reservation_date_from' => 'required|date|after:today',
+                'reservation_date_to' => 'required|date|after_or_equal:reservation_date_from',
                 'start_time' => 'required',
                 'end_time' => 'required|after:start_time',
                 'num_students' => 'required|integer|min:1',
@@ -118,6 +127,33 @@ class LaboratoryReservationController extends Controller
 
             $validated = $request->validate($validationRules);
 
+            // Log validated data
+            \Log::info('Validated reservation data:', $validated);
+
+            // Your existing conflict check (move this before DB::beginTransaction and creation)
+            $conflictingReservation = LaboratoryReservation::where('laboratory_id', $validated['laboratory_id'])
+                ->where(function($query) use ($validated) {
+                    $query->where(function($q) use ($validated) {
+                        $q->where('reservation_date_from', '<=', $validated['reservation_date_to'])
+                          ->where('reservation_date_to', '>=', $validated['reservation_date_from']);
+                    });
+                })
+                ->where('status', '!=', 'Cancelled')
+                ->first();
+
+            if ($conflictingReservation) {
+                $conflictMsg = 'This time slot is already reserved';
+                $conflictMsg .= ' from ' . $conflictingReservation->reservation_date_from . ' to ' . $conflictingReservation->reservation_date_to;
+                $conflictMsg .= ' (' . $conflictingReservation->start_time . ' - ' . $conflictingReservation->end_time . ')';
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $conflictMsg
+                    ], 409);
+                }
+                return back()->with('error', $conflictMsg)->withInput();
+            }
+
             DB::beginTransaction();
 
             // Modified control number generation with microseconds for uniqueness
@@ -126,20 +162,6 @@ class LaboratoryReservationController extends Controller
             $timeComponent = $timestamp->format('His');
             $microseconds = sprintf('%06d', $timestamp->microsecond);
             $controlNo = "LR-{$dateComponent}-{$timeComponent}{$microseconds}";
-
-            // Your existing conflict check
-            $conflictingReservation = LaboratoryReservation::where('laboratory_id', $validated['laboratory_id'])
-                ->where('reservation_date', $validated['reservation_date'])
-                ->where(function($query) use ($validated) {
-                    $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
-                        ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']]);
-                })
-                ->where('status', '!=', 'Cancelled')
-                ->first();
-
-            if ($conflictingReservation) {
-                throw new \Exception('This time slot is already reserved.');
-            }
 
             // Set requested_by based on user type
             $requestedBy = '';
@@ -150,6 +172,18 @@ class LaboratoryReservationController extends Controller
                 $student = \App\Models\Student::where('UserAccountID', $user->UserAccountID)->first();
                 $requestedBy = $student ? $student->first_name . ' ' . $student->last_name : $user->name;
             }
+
+            // Set initial status based on user role
+            $initialStatus = $isTeacher ? 'Approval of SRA / SRS' : 'Approval of Teacher';
+
+            // Format the date range
+            $reservation_date = $validated['reservation_date_from'] . ' to ' . $validated['reservation_date_to'];
+            
+            // Log the date value
+            \Log::info('Reservation date range:', [
+                'from' => $validated['reservation_date_from'],
+                'to' => $validated['reservation_date_to'],
+            ]);
 
             // Prepare creation data with role-specific values
             $creationData = [
@@ -162,7 +196,8 @@ class LaboratoryReservationController extends Controller
                 'grade_section' => $isTeacher ? 'N/A' : $validated['grade_section'],
                 'subject' => $validated['subject'],
                 'teacher_id' => $isTeacher ? $employeeId : $validated['teacher_id'],
-                'reservation_date' => $validated['reservation_date'],
+                'reservation_date_from' => $validated['reservation_date_from'],
+                'reservation_date_to' => $validated['reservation_date_to'],
                 'start_time' => $validated['start_time'],
                 'end_time' => $validated['end_time'],
                 'num_students' => $validated['num_students'],
@@ -172,13 +207,19 @@ class LaboratoryReservationController extends Controller
                 'endorser_role' => $isTeacher ? 'Unit Head' : 'Teacher In-Charge',
                 'date_requested' => now(),
                 'group_members' => $validated['group_members'],
-                'status' => 'For Approval',
+                'status' => $initialStatus,
                 'remarks' => '',
                 'created_by' => Auth::user()->UserAccountID,
                 'IsDeleted' => false
             ];
 
+            // Log the final creation data
+            \Log::info('Final creation data:', $creationData);
+
             $reservation = LaboratoryReservation::create($creationData);
+
+            // Log the created reservation
+            \Log::info('Created reservation:', $reservation->toArray());
 
             DB::commit();
 
@@ -195,6 +236,10 @@ class LaboratoryReservationController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error creating reservation:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             
             if ($request->ajax()) {
                 return response()->json([
@@ -244,7 +289,8 @@ class LaboratoryReservationController extends Controller
                 'grade_section' => 'required|string',
                 'subject' => 'required|string',
                 'teacher_id' => 'required|exists:employee,EmployeeID',
-                'reservation_date' => 'required|date|after:today',
+                'reservation_date_from' => 'required|date|after:today',
+                'reservation_date_to' => 'nullable|date|after_or_equal:reservation_date_from',
                 'start_time' => 'required',
                 'end_time' => 'required|after:start_time',
                 'num_students' => 'required|integer|min:1',
@@ -263,7 +309,7 @@ class LaboratoryReservationController extends Controller
 
             // Check for conflicts
             $conflictingReservation = LaboratoryReservation::where('laboratory_id', $validated['laboratory_id'])
-                ->where('reservation_date', $validated['reservation_date'])
+                ->where('reservation_date_from', $validated['reservation_date_from'])
                 ->where(function($query) use ($validated) {
                     $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
                         ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']]);
@@ -275,6 +321,14 @@ class LaboratoryReservationController extends Controller
                 throw new \Exception('This time slot is already reserved.');
             }
 
+            // Debug: log the incoming request data
+            \Log::info('Reservation request data (studentStore):', $request->all());
+
+            $reservation_date_from = $validated['reservation_date_from'];
+            $reservation_date_to = $request->input('reservation_date_to');
+            if (!$reservation_date_to || $reservation_date_to === 'null' || $reservation_date_to === '') {
+                $reservation_date_to = $reservation_date_from;
+            }
             $reservation = LaboratoryReservation::create([
                 'reservation_id' => 'RES' . date('YmdHis'),
                 'control_no' => $controlNo,
@@ -285,7 +339,8 @@ class LaboratoryReservationController extends Controller
                 'grade_section' => $validated['grade_section'],
                 'subject' => $validated['subject'],
                 'teacher_id' => $validated['teacher_id'],
-                'reservation_date' => $validated['reservation_date'],
+                'reservation_date_from' => $reservation_date_from,
+                'reservation_date_to' => $reservation_date_to,
                 'start_time' => $validated['start_time'],
                 'end_time' => $validated['end_time'],
                 'num_students' => $validated['num_students'],
@@ -293,7 +348,7 @@ class LaboratoryReservationController extends Controller
                 'requested_by' => Auth::user()->student ? Auth::user()->student->first_name . ' ' . Auth::user()->student->last_name : Auth::user()->name,
                 'date_requested' => now(),
                 'group_members' => $validated['group_members'],
-                'status' => 'For Approval',
+                'status' => 'Approval of Teacher',
                 'remarks' => $validated['remarks'],
                 'created_by' => Auth::user()->UserAccountID,
                 'IsDeleted' => false
@@ -507,22 +562,14 @@ class LaboratoryReservationController extends Controller
             $fullId = request('full_id', $id);
             $reservation = LaboratoryReservation::where('reservation_id', $fullId)->firstOrFail();
             
-            // Check if user is SRA or SRS
-            $user = Auth::user();
-            if ($user->role !== 'SRA' && $user->role !== 'SRS') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only SRA and SRS can approve reservations.'
-                ], 403);
-            }
+            // Get the current status from the request
+            $currentStatus = request('current_status');
             
-            if ($reservation->status !== 'For Approval') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only reservations with For Approval status can be approved.'
-                ], 422);
-            }
-
+            // Get the current user
+            $user = Auth::user();
+            $isTeacher = $user->role === 'Teacher';
+            $isSRAorSRS = $user->role === 'SRA' || $user->role === 'SRS';
+            
             // Get the employee ID associated with the current user
             $employee = \App\Models\Employee::where('UserAccountID', Auth::user()->UserAccountID)->first();
             
@@ -536,12 +583,27 @@ class LaboratoryReservationController extends Controller
             // Add logging to track the update
             \Log::info('Attempting to approve reservation', [
                 'reservation_id' => $fullId,
+                'current_status' => $currentStatus,
                 'employee_id' => $employee->EmployeeID,
                 'user_role' => $user->role
             ]);
 
+            // Determine the new status based on current status and user role
+            $newStatus = '';
+            if ($currentStatus === 'Approval of Teacher' && $isTeacher) {
+                $newStatus = 'Approval of SRA / SRS';
+            } else if ($currentStatus === 'Approval of SRA / SRS' && $isSRAorSRS) {
+                $newStatus = 'Approved';
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid status transition or unauthorized action.'
+                ], 403);
+            }
+
+            // Update the reservation
             $reservation->update([
-                'status' => 'Approved',
+                'status' => $newStatus,
                 'approved_by' => $employee->EmployeeID,
                 'approved_at' => now(),
                 'updated_by' => $employee->EmployeeID
@@ -681,8 +743,16 @@ class LaboratoryReservationController extends Controller
                 'bindings' => $query->getBindings()
             ]);
 
+            // Map reservations to include requested_by_role and reservation_date_to
+            $data = collect($reservations->items())->map(function($reservation) {
+                $arr = $reservation->toArray();
+                $arr['requested_by_role'] = $reservation->requested_by_type ?? null;
+                $arr['reservation_date_to'] = $reservation->reservation_date_to ?? null;
+                return $arr;
+            });
+
             return response()->json([
-                'data' => $reservations->items(),
+                'data' => $data,
                 'meta' => [
                     'current_page' => $reservations->currentPage(),
                     'last_page' => $reservations->lastPage(),
@@ -996,8 +1066,16 @@ class LaboratoryReservationController extends Controller
         $reservations = $query->orderBy('created_at', 'desc')
             ->paginate($perPage, ['*'], 'page', $page);
 
+        // Map reservations to include requested_by_role and reservation_date_to
+        $data = collect($reservations->items())->map(function($reservation) {
+            $arr = $reservation->toArray();
+            $arr['requested_by_role'] = $reservation->requested_by_type ?? null;
+            $arr['reservation_date_to'] = $reservation->reservation_date_to ?? null;
+            return $arr;
+        });
+
         return response()->json([
-            'data' => $reservations->items(),
+            'data' => $data,
             'meta' => [
                 'current_page' => $reservations->currentPage(),
                 'last_page' => $reservations->lastPage(),

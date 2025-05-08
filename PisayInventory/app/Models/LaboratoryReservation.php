@@ -49,7 +49,9 @@ class LaboratoryReservation extends Model
         'deleted_by',
         'RestoredById',
         'DateRestored',
-        'IsDeleted'
+        'IsDeleted',
+        'reservation_date_from',
+        'reservation_date_to'
     ];
 
     protected $dates = [
@@ -144,19 +146,19 @@ class LaboratoryReservation extends Model
     }
 
     public function endorser()
-{
-    return $this->belongsTo(Employee::class, 'endorsed_by', 'EmployeeID');
-}
+    {
+        return $this->belongsTo(Employee::class, 'endorsed_by', 'EmployeeID');
+    }
 
-public function approver()
-{
-    return $this->belongsTo(Employee::class, 'approved_by', 'EmployeeID');
-}
+    public function approver()
+    {
+        return $this->belongsTo(Employee::class, 'approved_by', 'EmployeeID');
+    }
 
-public function disapprover()
-{
-    return $this->belongsTo(\App\Models\Employee::class, 'disapproved_by', 'EmployeeID')
-        ->withDefault() // This will prevent null errors
-        ->select(['EmployeeID', 'FirstName', 'LastName']);
-}
+    public function disapprover()
+    {
+        return $this->belongsTo(\App\Models\Employee::class, 'disapproved_by', 'EmployeeID')
+            ->withDefault()
+            ->select(['EmployeeID', 'FirstName', 'LastName']);
+    }
 }

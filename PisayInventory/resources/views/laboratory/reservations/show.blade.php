@@ -16,7 +16,12 @@
 
     <div class="mb-3">
         <strong>Date:</strong>
-        <div>{{ \Carbon\Carbon::parse($reservation->reservation_date)->format('M d, Y') }}</div>
+        <div>
+            {{ \Carbon\Carbon::parse($reservation->reservation_date_from)->format('M d, Y') }}
+            @if($reservation->reservation_date_to && $reservation->reservation_date_to !== $reservation->reservation_date_from)
+                to {{ \Carbon\Carbon::parse($reservation->reservation_date_to)->format('M d, Y') }}
+            @endif
+        </div>
     </div>
 
     <div class="mb-3">
@@ -48,8 +53,10 @@
     <div class="mb-3">
         <strong>Status:</strong>
         <div>
-            @if($reservation->status == 'For Approval')
-                <span class="badge bg-warning">For Approval</span>
+            @if($reservation->status == 'Approval of Teacher')
+                <span class="badge bg-primary">Approval of Teacher</span>
+            @elseif($reservation->status == 'Approval of SRA / SRS')
+                <span class="badge bg-warning">Approval of SRA / SRS</span>
             @elseif($reservation->status == 'Approved')
                 <span class="badge bg-success">Approved</span>
             @elseif($reservation->status == 'Disapproved')

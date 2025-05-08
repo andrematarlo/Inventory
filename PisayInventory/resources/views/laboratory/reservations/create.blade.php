@@ -95,8 +95,16 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Date/Inclusive Dates:</label>
-                                <input type="date" class="form-control" name="reservation_date" 
-                                       min="{{ date('Y-m-d', strtotime('+1 day')) }}" required>
+                                <div class="d-flex gap-2">
+                                    <input type="date" class="form-control" name="reservation_date_from" 
+                                        min="{{ date('Y-m-d', strtotime('+1 day')) }}" 
+                                        required>
+                                    <span class="align-self-center">to</span>
+                                    <input type="date" class="form-control" name="reservation_date_to" 
+                                        min="{{ date('Y-m-d', strtotime('+1 day')) }}" 
+                                        required>
+                                </div>
+                                <small class="text-muted">Select both start and end dates</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Inclusive Time of Use:</label>
@@ -377,7 +385,33 @@ $(document).ready(function() {
     // Set minimum date for reservation
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    $('input[name="reservation_date"]').attr('min', tomorrow.toISOString().split('T')[0]);
+    $('input[name="reservation_date_from"], input[name="reservation_date_to"]').attr('min', tomorrow.toISOString().split('T')[0]);
+
+    // When reservation_date_from changes, update reservation_date_to if needed
+    $('input[name="reservation_date_from"]').on('change', function() {
+        var dateFrom = $(this).val();
+        var dateTo = $('input[name="reservation_date_to"]').val();
+        
+        // If to date is empty or before from date, set it to from date
+        if (!dateTo || new Date(dateTo) < new Date(dateFrom)) {
+            $('input[name="reservation_date_to"]').val(dateFrom);
+        }
+    });
+
+    // When reservation_date_to changes, validate it's not before from date
+    $('input[name="reservation_date_to"]').on('change', function() {
+        var dateFrom = $('input[name="reservation_date_from"]').val();
+        var dateTo = $(this).val();
+        
+        if (dateTo && new Date(dateTo) < new Date(dateFrom)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Date Range',
+                text: 'End date cannot be before start date'
+            });
+            $(this).val(dateFrom);
+        }
+    });
 
     // Set default time range (8 AM to 5 PM)
     $('input[name="start_time"]').val('08:00');
@@ -418,13 +452,35 @@ $(document).ready(function() {
         }
     });
 
-    // Form validation and submission
-    $('#reservationForm').submit(function(e) {
-        e.preventDefault();
+    // Before submitting the form
+    $('#reservationForm').off('submit').on('submit', function(e) {
+        e.preventDefault(); // Prevent default form submission immediately!
+        // Cutoff: block submission after 3pm PH time (UTC+8)
+        const now = new Date();
+        // Convert to PH time (UTC+8)
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const phTime = new Date(utc + (3600000 * 8));
+        if (phTime.getHours() > 15 || (phTime.getHours() === 15 && phTime.getMinutes() > 0)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Cutoff Time Reached',
+                text: 'Reservation requests can only be filed until 3:00 PM (PH Time). Please try again tomorrow.'
+            });
+            return;
+        }
         
+        var dateFrom = $('input[name="reservation_date_from"]').val();
+        var dateTo = $('input[name="reservation_date_to"]').val();
+        
+        // Log the form data before submission
+        console.log('Form data before submission:', {
+            reservation_date_from: dateFrom,
+            reservation_date_to: dateTo
+        });
+
         // Validate required fields
         const requiredFields = ['campus', 'school_year', 'subject', 'teacher_id', 
-                              'reservation_date', 'start_time', 'end_time', 
+                              'reservation_date_from', 'reservation_date_to', 'start_time', 'end_time', 
                               'laboratory_id', 'num_students'];
         
         // Check user role and add grade_section conditionally
@@ -500,7 +556,6 @@ $(document).ready(function() {
                 } else if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
                 }
-                
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
@@ -513,14 +568,14 @@ $(document).ready(function() {
     // Check for conflicting reservations when laboratory and date/time are selected
     function checkConflicts() {
         const labId = $('select[name="laboratory_id"]').val();
-        const date = $('input[name="reservation_date"]').val();
+        const reservationDate = $('input[name="reservation_date_from"]').val() + ' to ' + $('input[name="reservation_date_to"]').val();
         const startTime = $('input[name="start_time"]').val();
         const endTime = $('input[name="end_time"]').val();
 
-        if (labId && date && startTime && endTime) {
+        if (labId && reservationDate && startTime && endTime) {
             $.get('{{ route("laboratory.reservations.checkConflicts") }}', {
                 laboratory_id: labId,
-                reservation_date: date,
+                reservation_date: reservationDate,
                 start_time: startTime,
                 end_time: endTime
             }, function(response) {
@@ -538,7 +593,7 @@ $(document).ready(function() {
     }
 
     // Check conflicts when relevant fields change
-    $('select[name="laboratory_id"], input[name="reservation_date"], input[name="start_time"], input[name="end_time"]')
+    $('select[name="laboratory_id"], input[name="reservation_date_from"], input[name="reservation_date_to"], input[name="start_time"], input[name="end_time"]')
         .change(checkConflicts);
 });
 </script>
