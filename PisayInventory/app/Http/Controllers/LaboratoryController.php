@@ -23,10 +23,27 @@ class LaboratoryController extends Controller
             return redirect()->route('dashboard')->with('error', 'You do not have permission to view laboratories.');
         }
 
-        $laboratories = Laboratory::withTrashed()
-            ->orderBy('laboratory_name')
-            ->get();
-        
+        // Get the user's role from the useraccount table
+        $userRole = DB::table('useraccount')
+            ->where('UserAccountID', Auth::id())
+            ->value('role');
+
+        // Debug: Show the role and user ID (remove after testing)
+        dd($userRole, Auth::id());
+
+        // Always filter by role except for Admin
+        if ($userRole && $userRole !== 'Admin') {
+            $laboratories = Laboratory::withTrashed()
+                ->where('role', trim($userRole)) // trim to avoid space issues
+                ->orderBy('laboratory_name')
+                ->get();
+        } else {
+            // Admin can see all
+            $laboratories = Laboratory::withTrashed()
+                ->orderBy('laboratory_name')
+                ->get();
+        }
+
         return view('laboratories.index', compact('laboratories', 'userPermissions'));
     }
 
@@ -77,6 +94,11 @@ class LaboratoryController extends Controller
         try {
             DB::beginTransaction();
 
+            // Get the user's role
+            $userRole = DB::table('useraccount')
+                ->where('UserAccountID', Auth::id())
+                ->value('role');
+
             // Create the laboratory
             Laboratory::create([
                 'laboratory_id' => $request->laboratory_id,
@@ -85,7 +107,8 @@ class LaboratoryController extends Controller
                 'location' => $request->location,
                 'capacity' => $request->capacity,
                 'status' => $request->status,
-                'created_by' => Auth::id()
+                'created_by' => Auth::id(),
+                'role' => $userRole
             ]);
 
             DB::commit();
@@ -176,6 +199,11 @@ class LaboratoryController extends Controller
         try {
             DB::beginTransaction();
 
+            // Get the user's role
+            $userRole = DB::table('useraccount')
+                ->where('UserAccountID', Auth::id())
+                ->value('role');
+
             // Update the laboratory
             $laboratory->update([
                 'laboratory_id' => $request->laboratory_id,
@@ -184,7 +212,8 @@ class LaboratoryController extends Controller
                 'location' => $request->location,
                 'capacity' => $request->capacity,
                 'status' => $request->status,
-                'updated_by' => Auth::id()
+                'updated_by' => Auth::id(),
+                'role' => $userRole // Maintain the role
             ]);
 
             DB::commit();

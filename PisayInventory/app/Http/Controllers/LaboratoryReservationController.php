@@ -34,23 +34,16 @@ class LaboratoryReservationController extends Controller
                 ->with('error', 'You do not have permission to view laboratory reservations.');
         }
 
-        $activeReservations = LaboratoryReservation::with(['laboratory', 'reserver.employee'])
-            ->whereNull('deleted_at')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        $userRole = DB::table('useraccount')
+            ->where('UserAccountID', Auth::id())
+            ->value('role');
 
-        $deletedReservations = LaboratoryReservation::with(['laboratory', 'reserver.employee'])
-            ->onlyTrashed()
-            ->orderBy('deleted_at', 'desc')
-            ->paginate(10);
-
+        // Strict filtering is handled by AJAX endpoint, so don't pass reservations here
         $laboratories = Laboratory::where('status', 'Available')
             ->orderBy('laboratory_name')
             ->get();
 
         return view('laboratory.reservations.index', compact(
-            'activeReservations',
-            'deletedReservations',
             'userPermissions',
             'laboratories'
         ));
@@ -568,8 +561,9 @@ class LaboratoryReservationController extends Controller
             // Get the current user
             $user = Auth::user();
             $isTeacher = $user->role === 'Teacher';
-            $isSRAorSRS = $user->role === 'SRA' || $user->role === 'SRS';
-            
+            // Update: Allow SRS-BIO, SRS-CHEM, SRS-COMLAB as SRA/SRS
+            $isSRAorSRS = in_array($user->role, ['SRA', 'SRS', 'SRS-BIO', 'SRS-CHEM', 'SRS-COMLAB']);
+
             // Get the employee ID associated with the current user
             $employee = \App\Models\Employee::where('UserAccountID', Auth::user()->UserAccountID)->first();
             
@@ -706,11 +700,28 @@ class LaboratoryReservationController extends Controller
             $search = $request->get('search', '');
             $perPage = $request->get('per_page', 10);
 
-            // Get all reservations without filtering by user
+            // Get user role and trim any whitespace
+            $userRole = trim(DB::table('useraccount')
+                ->where('UserAccountID', Auth::id())
+                ->value('role'));
+
+            // Debug log user role
+            Log::info('User role for filtering:', ['role' => $userRole]);
+
             $query = LaboratoryReservation::with(['laboratory', 'teacher', 'reserver'])
                 ->whereNull('deleted_at');
 
-            // Only filter by status if it's not empty
+            // Strict role-based filtering (except Admin and Teacher)
+            if ($userRole && $userRole !== 'Admin' && $userRole !== 'Teacher') {
+                $labIds = Laboratory::where('role', $userRole)->pluck('laboratory_id')->toArray();
+                // Debug log filtered lab IDs
+                Log::info('Filtered laboratory IDs:', [
+                    'userRole' => $userRole,
+                    'labIds' => $labIds
+                ]);
+                $query->whereIn('laboratory_id', $labIds);
+            }
+
             if (!empty($status)) {
                 $query->where('status', $status);
             }
@@ -733,23 +744,22 @@ class LaboratoryReservationController extends Controller
 
             $reservations = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-            // Add debug logging
-            \Log::info('Reservations query result:', [
-                'status' => $status,
-                'count' => $reservations->total(),
-                'current_page' => $reservations->currentPage(),
-                'per_page' => $perPage,
-                'sql' => $query->toSql(),
-                'bindings' => $query->getBindings()
-            ]);
-
-            // Map reservations to include requested_by_role and reservation_date_to
-            $data = collect($reservations->items())->map(function($reservation) {
+            // Additional PHP-side filtering as a safety measure
+            $data = collect($reservations->items())->filter(function($reservation) use ($userRole) {
+                if ($userRole === 'Admin') return true;
+                return $reservation->laboratory && trim($reservation->laboratory->role) === $userRole;
+            })->map(function($reservation) {
                 $arr = $reservation->toArray();
                 $arr['requested_by_role'] = $reservation->requested_by_type ?? null;
                 $arr['reservation_date_to'] = $reservation->reservation_date_to ?? null;
                 return $arr;
             });
+
+            // Debug log final filtered data
+            Log::info('Final filtered reservations:', [
+                'count' => $data->count(),
+                'userRole' => $userRole
+            ]);
 
             return response()->json([
                 'data' => $data,
@@ -761,7 +771,7 @@ class LaboratoryReservationController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error in getReservationsData:', [
+            Log::error('Error in getReservationsData:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -775,12 +785,12 @@ class LaboratoryReservationController extends Controller
     public function getStatusCounts()
     {
         $counts = [
-            'forApproval' => LaboratoryReservation::where('status', 'For Approval')->count(),
+            'teacherApproval' => LaboratoryReservation::where('status', 'Approval of Teacher')->count(),
+            'sraSrsApproval' => LaboratoryReservation::where('status', 'Approval of SRA / SRS')->count(),
             'approved' => LaboratoryReservation::where('status', 'Approved')->count(),
             'cancelled' => LaboratoryReservation::where('status', 'Cancelled')->count(),
-            'disapproved' => LaboratoryReservation::where('status', 'Disapproved')->count()  // Add this line
+            'disapproved' => LaboratoryReservation::where('status', 'Disapproved')->count()
         ];
-
         return response()->json($counts);
     }
 
@@ -805,33 +815,12 @@ class LaboratoryReservationController extends Controller
      */
     public function show($id)
     {
-        $reservation = LaboratoryReservation::with([
-            'laboratory', 
-            'reserver.employee',
-            'endorser',
-            'approver',
-            'disapprover' => function($query) {
-                $query->select(['EmployeeID', 'FirstName', 'LastName']);
-            }
-        ])->findOrFail($id);
-        
-        // Add more detailed debugging
-        \Log::info('Reservation details:', [
-            'id' => $id,
-            'status' => $reservation->status,
-            'disapproved_by' => $reservation->disapproved_by,
-            'disapproved_at' => $reservation->disapproved_at,
-            'disapprover_info' => $reservation->disapprover ? [
-                'id' => $reservation->disapprover->EmployeeID,
-                'name' => $reservation->disapprover->FirstName . ' ' . $reservation->disapprover->LastName
-            ] : null
-        ]);
-        
+        $reservation = LaboratoryReservation::with(['laboratory', 'teacher', 'endorser', 'approver'])->findOrFail($id);
+        $readonly = true;
         if (request()->ajax()) {
-            return view('laboratory.reservations.show', compact('reservation'))->render();
+            return view('laboratory.reservations._form', compact('reservation', 'readonly'))->render();
         }
-        
-        return view('laboratory.reservations.show', compact('reservation'));
+        return view('laboratory.reservations._form', compact('reservation', 'readonly'));
     }
 
     /**

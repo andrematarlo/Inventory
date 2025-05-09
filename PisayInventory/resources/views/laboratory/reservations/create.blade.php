@@ -477,7 +477,7 @@ $(document).ready(function() {
             reservation_date_from: dateFrom,
             reservation_date_to: dateTo
         });
-
+        
         // Validate required fields
         const requiredFields = ['campus', 'school_year', 'subject', 'teacher_id', 
                               'reservation_date_from', 'reservation_date_to', 'start_time', 'end_time', 

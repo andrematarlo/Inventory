@@ -146,19 +146,19 @@ class LaboratoryReservation extends Model
     }
 
     public function endorser()
-    {
-        return $this->belongsTo(Employee::class, 'endorsed_by', 'EmployeeID');
-    }
+{
+    return $this->belongsTo(Employee::class, 'endorsed_by', 'EmployeeID');
+}
 
-    public function approver()
-    {
-        return $this->belongsTo(Employee::class, 'approved_by', 'EmployeeID');
-    }
+public function approver()
+{
+    return $this->belongsTo(Employee::class, 'approved_by', 'EmployeeID');
+}
 
-    public function disapprover()
-    {
-        return $this->belongsTo(\App\Models\Employee::class, 'disapproved_by', 'EmployeeID')
+public function disapprover()
+{
+    return $this->belongsTo(\App\Models\Employee::class, 'disapproved_by', 'EmployeeID')
             ->withDefault()
-            ->select(['EmployeeID', 'FirstName', 'LastName']);
-    }
+        ->select(['EmployeeID', 'FirstName', 'LastName']);
+}
 }

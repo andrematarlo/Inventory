@@ -5,13 +5,28 @@ namespace App\Http\Controllers;
 use App\Models\Laboratory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class LaboratoriesController extends Controller
 {
     public function index()
     {
-        $laboratories = Laboratory::withTrashed()->get();
-        
+        $userRole = DB::table('useraccount')
+            ->where('UserAccountID', Auth::id())
+            ->value('role');
+
+        // Strict filtering except for Admin
+        if ($userRole && $userRole !== 'Admin') {
+            $laboratories = Laboratory::withTrashed()
+                ->where('role', trim($userRole))
+                ->orderBy('laboratory_name')
+                ->get();
+        } else {
+            $laboratories = Laboratory::withTrashed()
+                ->orderBy('laboratory_name')
+                ->get();
+        }
+
         // Get user permissions for laboratories
         $userPermissions = (object) [
             'CanView' => true,  // You should replace these with actual permission checks
@@ -134,7 +149,8 @@ class LaboratoriesController extends Controller
                 'capacity' => $request->capacity,
                 'status' => $request->status,
                 'description' => $request->description,
-                'created_by' => auth()->id() ?? 1
+                'created_by' => auth()->id() ?? 1,
+                'role' => DB::table('useraccount')->where('UserAccountID', auth()->id())->value('role'),
             ]);
 
             if ($request->ajax()) {

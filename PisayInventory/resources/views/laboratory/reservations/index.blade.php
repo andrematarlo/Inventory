@@ -25,8 +25,8 @@
                     Approved <span class="badge bg-success ms-2" id="approvedCount">0</span>
                 </button>
                 <button type="button" class="status-toggle btn btn-outline-danger" data-status="Disapproved">
-                    Disapproved <span class="badge bg-danger" id="disapprovedCount">0</span>
-                </button>
+        Disapproved <span class="badge bg-danger" id="disapprovedCount">0</span>
+    </button>
             </div>
 
             <!-- Search and Entries Control -->
@@ -189,6 +189,12 @@
     const isAdmin = '{{ Auth::user()->role === "Admin" ? "true" : "false" }}';
     const userPermissions = JSON.parse('{!! addslashes(json_encode($userPermissions)) !!}');
     
+    // New SRS role checks
+    const isSRSBIO = userRole === 'SRS-BIO';
+    const isSRSCHEM = userRole === 'SRS-CHEM';
+    const isSRSCOMLAB = userRole === 'SRS-COMLAB';
+    const isSRSRole = isSRSBIO || isSRSCHEM || isSRSCOMLAB;
+    
     // Debug role information
     console.log('Detailed Role Information:', {
         rawRole: '{{ Auth::user()->role }}',
@@ -291,42 +297,69 @@ $(document).ready(function() {
 
     // Load status counts
     function loadCounts() {
-        $.get("{{ route('laboratory.reservations.counts') }}", function(response) {
+    $.get("{{ route('laboratory.reservations.counts') }}", function(response) {
             $('#teacherApprovalCount').text(response.teacherApproval || 0);
             $('#sraSrsApprovalCount').text(response.sraSrsApproval || 0);
             $('#approvedCount').text(response.approved || 0);
             $('#cancelledCount').text(response.cancelled || 0);
             $('#disapprovedCount').text(response.disapproved || 0);
-        });
-    }
+    });
+}
 
     // Render table
     function renderTable(reservations) {
         let html = '';
+        // Always define laboratoryFilters at the top
+        const laboratoryFilters = {
+            'SRS-BIO': [
+                'Microbiology Lab',
+                'Research Lab(Bio)',
+                'Botany(Bio) Lab',
+                'Zoology(Bio) Lab'
+            ],
+            'SRS-CHEM': [
+                'Chemistry Lab 331',
+                'Chemistry Lab 332',
+                'Research Room 1/ 334',
+                'Research Room 2/ 335'
+            ],
+            'SRS-COMLAB': [
+                'Computer Lab 1',
+                'Computer Lab 2'
+            ]
+        };
         
         if (!reservations || reservations.length === 0) {
             html = '<tr><td colspan="9" class="text-center">No reservations found</td></tr>';
         } else {
-            reservations.forEach(function(reservation) {
-                // Check if the current user is a teacher
-                const isTeacher = userRole === 'Teacher';
-                // Check if the current user is SRA/SRS
-                const isSRAorSRS = userRole && (userRole.trim().toUpperCase() === 'SRS' || userRole.trim().toUpperCase() === 'SRA');
-                // Check if the reservation was made by a teacher (case-insensitive)
-                const isTeacherReservation = reservation.requested_by_role && reservation.requested_by_role.toLowerCase() === 'teacher';
-                
-                console.log('Rendering reservation:', {
-                    id: reservation.reservation_id,
-                    status: reservation.status,
-                    requested_by: reservation.requested_by,
-                    requested_by_role: reservation.requested_by_role,
-                    is_teacher_reservation: isTeacherReservation,
-                    current_status: currentStatus,
-                    user_role: userRole,
-                    is_teacher: isTeacher,
-                    is_sra_srs: isSRAorSRS
+            // Filter reservations based on user role and laboratory names
+            let filteredReservations;
+            if (userRole === 'Admin') {
+                filteredReservations = reservations;
+            } else if (userRole === 'Teacher') {
+                // Teachers see all reservations (especially for Approval of Teacher)
+                filteredReservations = reservations;
+            } else {
+                filteredReservations = reservations.filter(reservation => {
+                    const labName = reservation.laboratory ? reservation.laboratory.laboratory_name : '';
+                    const allowedLabs = laboratoryFilters[userRole] || [];
+                    return allowedLabs.includes(labName);
                 });
-                
+            }
+
+            // Debug log
+            console.log('Filtering reservations:', {
+                userRole: userRole,
+                totalReservations: reservations.length,
+                filteredCount: filteredReservations.length,
+                allowedLabs: laboratoryFilters[userRole] || []
+            });
+
+            filteredReservations.forEach(function(reservation) {
+                const isTeacher = userRole === 'Teacher';
+                const status = reservation.status;
+                // Only show approve/disapprove if not Approved, Disapproved, or Cancelled
+                const canShowActionButtons = !['Approved', 'Disapproved', 'Cancelled'].includes(status);
                 html += `
                     <tr>
                         <td>
@@ -336,18 +369,15 @@ $(document).ready(function() {
                                         data-id="${reservation.reservation_id}" title="View">
                                     <i class="bi bi-eye"></i>
                                 </button>
-
-                                ${(() => {
+                                ${canShowActionButtons ? (() => {
                                     // If it's a student reservation in "Approval of Teacher" status and user is a teacher
-                                    if (!isTeacherReservation && reservation.status === 'Approval of Teacher' && isTeacher) {
-                                        console.log('Showing teacher approval buttons for:', reservation.reservation_id);
+                                    if (!reservation.requested_by_role || reservation.requested_by_role.toLowerCase() !== 'teacher') {
                                         return `
                                             <!-- Approve button for teachers -->
                                             <button type="button" class="btn btn-success btn-sm approve-reservation" 
                                                     data-id="${reservation.reservation_id}" title="Approve">
                                                 <i class="bi bi-check-lg"></i>
                                             </button>
-
                                             <!-- Disapprove button for teachers -->
                                             <button type="button" class="btn btn-danger btn-sm disapprove-reservation" 
                                                     data-id="${reservation.reservation_id}" title="Disapprove">
@@ -355,27 +385,23 @@ $(document).ready(function() {
                                             </button>
                                         `;
                                     }
-                                    
                                     // If it's in "Approval of SRA / SRS" status and user is SRA/SRS
-                                    if (reservation.status === 'Approval of SRA / SRS' && isSRAorSRS) {
-                                        console.log('Showing SRA/SRS approval buttons for:', reservation.reservation_id);
+                                    if (reservation.status === 'Approval of SRA / SRS' && isSRSRole) {
                                         return `
-                                            <!-- Approve button for SRA/SRS -->
+                                            <!-- Approve button for SRS -->
                                             <button type="button" class="btn btn-success btn-sm approve-reservation" 
                                                     data-id="${reservation.reservation_id}" title="Approve">
                                                 <i class="bi bi-check-lg"></i>
                                             </button>
-
-                                            <!-- Disapprove button for SRA/SRS -->
+                                            <!-- Disapprove button for SRS -->
                                             <button type="button" class="btn btn-danger btn-sm disapprove-reservation" 
                                                     data-id="${reservation.reservation_id}" title="Disapprove">
                                                 <i class="bi bi-x-lg"></i>
                                             </button>
                                         `;
                                     }
-
                                     // Cancel button - show for both teachers and SRA/SRS
-                                    if ((isTeacher || isSRAorSRS) && reservation.status !== 'Approved' && reservation.status !== 'Disapproved') {
+                                    if ((isTeacher || isSRSRole) && reservation.status !== 'Approved' && reservation.status !== 'Disapproved') {
                                         return `
                                             <button type="button" class="btn btn-warning btn-sm cancel-reservation" 
                                                     data-id="${reservation.reservation_id}" title="Cancel">
@@ -383,9 +409,8 @@ $(document).ready(function() {
                                             </button>
                                         `;
                                     }
-
                                     return '';
-                                })()}
+                                })() : ''}
                             </div>
                         </td>
                         <td>${reservation.control_no || '-'}</td>
@@ -605,9 +630,9 @@ $(document).ready(function() {
                                 $('.status-toggle[data-status="Approval of SRA / SRS"]').addClass('active');
                             } else {
                                 // For SRA/SRS approval, switch to Approved view
-                                currentStatus = 'Approved';
-                                $('.status-toggle').removeClass('active');
-                                $('.status-toggle[data-status="Approved"]').addClass('active');
+                            currentStatus = 'Approved';
+                            $('.status-toggle').removeClass('active');
+                            $('.status-toggle[data-status="Approved"]').addClass('active');
                             }
                             // Reload the reservations and counts
                             loadReservations();
@@ -626,72 +651,72 @@ $(document).ready(function() {
         });
     });
 
-    // Disapprove reservation
-    $(document).on('click', '.disapprove-reservation', function() {
-        const fullReservationId = $(this).data('id');
-        console.log('Full Reservation ID:', fullReservationId);
-        
-        // Extract just the numeric part if it's a RES-prefixed ID
-        const reservationId = fullReservationId.replace('RES', '');
-        console.log('Processed Reservation ID:', reservationId);
+   // Disapprove reservation
+$(document).on('click', '.disapprove-reservation', function() {
+    const fullReservationId = $(this).data('id');
+    console.log('Full Reservation ID:', fullReservationId);
+    
+    // Extract just the numeric part if it's a RES-prefixed ID
+    const reservationId = fullReservationId.replace('RES', '');
+    console.log('Processed Reservation ID:', reservationId);
         
         // Get the current status from the active toggle button
         const currentStatus = $('.status-toggle.active').data('status');
-        
-        Swal.fire({
-            title: 'Disapprove Reservation?',
-            text: 'Please provide a reason for disapproval:',
-            input: 'textarea',
-            inputPlaceholder: 'Enter detailed reason for disapproval...',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Disapprove',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            inputValidator: (value) => {
-                if (!value) {
-                    return 'You need to provide a reason for disapproval!';
-                }
-                if (value.length < 10) {
-                    return 'Please provide a more detailed reason (at least 10 characters)';
-                }
+    
+    Swal.fire({
+        title: 'Disapprove Reservation?',
+        text: 'Please provide a reason for disapproval:',
+        input: 'textarea',
+        inputPlaceholder: 'Enter detailed reason for disapproval...',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Disapprove',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'You need to provide a reason for disapproval!';
             }
-        }).then((result) => {
-            if (result.isConfirmed && result.value) {
-                $.ajax({
-                    url: "{{ route('laboratory.reservations.disapprove', '_id_') }}".replace('_id_', reservationId),
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        remarks: result.value,
+            if (value.length < 10) {
+                return 'Please provide a more detailed reason (at least 10 characters)';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            $.ajax({
+                url: "{{ route('laboratory.reservations.disapprove', '_id_') }}".replace('_id_', reservationId),
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    remarks: result.value,
                         full_id: fullReservationId,
                         current_status: currentStatus
-                    },
-                    success: function(response) {
-                        Swal.fire({
-                            title: 'Success!',
-                            text: response.message,
-                            icon: 'success'
-                        }).then(() => {
-                            currentStatus = 'Disapproved';
-                            $('.status-toggle').removeClass('active');
-                            $('.status-toggle[data-status="Disapproved"]').addClass('active');
-                            loadReservations();
-                            loadCounts();
-                        });
-                    },
-                    error: function(xhr) {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: xhr.responseJSON?.message || 'An error occurred while processing your request.',
-                            icon: 'error'
-                        });
-                    }
-                });
-            }
-        });
+                },
+                success: function(response) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: response.message,
+                        icon: 'success'
+                    }).then(() => {
+                        currentStatus = 'Disapproved';
+                        $('.status-toggle').removeClass('active');
+                        $('.status-toggle[data-status="Disapproved"]').addClass('active');
+                        loadReservations();
+                        loadCounts();
+                    });
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: xhr.responseJSON?.message || 'An error occurred while processing your request.',
+                        icon: 'error'
+                    });
+                }
+            });
+        }
     });
+});
 
     // Helper functions
     function formatDate(date) {
