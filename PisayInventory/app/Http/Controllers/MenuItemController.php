@@ -70,6 +70,7 @@ class MenuItemController extends Controller
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'IsValueMeal' => 'boolean',
+                'UnitOfMeasureID' => 'nullable|exists:unitofmeasure,UnitOfMeasureId',
                 'value_meal_items' => 'required_if:IsValueMeal,1|array|min:1',
                 'value_meal_items.*.menu_item_id' => 'required_with:value_meal_items|exists:menu_items,MenuItemID',
                 'value_meal_items.*.quantity' => 'required_with:value_meal_items|integer|min:1'
@@ -83,6 +84,7 @@ class MenuItemController extends Controller
             $menuItem->IsAvailable = true;
             $menuItem->IsDeleted = false;
             $menuItem->IsValueMeal = $request->boolean('IsValueMeal');
+            $menuItem->UnitOfMeasureID = $validated['UnitOfMeasureID'] ?? 1;
 
             // Handle stocks for value meals vs regular items
             if (!$menuItem->IsValueMeal) {
@@ -156,7 +158,7 @@ class MenuItemController extends Controller
                 'Description' => 'nullable|string',
                 'Price' => 'required|numeric|min:0',
                 'ClassificationId' => 'required|exists:classification,ClassificationId',
-                'UnitOfMeasureID' => 'required|exists:unitofmeasure,UnitOfMeasureId',
+                'UnitOfMeasureID' => 'nullable|exists:unitofmeasure,UnitOfMeasureId',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ];
 

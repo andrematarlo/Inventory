@@ -1183,6 +1183,8 @@ class POSController extends Controller
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'UnitOfMeasureID' => 'required|exists:unitofmeasure,UnitOfMeasureId',
                 'IsValueMeal' => 'boolean',
+                'IsAvailable' => 'boolean',
+                'IsDeleted' => 'boolean',
                 'value_meal_items' => 'required_if:IsValueMeal,1|array|min:1',
                 'value_meal_items.*.menu_item_id' => 'required_with:value_meal_items|exists:menu_items,MenuItemID',
                 'value_meal_items.*.quantity' => 'required_with:value_meal_items|integer|min:1'
@@ -1207,6 +1209,8 @@ class POSController extends Controller
                 $menuItem->Description = $request->Description;
                 $menuItem->UnitOfMeasureID = $request->UnitOfMeasureID;
                 $menuItem->IsValueMeal = $request->boolean('IsValueMeal');
+                $menuItem->IsAvailable = $request->boolean('IsAvailable', true); // Default to true if not provided
+                $menuItem->IsDeleted = $request->boolean('IsDeleted', false); // Default to false if not provided
                 
                 // Handle stocks for value meals vs regular items
                 if (!$menuItem->IsValueMeal) {
@@ -1224,9 +1228,6 @@ class POSController extends Controller
                     }
                     $menuItem->StocksAvailable = $maxMeals;
                 }
-                
-                $menuItem->IsAvailable = true;
-                $menuItem->IsDeleted = false;
                 
                 // Handle image upload
                 if ($request->hasFile('image')) {

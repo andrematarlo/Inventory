@@ -149,49 +149,47 @@
 
                 <!-- Menu Items Grid -->
                 <div class="menu-items-custom-grid">
-                    @foreach($menuItems as $index => $item)
-                        @if($index < 8)
-                            <div class="menu-card">
-                                <div class="card h-100 border-0 shadow-sm menu-item-card">
-                                    @if($item->image_path && Storage::disk('public')->exists($item->image_path))
-                                        <img src="{{ asset('storage/' . $item->image_path) }}" 
-                                             class="card-img-top" 
-                                             alt="{{ $item->ItemName }}"
-                                             style="height: 250px; object-fit: cover;">
-                                    @else
-                                        <div class="bg-light d-flex align-items-center justify-content-center" 
-                                             style="height: 250px;">
-                                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
-                                        </div>
-                                    @endif
-                                    <div class="card-body d-flex flex-column">
-                                        <h5 class="card-title mb-2">{{ $item->ItemName }}</h5>
-                                        <p class="card-text text-muted small mb-2">
-                                            <span class="badge bg-secondary">
-                                                {{ $item->classification ? $item->classification->ClassificationName : 'Uncategorized' }}
+                    @foreach($menuItems as $item)
+                        <div class="menu-card">
+                            <div class="card h-100 border-0 shadow-sm menu-item-card">
+                                @if($item->image_path && Storage::disk('public')->exists($item->image_path))
+                                    <img src="{{ asset('storage/' . $item->image_path) }}" 
+                                         class="card-img-top" 
+                                         alt="{{ $item->ItemName }}"
+                                         style="height: 250px; object-fit: cover;">
+                                @else
+                                    <div class="bg-light d-flex align-items-center justify-content-center" 
+                                         style="height: 250px;">
+                                        <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                    </div>
+                                @endif
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title mb-2">{{ $item->ItemName }}</h5>
+                                    <p class="card-text text-muted small mb-2">
+                                        <span class="badge bg-secondary">
+                                            {{ $item->classification ? $item->classification->ClassificationName : 'Uncategorized' }}
+                                        </span>
+                                    </p>
+                                    <p class="card-text text-muted small mb-3">{{ $item->Description }}</p>
+                                    <div class="mt-auto">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="fw-bold text-primary">₱{{ number_format($item->Price, 2) }}</span>
+                                            <span class="badge stock-badge bg-success" style="color: blue !important;">
+                                                {{ $item->StocksAvailable > 0 ? 'In Stock: ' . $item->StocksAvailable : 'Out of Stock' }}
                                             </span>
-                                        </p>
-                                        <p class="card-text text-muted small mb-3">{{ $item->Description }}</p>
-                                        <div class="mt-auto">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span class="fw-bold text-primary">₱{{ number_format($item->Price, 2) }}</span>
-                                                <span class="badge stock-badge bg-success" style="color: blue !important;">
-                                                    {{ $item->StocksAvailable > 0 ? 'In Stock: ' . $item->StocksAvailable : 'Out of Stock' }}
-                                                </span>
-                                            </div>
-                                            <button type="button" class="btn btn-primary w-100 add-to-cart"
-                                                    {{ $item->StocksAvailable <= 0 ? 'disabled' : '' }}
-                                                    data-item-id="{{ $item->MenuItemID }}"
-                                                    data-item-name="{{ $item->ItemName }}"
-                                                    data-item-price="{{ $item->Price }}"
-                                                    data-item-stock="{{ $item->StocksAvailable }}">
-                                                <i class="bi bi-plus-circle me-2"></i>Add to Order
-                                            </button>
                                         </div>
+                                        <button type="button" class="btn btn-primary w-100 add-to-cart"
+                                                {{ $item->StocksAvailable <= 0 ? 'disabled' : '' }}
+                                                data-item-id="{{ $item->MenuItemID }}"
+                                                data-item-name="{{ $item->ItemName }}"
+                                                data-item-price="{{ $item->Price }}"
+                                                data-item-stock="{{ $item->StocksAvailable }}">
+                                            <i class="bi bi-plus-circle me-2"></i>Add to Order
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        @endif
+                        </div>
                     @endforeach
                     <div class="blue-area"></div>
                 </div>

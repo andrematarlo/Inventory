@@ -9,6 +9,8 @@
             <form id="createMenuItemForm" action="{{ route('pos.menu-items.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="IsValueMeal" value="0">
+                <input type="hidden" name="IsAvailable" value="1">
+                <input type="hidden" name="IsDeleted" value="0">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -19,7 +21,7 @@
                             <label for="price" class="form-label">Price</label>
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
-                                <input type="number" class="form-control" id="price" name="Price" step="0.01" required>
+                                <input type="number" class="form-control" id="price" name="Price" step="0.01" min="0" required>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -66,6 +68,51 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // Form submission handling
+    $('#createMenuItemForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Create FormData object
+        const formData = new FormData(this);
+        
+        // Send AJAX request
+        $.ajax({
+            url: $(this).attr('action'),
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    // Show success message
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: response.message,
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        // Close modal and refresh page
+                        $('#createMenuItemModal').modal('hide');
+                        location.reload();
+                    });
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'An error occurred while creating the menu item.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: errorMessage
+                });
+            }
+        });
+    });
+
     // Toggle value meal items section
     $('#isValueMeal').on('change', function() {
         $('.value-meal-items').toggleClass('d-block d-none');
