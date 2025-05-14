@@ -58,6 +58,9 @@ class OrderController extends Controller
         try {
             $order = Order::findOrFail($id);
             $order->Status = $request->status;
+            if ($request->has('payment_type')) {
+                $order->PaymentMethod = $request->payment_type;
+            }
             $order->save();
 
             return response()->json([

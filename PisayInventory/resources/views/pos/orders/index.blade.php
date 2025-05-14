@@ -57,6 +57,7 @@
                             <th>Student Name</th>
                             <th>Items</th>
                             <th>Total Amount</th>
+                            <th>Payment Method</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -85,6 +86,15 @@
                                 </button>
                             </td>
                             <td>₱{{ number_format($order->TotalAmount, 2) }}</td>
+                            <td>
+                                @if($order->Status === 'pending')
+                                    <span class="badge bg-warning">Not Paid</span>
+                                @else
+                                    <span class="badge bg-{{ $order->PaymentMethod === 'gcash' ? 'info' : 'success' }}">
+                                        {{ strtoupper($order->PaymentMethod ?? 'cash') }}
+                                    </span>
+                                @endif
+                            </td>
                             <td>
                                 <select class="form-select form-select-sm status-select" 
                                         data-order-id="{{ $order->OrderID }}"
@@ -366,13 +376,24 @@
                         </div>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Payment Method</label>
+                        <select class="form-select" id="paymentMethod" required>
+                            <option value="cash">Cash</option>
+                            <option value="gcash">GCash</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="gcashFields" style="display: none;">
+                        <label for="referenceNumber" class="form-label">GCash Reference Number</label>
+                        <input type="text" class="form-control" id="referenceNumber" placeholder="Enter GCash reference number">
+                    </div>
+                    <div class="mb-3" id="cashFields">
                         <label for="amountPaid" class="form-label">Amount Paid</label>
                         <div class="input-group">
                             <span class="input-group-text">₱</span>
                             <input type="number" class="form-control" id="amountPaid" required min="0" step="0.01">
                         </div>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" id="changeField">
                         <label class="form-label">Change</label>
                         <div class="input-group">
                             <span class="input-group-text">₱</span>
@@ -545,22 +566,43 @@ $(document).ready(function() {
 
             // Handle payment confirmation
             $('#confirmPayment').off('click').on('click', function() {
-                const amountPaid = parseFloat($('#amountPaid').val());
+                const paymentMethod = $('#paymentMethod').val();
+                const orderTotal = parseFloat($('#orderTotal').val());
                 
-                if (!amountPaid || amountPaid < orderTotal) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Invalid Amount',
-                        text: 'Please enter an amount equal to or greater than the order total.'
+                if (paymentMethod === 'gcash') {
+                    const referenceNumber = $('#referenceNumber').val();
+                    if (!referenceNumber) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Reference Number Required',
+                            text: 'Please enter the GCash reference number.'
+                        });
+                        return;
+                    }
+                    
+                    // Process GCash payment
+                    updateOrderStatus(orderId, newStatus, selectElement, originalValue, {
+                        payment_type: 'gcash',
+                        reference_number: referenceNumber
                     });
-                    return;
-                }
+                } else {
+                    const amountPaid = parseFloat($('#amountPaid').val());
+                    if (!amountPaid || amountPaid < orderTotal) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid Amount',
+                            text: 'Please enter an amount equal to or greater than the order total.'
+                        });
+                        return;
+                    }
 
-                // Process the status change with payment
-                updateOrderStatus(orderId, newStatus, selectElement, originalValue, {
-                    amount_paid: amountPaid,
-                    change: parseFloat($('#changeAmount').val())
-                });
+                    // Process cash payment
+                    updateOrderStatus(orderId, newStatus, selectElement, originalValue, {
+                        payment_type: 'cash',
+                        amount_paid: amountPaid,
+                        change: parseFloat($('#changeAmount').val())
+                    });
+                }
                 
                 // Hide payment modal
                 paymentModal.hide();
@@ -582,13 +624,18 @@ $(document).ready(function() {
         
         const data = {
             _token: '{{ csrf_token() }}',
-            status: newStatus
+            status: newStatus,
+            payment_type: paymentDetails ? paymentDetails.payment_type : 'cash'
         };
 
         // Add payment details if provided
         if (paymentDetails) {
-            data.amount_paid = paymentDetails.amount_paid;
-            data.change = paymentDetails.change;
+            if (paymentDetails.payment_type === 'gcash') {
+                data.reference_number = paymentDetails.reference_number;
+            } else {
+                data.amount_paid = paymentDetails.amount_paid;
+                data.change = paymentDetails.change;
+            }
         }
         
         $.ajax({
@@ -597,6 +644,17 @@ $(document).ready(function() {
             data: data,
             success: function(response) {
                 if (response.success) {
+                    // Update the payment method badge in the table
+                    const row = selectElement.closest('tr');
+                    const paymentCell = row.find('td:eq(5)'); // Adjust index if needed
+                    if (newStatus === 'pending') {
+                        paymentCell.html('<span class="badge bg-warning">Not Paid</span>');
+                    } else {
+                        const badgeClass = data.payment_type === 'gcash' ? 'info' : 'success';
+                        const paymentText = data.payment_type.toUpperCase();
+                        paymentCell.html(`<span class="badge bg-${badgeClass}">${paymentText}</span>`);
+                    }
+
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
@@ -671,6 +729,24 @@ $(document).ready(function() {
                 }
             });
         });
+    });
+
+    // Handle payment method change
+    $('#paymentMethod').on('change', function() {
+        const method = $(this).val();
+        if (method === 'gcash') {
+            $('#gcashFields').show();
+            $('#cashFields').hide();
+            $('#changeField').hide();
+            $('#referenceNumber').prop('required', true);
+            $('#amountPaid').prop('required', false);
+        } else {
+            $('#gcashFields').hide();
+            $('#cashFields').show();
+            $('#changeField').show();
+            $('#referenceNumber').prop('required', false);
+            $('#amountPaid').prop('required', true);
+        }
     });
 });
 </script>
