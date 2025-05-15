@@ -321,9 +321,17 @@
 <script>
 $(document).ready(function() {
     // Auto-generate control number on page load
-    $.get('{{ route("laboratory.reservations.generateControlNo") }}', function(response) {
-        $('input[name="control_no"]').val(response.control_no);
-    });
+    function generateControlNumber() {
+        const laboratoryId = $('select[name="laboratory_id"]').val();
+        if (laboratoryId) {
+            $.get('{{ route("laboratory.reservations.generateControlNo") }}', { laboratory_id: laboratoryId }, function(response) {
+                $('input[name="control_no"]').val(response.control_no);
+            });
+        }
+    }
+
+    // Generate control number when laboratory is selected
+    $('select[name="laboratory_id"]').on('change', generateControlNumber);
 
     // Auto-populate current school year
     const currentDate = new Date();

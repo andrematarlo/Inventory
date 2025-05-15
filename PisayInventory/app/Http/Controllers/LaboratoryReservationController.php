@@ -149,12 +149,47 @@ class LaboratoryReservationController extends Controller
 
             DB::beginTransaction();
 
-            // Modified control number generation with microseconds for uniqueness
+            // Modified control number generation with laboratory type
             $timestamp = now();
             $dateComponent = $timestamp->format('Ymd');
-            $timeComponent = $timestamp->format('His');
-            $microseconds = sprintf('%06d', $timestamp->microsecond);
-            $controlNo = "LR-{$dateComponent}-{$timeComponent}{$microseconds}";
+            
+            // Get laboratory type
+            $laboratory = Laboratory::find($validated['laboratory_id']);
+            
+            // Map laboratory names to their types
+            $labTypeMap = [
+                'Microbiology Lab' => 'BIO',
+                'Research Lab(Bio)' => 'BIO',
+                'Botany(Bio) Lab' => 'BIO',
+                'Zoology(Bio) Lab' => 'BIO',
+                'Chemistry Lab 331' => 'CHEM',
+                'Chemistry Lab 332' => 'CHEM',
+                'Research Room 1/ 334' => 'CHEM',
+                'Research Room 2/ 335' => 'CHEM',
+                'Computer Lab 1' => 'COMLAB',
+                'Computer Lab 2' => 'COMLAB'
+            ];
+            
+            // Get laboratory type or default to 'GEN'
+            $labType = $laboratory ? ($labTypeMap[$laboratory->laboratory_name] ?? 'GEN') : 'GEN';
+            
+            // Get the last control number for this lab type and date
+            $prefix = "LR-{$labType}-{$dateComponent}";
+            $lastReservation = LaboratoryReservation::where('control_no', 'like', $prefix . '%')
+                ->orderBy('control_no', 'desc')
+                ->first();
+            
+            // Generate the next sequence number
+            $sequence = '001';
+            if ($lastReservation) {
+                $lastSequence = substr($lastReservation->control_no, -3);
+                if (is_numeric($lastSequence)) {
+                    $sequence = str_pad((int)$lastSequence + 1, 3, '0', STR_PAD_LEFT);
+                }
+            }
+            
+            // Format: LR-[LABTYPE]-[DATE]-[SEQUENCE]
+            $controlNo = "{$prefix}-{$sequence}";
 
             // Set requested_by based on user type
             $requestedBy = '';
@@ -293,12 +328,47 @@ class LaboratoryReservationController extends Controller
 
             DB::beginTransaction();
 
-            // Modified control number generation with microseconds for uniqueness
+            // Modified control number generation with laboratory type
             $timestamp = now();
             $dateComponent = $timestamp->format('Ymd');
-            $timeComponent = $timestamp->format('His');
-            $microseconds = sprintf('%06d', $timestamp->microsecond);
-            $controlNo = "LR-{$dateComponent}-{$timeComponent}{$microseconds}";
+            
+            // Get laboratory type
+            $laboratory = Laboratory::find($validated['laboratory_id']);
+            
+            // Map laboratory names to their types
+            $labTypeMap = [
+                'Microbiology Lab' => 'BIO',
+                'Research Lab(Bio)' => 'BIO',
+                'Botany(Bio) Lab' => 'BIO',
+                'Zoology(Bio) Lab' => 'BIO',
+                'Chemistry Lab 331' => 'CHEM',
+                'Chemistry Lab 332' => 'CHEM',
+                'Research Room 1/ 334' => 'CHEM',
+                'Research Room 2/ 335' => 'CHEM',
+                'Computer Lab 1' => 'COMLAB',
+                'Computer Lab 2' => 'COMLAB'
+            ];
+            
+            // Get laboratory type or default to 'GEN'
+            $labType = $laboratory ? ($labTypeMap[$laboratory->laboratory_name] ?? 'GEN') : 'GEN';
+            
+            // Get the last control number for this lab type and date
+            $prefix = "LR-{$labType}-{$dateComponent}";
+            $lastReservation = LaboratoryReservation::where('control_no', 'like', $prefix . '%')
+                ->orderBy('control_no', 'desc')
+                ->first();
+            
+            // Generate the next sequence number
+            $sequence = '001';
+            if ($lastReservation) {
+                $lastSequence = substr($lastReservation->control_no, -3);
+                if (is_numeric($lastSequence)) {
+                    $sequence = str_pad((int)$lastSequence + 1, 3, '0', STR_PAD_LEFT);
+                }
+            }
+            
+            // Format: LR-[LABTYPE]-[DATE]-[SEQUENCE]
+            $controlNo = "{$prefix}-{$sequence}";
 
             // Check for conflicts
             $conflictingReservation = LaboratoryReservation::where('laboratory_id', $validated['laboratory_id'])
@@ -794,13 +864,49 @@ class LaboratoryReservationController extends Controller
         return response()->json($counts);
     }
 
-    public function generateControlNo()
+    public function generateControlNo(Request $request)
     {
         $timestamp = now();
         $dateComponent = $timestamp->format('Ymd');
-        $timeComponent = $timestamp->format('His');
-        $microseconds = sprintf('%06d', $timestamp->microsecond);
-        $controlNo = "LR-{$dateComponent}-{$timeComponent}{$microseconds}";
+        
+        // Get laboratory type from request
+        $laboratoryId = $request->laboratory_id;
+        $laboratory = Laboratory::find($laboratoryId);
+        
+        // Map laboratory names to their types
+        $labTypeMap = [
+            'Microbiology Lab' => 'BIO',
+            'Research Lab(Bio)' => 'BIO',
+            'Botany(Bio) Lab' => 'BIO',
+            'Zoology(Bio) Lab' => 'BIO',
+            'Chemistry Lab 331' => 'CHEM',
+            'Chemistry Lab 332' => 'CHEM',
+            'Research Room 1/ 334' => 'CHEM',
+            'Research Room 2/ 335' => 'CHEM',
+            'Computer Lab 1' => 'COMLAB',
+            'Computer Lab 2' => 'COMLAB'
+        ];
+        
+        // Get laboratory type or default to 'GEN'
+        $labType = $laboratory ? ($labTypeMap[$laboratory->laboratory_name] ?? 'GEN') : 'GEN';
+        
+        // Get the last control number for this lab type and date
+        $prefix = "LR-{$labType}-{$dateComponent}";
+        $lastReservation = LaboratoryReservation::where('control_no', 'like', $prefix . '%')
+            ->orderBy('control_no', 'desc')
+            ->first();
+        
+        // Generate the next sequence number
+        $sequence = '001';
+        if ($lastReservation) {
+            $lastSequence = substr($lastReservation->control_no, -3);
+            if (is_numeric($lastSequence)) {
+                $sequence = str_pad((int)$lastSequence + 1, 3, '0', STR_PAD_LEFT);
+            }
+        }
+        
+        // Format: LR-[LABTYPE]-[DATE]-[SEQUENCE]
+        $controlNo = "{$prefix}-{$sequence}";
         
         return response()->json([
             'control_no' => $controlNo
