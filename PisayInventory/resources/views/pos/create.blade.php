@@ -150,7 +150,7 @@
                 <!-- Menu Items Grid -->
                 <div class="menu-items-custom-grid">
                     @foreach($menuItems as $item)
-                        <div class="menu-card">
+                        <div class="menu-card" data-category="{{ $item->ClassificationID }}">
                             <div class="card h-100 border-0 shadow-sm menu-item-card">
                                 @if($item->image_path && Storage::disk('public')->exists($item->image_path))
                                     <img src="{{ asset('storage/' . $item->image_path) }}" 
@@ -700,16 +700,17 @@ $(document).ready(function() {
         setTimeout(() => {
             if (categoryId === 'all') {
                 // Show all items that are in stock
-                $('.menu-item').each(function() {
-                    if (!$(this).hasClass('out-of-stock')) {
+                $('.menu-card').each(function() {
+                    if (!$(this).find('.add-to-cart').prop('disabled')) {
                         $(this).show();
                     }
                 });
             } else {
                 // Show only items from selected classification that are in stock
-                $('.menu-item').each(function() {
+                $('.menu-card').each(function() {
                     const itemCategory = $(this).data('category');
-                    if (itemCategory == categoryId && !$(this).hasClass('out-of-stock')) {
+                    const isInStock = !$(this).find('.add-to-cart').prop('disabled');
+                    if (itemCategory == categoryId && isInStock) {
                         $(this).show();
                     } else {
                         $(this).hide();
