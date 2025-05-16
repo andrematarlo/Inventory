@@ -782,7 +782,7 @@ class LaboratoryReservationController extends Controller
                 ->whereNull('deleted_at');
 
             // Strict role-based filtering (except Admin and Teacher)
-            if ($userRole && $userRole !== 'Admin' && $userRole !== 'Teacher') {
+            if ($userRole && $userRole !== 'Admin' && !str_contains($userRole, 'Teacher')) {
                 $labIds = Laboratory::where('role', $userRole)->pluck('laboratory_id')->toArray();
                 // Debug log filtered lab IDs
                 Log::info('Filtered laboratory IDs:', [
@@ -816,7 +816,7 @@ class LaboratoryReservationController extends Controller
 
             // Additional PHP-side filtering as a safety measure
             $data = collect($reservations->items())->filter(function($reservation) use ($userRole) {
-                if ($userRole === 'Admin') return true;
+                if ($userRole === 'Admin' || str_contains($userRole, 'Teacher')) return true;
                 return $reservation->laboratory && trim($reservation->laboratory->role) === $userRole;
             })->map(function($reservation) {
                 $arr = $reservation->toArray();
