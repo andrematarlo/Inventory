@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\UserAccount;
 use App\Models\Employee;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -22,6 +23,19 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
+            // Check if user is a student
+            $student = Student::where('UserAccountID', Auth::user()->UserAccountID)
+                ->first();
+            if ($student) {
+                return redirect()->route('pos.orders.create');
+            }
+            // Check if user is a teacher (Employee)
+            $employee = Employee::where('UserAccountID', Auth::user()->UserAccountID)
+                ->where('IsDeleted', false)
+                ->first();
+            if ($employee && $employee->Role === 'Teacher') {
+                return redirect()->route('laboratory.reservations');
+            }
             return redirect()->route('dashboard');
         }
         return view('auth.login');
@@ -54,6 +68,20 @@ class AuthController extends Controller
             // Start session and login
             $request->session()->regenerate();
             Auth::login($user);
+
+            // Check if user is a student
+            $student = Student::where('UserAccountID', $user->UserAccountID)
+                ->first();
+            if ($student) {
+                return redirect()->route('pos.orders.create');
+            }
+            // Check if user is a teacher (Employee)
+            $employee = Employee::where('UserAccountID', $user->UserAccountID)
+                ->where('IsDeleted', false)
+                ->first();
+            if ($employee && $employee->Role === 'Teacher') {
+                return redirect()->route('laboratory.reservations');
+            }
 
             return redirect()->route('dashboard');
         }

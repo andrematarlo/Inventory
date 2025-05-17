@@ -47,7 +47,7 @@
     @endphp
 
     <ul class="nav flex-column py-2">
-        @if(!$isStudent)
+        @if(!$isStudent && Auth::user()->role !== 'Teacher')
         <li class="nav-item">
             <a href="{{ route('dashboard') }}" class="nav-link text-white {{ request()->routeIs('dashboard') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-speedometer2"></i>
