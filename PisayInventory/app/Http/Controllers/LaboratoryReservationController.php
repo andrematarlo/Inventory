@@ -866,9 +866,6 @@ class LaboratoryReservationController extends Controller
 
     public function generateControlNo(Request $request)
     {
-        $timestamp = now();
-        $dateComponent = $timestamp->format('Ymd');
-        
         // Get laboratory type from request
         $laboratoryId = $request->laboratory_id;
         $laboratory = Laboratory::find($laboratoryId);
@@ -890,22 +887,22 @@ class LaboratoryReservationController extends Controller
         // Get laboratory type or default to 'GEN'
         $labType = $laboratory ? ($labTypeMap[$laboratory->laboratory_name] ?? 'GEN') : 'GEN';
         
-        // Get the last control number for this lab type and date
-        $prefix = "LR-{$labType}-{$dateComponent}";
+        // Get the last control number for this lab type (without date component)
+        $prefix = "LR-{$labType}";
         $lastReservation = LaboratoryReservation::where('control_no', 'like', $prefix . '%')
             ->orderBy('control_no', 'desc')
             ->first();
         
         // Generate the next sequence number
-        $sequence = '001';
+        $sequence = '0001';
         if ($lastReservation) {
-            $lastSequence = substr($lastReservation->control_no, -3);
+            $lastSequence = substr($lastReservation->control_no, -4);
             if (is_numeric($lastSequence)) {
-                $sequence = str_pad((int)$lastSequence + 1, 3, '0', STR_PAD_LEFT);
+                $sequence = str_pad((int)$lastSequence + 1, 4, '0', STR_PAD_LEFT);
             }
         }
         
-        // Format: LR-[LABTYPE]-[DATE]-[SEQUENCE]
+        // Format: LR-[LABTYPE]-[SEQUENCE]
         $controlNo = "{$prefix}-{$sequence}";
         
         return response()->json([
