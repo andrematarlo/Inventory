@@ -150,6 +150,18 @@
             </a>
         </li>
         <li class="nav-item">
+            <a href="{{ route('reagent-items.index') }}" class="nav-link text-white {{ request()->routeIs('reagent-items.*') ? 'active bg-primary' : '' }}">
+                <i class="bi bi-flask"></i>
+                <span>Reagent Items</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('accountability-items.index') }}" class="nav-link text-white {{ request()->routeIs('accountability-items.*') ? 'active bg-primary' : '' }}">
+                <i class="bi bi-archive"></i>
+                <span>Accountability Items</span>
+            </a>
+        </li>
+        <li class="nav-item">
             <a href="{{ route('reports.index') }}" class="nav-link text-white {{ request()->routeIs('reports.*') ? 'active bg-primary' : '' }}">
                 <i class="bi bi-file-earmark-text"></i>
                 <span>Reports</span>

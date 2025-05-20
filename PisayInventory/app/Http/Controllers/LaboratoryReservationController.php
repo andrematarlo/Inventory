@@ -151,7 +151,7 @@ class LaboratoryReservationController extends Controller
 
             // Modified control number generation with laboratory type
             $timestamp = now();
-            $dateComponent = $timestamp->format('Ymd');
+            $dateComponent = $timestamp->format('Ym'); // YYYYMM for monthly reset
             
             // Get laboratory type
             $laboratory = Laboratory::find($validated['laboratory_id']);
@@ -173,7 +173,7 @@ class LaboratoryReservationController extends Controller
             // Get laboratory type or default to 'GEN'
             $labType = $laboratory ? ($labTypeMap[$laboratory->laboratory_name] ?? 'GEN') : 'GEN';
             
-            // Get the last control number for this lab type and date
+            // Get the last control number for this lab type and month
             $prefix = "LR-{$labType}-{$dateComponent}";
             $lastReservation = LaboratoryReservation::where('control_no', 'like', $prefix . '%')
                 ->orderBy('control_no', 'desc')
@@ -188,7 +188,7 @@ class LaboratoryReservationController extends Controller
                 }
             }
             
-            // Format: LR-[LABTYPE]-[DATE]-[SEQUENCE]
+            // Format: LR-[LABTYPE]-[YYYYMM]-[SEQUENCE]
             $controlNo = "{$prefix}-{$sequence}";
 
             // Set requested_by based on user type
@@ -330,7 +330,7 @@ class LaboratoryReservationController extends Controller
 
             // Modified control number generation with laboratory type
             $timestamp = now();
-            $dateComponent = $timestamp->format('Ymd');
+            $dateComponent = $timestamp->format('Ym'); // YYYYMM for monthly reset
             
             // Get laboratory type
             $laboratory = Laboratory::find($validated['laboratory_id']);
@@ -352,7 +352,7 @@ class LaboratoryReservationController extends Controller
             // Get laboratory type or default to 'GEN'
             $labType = $laboratory ? ($labTypeMap[$laboratory->laboratory_name] ?? 'GEN') : 'GEN';
             
-            // Get the last control number for this lab type and date
+            // Get the last control number for this lab type and month
             $prefix = "LR-{$labType}-{$dateComponent}";
             $lastReservation = LaboratoryReservation::where('control_no', 'like', $prefix . '%')
                 ->orderBy('control_no', 'desc')
@@ -367,7 +367,7 @@ class LaboratoryReservationController extends Controller
                 }
             }
             
-            // Format: LR-[LABTYPE]-[DATE]-[SEQUENCE]
+            // Format: LR-[LABTYPE]-[YYYYMM]-[SEQUENCE]
             $controlNo = "{$prefix}-{$sequence}";
 
             // Check for conflicts
@@ -894,11 +894,11 @@ class LaboratoryReservationController extends Controller
             ->first();
         
         // Generate the next sequence number
-        $sequence = '0001';
+        $sequence = '001';
         if ($lastReservation) {
-            $lastSequence = substr($lastReservation->control_no, -4);
+            $lastSequence = substr($lastReservation->control_no, -3);
             if (is_numeric($lastSequence)) {
-                $sequence = str_pad((int)$lastSequence + 1, 4, '0', STR_PAD_LEFT);
+                $sequence = str_pad((int)$lastSequence + 1, 3, '0', STR_PAD_LEFT);
             }
         }
         

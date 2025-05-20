@@ -242,6 +242,9 @@
         @yield('styles')
         @stack('styles')
 
+        <!-- DateRangePicker CSS -->
+        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
     </head>
     <body>
         @include('layouts.sidebar')
@@ -346,5 +349,10 @@
             @endif
         });
     </script>
+
+    <!-- Moment.js -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <!-- DateRangePicker -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     </body>
 </html>

@@ -7,6 +7,25 @@
             <h3 class="card-title">Laboratory Request and Equipment Accountability Form</h3>
         </div>
         <div class="card-body">
+            @if ($errors->any())
+                <div class="alert alert-danger">
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+            @if (session('error'))
+                <div class="alert alert-danger">
+                    {{ session('error') }}
+                </div>
+            @endif
+            @if (session('success'))
+                <div class="alert alert-success">
+                    {{ session('success') }}
+                </div>
+            @endif
             <form action="{{ route('laboratory.accountability.store') }}" method="POST">
                 @csrf
                 <div class="row mb-3">
@@ -43,7 +62,12 @@
                         </div>
                         <div class="mb-3">
                             <label for="teacher" class="form-label">Teacher-in-Charge:</label>
-                            <input type="text" class="form-control" id="teacher" name="teacher" required>
+                            <select class="form-control" id="teacher" name="teacher_in_charge" required>
+                                <option value="">-- Select Teacher --</option>
+                                @foreach($teachers as $teacher)
+                                    <option value="{{ $teacher->FirstName }} {{ $teacher->LastName }}">{{ $teacher->FirstName }} {{ $teacher->LastName }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -55,12 +79,16 @@
 
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label for="date" class="form-label">Date/Inclusive Dates:</label>
-                        <input type="date" class="form-control" id="date" name="date" required>
+                        <label for="inclusive_dates" class="form-label">Date/Inclusive Dates:</label>
+                        <input type="date" class="form-control" id="inclusive_dates" name="inclusive_dates" required>
                     </div>
                     <div class="col-md-6">
-                        <label for="time" class="form-label">Inclusive Time of Use:</label>
-                        <input type="time" class="form-control" id="time" name="time" required>
+                        <label for="inclusive_time" class="form-label">Inclusive Time of Use:</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="time" class="form-control" id="inclusive_time_start" name="inclusive_time_start" value="08:00" required>
+                            <span>to</span>
+                            <input type="time" class="form-control" id="inclusive_time_end" name="inclusive_time_end" value="17:00" required>
+                        </div>
                     </div>
                 </div>
 
@@ -80,7 +108,14 @@
                         <tbody>
                             <tr>
                                 <td><input type="number" class="form-control" name="quantities[]"></td>
-                                <td><input type="text" class="form-control" name="items[]"></td>
+                                <td>
+                                    <select name="items[]" class="form-control" required>
+                                        <option value="">-- Select Item --</option>
+                                        @foreach($accountabilityItems as $item)
+                                            <option value="{{ $item->item }}">{{ $item->item }}</option>
+                                        @endforeach
+                                    </select>
+                                </td>
                                 <td><input type="text" class="form-control" name="descriptions[]"></td>
                                 <td><input type="text" class="form-control" name="issued_conditions[]"></td>
                                 <td><input type="text" class="form-control" name="returned_conditions[]"></td>
@@ -106,8 +141,8 @@
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="inspected_by" class="form-label">Received and Inspected by:</label>
-                            <input type="text" class="form-control" id="inspected_by" name="inspected_by">
+                            <label for="received_and_inspected_by" class="form-label">Received and Inspected by:</label>
+                            <input type="text" class="form-control" id="received_and_inspected_by" name="received_and_inspected_by">
                         </div>
                         <div class="mb-3">
                             <label for="date_inspected" class="form-label">Date Inspected:</label>
@@ -127,12 +162,35 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // Date picker for inclusive_dates
+    $('.datepicker').daterangepicker({
+        singleDatePicker: true,
+        showDropdowns: true,
+        locale: { format: 'YYYY-MM-DD' }
+    });
+
+    // Time picker for inclusive_time
+    $('.timepicker').daterangepicker({
+        singleDatePicker: true,
+        timePicker: true,
+        timePicker24Hour: true,
+        timePickerIncrement: 15,
+        locale: { format: 'HH:mm' }
+    }, function(start, end, label) {
+        // Only set the start time
+        $('.timepicker').val(start.format('HH:mm'));
+    });
+    $('.timepicker').on('show.daterangepicker', function(ev, picker) {
+        picker.container.find('.calendar-table').hide();
+    });
+
     // Add new row
     $('#addRow').click(function() {
+        var itemSelect = `<select name=\"items[]\" class=\"form-control\" required>\n<option value=\"\">-- Select Item --</option>\n@foreach($accountabilityItems as $item)\n<option value=\"{{ $item->item }}\">{{ $item->item }}</option>\n@endforeach\n</select>`;
         var newRow = `
             <tr>
                 <td><input type="number" class="form-control" name="quantities[]"></td>
-                <td><input type="text" class="form-control" name="items[]"></td>
+                <td>${itemSelect}</td>
                 <td><input type="text" class="form-control" name="descriptions[]"></td>
                 <td><input type="text" class="form-control" name="issued_conditions[]"></td>
                 <td><input type="text" class="form-control" name="returned_conditions[]"></td>
@@ -147,6 +205,24 @@ $(document).ready(function() {
     // Remove row
     $(document).on('click', '.remove-row', function() {
         $(this).closest('tr').remove();
+    });
+
+    // Prepare item-description mapping from PHP
+    const itemDescriptions = @json($itemDescriptions);
+
+    // Delegate event for all item selects (including dynamically added)
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.matches('select[name="items[]"]')) {
+            const selectedItem = e.target.value;
+            // Find the description input in the same row
+            const row = e.target.closest('tr');
+            if (row) {
+                const descField = row.querySelector('input[name="descriptions[]"]');
+                if (descField) {
+                    descField.value = itemDescriptions[selectedItem] || '';
+                }
+            }
+        }
     });
 });
 </script>

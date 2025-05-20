@@ -2,6 +2,25 @@
 
 @section('content')
 <div class="container-fluid">
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
+    @if (session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
+        </div>
+    @endif
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Reagent Request Form</h3>
@@ -43,7 +62,12 @@
                         </div>
                         <div class="form-group">
                             <label>Teacher-in-Charge:</label>
-                            <input type="text" class="form-control" name="teacher_in_charge">
+                            <select name="teacher_in_charge" class="form-control" required>
+                                <option value="">-- Select Teacher --</option>
+                                @foreach($teachers as $teacher)
+                                    <option value="{{ $teacher->FirstName }} {{ $teacher->LastName }}">{{ $teacher->FirstName }} {{ $teacher->LastName }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -53,14 +77,25 @@
                     <input type="text" class="form-control" name="venue">
                 </div>
 
+                @php
+                    use Carbon\Carbon;
+                    $today = Carbon::now();
+                    $tomorrow = Carbon::now()->addDay();
+                    $nextWeek = Carbon::now()->addWeek();
+                    $nextMonth = Carbon::now()->addMonth();
+                @endphp
                 <div class="form-group">
                     <label>Date/Inclusive Dates:</label>
-                    <input type="text" class="form-control" name="inclusive_dates">
+                    <input type="date" class="form-control" name="inclusive_dates" min="{{ now()->format('Y-m-d') }}" required>
                 </div>
 
                 <div class="form-group">
                     <label>Inclusive Time of Use:</label>
-                    <input type="text" class="form-control" name="inclusive_time">
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="time" class="form-control" name="inclusive_time_start" value="08:00" required>
+                        <span>to</span>
+                        <input type="time" class="form-control" name="inclusive_time_end" value="17:00" required>
+                    </div>
                 </div>
 
                 <div class="card mt-4">
@@ -82,7 +117,14 @@
                                 <tbody>
                                     <tr>
                                         <td><input type="number" class="form-control" name="quantities[]"></td>
-                                        <td><input type="text" class="form-control" name="reagents[]"></td>
+                                        <td>
+                                            <select name="reagents[]" class="form-control" required>
+                                                <option value="">-- Select Reagent --</option>
+                                                @foreach($reagentItems as $reagent)
+                                                    <option value="{{ $reagent->reagent }}">{{ $reagent->reagent }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
                                         <td>
                                             <div class="form-check">
                                                 <input type="checkbox" class="form-check-input" name="sds[]">
@@ -155,10 +197,11 @@
     $(document).ready(function() {
         // Add new row
         $('#add_row').click(function() {
+            var reagentSelect = `<select name=\"reagents[]\" class=\"form-control\" required>\n<option value=\"\">-- Select Reagent --</option>\n@foreach($reagentItems as $reagent)\n<option value=\"{{ $reagent->reagent }}\">{{ $reagent->reagent }}</option>\n@endforeach\n</select>`;
             var newRow = `
                 <tr>
                     <td><input type="number" class="form-control" name="quantities[]"></td>
-                    <td><input type="text" class="form-control" name="reagents[]"></td>
+                    <td>${reagentSelect}</td>
                     <td>
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input" name="sds[]">

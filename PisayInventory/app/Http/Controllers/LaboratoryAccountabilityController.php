@@ -38,7 +38,26 @@ class LaboratoryAccountabilityController extends Controller
 
         $nextControlNo = $prefix . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
         
-        return view('laboratory.accountability.create', compact('nextControlNo'));
+        $teachers = DB::table('employee')
+            ->join('employee_roles', 'employee.EmployeeID', '=', 'employee_roles.EmployeeId')
+            ->join('roles', 'employee_roles.RoleId', '=', 'roles.RoleId')
+            ->where('employee.IsDeleted', 0)
+            ->where('roles.RoleName', 'Teacher')
+            ->orderBy('employee.LastName')
+            ->select('employee.*')
+            ->get();
+
+        $accountabilityItems = DB::table('laboratory_accountability_items')
+            ->orderBy('item')
+            ->get();
+
+        // Prepare item-description pairs for JS
+        $itemDescriptions = [];
+        foreach ($accountabilityItems as $item) {
+            $itemDescriptions[$item->item] = $item->description;
+        }
+
+        return view('laboratory.accountability.create', compact('nextControlNo', 'teachers', 'accountabilityItems', 'itemDescriptions'));
     }
 
     public function store(Request $request)

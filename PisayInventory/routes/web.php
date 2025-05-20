@@ -34,6 +34,8 @@ use App\Models\Classification;
 use App\Http\Controllers\DeleteFormController;
 use App\Http\Controllers\LaboratoryAccountabilityController;
 use App\Http\Controllers\LaboratoryReagentController;
+use App\Http\Controllers\ReagentItemController;
+use App\Http\Controllers\AccountabilityItemController;
 
 // Add this at the top of your routes to debug
 Route::get('/debug/routes', function() {
@@ -382,6 +384,22 @@ Route::middleware('auth')->group(function () {
             Route::post('/{id}/restore', [POSController::class, 'restoreMenuItem'])->name('menu-items.restore');
             Route::post('/{id}/toggle-availability', [POSController::class, 'toggleMenuItemAvailability'])->name('menu-items.toggle-availability');
         });
+
+        // Reagent Items Master List
+        Route::get('reagent-items', [ReagentItemController::class, 'index'])->name('reagent-items.index');
+        Route::get('reagent-items/create', [ReagentItemController::class, 'create'])->name('reagent-items.create');
+        Route::post('reagent-items', [ReagentItemController::class, 'store'])->name('reagent-items.store');
+        Route::get('reagent-items/{id}/edit', [ReagentItemController::class, 'edit'])->name('reagent-items.edit');
+        Route::put('reagent-items/{id}', [ReagentItemController::class, 'update'])->name('reagent-items.update');
+        Route::delete('reagent-items/{id}', [ReagentItemController::class, 'destroy'])->name('reagent-items.destroy');
+
+        // Accountability Items Master List
+        Route::get('accountability-items', [AccountabilityItemController::class, 'index'])->name('accountability-items.index');
+        Route::get('accountability-items/create', [AccountabilityItemController::class, 'create'])->name('accountability-items.create');
+        Route::post('accountability-items', [AccountabilityItemController::class, 'store'])->name('accountability-items.store');
+        Route::get('accountability-items/{id}/edit', [AccountabilityItemController::class, 'edit'])->name('accountability-items.edit');
+        Route::put('accountability-items/{id}', [AccountabilityItemController::class, 'update'])->name('accountability-items.update');
+        Route::delete('accountability-items/{id}', [AccountabilityItemController::class, 'destroy'])->name('accountability-items.destroy');
     }); // Close inventory prefix
 }); // Close auth middleware
 

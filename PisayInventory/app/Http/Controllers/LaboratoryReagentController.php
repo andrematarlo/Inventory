@@ -38,7 +38,19 @@ class LaboratoryReagentController extends Controller
 
         $nextControlNo = $prefix . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
         
-        return view('laboratory.reagent.create', compact('nextControlNo'));
+        // Fetch all reagent items for dropdown
+        $reagentItems = DB::table('laboratory_reagent_items')->orderBy('reagent')->get();
+
+        $teachers = DB::table('employee')
+            ->join('employee_roles', 'employee.EmployeeID', '=', 'employee_roles.EmployeeId')
+            ->join('roles', 'employee_roles.RoleId', '=', 'roles.RoleId')
+            ->where('employee.IsDeleted', 0)
+            ->where('roles.RoleName', 'Teacher')
+            ->orderBy('employee.LastName')
+            ->select('employee.*')
+            ->get();
+
+        return view('laboratory.reagent.create', compact('nextControlNo', 'reagentItems', 'teachers'));
     }
 
     public function store(Request $request)
