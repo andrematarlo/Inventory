@@ -489,3 +489,5 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/pos/students/{studentId}/limit', [App\Http\Controllers\POSController::class, 'getStudentLimit'])->name('pos.students.limit.get');
 Route::post('/pos/students/{studentId}/limit', [App\Http\Controllers\POSController::class, 'setStudentLimit'])->name('pos.students.limit.set');
+
+Route::get('/get-unit-head', [App\Http\Controllers\LaboratoryController::class, 'getUnitHead'])->name('get.unit.head');

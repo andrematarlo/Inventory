@@ -529,4 +529,34 @@ class LaboratoryController extends Controller
         // Logic to delete reagent request
         return redirect()->route('laboratory.reagent')->with('success', 'Reagent request deleted successfully.');
     }
+
+    public function getUnitHead()
+    {
+        try {
+            $unitHead = DB::table('employee')
+                ->join('employee_roles', 'employee.EmployeeID', '=', 'employee_roles.EmployeeId')
+                ->join('roles', 'employee_roles.RoleId', '=', 'roles.RoleId')
+                ->where('employee.IsDeleted', 0)
+                ->where('roles.RoleName', 'Unit Head')
+                ->select('employee.*')
+                ->first();
+
+            if (!$unitHead) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No Unit Head found'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $unitHead
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving Unit Head: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

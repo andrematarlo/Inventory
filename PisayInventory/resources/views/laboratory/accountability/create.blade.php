@@ -132,7 +132,16 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="received_by" class="form-label">Received by:</label>
-                            <input type="text" class="form-control" id="received_by" name="received_by">
+                            @if(count($srsChemUsers) === 1)
+                                <input type="text" class="form-control" id="received_by" name="received_by" value="{{ $srsChemUsers[0]->FirstName }} {{ $srsChemUsers[0]->LastName }}" readonly required>
+                            @else
+                                <select class="form-control" id="received_by" name="received_by" required>
+                                    <option value="">-- Select SRS-CHEM --</option>
+                                    @foreach($srsChemUsers as $srs)
+                                        <option value="{{ $srs->FirstName }} {{ $srs->LastName }}">{{ $srs->FirstName }} {{ $srs->LastName }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                         </div>
                         <div class="mb-3">
                             <label for="date_received" class="form-label">Date Received:</label>
@@ -142,11 +151,51 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="received_and_inspected_by" class="form-label">Received and Inspected by:</label>
-                            <input type="text" class="form-control" id="received_and_inspected_by" name="received_and_inspected_by">
+                            @if(count($srsChemUsers) === 1)
+                                <input type="text" class="form-control" id="received_and_inspected_by" name="received_and_inspected_by" value="{{ $srsChemUsers[0]->FirstName }} {{ $srsChemUsers[0]->LastName }}" readonly required>
+                            @else
+                                <select class="form-control" id="received_and_inspected_by" name="received_and_inspected_by" required>
+                                    <option value="">-- Select SRS-CHEM --</option>
+                                    @foreach($srsChemUsers as $srs)
+                                        <option value="{{ $srs->FirstName }} {{ $srs->LastName }}">{{ $srs->FirstName }} {{ $srs->LastName }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                         </div>
                         <div class="mb-3">
                             <label for="date_inspected" class="form-label">Date Inspected:</label>
                             <input type="date" class="form-control" id="date_inspected" name="date_inspected">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="endorsed_by" class="form-label">Endorsed by:</label>
+                            <div class="d-flex flex-column">
+                                <input type="text" class="form-control" name="endorsed_by" id="endorsed_by" 
+                                    readonly 
+                                    placeholder="{{ Auth::user()->role === 'Teacher' ? 'Will be endorsed by Unit Head' : 'Will be endorsed by Subject Teacher' }}">
+                                <small class="text-muted text-center mt-1">
+                                    {{ Auth::user()->role === 'Teacher' ? 'Unit Head' : 'Subject Teacher' }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="approved_by" class="form-label">Approved by:</label>
+                            @if(count($srsChemUsers) === 1)
+                                <input type="text" class="form-control" name="approved_by" value="{{ $srsChemUsers[0]->FirstName }} {{ $srsChemUsers[0]->LastName }}" readonly required>
+                            @else
+                                <select class="form-control" name="approved_by" required>
+                                    <option value="">-- Select SRS-CHEM --</option>
+                                    @foreach($srsChemUsers as $srs)
+                                        <option value="{{ $srs->FirstName }} {{ $srs->LastName }}">{{ $srs->FirstName }} {{ $srs->LastName }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -224,6 +273,36 @@ $(document).ready(function() {
             }
         }
     });
+
+    // Function to update endorsed_by field
+    function updateEndorsedBy() {
+        const userRole = '{{ Auth::user()->role }}';
+        const teacherSelect = $('select[name="teacher_in_charge"]');
+        const endorsedByInput = $('#endorsed_by');
+        
+        if (userRole === 'Teacher') {
+            // If user is a teacher, get the Unit Head
+            $.ajax({
+                url: '{{ route("get.unit.head") }}',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        endorsedByInput.val(response.data.FirstName + ' ' + response.data.LastName);
+                    }
+                }
+            });
+        } else {
+            // If user is not a teacher, get the selected teacher's name
+            const selectedTeacher = teacherSelect.val();
+            if (selectedTeacher) {
+                endorsedByInput.val(selectedTeacher);
+            }
+        }
+    }
+    // Update endorsed_by when teacher is selected
+    $('select[name="teacher_in_charge"]').on('change', updateEndorsedBy);
+    // Initial update
+    updateEndorsedBy();
 });
 </script>
 @endpush

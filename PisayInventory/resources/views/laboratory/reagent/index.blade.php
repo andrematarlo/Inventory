@@ -131,7 +131,7 @@ $(document).ready(function() {
     $('.approve-btn').click(function() {
         var id = $(this).data('id');
         if (confirm('Are you sure you want to approve this request?')) {
-            $.post(`/laboratory/reagent/${id}/approve`, {
+            $.post(`{{ url('inventory/laboratory/reagent') }}/${id}/approve`, {
                 _token: '{{ csrf_token() }}'
             })
             .done(function() {
@@ -147,7 +147,7 @@ $(document).ready(function() {
     $('.reject-btn').click(function() {
         var id = $(this).data('id');
         if (confirm('Are you sure you want to reject this request?')) {
-            $.post(`/laboratory/reagent/${id}/reject`, {
+            $.post(`{{ url('inventory/laboratory/reagent') }}/${id}/reject`, {
                 _token: '{{ csrf_token() }}'
             })
             .done(function() {
@@ -163,7 +163,7 @@ $(document).ready(function() {
     $('.delete-btn').click(function() {
         var id = $(this).data('id');
         if (confirm('Are you sure you want to delete this record? This cannot be undone.')) {
-            $.post(`/laboratory/reagent/${id}/delete`, {
+            $.post(`{{ url('inventory/laboratory/reagent') }}/${id}/delete`, {
                 _token: '{{ csrf_token() }}'
             })
             .done(function() {
@@ -179,7 +179,7 @@ $(document).ready(function() {
     $('.restore-btn').click(function() {
         var id = $(this).data('id');
         if (confirm('Are you sure you want to restore this record?')) {
-            $.post(`/laboratory/reagent/${id}/restore`, {
+            $.post(`{{ url('inventory/laboratory/reagent') }}/${id}/restore`, {
                 _token: '{{ csrf_token() }}'
             })
             .done(function() {

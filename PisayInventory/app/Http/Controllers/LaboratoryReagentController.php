@@ -50,7 +50,16 @@ class LaboratoryReagentController extends Controller
             ->select('employee.*')
             ->get();
 
-        return view('laboratory.reagent.create', compact('nextControlNo', 'reagentItems', 'teachers'));
+        $srsChemUsers = DB::table('employee')
+            ->join('employee_roles', 'employee.EmployeeID', '=', 'employee_roles.EmployeeId')
+            ->join('roles', 'employee_roles.RoleId', '=', 'roles.RoleId')
+            ->where('employee.IsDeleted', 0)
+            ->where('roles.RoleName', 'SRS-CHEM')
+            ->orderBy('employee.LastName')
+            ->select('employee.*')
+            ->get();
+
+        return view('laboratory.reagent.create', compact('nextControlNo', 'reagentItems', 'teachers', 'srsChemUsers'));
     }
 
     public function store(Request $request)
@@ -65,7 +74,8 @@ class LaboratoryReagentController extends Controller
             'teacher_in_charge' => 'required',
             'venue' => 'required',
             'inclusive_dates' => 'required',
-            'inclusive_time' => 'required',
+            'inclusive_time_start' => 'required',
+            'inclusive_time_end' => 'required',
             'quantities' => 'required|array',
             'reagents' => 'required|array',
             'received_by' => 'required',
@@ -107,7 +117,8 @@ class LaboratoryReagentController extends Controller
                 'teacher_in_charge' => $request->teacher_in_charge,
                 'venue' => $request->venue,
                 'inclusive_dates' => $request->inclusive_dates,
-                'inclusive_time' => $request->inclusive_time,
+                'inclusive_time_start' => $request->inclusive_time_start,
+                'inclusive_time_end' => $request->inclusive_time_end,
                 'student_names' => $request->student_names,
                 'received_by' => $request->received_by,
                 'date_received' => $request->date_received,
@@ -146,8 +157,7 @@ class LaboratoryReagentController extends Controller
 
     public function show($id)
     {
-        $reagentRequest = DB::table('laboratory_reagent_requests')
-            ->where('request_id', $id)
+        $reagentRequest = \App\Models\LaboratoryReagentRequest::where('request_id', $id)
             ->whereNull('deleted_at')
             ->first();
 

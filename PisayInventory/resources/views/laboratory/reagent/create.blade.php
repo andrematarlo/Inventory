@@ -146,11 +146,20 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Received by:</label>
-                            <input type="text" class="form-control" name="received_by">
+                            @if(count($srsChemUsers) === 1)
+                                <input type="text" class="form-control" name="received_by" value="{{ $srsChemUsers[0]->FirstName }} {{ $srsChemUsers[0]->LastName }}" readonly required>
+                            @else
+                                <select class="form-control" name="received_by" required>
+                                    <option value="">-- Select SRS-CHEM --</option>
+                                    @foreach($srsChemUsers as $srs)
+                                        <option value="{{ $srs->FirstName }} {{ $srs->LastName }}">{{ $srs->FirstName }} {{ $srs->LastName }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                         </div>
                         <div class="form-group">
                             <label>Date:</label>
-                            <input type="date" class="form-control" name="date_received">
+                            <input type="date" class="form-control" name="date_received" value="{{ now()->format('Y-m-d') }}" required>
                         </div>
                     </div>
                 </div>
@@ -164,13 +173,30 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Endorsed by:</label>
-                            <input type="text" class="form-control" name="endorsed_by" placeholder="Subject Teacher/Unit Head">
+                            <div class="d-flex flex-column">
+                                <input type="text" class="form-control" id="endorsed_by_display" 
+                                    readonly 
+                                    placeholder="{{ Auth::user()->role === 'Teacher' ? 'Will be endorsed by Unit Head' : 'Will be endorsed by Subject Teacher' }}">
+                                <input type="hidden" name="endorsed_by" id="endorsed_by">
+                                <small class="text-muted text-center mt-1">
+                                    {{ Auth::user()->role === 'Teacher' ? 'Unit Head' : 'Subject Teacher' }}
+                                </small>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Approved by:</label>
-                            <input type="text" class="form-control" name="approved_by" placeholder="SRS/SRA (Releasing Unit)">
+                            @if(count($srsChemUsers) === 1)
+                                <input type="text" class="form-control" name="approved_by" value="{{ $srsChemUsers[0]->FirstName }} {{ $srsChemUsers[0]->LastName }}" readonly required>
+                            @else
+                                <select class="form-control" name="approved_by" required>
+                                    <option value="">-- Select SRS-CHEM --</option>
+                                    @foreach($srsChemUsers as $srs)
+                                        <option value="{{ $srs->FirstName }} {{ $srs->LastName }}">{{ $srs->FirstName }} {{ $srs->LastName }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -220,6 +246,42 @@
         $(document).on('click', '.remove-row', function() {
             $(this).closest('tr').remove();
         });
+
+        // Function to update endorsed_by field
+        function updateEndorsedBy() {
+            const userRole = '{{ Auth::user()->role }}';
+            const teacherSelect = $('select[name="teacher_in_charge"]');
+            const endorsedByDisplay = $('#endorsed_by_display');
+            const endorsedByInput = $('#endorsed_by');
+            
+            if (userRole === 'Teacher') {
+                // If user is a teacher, get the Unit Head
+                $.ajax({
+                    url: '{{ route("get.unit.head") }}',
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            const unitHeadName = response.data.FirstName + ' ' + response.data.LastName;
+                            endorsedByDisplay.val(unitHeadName);
+                            endorsedByInput.val(unitHeadName);
+                        }
+                    }
+                });
+            } else {
+                // If user is not a teacher, get the selected teacher's name
+                const selectedTeacher = teacherSelect.val();
+                if (selectedTeacher) {
+                    endorsedByDisplay.val(selectedTeacher);
+                    endorsedByInput.val(selectedTeacher);
+                }
+            }
+        }
+
+        // Update endorsed_by when teacher is selected
+        $('select[name="teacher_in_charge"]').on('change', updateEndorsedBy);
+
+        // Initial update
+        updateEndorsedBy();
     });
 </script>
 @endpush
